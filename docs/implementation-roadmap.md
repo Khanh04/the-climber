@@ -229,12 +229,12 @@ Every phase should pass these checks before being considered complete:
 
 ## Recommended Next Sprint
 
-Start with Phase 2 while preserving the Phase 1 contracts already created.
+Start with Phase 3 now that the Phase 2 run-core slice is in place.
 
 Sprint outcomes:
 
-- Add `RunState`, `RunSession`, and explicit transition validation.
-- Add stamina runtime behavior with tests.
-- Add minimal typed input intent models.
-- Add tests for transitions, rescue once-per-run, unsupported states, and stamina behavior.
+- Create a dev playground scene that wires the existing `RunSession`, stamina runtime, and input adapters into a playable prototype.
+- Add basic handhold detection and climb impulse behavior using placeholder visuals.
+- Route both mobile touch and desktop debug input through the shared typed `PlayerInputFrame` contract.
+- Add a thin scene coordinator for reset and quick scenario testing without moving gameplay rules out of `src/`.
 - Keep `sh scripts/validate.sh` green.

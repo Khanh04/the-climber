@@ -62,11 +62,13 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 - Define a handhold validation layer or group early so grip checks remain deterministic.
 - Keep left-hand and right-hand attachment state independent.
 - Store the currently attached hold and joint reference per hand to simplify release and forced-break logic.
+- Normalize mobile touch and desktop debug controls into the same typed gameplay intent layer before player systems consume them.
 
 ### Stamina Rules
 
 - Drain only when exactly one hand is attached.
-- Pause drain when both hands are secured unless later balancing changes require otherwise.
+- Pause drain when both hands are secured.
+- Phase 2 runtime does not passively regenerate stamina; restore stamina only through explicit run start, retry, or rescue flows unless later balancing changes require otherwise.
 - Ensure forced break events use the same release path as manual input release to avoid divergent states.
 
 ### Physics Fairness
@@ -90,7 +92,7 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 ## Open Questions
 
 - What is the target average stamina duration for a one-hand hang in the first 100 meters?
-- Should both-hand hanging regenerate stamina, pause stamina, or slowly drain at a reduced rate?
+- If passive stamina regeneration is added later, should it happen only while both hands are attached or also while fully detached during a fall beat?
 - What minimum fall distance qualifies for the comedic camera follow before the result UI can appear?
 
 ## Risks
