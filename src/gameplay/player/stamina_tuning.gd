@@ -7,6 +7,9 @@ extends Resource
 func is_valid() -> bool:
     return one_hand_seconds > 0.0 and greasy_ledge_drain_multiplier >= 1.0
 
+func validate() -> void:
+    assert_valid()
+
 func assert_valid() -> void:
     Validation.require_condition(one_hand_seconds > 0.0, "One-hand stamina duration must be positive.")
     Validation.require_condition(greasy_ledge_drain_multiplier >= 1.0, "Greasy ledge drain multiplier must be at least 1.0.")
