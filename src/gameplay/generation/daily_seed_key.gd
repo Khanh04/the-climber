@@ -11,10 +11,12 @@ static func from_utc_date(year: int, month: int, day: int) -> String:
     return "%s:%04d-%02d-%02d" % [GENERATOR_VERSION, year, month, day]
 
 static func current_utc() -> String:
-    var utc_datetime: Dictionary = Time.get_datetime_dict_from_system(true)
-    var year: int = int(utc_datetime["year"])
-    var month: int = int(utc_datetime["month"])
-    var day: int = int(utc_datetime["day"])
+    var date_parts: PackedStringArray = Time.get_date_string_from_system(true).split("-")
+    Validation.require_condition(date_parts.size() == 3, "UTC date string must use YYYY-MM-DD format.")
+
+    var year: int = date_parts[0].to_int()
+    var month: int = date_parts[1].to_int()
+    var day: int = date_parts[2].to_int()
 
     return from_utc_date(year, month, day)
 

@@ -35,6 +35,8 @@ Both scripts default to `$HOME/.local/godot`. Override with `GODOT_BIN=/path/to/
 
 `scripts/test.sh` requires GUT at `addons/gut/gut_cmdln.gd`. If GUT is not installed, the script fails with installation guidance rather than skipping tests.
 
+The runner includes subdirectories under `tests/`, so unit, integration, and scene tests are all discovered from the same command.
+
 ## GUT Installation
 
 Pin a GUT version before adding gameplay-heavy tests. Recommended path:
@@ -43,7 +45,9 @@ Pin a GUT version before adding gameplay-heavy tests. Recommended path:
 addons/gut/
 ```
 
-After installing or updating GUT, record the version here and keep tests compatible with that version.
+Pinned version: GUT v9.6.0.
+
+After installing or updating GUT, update the pinned version here and keep tests compatible with that version.
 
 ## Test Style
 

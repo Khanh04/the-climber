@@ -14,4 +14,4 @@ if [ ! -f "$GUT_CMD" ]; then
     exit 66
 fi
 
-"$GODOT_BIN" --headless --path . -s "res://$GUT_CMD" -gdir=res://tests -gexit
+"$GODOT_BIN" --headless --path . -s "res://$GUT_CMD" -gdir=res://tests -ginclude_subdirs -gexit
