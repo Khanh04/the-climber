@@ -10,7 +10,27 @@ enum Value {
     ALREADY_RESCUED
 }
 
-static func is_fall_reason(reason: Value) -> bool:
+static func is_valid(reason: int) -> bool:
+    match reason:
+        Value.BOTTOM_SCREEN_FALL:
+            return true
+        Value.STAMINA_FALL:
+            return true
+        Value.MISSED_GRIP_FALL:
+            return true
+        Value.CHASER_CONTACT:
+            return true
+        Value.LETHAL_HAZARD:
+            return true
+        Value.ALREADY_RESCUED:
+            return true
+        _:
+            return false
+
+static func assert_valid(reason: int) -> void:
+    Validation.require_condition(is_valid(reason), "Unsupported run end reason.")
+
+static func is_fall_reason(reason: int) -> bool:
     match reason:
         Value.BOTTOM_SCREEN_FALL:
             return true
