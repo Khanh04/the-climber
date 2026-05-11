@@ -1,34 +1,36 @@
 extends GutTest
 
+const EconomyTuningScript = preload("res://resources/config/economy_tuning.gd")
+const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
 const RewardedAdsTuningScript = preload("res://resources/config/rewarded_ads_tuning.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 const ChaserTuningScript = preload("res://resources/config/chaser_tuning.gd")
 const CosmeticsTuningScript = preload("res://resources/config/cosmetics_tuning.gd")
 
 func test_default_economy_tuning_is_valid() -> void:
-    var tuning: EconomyTuning = EconomyTuning.new()
+    var tuning = EconomyTuningScript.new()
 
     assert_true(tuning.is_valid())
 
 func test_economy_tuning_validate_alias_keeps_contract_consistent() -> void:
-    var tuning: EconomyTuning = EconomyTuning.new()
+    var tuning = EconomyTuningScript.new()
 
     tuning.validate()
     assert_true(tuning.is_valid())
 
 func test_invalid_economy_tuning_is_detected() -> void:
-    var tuning: EconomyTuning = EconomyTuning.new()
+    var tuning = EconomyTuningScript.new()
     tuning.supporter_daily_coin_reward = 0
 
     assert_false(tuning.is_valid())
 
 func test_default_stamina_tuning_is_valid() -> void:
-    var tuning: StaminaTuning = StaminaTuning.new()
+    var tuning = StaminaTuningScript.new()
 
     assert_true(tuning.is_valid())
 
 func test_stamina_tuning_validate_alias_keeps_contract_consistent() -> void:
-    var tuning: StaminaTuning = StaminaTuning.new()
+    var tuning = StaminaTuningScript.new()
 
     tuning.validate()
     assert_true(tuning.is_valid())

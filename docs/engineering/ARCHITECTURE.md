@@ -21,7 +21,7 @@ The Climber is a Godot 4.4+ mobile-first 2D physics game. The MVP architecture p
 - `src/gameplay/pickups/`: normal coins, special coin stacks, scatter behavior, and pickup events.
 - `src/economy/`: wallet, inventory, consumables, reward grants, and entitlement state.
 - `src/cosmetics/`: visual-only loadouts, themes, and physics-neutral cosmetic validation.
-- `src/platform/`: rewarded ads, purchases, subscriptions, sharing, permissions, and future camera/social adapters.
+- `src/platform/`: rewarded ads, local storage, UTC clock/date, haptics, app lifecycle, purchases, subscriptions, sharing, permissions, and future camera/social adapters.
 - `src/ui/`: HUD, run summary, ad prompts, vending UI, store shell, and settings.
 
 ## Scene Boundaries
@@ -33,9 +33,18 @@ The Climber is a Godot 4.4+ mobile-first 2D physics game. The MVP architecture p
 
 ## Configuration
 
-- Tunable values live in typed `Resource` classes under `resources/config/`.
-- Configuration Resources must expose a `validate()` method when values have constraints.
+- Tunable values use typed `Resource` classes.
+- Shared gameplay, economy, generation, Chaser, cosmetics, and ads tuning scripts live under `resources/config/`.
+- Concrete `.tres` tuning assets belong under `resources/config/`.
+- Configuration Resources must expose a `validate()` method when values have constraints. `is_valid()` and `assert_valid()` are the standard supporting helpers.
 - Invalid configuration is a development error. Do not clamp, guess, or silently replace invalid values.
+
+## Platform Contracts
+
+- Platform seams are defined as typed adapters under `src/platform/` with no gameplay code calling SDKs directly.
+- Phase 1 contract boundaries are: local storage, UTC clock/date, rewarded ads, haptics, app lifecycle, purchases, subscriptions, and future sharing.
+- Persistence dictionaries and SDK payload dictionaries are boundary-only data. They must be parsed into typed models immediately and validated before use.
+- Save data uses an explicit schema version and must fail fast on unsupported versions, missing required fields, or corrupt values.
 
 ## MVP Boundaries
 

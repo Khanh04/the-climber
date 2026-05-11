@@ -30,6 +30,19 @@
 - Inject or assign typed dependencies through scenes, Resources, or adapters.
 - Make pure gameplay rules testable without loading full scenes whenever possible.
 
+## Config Resources
+
+- Use typed `Resource` classes for tuning and configuration.
+- Shared tuning/config scripts belong under `resources/config/`.
+- Config Resources with constraints must expose `validate()`, `is_valid()`, and `assert_valid()`.
+- `validate()` must fail fast by delegating to explicit validation checks. Do not silently repair invalid values.
+
+## Platform Boundaries
+
+- Typed adapters under `src/platform/` define the only allowed entry points for rewarded ads, local storage, UTC clock/date, haptics, app lifecycle, purchases, subscriptions, and sharing.
+- Boundary payloads may use dictionaries only at the adapter edge. Convert them to typed models immediately.
+- Save schema/version checks are mandatory. Unsupported versions, missing required fields, and corrupt persisted values must fail fast.
+
 ## Forbidden Patterns
 
 ```gdscript
