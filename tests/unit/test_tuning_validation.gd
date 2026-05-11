@@ -6,6 +6,7 @@ const RewardedAdsTuningScript = preload("res://resources/config/rewarded_ads_tun
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 const ChaserTuningScript = preload("res://resources/config/chaser_tuning.gd")
 const CosmeticsTuningScript = preload("res://resources/config/cosmetics_tuning.gd")
+const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
 
 func test_default_economy_tuning_is_valid() -> void:
     var tuning = EconomyTuningScript.new()
@@ -23,6 +24,7 @@ func test_invalid_economy_tuning_is_detected() -> void:
     tuning.supporter_daily_coin_reward = 0
 
     assert_false(tuning.is_valid())
+
 
 func test_default_stamina_tuning_is_valid() -> void:
     var tuning = StaminaTuningScript.new()
@@ -76,5 +78,22 @@ func test_default_cosmetics_tuning_is_valid() -> void:
 func test_invalid_cosmetics_tuning_is_detected() -> void:
     var tuning = CosmeticsTuningScript.new()
     tuning.loadout_slot_count = 0
+
+    assert_false(tuning.is_valid())
+
+func test_default_climb_prototype_tuning_is_valid() -> void:
+    var tuning = ClimbPrototypeTuningScript.new()
+
+    assert_true(tuning.is_valid())
+
+func test_climb_prototype_tuning_validate_alias_keeps_contract_consistent() -> void:
+    var tuning = ClimbPrototypeTuningScript.new()
+
+    tuning.validate()
+    assert_true(tuning.is_valid())
+
+func test_invalid_climb_prototype_tuning_is_detected() -> void:
+    var tuning = ClimbPrototypeTuningScript.new()
+    tuning.upward_impulse_bias = 1.5
 
     assert_false(tuning.is_valid())

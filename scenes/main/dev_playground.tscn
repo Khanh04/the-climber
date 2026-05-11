@@ -1,3 +1,111 @@
-[gd_scene format=3]
+[gd_scene load_steps=9 format=3]
+
+[ext_resource type="Script" path="res://scenes/main/dev_playground.gd" id="1_dev"]
+[ext_resource type="Script" path="res://resources/config/climb_prototype_tuning.gd" id="2_climb"]
+[ext_resource type="Script" path="res://resources/config/stamina_tuning.gd" id="3_stamina"]
+
+[sub_resource type="Resource" id="Resource_climb"]
+script = ExtResource("2_climb")
+
+[sub_resource type="Resource" id="Resource_stamina"]
+script = ExtResource("3_stamina")
+
+[sub_resource type="CircleShape2D" id="CircleShape2D_player"]
+radius = 36.0
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_hold"]
+size = Vector2(128, 34)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_floor"]
+size = Vector2(1200, 80)
 
 [node name="DevPlayground" type="Node2D"]
+script = ExtResource("1_dev")
+climb_tuning = SubResource("Resource_climb")
+stamina_tuning = SubResource("Resource_stamina")
+
+[node name="ResetAnchor" type="Marker2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(540, 1500)
+
+[node name="PlayerBody" type="RigidBody2D" parent="."]
+unique_name_in_owner = true
+position = Vector2(540, 1500)
+gravity_scale = 1.0
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="PlayerBody"]
+shape = SubResource("CircleShape2D_player")
+
+[node name="PlayerVisual" type="Polygon2D" parent="PlayerBody"]
+color = Color(0.165, 0.56, 0.72, 1)
+polygon = PackedVector2Array(-30, -40, 30, -40, 40, 20, 0, 48, -40, 20)
+
+[node name="LeftHandAnchor" type="Marker2D" parent="PlayerBody"]
+unique_name_in_owner = true
+position = Vector2(-42, -24)
+
+[node name="RightHandAnchor" type="Marker2D" parent="PlayerBody"]
+unique_name_in_owner = true
+position = Vector2(42, -24)
+
+[node name="Handholds" type="Node2D" parent="."]
+
+[node name="HoldStartLeft" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+position = Vector2(500, 1450)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldStartLeft"]
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldStartLeft"]
+color = Color(0.92, 0.72, 0.23, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
+[node name="HoldStartRight" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+position = Vector2(580, 1450)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldStartRight"]
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldStartRight"]
+color = Color(0.92, 0.72, 0.23, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
+[node name="HoldMidLeft" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+position = Vector2(430, 1150)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldMidLeft"]
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldMidLeft"]
+color = Color(0.92, 0.72, 0.23, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
+[node name="HoldMidRight" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+position = Vector2(650, 980)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldMidRight"]
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldMidRight"]
+color = Color(0.92, 0.72, 0.23, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
+[node name="HoldTop" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+position = Vector2(540, 780)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldTop"]
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldTop"]
+color = Color(0.92, 0.72, 0.23, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
+[node name="Floor" type="StaticBody2D" parent="."]
+position = Vector2(540, 1840)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor"]
+shape = SubResource("RectangleShape2D_floor")
+
+[node name="Visual" type="Polygon2D" parent="Floor"]
+color = Color(0.18, 0.2, 0.22, 1)
+polygon = PackedVector2Array(-600, -40, 600, -40, 600, 40, -600, 40)
