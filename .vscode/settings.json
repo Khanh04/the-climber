@@ -1,0 +1,14 @@
+{
+  "editor.insertSpaces": true,
+  "editor.tabSize": 4,
+  "files.eol": "\n",
+  "files.trimTrailingWhitespace": true,
+  "markdown.validate.enabled": true,
+  "search.exclude": {
+    ".godot": true,
+    ".import": true,
+    "exports": true,
+    "builds": true
+  },
+  "godotTools.editorPath.godot4": "/home/khanh/.local/godot"
+}

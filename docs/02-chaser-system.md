@@ -1,0 +1,84 @@
+# Module 2: The Chaser
+
+## Owner
+
+Systems Programmer / Content Designer
+
+## Goal
+
+Introduce a rising environmental kill-zone that prevents stalling while preserving tension through dynamic pacing.
+
+## MVP Scope
+
+- A single full-width rising `Area2D` kill-zone with one default visual theme and one audio profile.
+- Chaser contact is final and not eligible for Rewarded Continue or Mulligan Drone rescue.
+- Rubber-banding uses simple, inspectable thresholds before adding more advanced pacing curves.
+
+## Core Requirements
+
+### Chaser Behavior
+
+- The Chaser constantly rises from the bottom of the screen.
+- It is implemented as an `Area2D` spanning the full level width.
+- Any player contact with the Chaser immediately ends the run.
+
+### Rubber-Banding
+
+- If the player remains at roughly the same Y position for more than 5 seconds, the Chaser speeds up.
+- If the player is climbing rapidly, the Chaser slows down.
+- The goal is tension maintenance, not forcing a pure speedrun.
+- Initial tuning target: treat less than 2 meters of vertical progress over 5 seconds as camping.
+- Initial tuning target: treat more than 8 meters of vertical progress over 5 seconds as rapid climbing.
+- Clamp Chaser speed between a readable minimum pressure speed and a maximum speed that still gives the player time to react.
+
+### Cosmetics and Audio
+
+- The `Area2D` visual can be swapped through player loadout.
+- Supported examples include Rising Void, Hot Coffee, Glitch / Code, and Plastic Ball Pit.
+- Each cosmetic has a distinct spatial audio signature.
+- Audio intensity should increase as the Chaser approaches the player.
+
+## Implementation Notes
+
+### Pacing Model
+
+- Track recent player vertical progress over time rather than relying on instantaneous velocity only.
+- Use a bounded speed range for the Chaser so rubber-banding remains predictable.
+- Separate base speed from temporary pressure modifiers so balancing remains data-driven.
+
+### Kill Logic
+
+- Keep the Chaser collision behavior simple and authoritative.
+- Death on contact should bypass partial damage logic and immediately resolve the run state.
+- Chaser death should still allow the fall/death camera beat if visually useful, but it should not offer rescue.
+
+### Presentation Layer
+
+- Decouple the visual theme from the kill-zone logic.
+- Treat cosmetic selection as a theme bundle containing visuals, particles, and an audio profile.
+
+## Post-MVP
+
+- Multiple Chaser themes such as Hot Coffee, Glitch / Code, and Plastic Ball Pit.
+- Per-theme spatial audio, particles, and screen-edge warning treatments.
+- More nuanced pacing curves based on run altitude, player skill, and recent near-death events.
+
+## Open Questions
+
+- What should the initial Chaser spawn distance be below the player?
+- What are the minimum and maximum Chaser speeds in meters per second?
+- Should the Chaser pause or slow during tutorialized first-run onboarding?
+
+## Risks
+
+- Over-aggressive speed-up can make the system feel unfair instead of anti-camping.
+- Under-tuned slowdown can remove urgency for skilled players.
+- Spatial audio needs careful mixing so it communicates threat without becoming fatiguing.
+
+## Suggested First Tasks
+
+1. Implement the base rising `Area2D` kill-zone.
+2. Add player progress tracking and rubber-band modifiers.
+3. Create a theme configuration format for visuals and sound.
+4. Add distance-based audio intensity.
+5. Playtest pressure curves with slow and fast climb cases.

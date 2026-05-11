@@ -1,0 +1,33 @@
+; Engine configuration file.
+; Target engine: Godot 4.4+.
+
+config_version=5
+
+[application]
+
+config/name="The Climber"
+run/main_scene="res://scenes/main/dev_playground.tscn"
+config/features=PackedStringArray("4.4", "Mobile")
+
+[display]
+
+window/size/viewport_width=1080
+window/size/viewport_height=1920
+window/size/mode=2
+window/handheld/orientation=1
+window/stretch/mode="canvas_items"
+window/stretch/aspect="expand"
+
+[rendering]
+
+renderer/rendering_method="mobile"
+renderer/rendering_method.mobile="mobile"
+
+[debug]
+
+gdscript/warnings/unsafe_property_access=2
+gdscript/warnings/unsafe_method_access=2
+gdscript/warnings/unsafe_cast=2
+gdscript/warnings/unsafe_call_argument=2
+gdscript/warnings/unused_variable=2
+gdscript/warnings/return_value_discarded=2

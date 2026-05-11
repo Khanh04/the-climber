@@ -1,0 +1,23 @@
+# Godot imports and generated data
+.godot/
+.import/
+*.import
+
+# Godot export outputs
+exports/
+builds/
+*.apk
+*.aab
+*.ipa
+*.pck
+
+# OS/editor local files
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Local environment files
+.env
+.env.*
+!.env.example
