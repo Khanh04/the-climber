@@ -9,6 +9,7 @@ This repository is currently initialized as a docs-first scaffold based on the p
 - [03-environment-procedural-generation.md](./03-environment-procedural-generation.md): Daily seed generation, hazard behavior, and shared-layout rules.
 - [04-economy-monetization.md](./04-economy-monetization.md): Coins, rewarded ads, store structure, and consumables.
 - [05-meta-viral-features.md](./05-meta-viral-features.md): Replay capture, facecam overlay, friend ghosts, and fall sprays.
+- [implementation-roadmap.md](./implementation-roadmap.md): Dependency-managed MVP implementation sequence, architecture gates, and recommended next sprint.
 
 ## Shared Project Assumptions
 
@@ -27,6 +28,8 @@ This repository is currently initialized as a docs-first scaffold based on the p
 - Treat async friend features as MVP-adjacent: useful for retention, but not required before the core physics loop proves fun.
 
 ## Suggested MVP Build Order
+
+The detailed implementation sequence lives in [implementation-roadmap.md](./implementation-roadmap.md). The short build order is:
 
 1. Implement the player ragdoll, grip system, and stamina loop.
 2. Add camera follow, fall comedy timing, run-end states, and rescue eligibility.
