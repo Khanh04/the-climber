@@ -55,6 +55,28 @@ func test_dev_playground_starter_holds_are_in_initial_grip_range() -> void:
     assert_lte(left_anchor.global_position.distance_to(left_hold.global_position), playground.climb_tuning.handhold_detection_radius_pixels)
     assert_lte(right_anchor.global_position.distance_to(right_hold.global_position), playground.climb_tuning.handhold_detection_radius_pixels)
 
+func test_dev_playground_climb_holds_do_not_block_player_body() -> void:
+    var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: DevPlayground = playground_node as DevPlayground
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_node("PlayerBody") as RigidBody2D
+    var left_hold: StaticBody2D = playground.get_node("Handholds/HoldStartLeft") as StaticBody2D
+    var right_hold: StaticBody2D = playground.get_node("Handholds/HoldStartRight") as StaticBody2D
+    var safe_platform: StaticBody2D = playground.get_node("Handholds/HoldSafePlatform") as StaticBody2D
+
+    assert_not_null(player_body)
+    assert_not_null(left_hold)
+    assert_not_null(right_hold)
+    assert_not_null(safe_platform)
+    assert_false((player_body.collision_mask & left_hold.collision_layer) != 0)
+    assert_false((player_body.collision_mask & right_hold.collision_layer) != 0)
+    assert_true((player_body.collision_mask & safe_platform.collision_layer) != 0)
+
 func test_dev_playground_has_safe_start_block_below_spawn() -> void:
     var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")
     var playground_node: Node = scene.instantiate()
@@ -73,7 +95,7 @@ func test_dev_playground_has_safe_start_block_below_spawn() -> void:
     assert_gt(safe_platform.global_position.y, reset_anchor.global_position.y)
     assert_lte(safe_platform.global_position.y - reset_anchor.global_position.y, 80.0)
 
-func test_dev_playground_left_grip_creates_and_releases_runtime_joint() -> void:
+func test_dev_playground_left_grip_creates_and_releases_runtime_link() -> void:
     var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: DevPlayground = playground_node as DevPlayground
@@ -85,19 +107,20 @@ func test_dev_playground_left_grip_creates_and_releases_runtime_joint() -> void:
     playground.get_controller_for_test().get_attachment_state().attach(
         HandSide.Value.LEFT,
         &"HoldStartLeft",
-        Vector2(500.0, 1450.0),
+        Vector2(450.0, 1424.0),
         NodePath("Handholds/HoldStartLeft")
     )
-    playground.sync_grip_joints_for_test()
+    playground.sync_grip_links_for_test()
 
-    var left_joint: PinJoint2D = playground.get_node_or_null("LeftGripJoint") as PinJoint2D
-    assert_not_null(left_joint)
+    var left_link: Line2D = playground.get_node_or_null("LeftGripLink") as Line2D
+    assert_not_null(left_link)
+    assert_eq(left_link.get_point_count(), 2)
 
     playground.get_controller_for_test().get_attachment_state().release(HandSide.Value.LEFT)
-    playground.sync_grip_joints_for_test()
+    playground.sync_grip_links_for_test()
     await get_tree().process_frame
 
-    assert_null(playground.get_node_or_null("LeftGripJoint"))
+    assert_null(playground.get_node_or_null("LeftGripLink"))
 
 func test_dev_playground_reset_clears_runtime_attachments_and_restarts_run() -> void:
     var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")

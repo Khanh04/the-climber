@@ -94,6 +94,6 @@ func test_climb_prototype_tuning_validate_alias_keeps_contract_consistent() -> v
 
 func test_invalid_climb_prototype_tuning_is_detected() -> void:
     var tuning = ClimbPrototypeTuningScript.new()
-    tuning.two_hand_velocity_damping = 1.5
+    tuning.grip_velocity_damping = 1.5
 
     assert_false(tuning.is_valid())

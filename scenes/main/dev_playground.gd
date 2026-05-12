@@ -29,8 +29,8 @@ var _desktop_input: DesktopDebugInputAdapterScript = DesktopDebugInputAdapterScr
 var _mobile_input: MobileTouchInputAdapterScript = MobileTouchInputAdapterScript.new()
 var _controller: ClimbPrototypeControllerScript
 var _active_touch_positions: PackedVector2Array = PackedVector2Array()
-var _left_grip_joint: PinJoint2D = null
-var _right_grip_joint: PinJoint2D = null
+var _left_grip_link: Line2D = null
+var _right_grip_link: Line2D = null
 var _start_y: float = 0.0
 
 func _ready() -> void:
@@ -56,8 +56,8 @@ func _physics_process(delta: float) -> void:
 	var right_target: RefCounted = _find_nearest_handhold(_right_hand_anchor.global_position)
 	var result: ClimbPrototypeFrameResultScript = _controller.apply_input_frame(input_frame, left_target, right_target, delta)
 
-	_sync_grip_joints()
 	_apply_prototype_motion(result)
+	_sync_grip_links()
 	_record_height()
 
 	if result.stamina_depleted_now:
@@ -77,8 +77,8 @@ func get_run_session_for_test() -> RunSessionScript:
 func get_controller_for_test() -> ClimbPrototypeControllerScript:
 	return _controller
 
-func sync_grip_joints_for_test() -> void:
-	_sync_grip_joints()
+func sync_grip_links_for_test() -> void:
+	_sync_grip_links()
 
 func _validate_required_state() -> void:
 	Validation.require_condition(climb_tuning != null, "DevPlayground requires climb tuning.")
@@ -154,6 +154,9 @@ func _find_nearest_handhold(anchor_position: Vector2) -> RefCounted:
 	return nearest_target
 
 func _apply_prototype_motion(result: ClimbPrototypeFrameResultScript) -> void:
+	if result.attached_hand_count > 0:
+		_apply_virtual_grip_forces(result)
+
 	if result.control_force != Vector2.ZERO:
 		_player_body.apply_central_force(result.control_force)
 
@@ -163,39 +166,68 @@ func _apply_prototype_motion(result: ClimbPrototypeFrameResultScript) -> void:
 	if result.attached_hand_count == 2:
 		_player_body.linear_velocity *= climb_tuning.two_hand_velocity_damping
 
-func _sync_grip_joints() -> void:
+func _apply_virtual_grip_forces(result: ClimbPrototypeFrameResultScript) -> void:
 	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
-	_left_grip_joint = _sync_hand_joint(HandSideScript.Value.LEFT, _left_grip_joint, attachment_state, &"LeftGripJoint")
-	_right_grip_joint = _sync_hand_joint(HandSideScript.Value.RIGHT, _right_grip_joint, attachment_state, &"RightGripJoint")
+	var target_position: Vector2 = _calculate_grip_target_position(attachment_state, result.control_force)
+	var displacement: Vector2 = target_position - _player_body.global_position
 
-func _sync_hand_joint(hand_side: int, current_joint: PinJoint2D, attachment_state: HandAttachmentState, joint_name: StringName) -> PinJoint2D:
+	_player_body.apply_central_force(Vector2.UP * climb_tuning.attached_gravity_compensation_force * _player_body.mass * _player_body.gravity_scale)
+	_player_body.apply_central_force(displacement * climb_tuning.grip_pull_stiffness)
+	_player_body.linear_velocity *= climb_tuning.grip_velocity_damping
+
+func _calculate_grip_target_position(attachment_state: HandAttachmentState, control_force: Vector2) -> Vector2:
+	var attached_count: int = attachment_state.get_attached_hand_count()
+	Validation.require_condition(attached_count > 0, "Grip target position requires an attached hand.")
+
+	var hold_position_sum: Vector2 = Vector2.ZERO
+	if attachment_state.is_attached(HandSideScript.Value.LEFT):
+		hold_position_sum += attachment_state.get_attach_position(HandSideScript.Value.LEFT)
+
+	if attachment_state.is_attached(HandSideScript.Value.RIGHT):
+		hold_position_sum += attachment_state.get_attach_position(HandSideScript.Value.RIGHT)
+
+	var average_hold_position: Vector2 = hold_position_sum / float(attached_count)
+	var aim_offset: Vector2 = Vector2.ZERO
+	if control_force != Vector2.ZERO:
+		aim_offset = control_force.normalized() * climb_tuning.grip_aim_target_offset_pixels
+
+	return average_hold_position + Vector2.DOWN * climb_tuning.grip_hang_offset_pixels + aim_offset
+
+func _sync_grip_links() -> void:
+	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
+	_left_grip_link = _sync_hand_link(HandSideScript.Value.LEFT, _left_grip_link, attachment_state, _left_hand_anchor, &"LeftGripLink")
+	_right_grip_link = _sync_hand_link(HandSideScript.Value.RIGHT, _right_grip_link, attachment_state, _right_hand_anchor, &"RightGripLink")
+
+func _sync_hand_link(hand_side: int, current_link: Line2D, attachment_state: HandAttachmentState, hand_anchor: Marker2D, link_name: StringName) -> Line2D:
 	if not attachment_state.is_attached(hand_side):
-		if current_joint != null:
-			current_joint.queue_free()
+		if current_link != null:
+			current_link.queue_free()
 		return null
 
-	if current_joint != null:
-		return current_joint
+	var active_link: Line2D = current_link
+	if active_link == null:
+		active_link = Line2D.new()
+		active_link.name = link_name
+		active_link.width = 4.0
+		active_link.default_color = Color(0.72, 0.9, 1.0, 0.8)
+		add_child(active_link)
 
 	var hold_node: Node = get_node_or_null(attachment_state.get_hold_path(hand_side))
-	Validation.require_condition(hold_node != null, "DevPlayground grip joint requires an attached handhold node.")
-	Validation.require_condition(hold_node is PhysicsBody2D, "DevPlayground grip joint requires a PhysicsBody2D handhold.")
+	Validation.require_condition(hold_node != null, "DevPlayground grip link requires an attached handhold node.")
+	Validation.require_condition(hold_node is Node2D, "DevPlayground grip link requires a Node2D handhold.")
 
-	var joint: PinJoint2D = PinJoint2D.new()
-	joint.name = joint_name
-	add_child(joint)
-	joint.global_position = attachment_state.get_attach_position(hand_side)
-	joint.node_a = joint.get_path_to(_player_body)
-	joint.node_b = joint.get_path_to(hold_node)
-	joint.disable_collision = true
-	return joint
+	active_link.points = PackedVector2Array([
+		to_local(attachment_state.get_attach_position(hand_side)),
+		to_local(hand_anchor.global_position)
+	])
+	return active_link
 
 func _record_height() -> void:
 	var height_pixels: float = maxf(0.0, _start_y - _player_body.global_position.y)
 	_run_session.record_height(height_pixels / climb_tuning.pixels_per_meter)
 
 func _reset_playground() -> void:
-	_clear_grip_joints()
+	_clear_grip_links()
 
 	if _controller != null:
 		_controller.reset()
@@ -209,14 +241,14 @@ func _reset_playground() -> void:
 	_player_body.linear_velocity = Vector2.ZERO
 	_player_body.angular_velocity = 0.0
 
-func _clear_grip_joints() -> void:
-	if _left_grip_joint != null:
-		_left_grip_joint.queue_free()
-		_left_grip_joint = null
+func _clear_grip_links() -> void:
+	if _left_grip_link != null:
+		_left_grip_link.queue_free()
+		_left_grip_link = null
 
-	if _right_grip_joint != null:
-		_right_grip_joint.queue_free()
-		_right_grip_joint = null
+	if _right_grip_link != null:
+		_right_grip_link.queue_free()
+		_right_grip_link = null
 
 func _update_touch_position(event: InputEventScreenTouch) -> void:
 	if event.pressed:
