@@ -1,5 +1,7 @@
 extends GutTest
 
+const AimInputIntentScript = preload("res://src/gameplay/player/aim_input_intent.gd")
+const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 
@@ -208,6 +210,51 @@ func test_dev_playground_left_grip_creates_and_releases_runtime_link() -> void:
     await get_tree().process_frame
 
     assert_null(playground.get_node_or_null("LeftGripLink"))
+
+func test_dev_playground_aim_preview_shows_for_unattached_hands_when_aiming() -> void:
+    var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: DevPlayground = playground_node as DevPlayground
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var input_frame: PlayerInputFrameScript = PlayerInputFrameScript.new([], [], AimInputIntentScript.new(Vector2.UP))
+    playground.sync_aim_preview_for_test(input_frame)
+
+    var left_preview: Line2D = playground.get_node_or_null("LeftAimPreview") as Line2D
+    var right_preview: Line2D = playground.get_node_or_null("RightAimPreview") as Line2D
+    var aim_marker: Polygon2D = playground.get_node_or_null("AimTargetMarker") as Polygon2D
+
+    assert_not_null(left_preview)
+    assert_not_null(right_preview)
+    assert_not_null(aim_marker)
+    assert_eq(left_preview.get_point_count(), 2)
+    assert_eq(right_preview.get_point_count(), 2)
+
+func test_dev_playground_aim_preview_hides_for_attached_hand() -> void:
+    var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: DevPlayground = playground_node as DevPlayground
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    playground.get_controller_for_test().get_attachment_state().attach(
+        HandSide.Value.LEFT,
+        &"HoldStartLeft",
+        Vector2(450.0, 1424.0),
+        NodePath("Handholds/HoldStartLeft")
+    )
+
+    var input_frame: PlayerInputFrameScript = PlayerInputFrameScript.new([], [], AimInputIntentScript.new(Vector2.RIGHT))
+    playground.sync_aim_preview_for_test(input_frame)
+
+    assert_null(playground.get_node_or_null("LeftAimPreview"))
+    assert_not_null(playground.get_node_or_null("RightAimPreview"))
+    assert_not_null(playground.get_node_or_null("AimTargetMarker"))
 
 func test_dev_playground_reset_clears_runtime_attachments_and_restarts_run() -> void:
     var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")

@@ -33,6 +33,9 @@ var _controller: ClimbPrototypeControllerScript
 var _active_touch_positions: PackedVector2Array = PackedVector2Array()
 var _left_grip_link: Line2D = null
 var _right_grip_link: Line2D = null
+var _left_aim_preview: Line2D = null
+var _right_aim_preview: Line2D = null
+var _aim_target_marker: Polygon2D = null
 var _debug_reset_pressed: bool = false
 var _start_y: float = 0.0
 
@@ -54,10 +57,12 @@ func _physics_process(delta: float) -> void:
 	_update_camera_follow()
 
 	if _resolve_bottom_screen_fall_if_needed():
+		_clear_aim_preview()
 		_update_debug_label(input_frame)
 		return
 
 	if _run_session.get_state() != RunStateScript.Value.CLIMBING:
+		_clear_aim_preview()
 		return
 
 	var left_target: RefCounted = _find_nearest_handhold(_left_hand_anchor.global_position)
@@ -66,11 +71,13 @@ func _physics_process(delta: float) -> void:
 
 	_apply_prototype_motion(result)
 	_sync_grip_links()
+	_sync_aim_preview(input_frame)
 	_record_height()
 
 	if result.stamina_depleted_now:
 		_run_session.begin_stamina_fall()
 		_run_session.resolve_stamina_fall()
+		_clear_aim_preview()
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"debug_reset_run"):
@@ -94,6 +101,9 @@ func get_controller_for_test() -> ClimbPrototypeControllerScript:
 func sync_grip_links_for_test() -> void:
 	_sync_grip_links()
 
+func sync_aim_preview_for_test(input_frame: PlayerInputFrameScript) -> void:
+	_sync_aim_preview(input_frame)
+
 func get_camera_player_lower_screen_offset_for_test() -> float:
 	return _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 
@@ -115,7 +125,7 @@ func _validate_required_state() -> void:
 
 func _create_input_frame() -> PlayerInputFrameScript:
 	if _active_touch_positions.size() > 0:
-		return _mobile_input.create_input_frame(get_viewport_rect().size, _active_touch_positions, _get_debug_aim_vector())
+		return _mobile_input.create_input_frame(get_viewport_rect().size, _active_touch_positions)
 
 	return _desktop_input.create_input_frame(
 		Input.is_action_pressed(&"debug_left_grip"),
@@ -245,6 +255,65 @@ func _sync_grip_links() -> void:
 	_left_grip_link = _sync_hand_link(HandSideScript.Value.LEFT, _left_grip_link, attachment_state, _left_hand_anchor, &"LeftGripLink")
 	_right_grip_link = _sync_hand_link(HandSideScript.Value.RIGHT, _right_grip_link, attachment_state, _right_hand_anchor, &"RightGripLink")
 
+func _sync_aim_preview(input_frame: PlayerInputFrameScript) -> void:
+	if not input_frame.has_aim_intent():
+		_clear_aim_preview()
+		return
+
+	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
+	var aim_intent: Object = input_frame.aim_intent
+	var aim_vector: Vector2 = aim_intent.get("aim_vector")
+	var aim_target_position: Vector2 = _calculate_aim_preview_target_position(aim_vector)
+	var left_visible: bool = not attachment_state.is_attached(HandSideScript.Value.LEFT)
+	var right_visible: bool = not attachment_state.is_attached(HandSideScript.Value.RIGHT)
+
+	_left_aim_preview = _sync_aim_preview_line(_left_aim_preview, left_visible, _left_hand_anchor.global_position, aim_target_position, &"LeftAimPreview")
+	_right_aim_preview = _sync_aim_preview_line(_right_aim_preview, right_visible, _right_hand_anchor.global_position, aim_target_position, &"RightAimPreview")
+	_aim_target_marker = _sync_aim_target_marker(_aim_target_marker, left_visible or right_visible, aim_target_position)
+
+func _calculate_aim_preview_target_position(aim_vector: Vector2) -> Vector2:
+	Validation.require_condition(aim_vector != Vector2.ZERO, "Aim preview target requires a non-zero aim vector.")
+	var preview_distance: float = maxf(160.0, climb_tuning.handhold_detection_radius_pixels * 1.75)
+	var hand_midpoint: Vector2 = (_left_hand_anchor.global_position + _right_hand_anchor.global_position) * 0.5
+	return hand_midpoint + (aim_vector.normalized() * preview_distance)
+
+func _sync_aim_preview_line(current_line: Line2D, should_show: bool, anchor_position: Vector2, target_position: Vector2, line_name: StringName) -> Line2D:
+	if not should_show:
+		if current_line != null:
+			current_line.queue_free()
+		return null
+
+	var active_line: Line2D = current_line
+	if active_line == null:
+		active_line = Line2D.new()
+		active_line.name = line_name
+		active_line.width = 3.0
+		active_line.default_color = Color(1.0, 0.87, 0.47, 0.85)
+		add_child(active_line)
+
+	active_line.points = PackedVector2Array([
+		to_local(anchor_position),
+		to_local(target_position)
+	])
+	return active_line
+
+func _sync_aim_target_marker(current_marker: Polygon2D, should_show: bool, target_position: Vector2) -> Polygon2D:
+	if not should_show:
+		if current_marker != null:
+			current_marker.queue_free()
+		return null
+
+	var active_marker: Polygon2D = current_marker
+	if active_marker == null:
+		active_marker = Polygon2D.new()
+		active_marker.name = &"AimTargetMarker"
+		active_marker.color = Color(1.0, 0.95, 0.62, 0.9)
+		active_marker.polygon = PackedVector2Array([Vector2(0.0, -8.0), Vector2(8.0, 0.0), Vector2(0.0, 8.0), Vector2(-8.0, 0.0)])
+		add_child(active_marker)
+
+	active_marker.global_position = target_position
+	return active_marker
+
 func _sync_hand_link(hand_side: int, current_link: Line2D, attachment_state: HandAttachmentState, hand_anchor: Marker2D, link_name: StringName) -> Line2D:
 	if not attachment_state.is_attached(hand_side):
 		if current_link != null:
@@ -275,6 +344,7 @@ func _record_height() -> void:
 
 func _reset_playground() -> void:
 	_clear_grip_links()
+	_clear_aim_preview()
 
 	if _controller != null:
 		_controller.reset()
@@ -312,6 +382,19 @@ func _clear_grip_links() -> void:
 	if _right_grip_link != null:
 		_right_grip_link.queue_free()
 		_right_grip_link = null
+
+func _clear_aim_preview() -> void:
+	if _left_aim_preview != null:
+		_left_aim_preview.queue_free()
+		_left_aim_preview = null
+
+	if _right_aim_preview != null:
+		_right_aim_preview.queue_free()
+		_right_aim_preview = null
+
+	if _aim_target_marker != null:
+		_aim_target_marker.queue_free()
+		_aim_target_marker = null
 
 func _update_touch_position(event: InputEventScreenTouch) -> void:
 	if event.pressed:

@@ -1,18 +1,43 @@
 class_name ClimbPrototypeTuning
 extends Resource
 
+# Max distance from a hand anchor to a hold before grip input can attach.
+# Higher values make grabbing more forgiving; lower values require cleaner aim.
 @export var handhold_detection_radius_pixels: float = 96.0
+# Debug-only directional force applied while the player is attached and aiming.
+# Higher values make pull and swing input feel stronger and more immediate.
 @export var swing_control_force: float = 2400.0
+# Default vertical gap between the held grip point and the player's body center.
+# Higher values make the body hang lower under holds; lower values tuck it closer.
 @export var grip_hang_offset_pixels: float = 92.0
+# Debug-only distance the grip target shifts toward the aim direction while attached.
+# Higher values make aiming reshape the body position more aggressively.
 @export var grip_aim_target_offset_pixels: float = 72.0
+# Strength of the spring-like pull that moves the body toward the grip target.
+# Higher values feel snappier and more controlled; lower values feel looser.
 @export var grip_pull_stiffness: float = 42.0
+# Per-frame velocity retention while attached.
+# Higher values preserve momentum; lower values bleed speed faster.
 @export var grip_velocity_damping: float = 0.96
+# Upward force that offsets gravity while attached.
+# Higher values reduce sag and falling; lower values make hanging heavier.
 @export var attached_gravity_compensation_force: float = 980.0
+# Extra per-frame damping applied when both hands are attached.
+# Lower values lock the player down more; higher values keep two-hand movement livelier.
 @export var two_hand_velocity_damping: float = 0.90
+# Hard speed cap applied after movement forces each frame.
+# Higher values allow faster swings and launches before clamping.
 @export var max_player_speed_pixels_per_second: float = 900.0
+# Vertical offset used to keep the player below the camera center while climbing upward.
+# Higher values show more space above the player; lower values center them more.
 @export var camera_player_lower_screen_offset_pixels: float = 160.0
+# Extra distance below the visible bottom edge before a fall is resolved.
+# Higher values are more forgiving; lower values end the run sooner when dropping.
 @export var bottom_fall_margin_pixels: float = 160.0
+# Conversion factor for recording climb height into run-session meters.
+# Higher values mean more pixels are required to count as one meter of progress.
 @export var pixels_per_meter: float = 100.0
+# Scene group name used to find valid handhold nodes at runtime.
 @export var handhold_group_name: StringName = &"handhold"
 
 func is_valid() -> bool:

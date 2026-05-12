@@ -41,15 +41,12 @@ func test_dual_half_touches_emit_both_grip_intents() -> void:
     assert_eq(right_hand_side, HandSideScript.Value.RIGHT)
     assert_eq(input_frame.release_intents.size(), 0)
 
-func test_non_zero_aim_vector_emits_aim_intent() -> void:
+func test_touch_input_does_not_emit_aim_intent() -> void:
     var adapter := MobileTouchInputAdapterScript.new()
     var viewport_size := Vector2(100.0, 200.0)
-    var input_frame := adapter.create_input_frame(viewport_size, PackedVector2Array(), Vector2.UP)
-    var aim_intent: Object = input_frame.aim_intent
-    var aim_vector: Vector2 = aim_intent.get("aim_vector")
+    var input_frame := adapter.create_input_frame(viewport_size, PackedVector2Array([Vector2(10.0, 50.0)]))
 
-    assert_true(input_frame.has_aim_intent())
-    assert_eq(aim_vector, Vector2.UP)
+    assert_false(input_frame.has_aim_intent())
 
 func test_reset_clears_held_touch_state() -> void:
     var adapter := MobileTouchInputAdapterScript.new()
