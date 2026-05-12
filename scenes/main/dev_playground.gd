@@ -12,12 +12,14 @@ const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
-const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
-const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
+const BottomScreenFallServiceScript = preload("res://src/gameplay/run/bottom_screen_fall_service.gd")
+const RunLoopCoordinatorScript = preload("res://src/gameplay/run/run_loop_coordinator.gd")
 const RunSessionScript = preload("res://src/gameplay/run/run_session.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const StaminaRuntimeScript = preload("res://src/gameplay/player/stamina_runtime.gd")
 const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
+const RunUiPresenterScript = preload("res://src/ui/run_ui_presenter.gd")
+const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
 
 @export var climb_tuning: ClimbPrototypeTuningScript
 @export var stamina_tuning: StaminaTuningScript
@@ -28,12 +30,16 @@ const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
 @onready var _debug_label: Label = %DebugLabel
 @onready var _run_hud: Control = %RunHud
 @onready var _run_end_screen: Control = %RunEndScreen
+@onready var _run_ui_view = RunUiViewScript.new(_run_hud, _run_end_screen)
 
 var _run_session: RunSessionScript = RunSessionScript.new()
 var _stamina: StaminaRuntimeScript
 var _desktop_input: DesktopDebugInputAdapterScript = DesktopDebugInputAdapterScript.new()
 var _mobile_input: MobileTouchInputAdapterScript = MobileTouchInputAdapterScript.new()
 var _controller: ClimbPrototypeControllerScript
+var _bottom_screen_fall_service: BottomScreenFallServiceScript = BottomScreenFallServiceScript.new()
+var _run_loop_coordinator: RunLoopCoordinatorScript = RunLoopCoordinatorScript.new()
+var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop_coordinator)
 var _active_touch_positions: PackedVector2Array = PackedVector2Array()
 var _left_aim_preview: Line2D = null
 var _right_aim_preview: Line2D = null
@@ -198,29 +204,28 @@ func _update_debug_label(input_frame: PlayerInputFrameScript) -> void:
 	]
 
 func _update_camera_follow() -> void:
-	var target_y: float = _player.get_body_global_position().y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
-	if target_y < _camera.global_position.y:
-		_camera.global_position.y = target_y
-		return
-
-	if _run_session.get_state() == RunStateScript.Value.FALLING \
-		or _run_session.get_state() == RunStateScript.Value.RESCUE_OFFERED \
-		or _run_session.get_state() == RunStateScript.Value.ENDED:
-		_camera.global_position.y = target_y
+	_camera.global_position.y = _run_loop_coordinator.calculate_camera_target_y(
+		_camera.global_position.y,
+		_player.get_body_global_position().y,
+		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
+		_run_session.get_state()
+	)
 
 func _resolve_bottom_screen_fall_if_needed() -> bool:
-	if _run_session.get_state() != RunStateScript.Value.CLIMBING:
+	var run_loop_coordinator: Object = _run_loop_coordinator
+	var should_resolve_bottom_fall: bool = run_loop_coordinator.call(
+		"should_resolve_bottom_screen_fall",
+		_run_session.get_state(),
+		_player.get_body_global_position().y,
+		_camera.global_position.y,
+		get_viewport_rect().size.y,
+		_get_climb_tuning_float(&"bottom_fall_margin_pixels")
+	)
+	if not should_resolve_bottom_fall:
 		return false
 
-	var viewport_size: Vector2 = get_viewport_rect().size
-	var bottom_fall_y: float = _camera.global_position.y + (viewport_size.y * 0.5) + _get_climb_tuning_float(&"bottom_fall_margin_pixels")
-	if _player.get_body_global_position().y <= bottom_fall_y:
-		return false
-
-	_controller.get_attachment_state().release_all()
-	_player.enter_falling(PlayerPhysicsModeTransitionsScript.Reason.FALL_DETECTED)
-	_run_session.begin_fall()
-	_run_session.resolve_fall(RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
+	var bottom_screen_fall_service: Object = _bottom_screen_fall_service
+	bottom_screen_fall_service.call("resolve", _controller, _player, _run_session)
 	return true
 
 func _find_nearest_handhold(anchor_position: Vector2) -> RefCounted:
@@ -320,38 +325,12 @@ func _reset_playground() -> void:
 	_refresh_ui()
 
 func _refresh_ui() -> void:
-	if _stamina == null:
+	if _stamina == null or _run_ui_view == null:
 		return
 
-	var hud_state: RefCounted = _build_run_hud_state()
-	var run_end_state: RefCounted = _build_run_end_screen_state()
-	_run_hud.call("apply_state", hud_state)
-	_run_end_screen.call("apply_state", run_end_state)
-
-func _build_run_hud_state() -> RefCounted:
-	var hud_state: RefCounted = RunHudStateScript.new()
-	hud_state.set("height_meters", _run_session.get_height_meters())
-	hud_state.set("current_stamina_seconds", _stamina.get_current_stamina_seconds())
-	hud_state.set("max_stamina_seconds", _stamina.get_max_stamina_seconds())
-	hud_state.set("run_earned_coins", _run_session.get_run_earned_coins())
-	hud_state.set("run_state", _run_session.get_state())
-	hud_state.call("assert_valid")
-	return hud_state
-
-func _build_run_end_screen_state() -> RefCounted:
-	var has_end_reason: bool = _run_session.has_end_reason()
-	var end_reason: int = -1
-	if has_end_reason:
-		end_reason = _run_session.get_end_reason()
-
-	var run_end_state: RefCounted = RunEndScreenStateScript.new()
-	run_end_state.set("run_state", _run_session.get_state())
-	run_end_state.set("final_height_meters", _run_session.get_height_meters())
-	run_end_state.set("run_earned_coins", _run_session.get_run_earned_coins())
-	run_end_state.set("has_end_reason", has_end_reason)
-	run_end_state.set("end_reason", end_reason)
-	run_end_state.call("assert_valid")
-	return run_end_state
+	var hud_state: RefCounted = _run_ui_presenter.build_hud_state(_run_session, _stamina)
+	var run_end_state: RefCounted = _run_ui_presenter.build_run_end_screen_state(_run_session)
+	_run_ui_view.apply_state_snapshots(hud_state, run_end_state)
 
 func _on_run_end_restart_requested() -> void:
 	_reset_playground()

@@ -22,8 +22,8 @@ func apply_state(state: RefCounted) -> void:
 	var typed_state: Object = state
 	typed_state.call("assert_valid")
 
-	var is_visible_state: bool = typed_state.call("is_visible")
-	var is_rescue_offered_state: bool = typed_state.call("is_rescue_offered")
+	var is_visible_state: bool = typed_state.get("visible")
+	var is_rescue_offered_state: bool = typed_state.get("rescue_offered")
 	var end_reason: int = typed_state.get("end_reason")
 	var final_height_meters: float = typed_state.get("final_height_meters")
 	var run_earned_coins: int = typed_state.get("run_earned_coins")

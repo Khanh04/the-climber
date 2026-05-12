@@ -1,0 +1,56 @@
+extends GutTest
+
+const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
+const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
+const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
+const RunLoopCoordinatorScript = preload("res://src/gameplay/run/run_loop_coordinator.gd")
+const RunSessionScript = preload("res://src/gameplay/run/run_session.gd")
+const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
+const RunUiPresenterScript = preload("res://src/ui/run_ui_presenter.gd")
+const StaminaRuntimeScript = preload("res://src/gameplay/player/stamina_runtime.gd")
+const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
+
+func test_build_hud_state_captures_run_session_and_stamina_snapshot() -> void:
+	var presenter: RunUiPresenterScript = RunUiPresenterScript.new(RunLoopCoordinatorScript.new())
+	var run_session: RefCounted = RunSessionScript.new()
+	var stamina: RefCounted = StaminaRuntimeScript.new(StaminaTuningScript.new())
+
+	run_session.call("start_run")
+	run_session.call("record_height", 12.5)
+	run_session.call("add_run_earned_coins", 3)
+	var _depleted_now: bool = stamina.call("advance", 1, 2.0)
+
+	var hud_state: RunHudStateScript = presenter.build_hud_state(run_session, stamina)
+
+	assert_eq(hud_state.height_meters, 12.5)
+	assert_eq(hud_state.current_stamina_seconds, 6.0)
+	assert_eq(hud_state.max_stamina_seconds, 8.0)
+	assert_eq(hud_state.run_earned_coins, 3)
+	assert_eq(hud_state.run_state, RunStateScript.Value.CLIMBING)
+
+func test_build_run_end_screen_state_hides_screen_for_active_run() -> void:
+	var presenter: RunUiPresenterScript = RunUiPresenterScript.new(RunLoopCoordinatorScript.new())
+	var run_session: RefCounted = RunSessionScript.new()
+
+	run_session.call("start_run")
+
+	var run_end_state: RunEndScreenStateScript = presenter.build_run_end_screen_state(run_session)
+
+	assert_false(run_end_state.visible)
+	assert_false(run_end_state.rescue_offered)
+	assert_false(run_end_state.has_end_reason)
+
+func test_build_run_end_screen_state_marks_rescue_offer_and_end_reason() -> void:
+	var presenter: RunUiPresenterScript = RunUiPresenterScript.new(RunLoopCoordinatorScript.new())
+	var run_session: RefCounted = RunSessionScript.new()
+
+	run_session.call("start_run")
+	run_session.call("begin_fall")
+	run_session.call("resolve_fall", RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
+
+	var run_end_state: RunEndScreenStateScript = presenter.build_run_end_screen_state(run_session)
+
+	assert_true(run_end_state.visible)
+	assert_true(run_end_state.rescue_offered)
+	assert_true(run_end_state.has_end_reason)
+	assert_eq(run_end_state.end_reason, RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)

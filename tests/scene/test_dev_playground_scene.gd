@@ -2,6 +2,7 @@ extends GutTest
 
 const AimInputIntentScript = preload("res://src/gameplay/player/aim_input_intent.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
+const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 
@@ -158,6 +159,19 @@ func test_dev_playground_bottom_screen_fall_routes_through_run_session() -> void
     assert_not_null(player_body)
     assert_not_null(camera)
 
+    playground.get_controller_for_test().get_attachment_state().attach(
+        HandSide.Value.LEFT,
+        &"HoldStartLeft",
+        Vector2(450.0, 1424.0),
+        NodePath("Handholds/HoldStartLeft")
+    )
+    playground.get_controller_for_test().get_attachment_state().attach(
+        HandSide.Value.RIGHT,
+        &"HoldStartRight",
+        Vector2(630.0, 1424.0),
+        NodePath("Handholds/HoldStartRight")
+    )
+
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
         player_body.global_position.x,
@@ -168,6 +182,8 @@ func test_dev_playground_bottom_screen_fall_routes_through_run_session() -> void
     assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.RESCUE_OFFERED)
     assert_true(playground.get_run_session_for_test().has_end_reason())
     assert_eq(playground.get_run_session_for_test().get_end_reason(), RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
+    assert_eq(playground.get_controller_for_test().get_attachment_state().get_attached_hand_count(), 0)
+    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
 
 func test_dev_playground_hud_displays_initial_run_snapshot() -> void:
     var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")

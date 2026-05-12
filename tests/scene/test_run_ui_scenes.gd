@@ -4,6 +4,7 @@ const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
 const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
+const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
 
 var _restart_requested: bool = false
 
@@ -67,7 +68,8 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	screen.call(
 		"apply_state",
 		RunEndScreenStateScript.new(
-			RunStateScript.Value.RESCUE_OFFERED,
+			true,
+			true,
 			23.0,
 			6,
 			true,
@@ -93,6 +95,40 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	var _emit_result: int = restart_button.emit_signal("pressed")
 
 	assert_true(_restart_requested)
+
+func test_run_ui_view_applies_snapshots_to_both_controls() -> void:
+	var hud_scene: PackedScene = load("res://scenes/ui/run_hud.tscn")
+	var screen_scene: PackedScene = load("res://scenes/ui/run_end_screen.tscn")
+	var hud_node: Node = hud_scene.instantiate()
+	var screen_node: Node = screen_scene.instantiate()
+
+	assert_not_null(hud_node)
+	assert_not_null(screen_node)
+	assert_true(hud_node is Control)
+	assert_true(screen_node is Control)
+
+	var hud: Control = hud_node as Control
+	var screen: Control = screen_node as Control
+	assert_not_null(hud)
+	assert_not_null(screen)
+	add_child_autofree(hud)
+	add_child_autofree(screen)
+	await get_tree().process_frame
+
+	var ui_view = RunUiViewScript.new(hud, screen)
+	ui_view.apply_state_snapshots(
+		RunHudStateScript.new(14.0, 5.0, 8.0, 2, RunStateScript.Value.CLIMBING),
+		RunEndScreenStateScript.new(true, true, 14.0, 2, true, RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
+	)
+
+	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/HeightMetric/HeightValueLabel") as Label
+	var title_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
+
+	assert_not_null(height_value_label)
+	assert_not_null(title_label)
+	assert_eq(height_value_label.text, "14.0 m")
+	assert_true(screen.visible)
+	assert_eq(title_label.text, "Rescue Offered")
 
 func _mark_restart_requested() -> void:
 	_restart_requested = true
