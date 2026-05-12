@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://crdl3mj8qeugi"]
 
-[ext_resource type="Script" uid="uid://bbcr6elll4por" path="res://scenes/main/run_scene.gd" id="1_dev"]
+[ext_resource type="Script" path="res://scenes/main/run_scene.gd" id="1_dev"]
 [ext_resource type="Script" uid="uid://co0omgi88wjup" path="res://resources/config/climb_prototype_tuning.gd" id="2_climb"]
 [ext_resource type="Script" uid="uid://coalyt3xlftcd" path="res://resources/config/stamina_tuning.gd" id="3_stamina"]
 [ext_resource type="PackedScene" uid="uid://1a8vb0lql3ln" path="res://scenes/player/player_character.tscn" id="4_player"]
