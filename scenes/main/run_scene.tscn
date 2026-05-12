@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://crdl3mj8qeugi"]
 
-[ext_resource type="Script" uid="uid://bbcr6elll4por" path="res://scenes/main/dev_playground.gd" id="1_dev"]
+[ext_resource type="Script" uid="uid://bbcr6elll4por" path="res://scenes/main/run_scene.gd" id="1_dev"]
 [ext_resource type="Script" uid="uid://co0omgi88wjup" path="res://resources/config/climb_prototype_tuning.gd" id="2_climb"]
 [ext_resource type="Script" uid="uid://coalyt3xlftcd" path="res://resources/config/stamina_tuning.gd" id="3_stamina"]
 [ext_resource type="PackedScene" uid="uid://1a8vb0lql3ln" path="res://scenes/player/player_character.tscn" id="4_player"]
@@ -20,7 +20,7 @@ size = Vector2(128, 34)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_floor"]
 size = Vector2(1200, 80)
 
-[node name="DevPlayground" type="Node2D" unique_id=15343070]
+[node name="RunScene" type="Node2D" unique_id=15343070]
 script = ExtResource("1_dev")
 climb_tuning = SubResource("Resource_climb")
 stamina_tuning = SubResource("Resource_stamina")
@@ -29,20 +29,12 @@ stamina_tuning = SubResource("Resource_stamina")
 unique_name_in_owner = true
 position = Vector2(540, 1340)
 
-[node name="DebugHud" type="CanvasLayer" parent="." unique_id=252631966]
+[node name="UiLayer" type="CanvasLayer" parent="." unique_id=252631966]
 
-[node name="DebugLabel" type="Label" parent="DebugHud" unique_id=355149956]
-unique_name_in_owner = true
-offset_left = 24.0
-offset_top = 24.0
-offset_right = 620.0
-offset_bottom = 72.0
-text = "Aim: (0, 0)  Attached: 0  Stamina: 0.0  State: 0"
-
-[node name="RunHud" parent="DebugHud" unique_id=120501001 instance=ExtResource("5_run_hud")]
+[node name="RunHud" parent="UiLayer" unique_id=120501001 instance=ExtResource("5_run_hud")]
 unique_name_in_owner = true
 
-[node name="RunEndScreen" parent="DebugHud" unique_id=120501002 instance=ExtResource("6_run_end")]
+[node name="RunEndScreen" parent="UiLayer" unique_id=120501002 instance=ExtResource("6_run_end")]
 unique_name_in_owner = true
 
 [node name="ResetAnchor" type="Marker2D" parent="." unique_id=2064874863]

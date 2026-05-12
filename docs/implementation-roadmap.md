@@ -91,6 +91,8 @@ Acceptance gates:
 
 Purpose: turn the climb prototype into a repeatable run.
 
+Status: implemented in the main run scene and its typed run-loop, UI presentation, and fall-resolution helpers.
+
 Implementation outcomes:
 
 - Add camera follow rules for vertical progress and falling.
@@ -229,12 +231,11 @@ Every phase should pass these checks before being considered complete:
 
 ## Recommended Next Sprint
 
-Start with Phase 3 now that the Phase 2 run-core slice is in place.
+Start with Phase 6 now that Phases 3 through 5 are implemented and the main run scene is in place.
 
 Sprint outcomes:
 
-- Create a dev playground scene that wires the existing `RunSession`, stamina runtime, and input adapters into a playable prototype.
-- Add basic handhold detection and climb impulse behavior using placeholder visuals.
-- Route both mobile touch and desktop debug input through the shared typed `PlayerInputFrame` contract.
-- Add a thin scene coordinator for reset and quick scenario testing without moving gameplay rules out of `src/`.
-- Keep `sh scripts/validate.sh` green.
+- Add the typed Chaser pacing model and scene boundary.
+- Wire Chaser contact to the existing run-end flow as a non-rescueable failure.
+- Add focused pacing tests and scene collision tests for the Chaser slice.
+- Keep `sh scripts/validate.sh` green while preserving the current run-loop contract.

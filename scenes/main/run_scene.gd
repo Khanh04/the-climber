@@ -1,4 +1,4 @@
-class_name DevPlayground
+class_name RunScene
 extends Node2D
 
 const ClimbPrototypeControllerScript = preload("res://src/gameplay/player/climb_prototype_controller.gd")
@@ -15,6 +15,7 @@ const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const BottomScreenFallServiceScript = preload("res://src/gameplay/run/bottom_screen_fall_service.gd")
 const RunLoopCoordinatorScript = preload("res://src/gameplay/run/run_loop_coordinator.gd")
 const RunSessionScript = preload("res://src/gameplay/run/run_session.gd")
+const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_service.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const StaminaRuntimeScript = preload("res://src/gameplay/player/stamina_runtime.gd")
 const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
@@ -27,7 +28,6 @@ const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
 @onready var _player: PlayerCharacterScript = %PlayerCharacter
 @onready var _reset_anchor: Marker2D = %ResetAnchor
 @onready var _camera: Camera2D = %DevCamera
-@onready var _debug_label: Label = %DebugLabel
 @onready var _run_hud: Control = %RunHud
 @onready var _run_end_screen: Control = %RunEndScreen
 @onready var _run_ui_view = RunUiViewScript.new(_run_hud, _run_end_screen)
@@ -40,6 +40,7 @@ var _controller: ClimbPrototypeControllerScript
 var _bottom_screen_fall_service: BottomScreenFallServiceScript = BottomScreenFallServiceScript.new()
 var _run_loop_coordinator: RunLoopCoordinatorScript = RunLoopCoordinatorScript.new()
 var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop_coordinator)
+var _stamina_fall_service: StaminaFallServiceScript = StaminaFallServiceScript.new()
 var _active_touch_positions: PackedVector2Array = PackedVector2Array()
 var _left_aim_preview: Line2D = null
 var _right_aim_preview: Line2D = null
@@ -60,17 +61,14 @@ func _ready() -> void:
 func _physics_process(delta: float) -> void:
 	if _consume_debug_reset_input():
 		_reset_playground()
-		_update_debug_label(PlayerInputFrameScript.new())
 		_refresh_ui()
 		return
 
 	var input_frame: PlayerInputFrameScript = _create_input_frame()
-	_update_debug_label(input_frame)
 	_update_camera_follow()
 
 	if _resolve_bottom_screen_fall_if_needed():
 		_clear_aim_preview()
-		_update_debug_label(input_frame)
 		_refresh_ui()
 		return
 
@@ -88,9 +86,8 @@ func _physics_process(delta: float) -> void:
 	_record_height()
 
 	if result.stamina_depleted_now:
-		_player.enter_falling(PlayerPhysicsModeTransitionsScript.Reason.STAMINA_DEPLETED)
-		_run_session.begin_stamina_fall()
-		_run_session.resolve_stamina_fall()
+		var stamina_fall_service: Object = _stamina_fall_service
+		stamina_fall_service.call("resolve", _player, _run_session)
 		_clear_aim_preview()
 
 	_refresh_ui()
@@ -98,7 +95,7 @@ func _physics_process(delta: float) -> void:
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"debug_reset_run"):
 		_reset_playground()
-		_update_debug_label(PlayerInputFrameScript.new())
+		_refresh_ui()
 		get_viewport().set_input_as_handled()
 		return
 
@@ -139,17 +136,16 @@ func get_bottom_fall_margin_for_test() -> float:
 	return _get_climb_tuning_float(&"bottom_fall_margin_pixels")
 
 func _validate_required_state() -> void:
-	Validation.require_condition(climb_tuning != null, "DevPlayground requires climb tuning.")
-	Validation.require_condition(stamina_tuning != null, "DevPlayground requires stamina tuning.")
+	Validation.require_condition(climb_tuning != null, "RunScene requires climb tuning.")
+	Validation.require_condition(stamina_tuning != null, "RunScene requires stamina tuning.")
 	climb_tuning.assert_valid()
 	stamina_tuning.assert_valid()
-	Validation.require_condition(_player != null, "DevPlayground requires PlayerCharacter.")
-	Validation.require_condition(_reset_anchor != null, "DevPlayground requires ResetAnchor.")
-	Validation.require_condition(_camera != null, "DevPlayground requires DevCamera.")
-	Validation.require_condition(_debug_label != null, "DevPlayground requires DebugLabel.")
-	Validation.require_condition(_run_hud != null, "DevPlayground requires RunHud.")
-	Validation.require_condition(_run_end_screen != null, "DevPlayground requires RunEndScreen.")
-	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "DevPlayground requires at least one handhold.")
+	Validation.require_condition(_player != null, "RunScene requires PlayerCharacter.")
+	Validation.require_condition(_reset_anchor != null, "RunScene requires ResetAnchor.")
+	Validation.require_condition(_camera != null, "RunScene requires DevCamera.")
+	Validation.require_condition(_run_hud != null, "RunScene requires RunHud.")
+	Validation.require_condition(_run_end_screen != null, "RunScene requires RunEndScreen.")
+	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "RunScene requires at least one handhold.")
 
 func _create_input_frame() -> PlayerInputFrameScript:
 	if _active_touch_positions.size() > 0:
@@ -182,27 +178,6 @@ func _get_debug_aim_vector() -> Vector2:
 
 	return aim_vector
 
-func _update_debug_label(input_frame: PlayerInputFrameScript) -> void:
-	var aim_vector: Vector2 = Vector2.ZERO
-	if input_frame.has_aim_intent():
-		var aim_intent: Object = input_frame.aim_intent
-		aim_vector = aim_intent.get("aim_vector")
-
-	var attached_hand_count: int = 0
-	if _controller != null:
-		attached_hand_count = _controller.get_attachment_state().get_attached_hand_count()
-
-	var stamina_seconds: float = 0.0
-	if _stamina != null:
-		stamina_seconds = _stamina.get_current_stamina_seconds()
-
-	_debug_label.text = "Aim: %s  Attached: %d  Stamina: %.1f  State: %d" % [
-		str(aim_vector),
-		attached_hand_count,
-		stamina_seconds,
-		_run_session.get_state()
-	]
-
 func _update_camera_follow() -> void:
 	_camera.global_position.y = _run_loop_coordinator.calculate_camera_target_y(
 		_camera.global_position.y,
@@ -233,7 +208,7 @@ func _find_nearest_handhold(anchor_position: Vector2) -> RefCounted:
 	var nearest_distance: float = climb_tuning.handhold_detection_radius_pixels
 
 	for handhold in get_tree().get_nodes_in_group(climb_tuning.handhold_group_name):
-		Validation.require_condition(handhold is Node2D, "DevPlayground handholds must be Node2D instances.")
+		Validation.require_condition(handhold is Node2D, "RunScene handholds must be Node2D instances.")
 		var handhold_node: Node2D = handhold
 		var distance: float = anchor_position.distance_to(handhold_node.global_position)
 
@@ -322,7 +297,6 @@ func _reset_playground() -> void:
 		_reset_anchor.global_position.x,
 		_reset_anchor.global_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 	)
-	_refresh_ui()
 
 func _refresh_ui() -> void:
 	if _stamina == null or _run_ui_view == null:
@@ -334,7 +308,7 @@ func _refresh_ui() -> void:
 
 func _on_run_end_restart_requested() -> void:
 	_reset_playground()
-	_update_debug_label(PlayerInputFrameScript.new())
+	_refresh_ui()
 
 func _get_climb_tuning_float(property_name: StringName) -> float:
 	var property_value: Variant = climb_tuning.get(property_name)
