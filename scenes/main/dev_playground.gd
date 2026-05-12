@@ -8,7 +8,9 @@ const DesktopDebugInputAdapterScript = preload("res://src/gameplay/player/deskto
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.gd")
 const MobileTouchInputAdapterScript = preload("res://src/gameplay/player/mobile_touch_input_adapter.gd")
+const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
+const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunSessionScript = preload("res://src/gameplay/run/run_session.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
@@ -18,9 +20,7 @@ const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
 @export var climb_tuning: ClimbPrototypeTuningScript
 @export var stamina_tuning: StaminaTuningScript
 
-@onready var _player_body: RigidBody2D = %PlayerBody
-@onready var _left_hand_anchor: Marker2D = %LeftHandAnchor
-@onready var _right_hand_anchor: Marker2D = %RightHandAnchor
+@onready var _player: PlayerCharacterScript = %PlayerCharacter
 @onready var _reset_anchor: Marker2D = %ResetAnchor
 @onready var _camera: Camera2D = %DevCamera
 @onready var _debug_label: Label = %DebugLabel
@@ -41,6 +41,7 @@ var _start_y: float = 0.0
 
 func _ready() -> void:
 	_validate_required_state()
+	_player.set_climb_tuning(climb_tuning)
 	_stamina = StaminaRuntimeScript.new(stamina_tuning)
 	_controller = ClimbPrototypeControllerScript.new(climb_tuning, _stamina)
 	_start_y = _reset_anchor.global_position.y
@@ -65,16 +66,17 @@ func _physics_process(delta: float) -> void:
 		_clear_aim_preview()
 		return
 
-	var left_target: RefCounted = _find_nearest_handhold(_left_hand_anchor.global_position)
-	var right_target: RefCounted = _find_nearest_handhold(_right_hand_anchor.global_position)
+	var left_target: RefCounted = _find_nearest_handhold(_player.get_left_hand_anchor_global_position())
+	var right_target: RefCounted = _find_nearest_handhold(_player.get_right_hand_anchor_global_position())
 	var result: ClimbPrototypeFrameResultScript = _controller.apply_input_frame(input_frame, left_target, right_target, delta)
 
-	_apply_prototype_motion(result)
+	_player.apply_frame_motion(result, _controller.get_attachment_state())
 	_sync_grip_links()
 	_sync_aim_preview(input_frame)
 	_record_height()
 
 	if result.stamina_depleted_now:
+		_player.enter_falling(PlayerPhysicsModeTransitionsScript.Reason.STAMINA_DEPLETED)
 		_run_session.begin_stamina_fall()
 		_run_session.resolve_stamina_fall()
 		_clear_aim_preview()
@@ -98,6 +100,18 @@ func get_run_session_for_test() -> RunSessionScript:
 func get_controller_for_test() -> ClimbPrototypeControllerScript:
 	return _controller
 
+func get_player_for_test() -> PlayerCharacterScript:
+	return _player
+
+func get_player_body_for_test() -> RigidBody2D:
+	return _player.get_player_body()
+
+func get_left_hand_anchor_for_test() -> Marker2D:
+	return _player.get_left_hand_anchor()
+
+func get_right_hand_anchor_for_test() -> Marker2D:
+	return _player.get_right_hand_anchor()
+
 func sync_grip_links_for_test() -> void:
 	_sync_grip_links()
 
@@ -115,9 +129,7 @@ func _validate_required_state() -> void:
 	Validation.require_condition(stamina_tuning != null, "DevPlayground requires stamina tuning.")
 	climb_tuning.assert_valid()
 	stamina_tuning.assert_valid()
-	Validation.require_condition(_player_body != null, "DevPlayground requires PlayerBody.")
-	Validation.require_condition(_left_hand_anchor != null, "DevPlayground requires LeftHandAnchor.")
-	Validation.require_condition(_right_hand_anchor != null, "DevPlayground requires RightHandAnchor.")
+	Validation.require_condition(_player != null, "DevPlayground requires PlayerCharacter.")
 	Validation.require_condition(_reset_anchor != null, "DevPlayground requires ResetAnchor.")
 	Validation.require_condition(_camera != null, "DevPlayground requires DevCamera.")
 	Validation.require_condition(_debug_label != null, "DevPlayground requires DebugLabel.")
@@ -176,7 +188,7 @@ func _update_debug_label(input_frame: PlayerInputFrameScript) -> void:
 	]
 
 func _update_camera_follow() -> void:
-	var target_y: float = _player_body.global_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
+	var target_y: float = _player.get_body_global_position().y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 	if target_y < _camera.global_position.y:
 		_camera.global_position.y = target_y
 
@@ -186,11 +198,12 @@ func _resolve_bottom_screen_fall_if_needed() -> bool:
 
 	var viewport_size: Vector2 = get_viewport_rect().size
 	var bottom_fall_y: float = _camera.global_position.y + (viewport_size.y * 0.5) + _get_climb_tuning_float(&"bottom_fall_margin_pixels")
-	if _player_body.global_position.y <= bottom_fall_y:
+	if _player.get_body_global_position().y <= bottom_fall_y:
 		return false
 
 	_controller.get_attachment_state().release_all()
 	_clear_grip_links()
+	_player.enter_falling(PlayerPhysicsModeTransitionsScript.Reason.FALL_DETECTED)
 	_run_session.begin_fall()
 	_run_session.resolve_fall(RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
 	return true
@@ -210,50 +223,10 @@ func _find_nearest_handhold(anchor_position: Vector2) -> RefCounted:
 
 	return nearest_target
 
-func _apply_prototype_motion(result: ClimbPrototypeFrameResultScript) -> void:
-	if result.attached_hand_count > 0:
-		_apply_virtual_grip_forces(result)
-
-	if result.control_force != Vector2.ZERO:
-		_player_body.apply_central_force(result.control_force)
-
-	if _player_body.linear_velocity.length() > climb_tuning.max_player_speed_pixels_per_second:
-		_player_body.linear_velocity = _player_body.linear_velocity.normalized() * climb_tuning.max_player_speed_pixels_per_second
-
-	if result.attached_hand_count == 2:
-		_player_body.linear_velocity *= climb_tuning.two_hand_velocity_damping
-
-func _apply_virtual_grip_forces(result: ClimbPrototypeFrameResultScript) -> void:
-	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
-	var target_position: Vector2 = _calculate_grip_target_position(attachment_state, result.control_force)
-	var displacement: Vector2 = target_position - _player_body.global_position
-
-	_player_body.apply_central_force(Vector2.UP * climb_tuning.attached_gravity_compensation_force * _player_body.mass * _player_body.gravity_scale)
-	_player_body.apply_central_force(displacement * climb_tuning.grip_pull_stiffness)
-	_player_body.linear_velocity *= climb_tuning.grip_velocity_damping
-
-func _calculate_grip_target_position(attachment_state: HandAttachmentState, control_force: Vector2) -> Vector2:
-	var attached_count: int = attachment_state.get_attached_hand_count()
-	Validation.require_condition(attached_count > 0, "Grip target position requires an attached hand.")
-
-	var hold_position_sum: Vector2 = Vector2.ZERO
-	if attachment_state.is_attached(HandSideScript.Value.LEFT):
-		hold_position_sum += attachment_state.get_attach_position(HandSideScript.Value.LEFT)
-
-	if attachment_state.is_attached(HandSideScript.Value.RIGHT):
-		hold_position_sum += attachment_state.get_attach_position(HandSideScript.Value.RIGHT)
-
-	var average_hold_position: Vector2 = hold_position_sum / float(attached_count)
-	var aim_offset: Vector2 = Vector2.ZERO
-	if control_force != Vector2.ZERO:
-		aim_offset = control_force.normalized() * climb_tuning.grip_aim_target_offset_pixels
-
-	return average_hold_position + Vector2.DOWN * climb_tuning.grip_hang_offset_pixels + aim_offset
-
 func _sync_grip_links() -> void:
 	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
-	_left_grip_link = _sync_hand_link(HandSideScript.Value.LEFT, _left_grip_link, attachment_state, _left_hand_anchor, &"LeftGripLink")
-	_right_grip_link = _sync_hand_link(HandSideScript.Value.RIGHT, _right_grip_link, attachment_state, _right_hand_anchor, &"RightGripLink")
+	_left_grip_link = _sync_hand_link(HandSideScript.Value.LEFT, _left_grip_link, attachment_state, _player.get_left_hand_anchor_global_position(), &"LeftGripLink")
+	_right_grip_link = _sync_hand_link(HandSideScript.Value.RIGHT, _right_grip_link, attachment_state, _player.get_right_hand_anchor_global_position(), &"RightGripLink")
 
 func _sync_aim_preview(input_frame: PlayerInputFrameScript) -> void:
 	if not input_frame.has_aim_intent():
@@ -267,14 +240,14 @@ func _sync_aim_preview(input_frame: PlayerInputFrameScript) -> void:
 	var left_visible: bool = not attachment_state.is_attached(HandSideScript.Value.LEFT)
 	var right_visible: bool = not attachment_state.is_attached(HandSideScript.Value.RIGHT)
 
-	_left_aim_preview = _sync_aim_preview_line(_left_aim_preview, left_visible, _left_hand_anchor.global_position, aim_target_position, &"LeftAimPreview")
-	_right_aim_preview = _sync_aim_preview_line(_right_aim_preview, right_visible, _right_hand_anchor.global_position, aim_target_position, &"RightAimPreview")
+	_left_aim_preview = _sync_aim_preview_line(_left_aim_preview, left_visible, _player.get_left_hand_anchor_global_position(), aim_target_position, &"LeftAimPreview")
+	_right_aim_preview = _sync_aim_preview_line(_right_aim_preview, right_visible, _player.get_right_hand_anchor_global_position(), aim_target_position, &"RightAimPreview")
 	_aim_target_marker = _sync_aim_target_marker(_aim_target_marker, left_visible or right_visible, aim_target_position)
 
 func _calculate_aim_preview_target_position(aim_vector: Vector2) -> Vector2:
 	Validation.require_condition(aim_vector != Vector2.ZERO, "Aim preview target requires a non-zero aim vector.")
 	var preview_distance: float = maxf(160.0, climb_tuning.handhold_detection_radius_pixels * 1.75)
-	var hand_midpoint: Vector2 = (_left_hand_anchor.global_position + _right_hand_anchor.global_position) * 0.5
+	var hand_midpoint: Vector2 = (_player.get_left_hand_anchor_global_position() + _player.get_right_hand_anchor_global_position()) * 0.5
 	return hand_midpoint + (aim_vector.normalized() * preview_distance)
 
 func _sync_aim_preview_line(current_line: Line2D, should_show: bool, anchor_position: Vector2, target_position: Vector2, line_name: StringName) -> Line2D:
@@ -314,7 +287,7 @@ func _sync_aim_target_marker(current_marker: Polygon2D, should_show: bool, targe
 	active_marker.global_position = target_position
 	return active_marker
 
-func _sync_hand_link(hand_side: int, current_link: Line2D, attachment_state: HandAttachmentState, hand_anchor: Marker2D, link_name: StringName) -> Line2D:
+func _sync_hand_link(hand_side: int, current_link: Line2D, attachment_state: HandAttachmentState, hand_anchor_position: Vector2, link_name: StringName) -> Line2D:
 	if not attachment_state.is_attached(hand_side):
 		if current_link != null:
 			current_link.queue_free()
@@ -334,12 +307,12 @@ func _sync_hand_link(hand_side: int, current_link: Line2D, attachment_state: Han
 
 	active_link.points = PackedVector2Array([
 		to_local(attachment_state.get_attach_position(hand_side)),
-		to_local(hand_anchor.global_position)
+		to_local(hand_anchor_position)
 	])
 	return active_link
 
 func _record_height() -> void:
-	var height_pixels: float = maxf(0.0, _start_y - _player_body.global_position.y)
+	var height_pixels: float = maxf(0.0, _start_y - _player.get_body_global_position().y)
 	_run_session.record_height(height_pixels / climb_tuning.pixels_per_meter)
 
 func _reset_playground() -> void:
@@ -354,9 +327,7 @@ func _reset_playground() -> void:
 	_active_touch_positions = PackedVector2Array()
 	_run_session = RunSessionScript.new()
 	_run_session.start_run()
-	_player_body.global_position = _reset_anchor.global_position
-	_player_body.linear_velocity = Vector2.ZERO
-	_player_body.angular_velocity = 0.0
+	_player.reset_physics(_reset_anchor.global_position)
 	_camera.global_position = Vector2(
 		_reset_anchor.global_position.x,
 		_reset_anchor.global_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")

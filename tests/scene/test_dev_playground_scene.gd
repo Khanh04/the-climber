@@ -14,9 +14,10 @@ func test_dev_playground_scene_wires_required_nodes_and_starts_run() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    assert_not_null(playground.get_node_or_null("PlayerBody"))
-    assert_not_null(playground.get_node_or_null("PlayerBody/LeftHandAnchor"))
-    assert_not_null(playground.get_node_or_null("PlayerBody/RightHandAnchor"))
+    assert_not_null(playground.get_node_or_null("PlayerCharacter"))
+    assert_not_null(playground.get_player_body_for_test())
+    assert_not_null(playground.get_left_hand_anchor_for_test())
+    assert_not_null(playground.get_right_hand_anchor_for_test())
     assert_not_null(playground.get_node_or_null("ResetAnchor"))
     assert_not_null(playground.get_node_or_null("DevCamera"))
     assert_not_null(playground.get_node_or_null("DebugHud/DebugLabel"))
@@ -58,8 +59,8 @@ func test_dev_playground_starter_holds_are_in_initial_grip_range() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    var left_anchor: Marker2D = playground.get_node("PlayerBody/LeftHandAnchor") as Marker2D
-    var right_anchor: Marker2D = playground.get_node("PlayerBody/RightHandAnchor") as Marker2D
+    var left_anchor: Marker2D = playground.get_left_hand_anchor_for_test()
+    var right_anchor: Marker2D = playground.get_right_hand_anchor_for_test()
     var left_hold: StaticBody2D = playground.get_node("Handholds/HoldStartLeft") as StaticBody2D
     var right_hold: StaticBody2D = playground.get_node("Handholds/HoldStartRight") as StaticBody2D
 
@@ -79,7 +80,7 @@ func test_dev_playground_climb_holds_do_not_block_player_body() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    var player_body: RigidBody2D = playground.get_node("PlayerBody") as RigidBody2D
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
     var left_hold: StaticBody2D = playground.get_node("Handholds/HoldStartLeft") as StaticBody2D
     var right_hold: StaticBody2D = playground.get_node("Handholds/HoldStartRight") as StaticBody2D
     var safe_platform: StaticBody2D = playground.get_node("Handholds/HoldSafePlatform") as StaticBody2D
@@ -101,7 +102,7 @@ func test_dev_playground_has_tall_non_blocking_test_route() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    var player_body: RigidBody2D = playground.get_node("PlayerBody") as RigidBody2D
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
     var non_blocking_hold_count: int = 0
     var highest_hold_y: float = INF
     var lowest_hold_y: float = -INF
@@ -115,7 +116,7 @@ func test_dev_playground_has_tall_non_blocking_test_route() -> void:
             highest_hold_y = minf(highest_hold_y, handhold_body.global_position.y)
             lowest_hold_y = maxf(lowest_hold_y, handhold_body.global_position.y)
 
-    assert_gte(non_blocking_hold_count, 8)
+    assert_gte(non_blocking_hold_count, 18)
     assert_gt(lowest_hold_y - highest_hold_y, 1200.0)
 
 func test_dev_playground_camera_follows_player_upward() -> void:
@@ -127,7 +128,7 @@ func test_dev_playground_camera_follows_player_upward() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    var player_body: RigidBody2D = playground.get_node("PlayerBody") as RigidBody2D
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
     var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
 
     assert_not_null(player_body)
@@ -149,7 +150,7 @@ func test_dev_playground_bottom_screen_fall_routes_through_run_session() -> void
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    var player_body: RigidBody2D = playground.get_node("PlayerBody") as RigidBody2D
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
     var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
 
     assert_not_null(player_body)
@@ -280,7 +281,7 @@ func test_dev_playground_debug_reset_action_works_while_falling() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    var player_body: RigidBody2D = playground.get_node("PlayerBody") as RigidBody2D
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
     var reset_anchor: Marker2D = playground.get_node("ResetAnchor") as Marker2D
 
     assert_not_null(player_body)
