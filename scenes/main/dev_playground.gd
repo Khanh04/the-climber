@@ -31,8 +31,6 @@ var _desktop_input: DesktopDebugInputAdapterScript = DesktopDebugInputAdapterScr
 var _mobile_input: MobileTouchInputAdapterScript = MobileTouchInputAdapterScript.new()
 var _controller: ClimbPrototypeControllerScript
 var _active_touch_positions: PackedVector2Array = PackedVector2Array()
-var _left_grip_link: Line2D = null
-var _right_grip_link: Line2D = null
 var _left_aim_preview: Line2D = null
 var _right_aim_preview: Line2D = null
 var _aim_target_marker: Polygon2D = null
@@ -71,7 +69,6 @@ func _physics_process(delta: float) -> void:
 	var result: ClimbPrototypeFrameResultScript = _controller.apply_input_frame(input_frame, left_target, right_target, delta)
 
 	_player.apply_frame_motion(result, _controller.get_attachment_state())
-	_sync_grip_links()
 	_sync_aim_preview(input_frame)
 	_record_height()
 
@@ -113,7 +110,7 @@ func get_right_hand_anchor_for_test() -> Marker2D:
 	return _player.get_right_hand_anchor()
 
 func sync_grip_links_for_test() -> void:
-	_sync_grip_links()
+	_player.sync_runtime_grip_links(_controller.get_attachment_state())
 
 func sync_aim_preview_for_test(input_frame: PlayerInputFrameScript) -> void:
 	_sync_aim_preview(input_frame)
@@ -202,7 +199,6 @@ func _resolve_bottom_screen_fall_if_needed() -> bool:
 		return false
 
 	_controller.get_attachment_state().release_all()
-	_clear_grip_links()
 	_player.enter_falling(PlayerPhysicsModeTransitionsScript.Reason.FALL_DETECTED)
 	_run_session.begin_fall()
 	_run_session.resolve_fall(RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
@@ -222,11 +218,6 @@ func _find_nearest_handhold(anchor_position: Vector2) -> RefCounted:
 			nearest_distance = distance
 
 	return nearest_target
-
-func _sync_grip_links() -> void:
-	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
-	_left_grip_link = _sync_hand_link(HandSideScript.Value.LEFT, _left_grip_link, attachment_state, _player.get_left_hand_anchor_global_position(), &"LeftGripLink")
-	_right_grip_link = _sync_hand_link(HandSideScript.Value.RIGHT, _right_grip_link, attachment_state, _player.get_right_hand_anchor_global_position(), &"RightGripLink")
 
 func _sync_aim_preview(input_frame: PlayerInputFrameScript) -> void:
 	if not input_frame.has_aim_intent():
@@ -287,36 +278,11 @@ func _sync_aim_target_marker(current_marker: Polygon2D, should_show: bool, targe
 	active_marker.global_position = target_position
 	return active_marker
 
-func _sync_hand_link(hand_side: int, current_link: Line2D, attachment_state: HandAttachmentState, hand_anchor_position: Vector2, link_name: StringName) -> Line2D:
-	if not attachment_state.is_attached(hand_side):
-		if current_link != null:
-			current_link.queue_free()
-		return null
-
-	var active_link: Line2D = current_link
-	if active_link == null:
-		active_link = Line2D.new()
-		active_link.name = link_name
-		active_link.width = 4.0
-		active_link.default_color = Color(0.72, 0.9, 1.0, 0.8)
-		add_child(active_link)
-
-	var hold_node: Node = get_node_or_null(attachment_state.get_hold_path(hand_side))
-	Validation.require_condition(hold_node != null, "DevPlayground grip link requires an attached handhold node.")
-	Validation.require_condition(hold_node is Node2D, "DevPlayground grip link requires a Node2D handhold.")
-
-	active_link.points = PackedVector2Array([
-		to_local(attachment_state.get_attach_position(hand_side)),
-		to_local(hand_anchor_position)
-	])
-	return active_link
-
 func _record_height() -> void:
 	var height_pixels: float = maxf(0.0, _start_y - _player.get_body_global_position().y)
 	_run_session.record_height(height_pixels / climb_tuning.pixels_per_meter)
 
 func _reset_playground() -> void:
-	_clear_grip_links()
 	_clear_aim_preview()
 
 	if _controller != null:
@@ -344,15 +310,6 @@ func _get_climb_tuning_float(property_name: StringName) -> float:
 
 	Validation.require_condition(false, "Climb tuning property %s must be numeric." % String(property_name))
 	return 0.0
-
-func _clear_grip_links() -> void:
-	if _left_grip_link != null:
-		_left_grip_link.queue_free()
-		_left_grip_link = null
-
-	if _right_grip_link != null:
-		_right_grip_link.queue_free()
-		_right_grip_link = null
 
 func _clear_aim_preview() -> void:
 	if _left_aim_preview != null:

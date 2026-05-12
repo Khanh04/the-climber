@@ -202,7 +202,7 @@ func test_dev_playground_left_grip_creates_and_releases_runtime_link() -> void:
     )
     playground.sync_grip_links_for_test()
 
-    var left_link: Line2D = playground.get_node_or_null("LeftGripLink") as Line2D
+    var left_link: Line2D = playground.get_player_for_test().get_left_runtime_grip_link()
     assert_not_null(left_link)
     assert_eq(left_link.get_point_count(), 2)
 
@@ -210,7 +210,7 @@ func test_dev_playground_left_grip_creates_and_releases_runtime_link() -> void:
     playground.sync_grip_links_for_test()
     await get_tree().process_frame
 
-    assert_null(playground.get_node_or_null("LeftGripLink"))
+    assert_null(playground.get_player_for_test().get_left_runtime_grip_link())
 
 func test_dev_playground_aim_preview_shows_for_unattached_hands_when_aiming() -> void:
     var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")

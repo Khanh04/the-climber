@@ -4,6 +4,7 @@ extends Node2D
 const ClimbPrototypeFrameResultScript = preload("res://src/gameplay/player/climb_prototype_frame_result.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
 const HandAttachmentStateScript = preload("res://src/gameplay/player/hand_attachment_state.gd")
+const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const PlayerMotionControllerScript = preload("res://src/gameplay/player/player_motion_controller.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
 const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
@@ -16,8 +17,14 @@ var _player_body: RigidBody2D
 var _body_collision_shape: CollisionShape2D
 var _left_hand_anchor: Marker2D
 var _right_hand_anchor: Marker2D
+var _left_hand_cosmetic_root: Node2D
+var _right_hand_cosmetic_root: Node2D
 var _left_grip_joint_anchor: Marker2D
 var _right_grip_joint_anchor: Marker2D
+var _left_runtime_grip_joint: PinJoint2D = null
+var _right_runtime_grip_joint: PinJoint2D = null
+var _left_runtime_grip_link: Line2D = null
+var _right_runtime_grip_link: Line2D = null
 var _debug_anchors: Node2D
 var _visual_root: Node2D
 var _cosmetic_visual_root: Node2D
@@ -44,18 +51,76 @@ func apply_frame_motion(frame_result: RefCounted, attachment_state: RefCounted) 
 	Validation.require_condition(attachment_state is HandAttachmentStateScript, "PlayerCharacter requires HandAttachmentState.")
 	Validation.require_condition(_motion_controller != null, "PlayerCharacter requires a motion controller.")
 
+	var typed_attachment_state: HandAttachmentStateScript = attachment_state
+
 	_physics_mode = PlayerPhysicsModeTransitionsScript.mode_after_frame(_physics_mode, frame_result)
 	if _physics_mode != PlayerPhysicsModeScript.controlled_climb():
+		clear_runtime_grip_joints()
+		clear_runtime_grip_links()
 		return
 
-	_motion_controller.apply_frame_motion(_player_body, attachment_state, frame_result)
+	sync_runtime_grip_joints(typed_attachment_state)
+	sync_runtime_grip_links(typed_attachment_state)
+	_motion_controller.apply_frame_motion(_player_body, typed_attachment_state, frame_result)
+
+func sync_runtime_grip_joints(attachment_state: RefCounted) -> void:
+	Validation.require_condition(attachment_state != null, "PlayerCharacter requires hand attachment state to sync runtime grip joints.")
+	Validation.require_condition(attachment_state is HandAttachmentStateScript, "PlayerCharacter requires HandAttachmentState to sync runtime grip joints.")
+
+	var typed_attachment_state: HandAttachmentStateScript = attachment_state
+	_left_runtime_grip_joint = _sync_runtime_grip_joint(
+		HandSideScript.Value.LEFT,
+		_left_runtime_grip_joint,
+		_left_grip_joint_anchor,
+		typed_attachment_state,
+		&"LeftRuntimeGripJoint"
+	)
+	_right_runtime_grip_joint = _sync_runtime_grip_joint(
+		HandSideScript.Value.RIGHT,
+		_right_runtime_grip_joint,
+		_right_grip_joint_anchor,
+		typed_attachment_state,
+		&"RightRuntimeGripJoint"
+	)
+
+func clear_runtime_grip_joints() -> void:
+	_left_runtime_grip_joint = _clear_runtime_grip_joint(_left_runtime_grip_joint)
+	_right_runtime_grip_joint = _clear_runtime_grip_joint(_right_runtime_grip_joint)
+
+func sync_runtime_grip_links(attachment_state: RefCounted) -> void:
+	Validation.require_condition(attachment_state != null, "PlayerCharacter requires hand attachment state to sync runtime grip links.")
+	Validation.require_condition(attachment_state is HandAttachmentStateScript, "PlayerCharacter requires HandAttachmentState to sync runtime grip links.")
+
+	var typed_attachment_state: HandAttachmentStateScript = attachment_state
+	_left_runtime_grip_link = _sync_runtime_grip_link(
+		HandSideScript.Value.LEFT,
+		_left_runtime_grip_link,
+		_left_hand_anchor,
+		typed_attachment_state,
+		&"LeftGripLink"
+	)
+	_right_runtime_grip_link = _sync_runtime_grip_link(
+		HandSideScript.Value.RIGHT,
+		_right_runtime_grip_link,
+		_right_hand_anchor,
+		typed_attachment_state,
+		&"RightGripLink"
+	)
+
+func clear_runtime_grip_links() -> void:
+	_left_runtime_grip_link = _clear_runtime_grip_link(_left_runtime_grip_link)
+	_right_runtime_grip_link = _clear_runtime_grip_link(_right_runtime_grip_link)
 
 func enter_falling(reason: int) -> void:
 	PlayerPhysicsModeTransitionsScript.assert_transition_allowed(_physics_mode, PlayerPhysicsModeScript.falling_ragdoll(), reason)
 	_physics_mode = PlayerPhysicsModeScript.falling_ragdoll()
+	clear_runtime_grip_joints()
+	clear_runtime_grip_links()
 
 func reset_physics(global_position_value: Vector2) -> void:
 	_physics_mode = PlayerPhysicsModeTransitionsScript.reset_mode(_physics_mode)
+	clear_runtime_grip_joints()
+	clear_runtime_grip_links()
 	_player_body.global_position = global_position_value
 	_player_body.linear_velocity = Vector2.ZERO
 	_player_body.angular_velocity = 0.0
@@ -90,6 +155,12 @@ func get_left_hand_anchor_global_position() -> Vector2:
 func get_right_hand_anchor_global_position() -> Vector2:
 	return _right_hand_anchor.global_position
 
+func get_left_hand_cosmetic_root() -> Node2D:
+	return _left_hand_cosmetic_root
+
+func get_right_hand_cosmetic_root() -> Node2D:
+	return _right_hand_cosmetic_root
+
 func get_visual_root() -> Node2D:
 	return _visual_root
 
@@ -105,9 +176,23 @@ func get_left_grip_joint_anchor() -> Marker2D:
 func get_right_grip_joint_anchor() -> Marker2D:
 	return _right_grip_joint_anchor
 
+func get_left_runtime_grip_joint() -> PinJoint2D:
+	return _left_runtime_grip_joint
+
+func get_right_runtime_grip_joint() -> PinJoint2D:
+	return _right_runtime_grip_joint
+
+func get_left_runtime_grip_link() -> Line2D:
+	return _left_runtime_grip_link
+
+func get_right_runtime_grip_link() -> Line2D:
+	return _right_runtime_grip_link
+
 func assert_visual_roots_physics_neutral() -> void:
 	_assert_node_tree_has_no_physics_nodes(_visual_root)
 	_assert_node_tree_has_no_physics_nodes(_cosmetic_visual_root)
+	_assert_node_tree_has_no_physics_nodes(_left_hand_cosmetic_root)
+	_assert_node_tree_has_no_physics_nodes(_right_hand_cosmetic_root)
 
 func _validate_required_state() -> void:
 	Validation.require_condition(climb_tuning != null, "PlayerCharacter requires climb tuning.")
@@ -119,6 +204,8 @@ func _validate_required_state() -> void:
 	_body_collision_shape = _require_collision_shape_2d("BaseSkeleton/PlayerBody/BodyCollisionShape", "PlayerCharacter requires BodyCollisionShape.")
 	_left_hand_anchor = _require_marker_2d("BaseSkeleton/PlayerBody/LeftHandAnchor", "PlayerCharacter requires LeftHandAnchor.")
 	_right_hand_anchor = _require_marker_2d("BaseSkeleton/PlayerBody/RightHandAnchor", "PlayerCharacter requires RightHandAnchor.")
+	_left_hand_cosmetic_root = _require_node_2d("BaseSkeleton/PlayerBody/LeftHandAnchor/LeftHandCosmeticRoot", "PlayerCharacter requires LeftHandCosmeticRoot.")
+	_right_hand_cosmetic_root = _require_node_2d("BaseSkeleton/PlayerBody/RightHandAnchor/RightHandCosmeticRoot", "PlayerCharacter requires RightHandCosmeticRoot.")
 	_left_grip_joint_anchor = _require_marker_2d("GripJoints/LeftGripJointAnchor", "PlayerCharacter requires LeftGripJointAnchor.")
 	_right_grip_joint_anchor = _require_marker_2d("GripJoints/RightGripJointAnchor", "PlayerCharacter requires RightGripJointAnchor.")
 	_debug_anchors = _require_node_2d("DebugAnchors", "PlayerCharacter requires DebugAnchors.")
@@ -129,6 +216,8 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_body_collision_shape.get_parent() == _player_body, "PlayerCharacter gameplay collision must belong to PlayerBody.")
 	Validation.require_condition(_player_body.get_parent() == _base_skeleton, "PlayerCharacter PlayerBody must belong to BaseSkeleton.")
 	Validation.require_condition(_torso_bone.get_parent() == _base_skeleton, "PlayerCharacter TorsoBone must belong to BaseSkeleton.")
+	Validation.require_condition(_left_hand_cosmetic_root.get_parent() == _left_hand_anchor, "PlayerCharacter LeftHandCosmeticRoot must belong to LeftHandAnchor.")
+	Validation.require_condition(_right_hand_cosmetic_root.get_parent() == _right_hand_anchor, "PlayerCharacter RightHandCosmeticRoot must belong to RightHandAnchor.")
 	assert_visual_roots_physics_neutral()
 
 func _require_skeleton_2d(node_path: NodePath, message: String) -> Skeleton2D:
@@ -166,6 +255,90 @@ func _require_node_2d(node_path: NodePath, message: String) -> Node2D:
 	Validation.require_condition(node != null, message)
 	Validation.require_condition(node is Node2D, "%s Expected Node2D." % message)
 	return node as Node2D
+
+func _sync_runtime_grip_joint(
+	hand_side: int,
+	current_joint: PinJoint2D,
+	joint_anchor: Marker2D,
+	attachment_state: HandAttachmentStateScript,
+	joint_name: StringName
+) -> PinJoint2D:
+	if not attachment_state.is_attached(hand_side):
+		return _clear_runtime_grip_joint(current_joint)
+
+	var hold_node: Node = _resolve_attached_hold_node(attachment_state.get_hold_path(hand_side))
+	Validation.require_condition(hold_node != null, "PlayerCharacter runtime grip joint requires an attached handhold node.")
+	Validation.require_condition(hold_node is PhysicsBody2D, "PlayerCharacter runtime grip joint requires a PhysicsBody2D handhold.")
+
+	var typed_hold_node: PhysicsBody2D = hold_node
+	var active_joint: PinJoint2D = current_joint
+	if active_joint != null:
+		var expected_node_b: NodePath = active_joint.get_path_to(typed_hold_node)
+		if active_joint.node_b != expected_node_b:
+			active_joint = _clear_runtime_grip_joint(active_joint)
+
+	if active_joint == null:
+		active_joint = PinJoint2D.new()
+		active_joint.name = joint_name
+		active_joint.disable_collision = true
+		joint_anchor.add_child(active_joint)
+
+	active_joint.global_position = attachment_state.get_attach_position(hand_side)
+	active_joint.node_a = active_joint.get_path_to(_player_body)
+	active_joint.node_b = active_joint.get_path_to(typed_hold_node)
+	return active_joint
+
+func _clear_runtime_grip_joint(runtime_grip_joint: PinJoint2D) -> PinJoint2D:
+	if runtime_grip_joint != null:
+		runtime_grip_joint.queue_free()
+
+	return null
+
+func _sync_runtime_grip_link(
+	hand_side: int,
+	current_link: Line2D,
+	hand_anchor: Marker2D,
+	attachment_state: HandAttachmentStateScript,
+	link_name: StringName
+) -> Line2D:
+	if not attachment_state.is_attached(hand_side):
+		return _clear_runtime_grip_link(current_link)
+
+	var hold_node: Node = _resolve_attached_hold_node(attachment_state.get_hold_path(hand_side))
+	Validation.require_condition(hold_node != null, "PlayerCharacter runtime grip link requires an attached handhold node.")
+	Validation.require_condition(hold_node is Node2D, "PlayerCharacter runtime grip link requires a Node2D handhold.")
+
+	var active_link: Line2D = current_link
+	if active_link == null:
+		active_link = Line2D.new()
+		active_link.name = link_name
+		active_link.width = 4.0
+		active_link.default_color = Color(0.72, 0.9, 1.0, 0.8)
+		add_child(active_link)
+
+	active_link.points = PackedVector2Array([
+		to_local(attachment_state.get_attach_position(hand_side)),
+		to_local(hand_anchor.global_position)
+	])
+	return active_link
+
+func _clear_runtime_grip_link(runtime_grip_link: Line2D) -> Line2D:
+	if runtime_grip_link != null:
+		runtime_grip_link.queue_free()
+
+	return null
+
+func _resolve_attached_hold_node(hold_path: NodePath) -> Node:
+	Validation.require_condition(not hold_path.is_empty(), "PlayerCharacter attached hold path cannot be empty.")
+
+	var hold_node: Node = get_node_or_null(hold_path)
+	if hold_node != null:
+		return hold_node
+
+	if get_parent() != null:
+		return get_parent().get_node_or_null(hold_path)
+
+	return null
 
 func _assert_node_tree_has_no_physics_nodes(root: Node) -> void:
 	Validation.require_condition(root != null, "Physics-neutral visual validation requires a root node.")

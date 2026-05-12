@@ -1,9 +1,9 @@
-[gd_scene load_steps=9 format=3]
+[gd_scene format=3 uid="uid://crdl3mj8qeugi"]
 
-[ext_resource type="Script" path="res://scenes/main/dev_playground.gd" id="1_dev"]
-[ext_resource type="Script" path="res://resources/config/climb_prototype_tuning.gd" id="2_climb"]
-[ext_resource type="Script" path="res://resources/config/stamina_tuning.gd" id="3_stamina"]
-[ext_resource type="PackedScene" path="res://scenes/player/player_character.tscn" id="4_player"]
+[ext_resource type="Script" uid="uid://bbcr6elll4por" path="res://scenes/main/dev_playground.gd" id="1_dev"]
+[ext_resource type="Script" uid="uid://co0omgi88wjup" path="res://resources/config/climb_prototype_tuning.gd" id="2_climb"]
+[ext_resource type="Script" uid="uid://coalyt3xlftcd" path="res://resources/config/stamina_tuning.gd" id="3_stamina"]
+[ext_resource type="PackedScene" uid="uid://1a8vb0lql3ln" path="res://scenes/player/player_character.tscn" id="4_player"]
 
 [sub_resource type="Resource" id="Resource_climb"]
 script = ExtResource("2_climb")
@@ -18,19 +18,18 @@ size = Vector2(128, 34)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_floor"]
 size = Vector2(1200, 80)
 
-[node name="DevPlayground" type="Node2D"]
+[node name="DevPlayground" type="Node2D" unique_id=15343070]
 script = ExtResource("1_dev")
 climb_tuning = SubResource("Resource_climb")
 stamina_tuning = SubResource("Resource_stamina")
 
-[node name="DevCamera" type="Camera2D" parent="."]
+[node name="DevCamera" type="Camera2D" parent="." unique_id=173797974]
 unique_name_in_owner = true
 position = Vector2(540, 1340)
-enabled = true
 
-[node name="DebugHud" type="CanvasLayer" parent="."]
+[node name="DebugHud" type="CanvasLayer" parent="." unique_id=252631966]
 
-[node name="DebugLabel" type="Label" parent="DebugHud"]
+[node name="DebugLabel" type="Label" parent="DebugHud" unique_id=355149956]
 unique_name_in_owner = true
 offset_left = 24.0
 offset_top = 24.0
@@ -38,280 +37,280 @@ offset_right = 620.0
 offset_bottom = 72.0
 text = "Aim: (0, 0)  Attached: 0  Stamina: 0.0  State: 0"
 
-[node name="ResetAnchor" type="Marker2D" parent="."]
+[node name="ResetAnchor" type="Marker2D" parent="." unique_id=2064874863]
 unique_name_in_owner = true
 position = Vector2(540, 1500)
 
-[node name="PlayerCharacter" parent="." instance=ExtResource("4_player")]
+[node name="PlayerCharacter" parent="." unique_id=2062018110 instance=ExtResource("4_player")]
 unique_name_in_owner = true
 position = Vector2(540, 1500)
 
-[node name="Handholds" type="Node2D" parent="."]
+[node name="Handholds" type="Node2D" parent="." unique_id=142891664]
 
-[node name="HoldSafePlatform" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldSafePlatform" type="StaticBody2D" parent="Handholds" unique_id=1100838222 groups=["handhold"]]
 position = Vector2(540, 1557)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldSafePlatform"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldSafePlatform" unique_id=467169153]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldSafePlatform"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldSafePlatform" unique_id=245411791]
 color = Color(0.34, 0.78, 0.48, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldBottomLeft" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldBottomLeft" type="StaticBody2D" parent="Handholds" unique_id=134443766 groups=["handhold"]]
 position = Vector2(390, 1680)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldBottomLeft"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldBottomLeft" unique_id=287166556]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldBottomLeft"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldBottomLeft" unique_id=630230376]
 color = Color(0.34, 0.78, 0.48, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldBottomRight" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldBottomRight" type="StaticBody2D" parent="Handholds" unique_id=918479919 groups=["handhold"]]
 position = Vector2(690, 1680)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldBottomRight"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldBottomRight" unique_id=1335380198]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldBottomRight"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldBottomRight" unique_id=1249159251]
 color = Color(0.34, 0.78, 0.48, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldStartLeft" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldStartLeft" type="StaticBody2D" parent="Handholds" unique_id=2010807902 groups=["handhold"]]
 position = Vector2(450, 1424)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldStartLeft"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldStartLeft" unique_id=1149529805]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldStartLeft"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldStartLeft" unique_id=645024572]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldStartRight" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldStartRight" type="StaticBody2D" parent="Handholds" unique_id=2126555711 groups=["handhold"]]
 position = Vector2(630, 1424)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldStartRight"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldStartRight" unique_id=1653748366]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldStartRight"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldStartRight" unique_id=576891859]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldAssistCenterA" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldAssistCenterA" type="StaticBody2D" parent="Handholds" unique_id=896055614 groups=["handhold"]]
 position = Vector2(540, 1325)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistCenterA"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistCenterA" unique_id=271649785]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistCenterA"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistCenterA" unique_id=403803581]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldAssistLeftA" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldAssistLeftA" type="StaticBody2D" parent="Handholds" unique_id=368147787 groups=["handhold"]]
 position = Vector2(405, 1235)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistLeftA"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistLeftA" unique_id=682424535]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistLeftA"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistLeftA" unique_id=1089717597]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldAssistRightA" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldAssistRightA" type="StaticBody2D" parent="Handholds" unique_id=1873140298 groups=["handhold"]]
 position = Vector2(675, 1235)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistRightA"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistRightA" unique_id=692247388]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistRightA"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistRightA" unique_id=519763492]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldAssistCenterB" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldAssistCenterB" type="StaticBody2D" parent="Handholds" unique_id=1516782544 groups=["handhold"]]
 position = Vector2(540, 1070)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistCenterB"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistCenterB" unique_id=928542488]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistCenterB"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistCenterB" unique_id=1298001683]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldMidLeft" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldMidLeft" type="StaticBody2D" parent="Handholds" unique_id=332996791 groups=["handhold"]]
 position = Vector2(430, 1150)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldMidLeft"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldMidLeft" unique_id=1891086950]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldMidLeft"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldMidLeft" unique_id=1194323111]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldMidRight" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldMidRight" type="StaticBody2D" parent="Handholds" unique_id=2040445971 groups=["handhold"]]
 position = Vector2(650, 980)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldMidRight"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldMidRight" unique_id=1845631176]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldMidRight"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldMidRight" unique_id=677332898]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldTop" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldTop" type="StaticBody2D" parent="Handholds" unique_id=59457369 groups=["handhold"]]
 position = Vector2(540, 780)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldTop"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldTop" unique_id=444639627]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldTop"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldTop" unique_id=212032192]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldAssistLeftB" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldAssistLeftB" type="StaticBody2D" parent="Handholds" unique_id=951507903 groups=["handhold"]]
 position = Vector2(410, 900)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistLeftB"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistLeftB" unique_id=1076695997]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistLeftB"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistLeftB" unique_id=1595871811]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldAssistRightB" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldAssistRightB" type="StaticBody2D" parent="Handholds" unique_id=2140575594 groups=["handhold"]]
 position = Vector2(670, 850)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistRightB"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistRightB" unique_id=1052184685]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistRightB"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistRightB" unique_id=867393100]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldAssistCenterC" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldAssistCenterC" type="StaticBody2D" parent="Handholds" unique_id=290269791 groups=["handhold"]]
 position = Vector2(540, 700)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistCenterC"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistCenterC" unique_id=1035124545]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistCenterC"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistCenterC" unique_id=804506975]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldRouteLeftA" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldRouteLeftA" type="StaticBody2D" parent="Handholds" unique_id=1158356074 groups=["handhold"]]
 position = Vector2(420, 600)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldRouteLeftA"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldRouteLeftA" unique_id=474652576]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldRouteLeftA"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldRouteLeftA" unique_id=1581477354]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldAssistLeftC" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldAssistLeftC" type="StaticBody2D" parent="Handholds" unique_id=644716104 groups=["handhold"]]
 position = Vector2(405, 520)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistLeftC"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistLeftC" unique_id=1924499417]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistLeftC"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistLeftC" unique_id=1215517774]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldRouteRightA" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldRouteRightA" type="StaticBody2D" parent="Handholds" unique_id=1702376342 groups=["handhold"]]
 position = Vector2(665, 430)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldRouteRightA"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldRouteRightA" unique_id=190547102]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldRouteRightA"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldRouteRightA" unique_id=1575439816]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldAssistCenterD" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldAssistCenterD" type="StaticBody2D" parent="Handholds" unique_id=2083311650 groups=["handhold"]]
 position = Vector2(540, 345)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistCenterD"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistCenterD" unique_id=17823601]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistCenterD"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistCenterD" unique_id=1349341361]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldRouteLeftB" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldRouteLeftB" type="StaticBody2D" parent="Handholds" unique_id=615482874 groups=["handhold"]]
 position = Vector2(455, 250)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldRouteLeftB"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldRouteLeftB" unique_id=1405264911]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldRouteLeftB"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldRouteLeftB" unique_id=1818133460]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldAssistRightC" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldAssistRightC" type="StaticBody2D" parent="Handholds" unique_id=24211231 groups=["handhold"]]
 position = Vector2(675, 160)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistRightC"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldAssistRightC" unique_id=1513528306]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistRightC"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldAssistRightC" unique_id=936342930]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldRouteFinish" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+[node name="HoldRouteFinish" type="StaticBody2D" parent="Handholds" unique_id=196303064 groups=["handhold"]]
 position = Vector2(590, 70)
 collision_layer = 2
 collision_mask = 0
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldRouteFinish"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldRouteFinish" unique_id=556065661]
 shape = SubResource("RectangleShape2D_hold")
 
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldRouteFinish"]
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldRouteFinish" unique_id=790652116]
 color = Color(0.92, 0.72, 0.23, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="Floor" type="StaticBody2D" parent="."]
+[node name="Floor" type="StaticBody2D" parent="." unique_id=713653130]
 position = Vector2(540, 1840)
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor"]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Floor" unique_id=1306148472]
 shape = SubResource("RectangleShape2D_floor")
 
-[node name="Visual" type="Polygon2D" parent="Floor"]
+[node name="Visual" type="Polygon2D" parent="Floor" unique_id=204315343]
 color = Color(0.18, 0.2, 0.22, 1)
 polygon = PackedVector2Array(-600, -40, 600, -40, 600, 40, -600, 40)
