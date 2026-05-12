@@ -7,6 +7,8 @@ var _left_attached: bool = false
 var _right_attached: bool = false
 var _left_hold_id: StringName = &""
 var _right_hold_id: StringName = &""
+var _left_hold_path: NodePath = NodePath()
+var _right_hold_path: NodePath = NodePath()
 var _left_position: Vector2 = Vector2.ZERO
 var _right_position: Vector2 = Vector2.ZERO
 
@@ -45,19 +47,30 @@ func get_attach_position(hand_side: int) -> Vector2:
 
     return _right_position
 
-func attach(hand_side: int, hold_id: StringName, attach_position: Vector2) -> void:
+func get_hold_path(hand_side: int) -> NodePath:
+    Validation.require_condition(is_attached(hand_side), "Cannot read hold path for an unattached hand.")
+
+    if hand_side == HandSideScript.Value.LEFT:
+        return _left_hold_path
+
+    return _right_hold_path
+
+func attach(hand_side: int, hold_id: StringName, attach_position: Vector2, hold_path: NodePath) -> void:
     HandSideScript.assert_valid(hand_side)
     Validation.require_condition(not String(hold_id).is_empty(), "Hand attachment requires a hold id.")
+    Validation.require_condition(not hold_path.is_empty(), "Hand attachment requires a hold node path.")
     Validation.require_condition(not is_attached(hand_side), "Cannot attach a hand that is already attached.")
 
     if hand_side == HandSideScript.Value.LEFT:
         _left_attached = true
         _left_hold_id = hold_id
+        _left_hold_path = hold_path
         _left_position = attach_position
         return
 
     _right_attached = true
     _right_hold_id = hold_id
+    _right_hold_path = hold_path
     _right_position = attach_position
 
 func release(hand_side: int) -> void:
@@ -67,11 +80,13 @@ func release(hand_side: int) -> void:
     if hand_side == HandSideScript.Value.LEFT:
         _left_attached = false
         _left_hold_id = &""
+        _left_hold_path = NodePath()
         _left_position = Vector2.ZERO
         return
 
     _right_attached = false
     _right_hold_id = &""
+    _right_hold_path = NodePath()
     _right_position = Vector2.ZERO
 
 
@@ -80,5 +95,7 @@ func release_all() -> void:
     _right_attached = false
     _left_hold_id = &""
     _right_hold_id = &""
+    _left_hold_path = NodePath()
+    _right_hold_path = NodePath()
     _left_position = Vector2.ZERO
     _right_position = Vector2.ZERO

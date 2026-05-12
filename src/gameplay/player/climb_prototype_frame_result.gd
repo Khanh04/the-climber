@@ -1,12 +1,12 @@
 class_name ClimbPrototypeFrameResult
 extends RefCounted
 
-var impulse: Vector2
+var control_force: Vector2
 var stamina_depleted_now: bool
 var attached_hand_count: int
 
-func _init(impulse_value: Vector2, stamina_depleted_now_value: bool, attached_hand_count_value: int) -> void:
-    impulse = impulse_value
+func _init(control_force_value: Vector2, stamina_depleted_now_value: bool, attached_hand_count_value: int) -> void:
+    control_force = control_force_value
     stamina_depleted_now = stamina_depleted_now_value
     attached_hand_count = attached_hand_count_value
     assert_valid()

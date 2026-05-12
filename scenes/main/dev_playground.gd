@@ -21,6 +21,7 @@ const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
 @onready var _left_hand_anchor: Marker2D = %LeftHandAnchor
 @onready var _right_hand_anchor: Marker2D = %RightHandAnchor
 @onready var _reset_anchor: Marker2D = %ResetAnchor
+@onready var _debug_label: Label = %DebugLabel
 
 var _run_session: RunSessionScript = RunSessionScript.new()
 var _stamina: StaminaRuntimeScript
@@ -28,6 +29,8 @@ var _desktop_input: DesktopDebugInputAdapterScript = DesktopDebugInputAdapterScr
 var _mobile_input: MobileTouchInputAdapterScript = MobileTouchInputAdapterScript.new()
 var _controller: ClimbPrototypeControllerScript
 var _active_touch_positions: PackedVector2Array = PackedVector2Array()
+var _left_grip_joint: PinJoint2D = null
+var _right_grip_joint: PinJoint2D = null
 var _start_y: float = 0.0
 
 func _ready() -> void:
@@ -39,9 +42,11 @@ func _ready() -> void:
 
 func _physics_process(delta: float) -> void:
 	var input_frame: PlayerInputFrameScript = _create_input_frame()
+	_update_debug_label(input_frame)
 
 	if input_frame.has_debug_reset_intent():
 		_reset_playground()
+		_update_debug_label(input_frame)
 		return
 
 	if _run_session.get_state() != RunStateScript.Value.CLIMBING:
@@ -51,6 +56,7 @@ func _physics_process(delta: float) -> void:
 	var right_target: RefCounted = _find_nearest_handhold(_right_hand_anchor.global_position)
 	var result: ClimbPrototypeFrameResultScript = _controller.apply_input_frame(input_frame, left_target, right_target, delta)
 
+	_sync_grip_joints()
 	_apply_prototype_motion(result)
 	_record_height()
 
@@ -71,6 +77,9 @@ func get_run_session_for_test() -> RunSessionScript:
 func get_controller_for_test() -> ClimbPrototypeControllerScript:
 	return _controller
 
+func sync_grip_joints_for_test() -> void:
+	_sync_grip_joints()
+
 func _validate_required_state() -> void:
 	Validation.require_condition(climb_tuning != null, "DevPlayground requires climb tuning.")
 	Validation.require_condition(stamina_tuning != null, "DevPlayground requires stamina tuning.")
@@ -80,6 +89,7 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_left_hand_anchor != null, "DevPlayground requires LeftHandAnchor.")
 	Validation.require_condition(_right_hand_anchor != null, "DevPlayground requires RightHandAnchor.")
 	Validation.require_condition(_reset_anchor != null, "DevPlayground requires ResetAnchor.")
+	Validation.require_condition(_debug_label != null, "DevPlayground requires DebugLabel.")
 	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "DevPlayground requires at least one handhold.")
 
 func _create_input_frame() -> PlayerInputFrameScript:
@@ -107,6 +117,27 @@ func _get_debug_aim_vector() -> Vector2:
 
 	return aim_vector
 
+func _update_debug_label(input_frame: PlayerInputFrameScript) -> void:
+	var aim_vector: Vector2 = Vector2.ZERO
+	if input_frame.has_aim_intent():
+		var aim_intent: Object = input_frame.aim_intent
+		aim_vector = aim_intent.get("aim_vector")
+
+	var attached_hand_count: int = 0
+	if _controller != null:
+		attached_hand_count = _controller.get_attachment_state().get_attached_hand_count()
+
+	var stamina_seconds: float = 0.0
+	if _stamina != null:
+		stamina_seconds = _stamina.get_current_stamina_seconds()
+
+	_debug_label.text = "Aim: %s  Attached: %d  Stamina: %.1f  State: %d" % [
+		str(aim_vector),
+		attached_hand_count,
+		stamina_seconds,
+		_run_session.get_state()
+	]
+
 func _find_nearest_handhold(anchor_position: Vector2) -> RefCounted:
 	var nearest_target: HandholdTargetScript = null
 	var nearest_distance: float = climb_tuning.handhold_detection_radius_pixels
@@ -117,26 +148,55 @@ func _find_nearest_handhold(anchor_position: Vector2) -> RefCounted:
 		var distance: float = anchor_position.distance_to(handhold_node.global_position)
 
 		if distance <= nearest_distance:
-			nearest_target = HandholdTargetScript.new(StringName(handhold_node.name), handhold_node.global_position)
+			nearest_target = HandholdTargetScript.new(StringName(handhold_node.name), handhold_node.global_position, handhold_node.get_path())
 			nearest_distance = distance
 
 	return nearest_target
 
 func _apply_prototype_motion(result: ClimbPrototypeFrameResultScript) -> void:
-	if result.impulse != Vector2.ZERO:
-		_player_body.apply_central_impulse(result.impulse)
+	if result.control_force != Vector2.ZERO:
+		_player_body.apply_central_force(result.control_force)
 
 	if _player_body.linear_velocity.length() > climb_tuning.max_player_speed_pixels_per_second:
 		_player_body.linear_velocity = _player_body.linear_velocity.normalized() * climb_tuning.max_player_speed_pixels_per_second
 
-	if result.attached_hand_count > 0 and result.impulse == Vector2.ZERO:
-		_player_body.linear_velocity = Vector2.ZERO
+	if result.attached_hand_count == 2:
+		_player_body.linear_velocity *= climb_tuning.two_hand_velocity_damping
+
+func _sync_grip_joints() -> void:
+	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
+	_left_grip_joint = _sync_hand_joint(HandSideScript.Value.LEFT, _left_grip_joint, attachment_state, &"LeftGripJoint")
+	_right_grip_joint = _sync_hand_joint(HandSideScript.Value.RIGHT, _right_grip_joint, attachment_state, &"RightGripJoint")
+
+func _sync_hand_joint(hand_side: int, current_joint: PinJoint2D, attachment_state: HandAttachmentState, joint_name: StringName) -> PinJoint2D:
+	if not attachment_state.is_attached(hand_side):
+		if current_joint != null:
+			current_joint.queue_free()
+		return null
+
+	if current_joint != null:
+		return current_joint
+
+	var hold_node: Node = get_node_or_null(attachment_state.get_hold_path(hand_side))
+	Validation.require_condition(hold_node != null, "DevPlayground grip joint requires an attached handhold node.")
+	Validation.require_condition(hold_node is PhysicsBody2D, "DevPlayground grip joint requires a PhysicsBody2D handhold.")
+
+	var joint: PinJoint2D = PinJoint2D.new()
+	joint.name = joint_name
+	add_child(joint)
+	joint.global_position = attachment_state.get_attach_position(hand_side)
+	joint.node_a = joint.get_path_to(_player_body)
+	joint.node_b = joint.get_path_to(hold_node)
+	joint.disable_collision = true
+	return joint
 
 func _record_height() -> void:
 	var height_pixels: float = maxf(0.0, _start_y - _player_body.global_position.y)
 	_run_session.record_height(height_pixels / climb_tuning.pixels_per_meter)
 
 func _reset_playground() -> void:
+	_clear_grip_joints()
+
 	if _controller != null:
 		_controller.reset()
 
@@ -148,6 +208,15 @@ func _reset_playground() -> void:
 	_player_body.global_position = _reset_anchor.global_position
 	_player_body.linear_velocity = Vector2.ZERO
 	_player_body.angular_velocity = 0.0
+
+func _clear_grip_joints() -> void:
+	if _left_grip_joint != null:
+		_left_grip_joint.queue_free()
+		_left_grip_joint = null
+
+	if _right_grip_joint != null:
+		_right_grip_joint.queue_free()
+		_right_grip_joint = null
 
 func _update_touch_position(event: InputEventScreenTouch) -> void:
 	if event.pressed:

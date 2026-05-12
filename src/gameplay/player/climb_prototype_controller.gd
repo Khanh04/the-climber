@@ -28,14 +28,9 @@ func _init(tuning: Resource, stamina: RefCounted) -> void:
 func get_attachment_state() -> HandAttachmentStateScript:
     return _attachments
 
-func get_climb_impulse(aim_vector: Vector2) -> Vector2:
-    var normalized_aim: Vector2 = Vector2.UP
-
-    if aim_vector != Vector2.ZERO:
-        normalized_aim = aim_vector.normalized()
-
-    var biased_direction: Vector2 = normalized_aim.lerp(Vector2.UP, _tuning.upward_impulse_bias).normalized()
-    return biased_direction * _tuning.climb_impulse_pixels_per_second
+func get_swing_control_force(aim_vector: Vector2) -> Vector2:
+    Validation.require_condition(aim_vector != Vector2.ZERO, "Swing control force requires a non-zero aim vector.")
+    return aim_vector.normalized() * _tuning.swing_control_force
 
 func apply_input_frame(
     input_frame: RefCounted,
@@ -49,21 +44,20 @@ func apply_input_frame(
 
     var typed_input_frame: PlayerInputFrameScript = input_frame
     typed_input_frame.assert_valid()
-    var had_attachment_before_input: bool = _attachments.get_attached_hand_count() > 0
 
     _apply_release_intents(typed_input_frame)
     _apply_grip_intents(typed_input_frame, left_target, right_target)
 
-    var impulse: Vector2 = Vector2.ZERO
-    if typed_input_frame.has_aim_intent() and (had_attachment_before_input or _attachments.get_attached_hand_count() > 0):
+    var control_force: Vector2 = Vector2.ZERO
+    if typed_input_frame.has_aim_intent() and _attachments.get_attached_hand_count() > 0:
         var aim_intent: AimInputIntentScript = typed_input_frame.aim_intent
-        impulse = get_climb_impulse(aim_intent.aim_vector)
+        control_force = get_swing_control_force(aim_intent.aim_vector)
 
     var depleted_now: bool = _stamina.advance(_attachments.get_attached_hand_count(), delta_seconds, _last_drain_multiplier)
     if depleted_now:
         _attachments.release_all()
 
-    return ClimbPrototypeFrameResultScript.new(impulse, depleted_now, _attachments.get_attached_hand_count())
+    return ClimbPrototypeFrameResultScript.new(control_force, depleted_now, _attachments.get_attached_hand_count())
 
 func reset() -> void:
     _attachments.release_all()
@@ -94,7 +88,7 @@ func _apply_grip_intents(input_frame: PlayerInputFrameScript, left_target: RefCo
         typed_target.assert_valid()
 
         if not _attachments.is_attached(hand_side):
-            _attachments.attach(hand_side, typed_target.hold_id, typed_target.attach_position)
+            _attachments.attach(hand_side, typed_target.hold_id, typed_target.attach_position, typed_target.hold_path)
 
     _refresh_drain_multiplier()
 

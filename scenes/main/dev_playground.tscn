@@ -24,6 +24,14 @@ script = ExtResource("1_dev")
 climb_tuning = SubResource("Resource_climb")
 stamina_tuning = SubResource("Resource_stamina")
 
+[node name="DebugLabel" type="Label" parent="."]
+unique_name_in_owner = true
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 620.0
+offset_bottom = 72.0
+text = "Aim: (0, 0)  Attached: 0  Stamina: 0.0  State: 0"
+
 [node name="ResetAnchor" type="Marker2D" parent="."]
 unique_name_in_owner = true
 position = Vector2(540, 1500)
@@ -49,6 +57,36 @@ unique_name_in_owner = true
 position = Vector2(42, -24)
 
 [node name="Handholds" type="Node2D" parent="."]
+
+[node name="HoldSafePlatform" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+position = Vector2(540, 1557)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldSafePlatform"]
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldSafePlatform"]
+color = Color(0.34, 0.78, 0.48, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
+[node name="HoldBottomLeft" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+position = Vector2(390, 1680)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldBottomLeft"]
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldBottomLeft"]
+color = Color(0.34, 0.78, 0.48, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
+[node name="HoldBottomRight" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
+position = Vector2(690, 1680)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldBottomRight"]
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/HoldBottomRight"]
+color = Color(0.34, 0.78, 0.48, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
 [node name="HoldStartLeft" type="StaticBody2D" parent="Handholds" groups=["handhold"]]
 position = Vector2(500, 1450)
