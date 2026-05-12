@@ -56,7 +56,7 @@ Purpose: prove the core interaction before hardening full scene structure or art
 
 Implementation outcomes:
 
-- Create a dev playground where the player can grip, release, climb, lose stamina, and fall.
+- Create an initial climb playground where the player can grip, release, climb, lose stamina, and fall.
 - Use deliberately simple placeholder visuals.
 - Add basic handhold detection and climb impulse behavior.
 - Keep tuning values in validated typed Resources.
