@@ -19,6 +19,11 @@
     "/^sh scripts/validate\\.sh$/": {
       "approve": true,
       "matchCommandLine": true
+    },
+    "\"$HOME/.local/godot\"": true,
+    "/^sh scripts/test\\.sh \\| tail -n 60$/": {
+      "approve": true,
+      "matchCommandLine": true
     }
   }
 }

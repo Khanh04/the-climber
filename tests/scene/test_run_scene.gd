@@ -1,6 +1,7 @@
 extends GutTest
 
 const AimInputIntentScript = preload("res://src/gameplay/player/aim_input_intent.gd")
+const ChaserKillZoneScript = preload("res://scenes/chaser/chaser_kill_zone.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
@@ -18,6 +19,7 @@ func test_run_scene_wires_required_nodes_and_starts_run() -> void:
     await get_tree().process_frame
 
     assert_not_null(playground.get_node_or_null("PlayerCharacter"))
+    assert_not_null(playground.get_node_or_null("ChaserKillZone"))
     assert_not_null(playground.get_player_body_for_test())
     assert_not_null(playground.get_left_hand_anchor_for_test())
     assert_not_null(playground.get_right_hand_anchor_for_test())
@@ -237,6 +239,56 @@ func test_run_scene_bottom_screen_fall_shows_run_end_screen() -> void:
     assert_not_null(title_label)
     assert_true(run_end_screen.visible)
     assert_eq(title_label.text, "Rescue Offered")
+
+func test_run_scene_chaser_contact_ends_run_without_rescue_and_restart_resets_chaser() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var chaser: ChaserKillZoneScript = playground.get_chaser_for_test()
+    var reset_anchor: Marker2D = playground.get_node("ResetAnchor") as Marker2D
+    var run_end_screen: Control = playground.get_node("UiLayer/RunEndScreen") as Control
+    var title_label: Label = playground.get_node("UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
+    var reason_label: Label = playground.get_node("UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/ReasonLabel") as Label
+    var restart_button: Button = playground.get_node("UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
+
+    assert_not_null(chaser)
+    assert_not_null(reset_anchor)
+    assert_not_null(run_end_screen)
+    assert_not_null(title_label)
+    assert_not_null(reason_label)
+    assert_not_null(restart_button)
+
+    playground.get_controller_for_test().get_attachment_state().attach(
+        HandSide.Value.LEFT,
+        &"HoldStartLeft",
+        Vector2(450.0, 1424.0),
+        NodePath("Handholds/HoldStartLeft")
+    )
+
+    chaser.global_position.y = 100.0
+    playground.resolve_chaser_contact_for_test()
+
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.ENDED)
+    assert_true(playground.get_run_session_for_test().has_end_reason())
+    assert_eq(playground.get_run_session_for_test().get_end_reason(), RunEndReasonScript.Value.CHASER_CONTACT)
+    assert_eq(playground.get_controller_for_test().get_attachment_state().get_attached_hand_count(), 0)
+    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
+    assert_true(run_end_screen.visible)
+    assert_eq(title_label.text, "Run Ended")
+    assert_eq(reason_label.text, "Reason: Chaser contact")
+
+    var _emit_result: int = restart_button.emit_signal("pressed")
+
+    var expected_reset_chaser_y: float = reset_anchor.global_position.y + (chaser.chaser_tuning.initial_spawn_offset_meters * playground.climb_tuning.pixels_per_meter) + (chaser.kill_zone_height_pixels * 0.5)
+
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_false(run_end_screen.visible)
+    assert_eq(chaser.global_position.y, expected_reset_chaser_y)
 
 func test_run_scene_camera_follows_player_downward_after_fall_resolution() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")

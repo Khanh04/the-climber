@@ -30,6 +30,7 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 - Initial tuning target: treat less than 2 meters of vertical progress over 5 seconds as camping.
 - Initial tuning target: treat more than 8 meters of vertical progress over 5 seconds as rapid climbing.
 - Clamp Chaser speed between a readable minimum pressure speed and a maximum speed that still gives the player time to react.
+- Current Phase 6 tuning uses a 5 second sample window, 2 meter camping threshold, 8 meter rapid-climb threshold, and a clamped 1.5 to 5.0 meters-per-second rise-speed envelope.
 
 ### Cosmetics and Audio
 
@@ -45,12 +46,14 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 - Track recent player vertical progress over time rather than relying on instantaneous velocity only.
 - Use a bounded speed range for the Chaser so rubber-banding remains predictable.
 - Separate base speed from temporary pressure modifiers so balancing remains data-driven.
+- The initial implementation uses typed Chaser tuning data for base rise speed, camping bonus speed, rapid-climb slowdown, and spawn offset.
 
 ### Kill Logic
 
 - Keep the Chaser collision behavior simple and authoritative.
 - Death on contact should bypass partial damage logic and immediately resolve the run state.
 - Chaser death should still allow the fall/death camera beat if visually useful, but it should not offer rescue.
+- The current run-scene integration resolves Chaser contact as `CHASER_CONTACT`, releases active grips, forces falling physics, and ends the run without rescue eligibility.
 
 ### Presentation Layer
 
@@ -66,8 +69,6 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 ## Open Questions
 
 - What should the initial Chaser spawn distance be below the player?
-- What are the minimum and maximum Chaser speeds in meters per second?
-- Should the Chaser pause or slow during tutorialized first-run onboarding?
 
 ## Risks
 
@@ -77,8 +78,8 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 
 ## Suggested First Tasks
 
-1. Implement the base rising `Area2D` kill-zone.
-2. Add player progress tracking and rubber-band modifiers.
-3. Create a theme configuration format for visuals and sound.
-4. Add distance-based audio intensity.
-5. Playtest pressure curves with slow and fast climb cases.
+1. Playtest the current camping and rapid-climb thresholds against slow, average, and expert climb cases.
+2. Choose and tune the initial spawn distance now that it is exposed through validated config.
+3. Add distance-based audio intensity once the default Chaser presentation is stable.
+4. Evaluate whether first-run onboarding needs a delayed Chaser start in a later phase.
+5. Add theme bundles for visual and audio swaps after the single-theme MVP slice feels fair.

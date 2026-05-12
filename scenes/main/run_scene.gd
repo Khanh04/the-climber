@@ -1,6 +1,9 @@
 class_name RunScene
 extends Node2D
 
+const ChaserContactServiceScript = preload("res://src/gameplay/chaser/chaser_contact_service.gd")
+const ChaserKillZoneScript = preload("res://scenes/chaser/chaser_kill_zone.gd")
+const ChaserPacingModelScript = preload("res://src/gameplay/chaser/chaser_pacing_model.gd")
 const ClimbPrototypeControllerScript = preload("res://src/gameplay/player/climb_prototype_controller.gd")
 const ClimbPrototypeFrameResultScript = preload("res://src/gameplay/player/climb_prototype_frame_result.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
@@ -26,6 +29,7 @@ const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
 @export var stamina_tuning: StaminaTuningScript
 
 @onready var _player: PlayerCharacterScript = %PlayerCharacter
+@onready var _chaser_kill_zone: ChaserKillZoneScript = get_node("ChaserKillZone") as ChaserKillZoneScript
 @onready var _reset_anchor: Marker2D = %ResetAnchor
 @onready var _camera: Camera2D = %DevCamera
 @onready var _run_hud: Control = %RunHud
@@ -37,6 +41,8 @@ var _stamina: StaminaRuntimeScript
 var _desktop_input: DesktopDebugInputAdapterScript = DesktopDebugInputAdapterScript.new()
 var _mobile_input: MobileTouchInputAdapterScript = MobileTouchInputAdapterScript.new()
 var _controller: ClimbPrototypeControllerScript
+var _chaser_contact_service: ChaserContactServiceScript = ChaserContactServiceScript.new()
+var _chaser_pacing_model: ChaserPacingModelScript
 var _bottom_screen_fall_service: BottomScreenFallServiceScript = BottomScreenFallServiceScript.new()
 var _run_loop_coordinator: RunLoopCoordinatorScript = RunLoopCoordinatorScript.new()
 var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop_coordinator)
@@ -51,9 +57,11 @@ var _start_y: float = 0.0
 func _ready() -> void:
 	_validate_required_state()
 	var _connect_result: int = _run_end_screen.connect(&"restart_requested", _on_run_end_restart_requested)
+	var _chaser_connect_result: int = _chaser_kill_zone.connect(&"chaser_contacted", _on_chaser_contacted)
 	_player.set_climb_tuning(climb_tuning)
 	_stamina = StaminaRuntimeScript.new(stamina_tuning)
 	_controller = ClimbPrototypeControllerScript.new(climb_tuning, _stamina)
+	_chaser_pacing_model = ChaserPacingModelScript.new(_chaser_kill_zone.chaser_tuning)
 	_start_y = _reset_anchor.global_position.y
 	_reset_playground()
 	_refresh_ui()
@@ -66,6 +74,7 @@ func _physics_process(delta: float) -> void:
 
 	var input_frame: PlayerInputFrameScript = _create_input_frame()
 	_update_camera_follow()
+	_update_chaser(delta)
 
 	if _resolve_bottom_screen_fall_if_needed():
 		_clear_aim_preview()
@@ -123,6 +132,12 @@ func get_left_hand_anchor_for_test() -> Marker2D:
 func get_right_hand_anchor_for_test() -> Marker2D:
 	return _player.get_right_hand_anchor()
 
+func get_chaser_for_test() -> ChaserKillZoneScript:
+	return _chaser_kill_zone
+
+func resolve_chaser_contact_for_test() -> void:
+	_on_chaser_contacted(_player.get_player_body())
+
 func sync_grip_links_for_test() -> void:
 	_player.sync_runtime_grip_links(_controller.get_attachment_state())
 
@@ -141,6 +156,7 @@ func _validate_required_state() -> void:
 	climb_tuning.assert_valid()
 	stamina_tuning.assert_valid()
 	Validation.require_condition(_player != null, "RunScene requires PlayerCharacter.")
+	Validation.require_condition(_chaser_kill_zone != null, "RunScene requires ChaserKillZone.")
 	Validation.require_condition(_reset_anchor != null, "RunScene requires ResetAnchor.")
 	Validation.require_condition(_camera != null, "RunScene requires DevCamera.")
 	Validation.require_condition(_run_hud != null, "RunScene requires RunHud.")
@@ -177,6 +193,21 @@ func _get_debug_aim_vector() -> Vector2:
 		aim_vector.y -= 1.0
 
 	return aim_vector
+
+func _update_chaser(delta: float) -> void:
+	if _chaser_kill_zone == null or _chaser_pacing_model == null:
+		return
+
+	var run_state: int = _run_session.get_state()
+	if run_state == RunStateScript.Value.READY or run_state == RunStateScript.Value.ENDED:
+		return
+
+	_chaser_pacing_model.record_height(_calculate_current_height_meters(), delta)
+	_chaser_kill_zone.advance_rise(
+		_chaser_pacing_model.get_current_rise_speed_meters_per_second(),
+		_get_climb_tuning_float(&"pixels_per_meter"),
+		delta
+	)
 
 func _update_camera_follow() -> void:
 	_camera.global_position.y = _run_loop_coordinator.calculate_camera_target_y(
@@ -277,9 +308,12 @@ func _sync_aim_target_marker(current_marker: Polygon2D, should_show: bool, targe
 	active_marker.global_position = target_position
 	return active_marker
 
-func _record_height() -> void:
+func _calculate_current_height_meters() -> float:
 	var height_pixels: float = maxf(0.0, _start_y - _player.get_body_global_position().y)
-	_run_session.record_height(height_pixels / climb_tuning.pixels_per_meter)
+	return height_pixels / _get_climb_tuning_float(&"pixels_per_meter")
+
+func _record_height() -> void:
+	_run_session.record_height(_calculate_current_height_meters())
 
 func _reset_playground() -> void:
 	_clear_aim_preview()
@@ -292,11 +326,20 @@ func _reset_playground() -> void:
 	_active_touch_positions = PackedVector2Array()
 	_run_session = RunSessionScript.new()
 	_run_session.start_run()
+	if _chaser_pacing_model != null:
+		_chaser_pacing_model.reset()
 	_player.reset_physics(_reset_anchor.global_position)
 	_camera.global_position = Vector2(
 		_reset_anchor.global_position.x,
 		_reset_anchor.global_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 	)
+	if _chaser_kill_zone != null:
+		_chaser_kill_zone.reset_to_player_position(
+			_player.get_body_global_position().y,
+			_get_climb_tuning_float(&"pixels_per_meter"),
+			_camera.global_position.x,
+			get_viewport_rect().size.x
+		)
 
 func _refresh_ui() -> void:
 	if _stamina == null or _run_ui_view == null:
@@ -308,6 +351,19 @@ func _refresh_ui() -> void:
 
 func _on_run_end_restart_requested() -> void:
 	_reset_playground()
+	_refresh_ui()
+
+func _on_chaser_contacted(body: Node) -> void:
+	Validation.require_condition(body != null, "RunScene chaser contact requires a body.")
+	if body != _player.get_player_body():
+		return
+
+	var run_state: int = _run_session.get_state()
+	if run_state == RunStateScript.Value.READY or run_state == RunStateScript.Value.ENDED:
+		return
+
+	_chaser_contact_service.resolve(_controller, _player, _run_session)
+	_clear_aim_preview()
 	_refresh_ui()
 
 func _get_climb_tuning_float(property_name: StringName) -> float:

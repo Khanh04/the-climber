@@ -1,12 +1,11 @@
-[gd_scene format=3 uid="uid://crdl3mj8qeugi"]
+[gd_scene format=3 uid="uid://6ueiv5gioohl"]
 
-[ext_resource type="Script" path="res://scenes/main/run_scene.gd" id="1_dev"]
+[ext_resource type="Script" path="res://scenes/main/dev_playground.gd" id="1_dev"]
 [ext_resource type="Script" uid="uid://co0omgi88wjup" path="res://resources/config/climb_prototype_tuning.gd" id="2_climb"]
 [ext_resource type="Script" uid="uid://coalyt3xlftcd" path="res://resources/config/stamina_tuning.gd" id="3_stamina"]
 [ext_resource type="PackedScene" uid="uid://1a8vb0lql3ln" path="res://scenes/player/player_character.tscn" id="4_player"]
 [ext_resource type="PackedScene" path="res://scenes/ui/run_hud.tscn" id="5_run_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/run_end_screen.tscn" id="6_run_end"]
-[ext_resource type="PackedScene" path="res://scenes/chaser/chaser_kill_zone.tscn" id="7_chaser"]
 
 [sub_resource type="Resource" id="Resource_climb"]
 script = ExtResource("2_climb")
@@ -21,7 +20,7 @@ size = Vector2(128, 34)
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_floor"]
 size = Vector2(1200, 80)
 
-[node name="RunScene" type="Node2D" unique_id=15343070]
+[node name="DevPlayground" type="Node2D" unique_id=15343070]
 script = ExtResource("1_dev")
 climb_tuning = SubResource("Resource_climb")
 stamina_tuning = SubResource("Resource_stamina")
@@ -30,12 +29,20 @@ stamina_tuning = SubResource("Resource_stamina")
 unique_name_in_owner = true
 position = Vector2(540, 1340)
 
-[node name="UiLayer" type="CanvasLayer" parent="." unique_id=252631966]
+[node name="DebugHud" type="CanvasLayer" parent="." unique_id=252631966]
 
-[node name="RunHud" parent="UiLayer" unique_id=120501001 instance=ExtResource("5_run_hud")]
+[node name="DebugLabel" type="Label" parent="DebugHud" unique_id=355149956]
+unique_name_in_owner = true
+offset_left = 24.0
+offset_top = 24.0
+offset_right = 620.0
+offset_bottom = 72.0
+text = "Aim: (0, 0)  Attached: 0  Stamina: 0.0  State: 0"
+
+[node name="RunHud" parent="DebugHud" unique_id=120501001 instance=ExtResource("5_run_hud")]
 unique_name_in_owner = true
 
-[node name="RunEndScreen" parent="UiLayer" unique_id=120501002 instance=ExtResource("6_run_end")]
+[node name="RunEndScreen" parent="DebugHud" unique_id=120501002 instance=ExtResource("6_run_end")]
 unique_name_in_owner = true
 
 [node name="ResetAnchor" type="Marker2D" parent="." unique_id=2064874863]
@@ -45,10 +52,6 @@ position = Vector2(540, 1500)
 [node name="PlayerCharacter" parent="." unique_id=2062018110 instance=ExtResource("4_player")]
 unique_name_in_owner = true
 position = Vector2(540, 1500)
-
-[node name="ChaserKillZone" parent="." unique_id=1635600093 instance=ExtResource("7_chaser")]
-unique_name_in_owner = true
-position = Vector2(540, 2396)
 
 [node name="Handholds" type="Node2D" parent="." unique_id=142891664]
 

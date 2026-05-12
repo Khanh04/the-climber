@@ -70,6 +70,12 @@ func test_invalid_chaser_tuning_is_detected() -> void:
 
     assert_false(tuning.is_valid())
 
+func test_chaser_tuning_rejects_non_positive_spawn_offset() -> void:
+    var tuning = ChaserTuningScript.new()
+    tuning.initial_spawn_offset_meters = 0.0
+
+    assert_false(tuning.is_valid())
+
 func test_default_cosmetics_tuning_is_valid() -> void:
     var tuning = CosmeticsTuningScript.new()
 
