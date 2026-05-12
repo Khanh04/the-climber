@@ -9,6 +9,7 @@ const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.gd")
 const MobileTouchInputAdapterScript = preload("res://src/gameplay/player/mobile_touch_input_adapter.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
+const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunSessionScript = preload("res://src/gameplay/run/run_session.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const StaminaRuntimeScript = preload("res://src/gameplay/player/stamina_runtime.gd")
@@ -21,6 +22,7 @@ const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
 @onready var _left_hand_anchor: Marker2D = %LeftHandAnchor
 @onready var _right_hand_anchor: Marker2D = %RightHandAnchor
 @onready var _reset_anchor: Marker2D = %ResetAnchor
+@onready var _camera: Camera2D = %DevCamera
 @onready var _debug_label: Label = %DebugLabel
 
 var _run_session: RunSessionScript = RunSessionScript.new()
@@ -31,6 +33,7 @@ var _controller: ClimbPrototypeControllerScript
 var _active_touch_positions: PackedVector2Array = PackedVector2Array()
 var _left_grip_link: Line2D = null
 var _right_grip_link: Line2D = null
+var _debug_reset_pressed: bool = false
 var _start_y: float = 0.0
 
 func _ready() -> void:
@@ -41,11 +44,16 @@ func _ready() -> void:
 	_reset_playground()
 
 func _physics_process(delta: float) -> void:
+	if _consume_debug_reset_input():
+		_reset_playground()
+		_update_debug_label(PlayerInputFrameScript.new())
+		return
+
 	var input_frame: PlayerInputFrameScript = _create_input_frame()
 	_update_debug_label(input_frame)
+	_update_camera_follow()
 
-	if input_frame.has_debug_reset_intent():
-		_reset_playground()
+	if _resolve_bottom_screen_fall_if_needed():
 		_update_debug_label(input_frame)
 		return
 
@@ -65,6 +73,12 @@ func _physics_process(delta: float) -> void:
 		_run_session.resolve_stamina_fall()
 
 func _input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"debug_reset_run"):
+		_reset_playground()
+		_update_debug_label(PlayerInputFrameScript.new())
+		get_viewport().set_input_as_handled()
+		return
+
 	if event is InputEventScreenTouch:
 		_update_touch_position(event as InputEventScreenTouch)
 
@@ -80,6 +94,12 @@ func get_controller_for_test() -> ClimbPrototypeControllerScript:
 func sync_grip_links_for_test() -> void:
 	_sync_grip_links()
 
+func get_camera_player_lower_screen_offset_for_test() -> float:
+	return _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
+
+func get_bottom_fall_margin_for_test() -> float:
+	return _get_climb_tuning_float(&"bottom_fall_margin_pixels")
+
 func _validate_required_state() -> void:
 	Validation.require_condition(climb_tuning != null, "DevPlayground requires climb tuning.")
 	Validation.require_condition(stamina_tuning != null, "DevPlayground requires stamina tuning.")
@@ -89,6 +109,7 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_left_hand_anchor != null, "DevPlayground requires LeftHandAnchor.")
 	Validation.require_condition(_right_hand_anchor != null, "DevPlayground requires RightHandAnchor.")
 	Validation.require_condition(_reset_anchor != null, "DevPlayground requires ResetAnchor.")
+	Validation.require_condition(_camera != null, "DevPlayground requires DevCamera.")
 	Validation.require_condition(_debug_label != null, "DevPlayground requires DebugLabel.")
 	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "DevPlayground requires at least one handhold.")
 
@@ -100,8 +121,14 @@ func _create_input_frame() -> PlayerInputFrameScript:
 		Input.is_action_pressed(&"debug_left_grip"),
 		Input.is_action_pressed(&"debug_right_grip"),
 		_get_debug_aim_vector(),
-		Input.is_action_pressed(&"debug_reset_run")
+		false
 	)
+
+func _consume_debug_reset_input() -> bool:
+	var reset_pressed_now: bool = Input.is_action_pressed(&"debug_reset_run")
+	var should_reset: bool = reset_pressed_now and not _debug_reset_pressed
+	_debug_reset_pressed = reset_pressed_now
+	return should_reset
 
 func _get_debug_aim_vector() -> Vector2:
 	var aim_vector: Vector2 = Vector2.ZERO
@@ -137,6 +164,26 @@ func _update_debug_label(input_frame: PlayerInputFrameScript) -> void:
 		stamina_seconds,
 		_run_session.get_state()
 	]
+
+func _update_camera_follow() -> void:
+	var target_y: float = _player_body.global_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
+	if target_y < _camera.global_position.y:
+		_camera.global_position.y = target_y
+
+func _resolve_bottom_screen_fall_if_needed() -> bool:
+	if _run_session.get_state() != RunStateScript.Value.CLIMBING:
+		return false
+
+	var viewport_size: Vector2 = get_viewport_rect().size
+	var bottom_fall_y: float = _camera.global_position.y + (viewport_size.y * 0.5) + _get_climb_tuning_float(&"bottom_fall_margin_pixels")
+	if _player_body.global_position.y <= bottom_fall_y:
+		return false
+
+	_controller.get_attachment_state().release_all()
+	_clear_grip_links()
+	_run_session.begin_fall()
+	_run_session.resolve_fall(RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
+	return true
 
 func _find_nearest_handhold(anchor_position: Vector2) -> RefCounted:
 	var nearest_target: HandholdTargetScript = null
@@ -240,6 +287,22 @@ func _reset_playground() -> void:
 	_player_body.global_position = _reset_anchor.global_position
 	_player_body.linear_velocity = Vector2.ZERO
 	_player_body.angular_velocity = 0.0
+	_camera.global_position = Vector2(
+		_reset_anchor.global_position.x,
+		_reset_anchor.global_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
+	)
+
+func _get_climb_tuning_float(property_name: StringName) -> float:
+	var property_value: Variant = climb_tuning.get(property_name)
+	if property_value is float:
+		return property_value
+
+	if property_value is int:
+		var int_value: int = property_value
+		return float(int_value)
+
+	Validation.require_condition(false, "Climb tuning property %s must be numeric." % String(property_name))
+	return 0.0
 
 func _clear_grip_links() -> void:
 	if _left_grip_link != null:
