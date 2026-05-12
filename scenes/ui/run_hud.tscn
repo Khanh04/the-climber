@@ -1,0 +1,71 @@
+[gd_scene format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/run_hud.gd" id="1_run_hud"]
+
+[node name="RunHud" type="Control"]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_run_hud")
+
+[node name="Panel" type="PanelContainer" parent="."]
+offset_left = 24.0
+offset_top = 84.0
+offset_right = 420.0
+offset_bottom = 214.0
+
+[node name="ContentMargin" type="MarginContainer" parent="Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 16
+theme_override_constants/margin_top = 12
+theme_override_constants/margin_right = 16
+theme_override_constants/margin_bottom = 12
+
+[node name="Metrics" type="HBoxContainer" parent="Panel/ContentMargin"]
+layout_mode = 2
+theme_override_constants/separation = 24
+
+[node name="HeightMetric" type="VBoxContainer" parent="Panel/ContentMargin/Metrics"]
+layout_mode = 2
+
+[node name="HeightLabel" type="Label" parent="Panel/ContentMargin/Metrics/HeightMetric"]
+layout_mode = 2
+text = "Height"
+
+[node name="HeightValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/HeightMetric" unique_name_in_owner=true]
+layout_mode = 2
+text = "0.0 m"
+
+[node name="StaminaMetric" type="VBoxContainer" parent="Panel/ContentMargin/Metrics"]
+layout_mode = 2
+size_flags_horizontal = 3
+
+[node name="StaminaLabel" type="Label" parent="Panel/ContentMargin/Metrics/StaminaMetric"]
+layout_mode = 2
+text = "Stamina"
+
+[node name="StaminaValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/StaminaMetric" unique_name_in_owner=true]
+layout_mode = 2
+text = "0.0 / 0.0"
+
+[node name="StaminaBar" type="ProgressBar" parent="Panel/ContentMargin/Metrics/StaminaMetric" unique_name_in_owner=true]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 20.0
+value = 20.0
+show_percentage = false
+
+[node name="CoinsMetric" type="VBoxContainer" parent="Panel/ContentMargin/Metrics"]
+layout_mode = 2
+
+[node name="CoinsLabel" type="Label" parent="Panel/ContentMargin/Metrics/CoinsMetric"]
+layout_mode = 2
+text = "Run Coins"
+
+[node name="CoinsValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/CoinsMetric" unique_name_in_owner=true]
+layout_mode = 2
+text = "0"

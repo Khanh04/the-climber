@@ -21,6 +21,8 @@ func test_dev_playground_scene_wires_required_nodes_and_starts_run() -> void:
     assert_not_null(playground.get_node_or_null("ResetAnchor"))
     assert_not_null(playground.get_node_or_null("DevCamera"))
     assert_not_null(playground.get_node_or_null("DebugHud/DebugLabel"))
+    assert_not_null(playground.get_node_or_null("DebugHud/RunHud"))
+    assert_not_null(playground.get_node_or_null("DebugHud/RunEndScreen"))
     assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
 
 func test_dev_playground_uses_extended_starting_stamina_for_playtesting() -> void:
@@ -166,6 +168,127 @@ func test_dev_playground_bottom_screen_fall_routes_through_run_session() -> void
     assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.RESCUE_OFFERED)
     assert_true(playground.get_run_session_for_test().has_end_reason())
     assert_eq(playground.get_run_session_for_test().get_end_reason(), RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
+
+func test_dev_playground_hud_displays_initial_run_snapshot() -> void:
+    var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: DevPlayground = playground_node as DevPlayground
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var height_value_label: Label = playground.get_node("DebugHud/RunHud/Panel/ContentMargin/Metrics/HeightMetric/HeightValueLabel") as Label
+    var stamina_value_label: Label = playground.get_node("DebugHud/RunHud/Panel/ContentMargin/Metrics/StaminaMetric/StaminaValueLabel") as Label
+    var coins_value_label: Label = playground.get_node("DebugHud/RunHud/Panel/ContentMargin/Metrics/CoinsMetric/CoinsValueLabel") as Label
+    var run_end_screen: Control = playground.get_node("DebugHud/RunEndScreen") as Control
+
+    assert_not_null(height_value_label)
+    assert_not_null(stamina_value_label)
+    assert_not_null(coins_value_label)
+    assert_not_null(run_end_screen)
+    assert_eq(height_value_label.text, "0.0 m")
+    assert_eq(stamina_value_label.text, "20.0 / 20.0")
+    assert_eq(coins_value_label.text, "0")
+    assert_false(run_end_screen.visible)
+
+func test_dev_playground_bottom_screen_fall_shows_run_end_screen() -> void:
+    var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: DevPlayground = playground_node as DevPlayground
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+
+    assert_not_null(player_body)
+    assert_not_null(camera)
+
+    var viewport_size: Vector2 = playground.get_viewport_rect().size
+    player_body.global_position = Vector2(
+        player_body.global_position.x,
+        camera.global_position.y + (viewport_size.y * 0.5) + playground.get_bottom_fall_margin_for_test() + 24.0
+    )
+    playground._physics_process(0.0)
+
+    var run_end_screen: Control = playground.get_node("DebugHud/RunEndScreen") as Control
+    var title_label: Label = playground.get_node("DebugHud/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
+
+    assert_not_null(run_end_screen)
+    assert_not_null(title_label)
+    assert_true(run_end_screen.visible)
+    assert_eq(title_label.text, "Rescue Offered")
+
+func test_dev_playground_camera_follows_player_downward_after_fall_resolution() -> void:
+    var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: DevPlayground = playground_node as DevPlayground
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+
+    assert_not_null(player_body)
+    assert_not_null(camera)
+
+    var viewport_size: Vector2 = playground.get_viewport_rect().size
+    player_body.global_position = Vector2(
+        player_body.global_position.x,
+        camera.global_position.y + (viewport_size.y * 0.5) + playground.get_bottom_fall_margin_for_test() + 24.0
+    )
+    playground._physics_process(0.0)
+
+    var camera_after_fall_resolution: float = camera.global_position.y
+    player_body.global_position = Vector2(player_body.global_position.x, player_body.global_position.y + 220.0)
+    playground._physics_process(0.0)
+
+    assert_gt(camera.global_position.y, camera_after_fall_resolution)
+    assert_eq(camera.global_position.y, player_body.global_position.y - playground.get_camera_player_lower_screen_offset_for_test())
+
+func test_dev_playground_run_end_restart_button_resets_run() -> void:
+    var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: DevPlayground = playground_node as DevPlayground
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+    var reset_anchor: Marker2D = playground.get_node("ResetAnchor") as Marker2D
+
+    assert_not_null(player_body)
+    assert_not_null(camera)
+    assert_not_null(reset_anchor)
+
+    var viewport_size: Vector2 = playground.get_viewport_rect().size
+    player_body.global_position = Vector2(
+        player_body.global_position.x,
+        camera.global_position.y + (viewport_size.y * 0.5) + playground.get_bottom_fall_margin_for_test() + 24.0
+    )
+    playground._physics_process(0.0)
+
+    var restart_button: Button = playground.get_node("DebugHud/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
+    var run_end_screen: Control = playground.get_node("DebugHud/RunEndScreen") as Control
+
+    assert_not_null(restart_button)
+    assert_not_null(run_end_screen)
+    assert_true(run_end_screen.visible)
+
+    var _emit_result: int = restart_button.emit_signal("pressed")
+
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_eq(player_body.global_position, reset_anchor.global_position)
+    assert_eq(player_body.linear_velocity, Vector2.ZERO)
+    assert_eq(camera.global_position.y, reset_anchor.global_position.y - playground.get_camera_player_lower_screen_offset_for_test())
+    assert_false(run_end_screen.visible)
 
 func test_dev_playground_has_safe_start_block_below_spawn() -> void:
     var scene: PackedScene = load("res://scenes/main/dev_playground.tscn")

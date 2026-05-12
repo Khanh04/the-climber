@@ -12,6 +12,8 @@ const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
+const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
+const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
 const RunSessionScript = preload("res://src/gameplay/run/run_session.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const StaminaRuntimeScript = preload("res://src/gameplay/player/stamina_runtime.gd")
@@ -24,6 +26,8 @@ const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
 @onready var _reset_anchor: Marker2D = %ResetAnchor
 @onready var _camera: Camera2D = %DevCamera
 @onready var _debug_label: Label = %DebugLabel
+@onready var _run_hud: Control = %RunHud
+@onready var _run_end_screen: Control = %RunEndScreen
 
 var _run_session: RunSessionScript = RunSessionScript.new()
 var _stamina: StaminaRuntimeScript
@@ -39,16 +43,19 @@ var _start_y: float = 0.0
 
 func _ready() -> void:
 	_validate_required_state()
+	var _connect_result: int = _run_end_screen.connect(&"restart_requested", _on_run_end_restart_requested)
 	_player.set_climb_tuning(climb_tuning)
 	_stamina = StaminaRuntimeScript.new(stamina_tuning)
 	_controller = ClimbPrototypeControllerScript.new(climb_tuning, _stamina)
 	_start_y = _reset_anchor.global_position.y
 	_reset_playground()
+	_refresh_ui()
 
 func _physics_process(delta: float) -> void:
 	if _consume_debug_reset_input():
 		_reset_playground()
 		_update_debug_label(PlayerInputFrameScript.new())
+		_refresh_ui()
 		return
 
 	var input_frame: PlayerInputFrameScript = _create_input_frame()
@@ -58,10 +65,12 @@ func _physics_process(delta: float) -> void:
 	if _resolve_bottom_screen_fall_if_needed():
 		_clear_aim_preview()
 		_update_debug_label(input_frame)
+		_refresh_ui()
 		return
 
 	if _run_session.get_state() != RunStateScript.Value.CLIMBING:
 		_clear_aim_preview()
+		_refresh_ui()
 		return
 
 	var left_target: RefCounted = _find_nearest_handhold(_player.get_left_hand_anchor_global_position())
@@ -77,6 +86,8 @@ func _physics_process(delta: float) -> void:
 		_run_session.begin_stamina_fall()
 		_run_session.resolve_stamina_fall()
 		_clear_aim_preview()
+
+	_refresh_ui()
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"debug_reset_run"):
@@ -130,6 +141,8 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_reset_anchor != null, "DevPlayground requires ResetAnchor.")
 	Validation.require_condition(_camera != null, "DevPlayground requires DevCamera.")
 	Validation.require_condition(_debug_label != null, "DevPlayground requires DebugLabel.")
+	Validation.require_condition(_run_hud != null, "DevPlayground requires RunHud.")
+	Validation.require_condition(_run_end_screen != null, "DevPlayground requires RunEndScreen.")
 	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "DevPlayground requires at least one handhold.")
 
 func _create_input_frame() -> PlayerInputFrameScript:
@@ -187,6 +200,12 @@ func _update_debug_label(input_frame: PlayerInputFrameScript) -> void:
 func _update_camera_follow() -> void:
 	var target_y: float = _player.get_body_global_position().y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 	if target_y < _camera.global_position.y:
+		_camera.global_position.y = target_y
+		return
+
+	if _run_session.get_state() == RunStateScript.Value.FALLING \
+		or _run_session.get_state() == RunStateScript.Value.RESCUE_OFFERED \
+		or _run_session.get_state() == RunStateScript.Value.ENDED:
 		_camera.global_position.y = target_y
 
 func _resolve_bottom_screen_fall_if_needed() -> bool:
@@ -298,6 +317,45 @@ func _reset_playground() -> void:
 		_reset_anchor.global_position.x,
 		_reset_anchor.global_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 	)
+	_refresh_ui()
+
+func _refresh_ui() -> void:
+	if _stamina == null:
+		return
+
+	var hud_state: RefCounted = _build_run_hud_state()
+	var run_end_state: RefCounted = _build_run_end_screen_state()
+	_run_hud.call("apply_state", hud_state)
+	_run_end_screen.call("apply_state", run_end_state)
+
+func _build_run_hud_state() -> RefCounted:
+	var hud_state: RefCounted = RunHudStateScript.new()
+	hud_state.set("height_meters", _run_session.get_height_meters())
+	hud_state.set("current_stamina_seconds", _stamina.get_current_stamina_seconds())
+	hud_state.set("max_stamina_seconds", _stamina.get_max_stamina_seconds())
+	hud_state.set("run_earned_coins", _run_session.get_run_earned_coins())
+	hud_state.set("run_state", _run_session.get_state())
+	hud_state.call("assert_valid")
+	return hud_state
+
+func _build_run_end_screen_state() -> RefCounted:
+	var has_end_reason: bool = _run_session.has_end_reason()
+	var end_reason: int = -1
+	if has_end_reason:
+		end_reason = _run_session.get_end_reason()
+
+	var run_end_state: RefCounted = RunEndScreenStateScript.new()
+	run_end_state.set("run_state", _run_session.get_state())
+	run_end_state.set("final_height_meters", _run_session.get_height_meters())
+	run_end_state.set("run_earned_coins", _run_session.get_run_earned_coins())
+	run_end_state.set("has_end_reason", has_end_reason)
+	run_end_state.set("end_reason", end_reason)
+	run_end_state.call("assert_valid")
+	return run_end_state
+
+func _on_run_end_restart_requested() -> void:
+	_reset_playground()
+	_update_debug_label(PlayerInputFrameScript.new())
 
 func _get_climb_tuning_float(property_name: StringName) -> float:
 	var property_value: Variant = climb_tuning.get(property_name)

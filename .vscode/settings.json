@@ -10,5 +10,15 @@
     "exports": true,
     "builds": true
   },
-  "godotTools.editorPath.godot4": "/home/khanh/.local/godot"
+  "godotTools.editorPath.godot4": "/home/khanh/.local/godot",
+  "chat.tools.terminal.autoApprove": {
+    "/^sh scripts/test\\.sh$/": {
+      "approve": true,
+      "matchCommandLine": true
+    },
+    "/^sh scripts/validate\\.sh$/": {
+      "approve": true,
+      "matchCommandLine": true
+    }
+  }
 }

@@ -4,6 +4,8 @@
 [ext_resource type="Script" uid="uid://co0omgi88wjup" path="res://resources/config/climb_prototype_tuning.gd" id="2_climb"]
 [ext_resource type="Script" uid="uid://coalyt3xlftcd" path="res://resources/config/stamina_tuning.gd" id="3_stamina"]
 [ext_resource type="PackedScene" uid="uid://1a8vb0lql3ln" path="res://scenes/player/player_character.tscn" id="4_player"]
+[ext_resource type="PackedScene" path="res://scenes/ui/run_hud.tscn" id="5_run_hud"]
+[ext_resource type="PackedScene" path="res://scenes/ui/run_end_screen.tscn" id="6_run_end"]
 
 [sub_resource type="Resource" id="Resource_climb"]
 script = ExtResource("2_climb")
@@ -36,6 +38,12 @@ offset_top = 24.0
 offset_right = 620.0
 offset_bottom = 72.0
 text = "Aim: (0, 0)  Attached: 0  Stamina: 0.0  State: 0"
+
+[node name="RunHud" parent="DebugHud" unique_id=120501001 instance=ExtResource("5_run_hud")]
+unique_name_in_owner = true
+
+[node name="RunEndScreen" parent="DebugHud" unique_id=120501002 instance=ExtResource("6_run_end")]
+unique_name_in_owner = true
 
 [node name="ResetAnchor" type="Marker2D" parent="." unique_id=2064874863]
 unique_name_in_owner = true
