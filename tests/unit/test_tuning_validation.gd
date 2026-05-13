@@ -76,6 +76,12 @@ func test_chaser_tuning_rejects_non_positive_spawn_offset() -> void:
 
     assert_false(tuning.is_valid())
 
+func test_chaser_tuning_rejects_invalid_feedback_ranges() -> void:
+    var tuning = ChaserTuningScript.new()
+    tuning.far_distance_for_min_intensity_meters = tuning.near_distance_for_max_intensity_meters
+
+    assert_false(tuning.is_valid())
+
 func test_default_cosmetics_tuning_is_valid() -> void:
     var tuning = CosmeticsTuningScript.new()
 

@@ -38,6 +38,7 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 - Supported examples include Rising Void, Hot Coffee, Glitch / Code, and Plastic Ball Pit.
 - Each cosmetic has a distinct spatial audio signature.
 - Audio intensity should increase as the Chaser approaches the player.
+- The current Phase 6 slice exposes a default intensity seam through visual alpha plus an `AudioStreamPlayer2D` pitch and volume response. A stream is optional for now; the node and intensity mapping are in place so a default loop can be assigned later without changing gameplay code.
 
 ## Implementation Notes
 
@@ -47,6 +48,7 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 - Use a bounded speed range for the Chaser so rubber-banding remains predictable.
 - Separate base speed from temporary pressure modifiers so balancing remains data-driven.
 - The initial implementation uses typed Chaser tuning data for base rise speed, camping bonus speed, rapid-climb slowdown, and spawn offset.
+- The current implementation also exposes a typed feedback snapshot containing pace state, recent vertical progress, rise speed, and normalized speed intensity for presentation and playtest tooling.
 
 ### Kill Logic
 
@@ -59,6 +61,7 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 
 - Decouple the visual theme from the kill-zone logic.
 - Treat cosmetic selection as a theme bundle containing visuals, particles, and an audio profile.
+- Current feedback intensity blends pace-driven pressure and player proximity to drive Chaser alpha and optional audio modulation without moving game rules into the scene.
 
 ## Post-MVP
 
@@ -80,6 +83,6 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 
 1. Playtest the current camping and rapid-climb thresholds against slow, average, and expert climb cases.
 2. Choose and tune the initial spawn distance now that it is exposed through validated config.
-3. Add distance-based audio intensity once the default Chaser presentation is stable.
-4. Evaluate whether first-run onboarding needs a delayed Chaser start in a later phase.
-5. Add theme bundles for visual and audio swaps after the single-theme MVP slice feels fair.
+3. Assign and tune a default Chaser loop on the existing audio intensity seam.
+4. Use the run-scene pacing snapshot and feedback intensity hooks to capture playtest notes for camping and near-contact pressure.
+5. Evaluate whether first-run onboarding needs a delayed Chaser start in a later phase.

@@ -24,6 +24,10 @@
     "/^sh scripts/test\\.sh \\| tail -n 60$/": {
       "approve": true,
       "matchCommandLine": true
+    },
+    "/^sh scripts/validate\\.sh \\| tail -n 60$/": {
+      "approve": true,
+      "matchCommandLine": true
     }
   }
 }

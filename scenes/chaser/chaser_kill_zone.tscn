@@ -24,4 +24,8 @@ shape = SubResource("RectangleShape2D_chaser")
 color = Color(0.16, 0.09, 0.12, 0.92)
 polygon = PackedVector2Array(-668, -96, 668, -96, 668, 96, -668, 96)
 
+[node name="IntensityAudioPlayer" type="AudioStreamPlayer2D" parent="." unique_name_in_owner = true]
+volume_db = -24.0
+pitch_scale = 0.9
+
 [connection signal="body_entered" from="." to="." method="_on_body_entered"]

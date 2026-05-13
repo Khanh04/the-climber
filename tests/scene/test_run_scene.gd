@@ -1,6 +1,8 @@
 extends GutTest
 
 const AimInputIntentScript = preload("res://src/gameplay/player/aim_input_intent.gd")
+const ChaserFeedbackSnapshotScript = preload("res://src/gameplay/chaser/chaser_feedback_snapshot.gd")
+const ChaserPacingModelScript = preload("res://src/gameplay/chaser/chaser_pacing_model.gd")
 const ChaserKillZoneScript = preload("res://scenes/chaser/chaser_kill_zone.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
@@ -289,6 +291,36 @@ func test_run_scene_chaser_contact_ends_run_without_rescue_and_restart_resets_ch
     assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
     assert_false(run_end_screen.visible)
     assert_eq(chaser.global_position.y, expected_reset_chaser_y)
+
+func test_run_scene_exposes_chaser_feedback_hooks_for_playtesting() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var chaser: ChaserKillZoneScript = playground.get_chaser_for_test()
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var pixels_per_meter: float = playground.climb_tuning.pixels_per_meter
+
+    assert_not_null(chaser)
+    assert_not_null(player_body)
+
+    chaser.global_position.y = player_body.global_position.y + (chaser.kill_zone_height_pixels * 0.5) + (chaser.chaser_tuning.far_distance_for_min_intensity_meters * pixels_per_meter)
+    playground._physics_process(0.0)
+    var far_intensity: float = playground.get_chaser_feedback_intensity_ratio_for_test()
+
+    chaser.global_position.y = player_body.global_position.y + (chaser.kill_zone_height_pixels * 0.5) + (chaser.chaser_tuning.near_distance_for_max_intensity_meters * pixels_per_meter)
+    playground._physics_process(0.0)
+    var near_intensity: float = playground.get_chaser_feedback_intensity_ratio_for_test()
+    var feedback_snapshot: ChaserFeedbackSnapshotScript = playground.get_chaser_feedback_snapshot_for_test()
+
+    assert_lt(far_intensity, near_intensity)
+    assert_eq(feedback_snapshot.pace_state, ChaserPacingModelScript.PaceState.CAMPING)
+    assert_gte(feedback_snapshot.speed_intensity_ratio, 0.0)
+    assert_lte(feedback_snapshot.speed_intensity_ratio, 1.0)
 
 func test_run_scene_camera_follows_player_downward_after_fall_resolution() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")

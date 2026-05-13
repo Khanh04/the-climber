@@ -2,6 +2,7 @@ class_name RunScene
 extends Node2D
 
 const ChaserContactServiceScript = preload("res://src/gameplay/chaser/chaser_contact_service.gd")
+const ChaserFeedbackSnapshotScript = preload("res://src/gameplay/chaser/chaser_feedback_snapshot.gd")
 const ChaserKillZoneScript = preload("res://scenes/chaser/chaser_kill_zone.gd")
 const ChaserPacingModelScript = preload("res://src/gameplay/chaser/chaser_pacing_model.gd")
 const ClimbPrototypeControllerScript = preload("res://src/gameplay/player/climb_prototype_controller.gd")
@@ -135,6 +136,14 @@ func get_right_hand_anchor_for_test() -> Marker2D:
 func get_chaser_for_test() -> ChaserKillZoneScript:
 	return _chaser_kill_zone
 
+func get_chaser_feedback_snapshot_for_test() -> ChaserFeedbackSnapshotScript:
+	Validation.require_condition(_chaser_pacing_model != null, "RunScene requires a chaser pacing model for feedback snapshots.")
+	return _chaser_pacing_model.get_current_feedback_snapshot()
+
+func get_chaser_feedback_intensity_ratio_for_test() -> float:
+	Validation.require_condition(_chaser_kill_zone != null, "RunScene requires a chaser kill zone for feedback intensity.")
+	return _chaser_kill_zone.get_feedback_intensity_ratio()
+
 func resolve_chaser_contact_for_test() -> void:
 	_on_chaser_contacted(_player.get_player_body())
 
@@ -203,8 +212,14 @@ func _update_chaser(delta: float) -> void:
 		return
 
 	_chaser_pacing_model.record_height(_calculate_current_height_meters(), delta)
+	var feedback_snapshot: ChaserFeedbackSnapshotScript = _chaser_pacing_model.get_current_feedback_snapshot()
+	_chaser_kill_zone.sync_feedback(
+		feedback_snapshot,
+		_player.get_body_global_position().y,
+		_get_climb_tuning_float(&"pixels_per_meter")
+	)
 	_chaser_kill_zone.advance_rise(
-		_chaser_pacing_model.get_current_rise_speed_meters_per_second(),
+		feedback_snapshot.rise_speed_meters_per_second,
 		_get_climb_tuning_float(&"pixels_per_meter"),
 		delta
 	)

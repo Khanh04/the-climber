@@ -1,6 +1,7 @@
 class_name ChaserPacingModel
 extends RefCounted
 
+const ChaserFeedbackSnapshotScript = preload("res://src/gameplay/chaser/chaser_feedback_snapshot.gd")
 const ChaserTuningScript = preload("res://resources/config/chaser_tuning.gd")
 
 enum PaceState {
@@ -56,6 +57,19 @@ static func calculate_rise_speed_meters_per_second(vertical_progress_meters: flo
         typed_tuning.max_rise_speed_meters_per_second
     )
 
+static func calculate_speed_intensity_ratio(vertical_progress_meters: float, tuning: Resource) -> float:
+    var typed_tuning: ChaserTuningScript = _require_tuning(tuning)
+    var rise_speed_meters_per_second: float = calculate_rise_speed_meters_per_second(vertical_progress_meters, typed_tuning)
+
+    if is_equal_approx(typed_tuning.min_rise_speed_meters_per_second, typed_tuning.max_rise_speed_meters_per_second):
+        return 1.0
+
+    return inverse_lerp(
+        typed_tuning.min_rise_speed_meters_per_second,
+        typed_tuning.max_rise_speed_meters_per_second,
+        rise_speed_meters_per_second
+    )
+
 func reset(starting_height_meters: float = 0.0) -> void:
     Validation.require_condition(starting_height_meters >= 0.0, "ChaserPacingModel starting height cannot be negative.")
     _elapsed_seconds = 0.0
@@ -79,6 +93,16 @@ func get_current_pace_state() -> int:
 
 func get_current_rise_speed_meters_per_second() -> float:
     return calculate_rise_speed_meters_per_second(get_recent_vertical_progress_meters(), _tuning)
+
+func get_current_feedback_snapshot() -> ChaserFeedbackSnapshotScript:
+    var snapshot := ChaserFeedbackSnapshotScript.new(
+        get_current_pace_state(),
+        get_recent_vertical_progress_meters(),
+        get_current_rise_speed_meters_per_second(),
+        calculate_speed_intensity_ratio(get_recent_vertical_progress_meters(), _tuning)
+    )
+    snapshot.assert_valid()
+    return snapshot
 
 static func _require_tuning(tuning: Resource) -> ChaserTuningScript:
     Validation.require_condition(tuning != null, "ChaserPacingModel requires chaser tuning.")
