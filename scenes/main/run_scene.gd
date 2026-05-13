@@ -5,9 +5,11 @@ const ChaserContactServiceScript = preload("res://src/gameplay/chaser/chaser_con
 const ChaserFeedbackSnapshotScript = preload("res://src/gameplay/chaser/chaser_feedback_snapshot.gd")
 const ChaserKillZoneScript = preload("res://scenes/chaser/chaser_kill_zone.gd")
 const ChaserPacingModelScript = preload("res://src/gameplay/chaser/chaser_pacing_model.gd")
+const ChaserThemeCatalogScript = preload("res://resources/config/chaser_theme_catalog.gd")
 const ClimbPrototypeControllerScript = preload("res://src/gameplay/player/climb_prototype_controller.gd")
 const ClimbPrototypeFrameResultScript = preload("res://src/gameplay/player/climb_prototype_frame_result.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
+const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
 const DesktopDebugInputAdapterScript = preload("res://src/gameplay/player/desktop_debug_input_adapter.gd")
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.gd")
@@ -28,6 +30,8 @@ const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
 
 @export var climb_tuning: ClimbPrototypeTuningScript
 @export var stamina_tuning: StaminaTuningScript
+@export var cosmetic_loadout: CosmeticLoadoutScript
+@export var chaser_theme_catalog: ChaserThemeCatalogScript
 
 @onready var _player: PlayerCharacterScript = %PlayerCharacter
 @onready var _chaser_kill_zone: ChaserKillZoneScript = get_node("ChaserKillZone") as ChaserKillZoneScript
@@ -63,6 +67,7 @@ func _ready() -> void:
 	_stamina = StaminaRuntimeScript.new(stamina_tuning)
 	_controller = ClimbPrototypeControllerScript.new(climb_tuning, _stamina)
 	_chaser_pacing_model = ChaserPacingModelScript.new(_chaser_kill_zone.chaser_tuning)
+	_apply_equipped_chaser_theme()
 	_start_y = _reset_anchor.global_position.y
 	_reset_playground()
 	_refresh_ui()
@@ -162,8 +167,13 @@ func get_bottom_fall_margin_for_test() -> float:
 func _validate_required_state() -> void:
 	Validation.require_condition(climb_tuning != null, "RunScene requires climb tuning.")
 	Validation.require_condition(stamina_tuning != null, "RunScene requires stamina tuning.")
+	Validation.require_condition(cosmetic_loadout != null, "RunScene requires a cosmetic loadout.")
+	Validation.require_condition(chaser_theme_catalog != null, "RunScene requires a chaser theme catalog.")
 	climb_tuning.assert_valid()
 	stamina_tuning.assert_valid()
+	cosmetic_loadout.assert_valid()
+	chaser_theme_catalog.assert_valid()
+	var _equipped_theme = chaser_theme_catalog.get_required_theme_by_id(cosmetic_loadout.chaser_theme_id)
 	Validation.require_condition(_player != null, "RunScene requires PlayerCharacter.")
 	Validation.require_condition(_chaser_kill_zone != null, "RunScene requires ChaserKillZone.")
 	Validation.require_condition(_reset_anchor != null, "RunScene requires ResetAnchor.")
@@ -349,12 +359,19 @@ func _reset_playground() -> void:
 		_reset_anchor.global_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 	)
 	if _chaser_kill_zone != null:
+		_apply_equipped_chaser_theme()
 		_chaser_kill_zone.reset_to_player_position(
 			_player.get_body_global_position().y,
 			_get_climb_tuning_float(&"pixels_per_meter"),
 			_camera.global_position.x,
 			get_viewport_rect().size.x
 		)
+
+func _apply_equipped_chaser_theme() -> void:
+	if _chaser_kill_zone == null or chaser_theme_catalog == null or cosmetic_loadout == null:
+		return
+
+	_chaser_kill_zone.apply_theme(chaser_theme_catalog.get_required_theme_by_id(cosmetic_loadout.chaser_theme_id))
 
 func _refresh_ui() -> void:
 	if _stamina == null or _run_ui_view == null:

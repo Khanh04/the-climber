@@ -2,30 +2,14 @@ class_name ChaserKillZone
 extends Area2D
 
 const ChaserFeedbackSnapshotScript = preload("res://src/gameplay/chaser/chaser_feedback_snapshot.gd")
+const ChaserThemeScript = preload("res://resources/config/chaser_theme.gd")
 const ChaserTuningScript = preload("res://resources/config/chaser_tuning.gd")
-
-const BASE_VISUAL_COLOR: Color = Color(0.16, 0.09, 0.12, 1.0)
-const HIGH_PRESSURE_VISUAL_COLOR: Color = Color(0.36, 0.10, 0.08, 1.0)
-const GLOW_VISUAL_COLOR: Color = Color(0.84, 0.22, 0.14, 1.0)
-const CREST_VISUAL_COLOR: Color = Color(1.0, 0.57, 0.30, 1.0)
-const GLOW_EXTRA_WIDTH_PIXELS: float = 160.0
-const GLOW_EXTRA_HEIGHT_PIXELS: float = 112.0
-const CREST_HEIGHT_PIXELS: float = 40.0
-const CREST_SIDE_INSET_PIXELS: float = 28.0
-const GLOW_MIN_ALPHA: float = 0.08
-const GLOW_MAX_ALPHA: float = 0.34
-const CREST_MIN_ALPHA: float = 0.14
-const CREST_MAX_ALPHA: float = 0.76
-const PULSE_MIN_FREQUENCY_HZ: float = 0.65
-const PULSE_MAX_FREQUENCY_HZ: float = 1.9
-const GLOW_MAX_SCALE_DELTA: float = 0.05
-const CREST_MAX_SCALE_DELTA: float = 0.18
-const CREST_MAX_LIFT_PIXELS: float = 10.0
 
 signal chaser_contacted(body: Node)
 signal feedback_intensity_changed(intensity_ratio: float)
 
 @export var chaser_tuning: ChaserTuningScript
+@export var chaser_theme: ChaserThemeScript
 @export var width_padding_pixels: float = 256.0
 @export var kill_zone_height_pixels: float = 192.0
 
@@ -56,6 +40,17 @@ func _exit_tree() -> void:
 
 	if _audio_player.playing:
 		_audio_player.stop()
+
+func apply_theme(theme: Resource) -> void:
+	chaser_theme = _require_theme(theme)
+	if not is_node_ready():
+		return
+
+	_apply_theme_resource()
+	_resize_to_cover_width(_get_rectangle_shape().size.x)
+	_presentation_time_seconds = 0.0
+	_refresh_audio_feedback()
+	_refresh_presentation()
 
 func reset_to_player_position(player_body_y: float, pixels_per_meter: float, center_x: float, viewport_width: float) -> void:
 	Validation.require_condition(pixels_per_meter > 0.0, "ChaserKillZone pixels per meter must be positive.")
@@ -118,6 +113,8 @@ func get_collision_height_pixels() -> float:
 func _validate_required_state() -> void:
 	Validation.require_condition(chaser_tuning != null, "ChaserKillZone requires chaser tuning.")
 	chaser_tuning.assert_valid()
+	Validation.require_condition(chaser_theme != null, "ChaserKillZone requires a chaser theme.")
+	chaser_theme.assert_valid()
 	Validation.require_condition(width_padding_pixels >= 0.0, "ChaserKillZone width padding cannot be negative.")
 	Validation.require_condition(kill_zone_height_pixels > 0.0, "ChaserKillZone height must be positive.")
 	Validation.require_condition(_collision_shape != null, "ChaserKillZone requires CollisionShape2D.")
@@ -127,6 +124,7 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_visual != null, "ChaserKillZone requires Visual.")
 	Validation.require_condition(_crest_visual != null, "ChaserKillZone requires CrestVisual.")
 	Validation.require_condition(_audio_player != null, "ChaserKillZone requires IntensityAudioPlayer.")
+	_apply_theme_resource()
 	Validation.require_condition(_audio_player.stream != null, "ChaserKillZone requires an assigned audio loop stream.")
 	_resize_to_cover_width(_get_rectangle_shape().size.x)
 	_apply_feedback_intensity(0.0)
@@ -135,8 +133,8 @@ func _resize_to_cover_width(width_pixels: float) -> void:
 	Validation.require_condition(width_pixels > 0.0, "ChaserKillZone width must be positive.")
 	var shape: RectangleShape2D = _get_rectangle_shape()
 	shape.size = Vector2(width_pixels, kill_zone_height_pixels)
-	var glow_width_pixels: float = width_pixels + GLOW_EXTRA_WIDTH_PIXELS
-	var glow_height_pixels: float = kill_zone_height_pixels + GLOW_EXTRA_HEIGHT_PIXELS
+	var glow_width_pixels: float = width_pixels + chaser_theme.glow_extra_width_pixels
+	var glow_height_pixels: float = kill_zone_height_pixels + chaser_theme.glow_extra_height_pixels
 	_glow_visual.polygon = PackedVector2Array([
 		Vector2(-glow_width_pixels * 0.5, -glow_height_pixels * 0.5),
 		Vector2(glow_width_pixels * 0.5, -glow_height_pixels * 0.5),
@@ -149,12 +147,12 @@ func _resize_to_cover_width(width_pixels: float) -> void:
 		Vector2(width_pixels * 0.5, kill_zone_height_pixels * 0.5),
 		Vector2(-width_pixels * 0.5, kill_zone_height_pixels * 0.5),
 	])
-	var crest_half_width_pixels: float = maxf(0.0, (width_pixels * 0.5) - CREST_SIDE_INSET_PIXELS)
+	var crest_half_width_pixels: float = maxf(0.0, (width_pixels * 0.5) - chaser_theme.crest_side_inset_pixels)
 	_crest_visual.polygon = PackedVector2Array([
-		Vector2(-crest_half_width_pixels, -CREST_HEIGHT_PIXELS * 0.5),
-		Vector2(crest_half_width_pixels, -CREST_HEIGHT_PIXELS * 0.5),
-		Vector2(crest_half_width_pixels, CREST_HEIGHT_PIXELS * 0.5),
-		Vector2(-crest_half_width_pixels, CREST_HEIGHT_PIXELS * 0.5),
+		Vector2(-crest_half_width_pixels, -chaser_theme.crest_height_pixels * 0.5),
+		Vector2(crest_half_width_pixels, -chaser_theme.crest_height_pixels * 0.5),
+		Vector2(crest_half_width_pixels, chaser_theme.crest_height_pixels * 0.5),
+		Vector2(-crest_half_width_pixels, chaser_theme.crest_height_pixels * 0.5),
 	])
 
 	if _feedback_intensity_ratio >= 0.0:
@@ -171,37 +169,53 @@ func _apply_feedback_intensity(intensity_ratio: float) -> void:
 		return
 
 	_feedback_intensity_ratio = intensity_ratio
-	var volume_intensity_ratio: float = sqrt(intensity_ratio)
-	var pitch_intensity_ratio: float = pow(intensity_ratio, 1.35)
-	_audio_player.volume_db = lerpf(chaser_tuning.min_audio_volume_db, chaser_tuning.max_audio_volume_db, volume_intensity_ratio)
-	_audio_player.pitch_scale = lerpf(chaser_tuning.min_audio_pitch_scale, chaser_tuning.max_audio_pitch_scale, pitch_intensity_ratio)
+	_refresh_audio_feedback()
 	_refresh_presentation()
 	feedback_intensity_changed.emit(intensity_ratio)
 
+func _apply_theme_resource() -> void:
+	_audio_player.stream = chaser_theme.audio_loop_stream
+
+func _refresh_audio_feedback() -> void:
+	if _feedback_intensity_ratio < 0.0:
+		return
+
+	var volume_intensity_ratio: float = chaser_theme.evaluate_audio_volume_intensity_ratio(_feedback_intensity_ratio)
+	var pitch_intensity_ratio: float = chaser_theme.evaluate_audio_pitch_intensity_ratio(_feedback_intensity_ratio)
+	_audio_player.volume_db = lerpf(chaser_tuning.min_audio_volume_db, chaser_tuning.max_audio_volume_db, volume_intensity_ratio)
+	_audio_player.pitch_scale = lerpf(chaser_tuning.min_audio_pitch_scale, chaser_tuning.max_audio_pitch_scale, pitch_intensity_ratio)
+
 func _refresh_presentation() -> void:
-	var pulse_frequency_hz: float = lerpf(PULSE_MIN_FREQUENCY_HZ, PULSE_MAX_FREQUENCY_HZ, _feedback_intensity_ratio)
+	var pulse_frequency_hz: float = lerpf(chaser_theme.pulse_min_frequency_hz, chaser_theme.pulse_max_frequency_hz, _feedback_intensity_ratio)
 	var pulse_ratio: float = 0.5 + (0.5 * sin(TAU * pulse_frequency_hz * _presentation_time_seconds))
 
-	var visual_color: Color = BASE_VISUAL_COLOR.lerp(HIGH_PRESSURE_VISUAL_COLOR, _feedback_intensity_ratio * 0.75)
+	var visual_color: Color = chaser_theme.base_fill_color.lerp(chaser_theme.high_pressure_fill_color, _feedback_intensity_ratio * 0.75)
 	visual_color.a = lerpf(chaser_tuning.min_visual_alpha, chaser_tuning.max_visual_alpha, _feedback_intensity_ratio)
 	_visual.color = visual_color
 
-	var glow_color: Color = GLOW_VISUAL_COLOR
-	var glow_alpha: float = lerpf(GLOW_MIN_ALPHA, GLOW_MAX_ALPHA, _feedback_intensity_ratio) * lerpf(0.82, 1.18, pulse_ratio)
+	var glow_color: Color = chaser_theme.glow_color
+	var glow_alpha: float = lerpf(chaser_theme.glow_min_alpha, chaser_theme.glow_max_alpha, _feedback_intensity_ratio) * lerpf(0.82, 1.18, pulse_ratio)
 	glow_color.a = clampf(glow_alpha, 0.0, 1.0)
 	_glow_visual.color = glow_color
-	var glow_scale: float = 1.0 + (GLOW_MAX_SCALE_DELTA * _feedback_intensity_ratio * pulse_ratio)
+	var glow_scale: float = 1.0 + (chaser_theme.glow_max_scale_delta * _feedback_intensity_ratio * pulse_ratio)
 	_glow_visual.scale = Vector2(glow_scale, glow_scale)
 
-	var crest_color: Color = CREST_VISUAL_COLOR
-	var crest_alpha: float = lerpf(CREST_MIN_ALPHA, CREST_MAX_ALPHA, _feedback_intensity_ratio) * lerpf(0.80, 1.20, pulse_ratio)
+	var crest_color: Color = chaser_theme.crest_color
+	var crest_alpha: float = lerpf(chaser_theme.crest_min_alpha, chaser_theme.crest_max_alpha, _feedback_intensity_ratio) * lerpf(0.80, 1.20, pulse_ratio)
 	crest_color.a = clampf(crest_alpha, 0.0, 1.0)
 	_crest_visual.color = crest_color
-	_crest_visual.scale = Vector2(1.0, 1.0 + (CREST_MAX_SCALE_DELTA * _feedback_intensity_ratio * pulse_ratio))
+	_crest_visual.scale = Vector2(1.0, 1.0 + (chaser_theme.crest_max_scale_delta * _feedback_intensity_ratio * pulse_ratio))
 	_crest_visual.position = Vector2(
 		0.0,
-		(-kill_zone_height_pixels * 0.5) + (CREST_HEIGHT_PIXELS * 0.5) - (CREST_MAX_LIFT_PIXELS * _feedback_intensity_ratio * pulse_ratio)
+		(-kill_zone_height_pixels * 0.5) + (chaser_theme.crest_height_pixels * 0.5) - (chaser_theme.crest_max_lift_pixels * _feedback_intensity_ratio * pulse_ratio)
 	)
+
+func _require_theme(theme: Resource) -> ChaserThemeScript:
+	Validation.require_condition(theme != null, "ChaserKillZone requires a ChaserTheme resource.")
+	Validation.require_condition(theme is ChaserThemeScript, "ChaserKillZone theme must implement ChaserTheme.")
+	var typed_theme: ChaserThemeScript = theme as ChaserThemeScript
+	typed_theme.assert_valid()
+	return typed_theme
 
 func _ensure_audio_playback() -> void:
 	if not _audio_player.playing:

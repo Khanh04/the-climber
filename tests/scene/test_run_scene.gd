@@ -4,6 +4,7 @@ const AimInputIntentScript = preload("res://src/gameplay/player/aim_input_intent
 const ChaserFeedbackSnapshotScript = preload("res://src/gameplay/chaser/chaser_feedback_snapshot.gd")
 const ChaserPacingModelScript = preload("res://src/gameplay/chaser/chaser_pacing_model.gd")
 const ChaserKillZoneScript = preload("res://scenes/chaser/chaser_kill_zone.gd")
+const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
@@ -41,6 +42,23 @@ func test_run_scene_uses_extended_starting_stamina_for_playtesting() -> void:
     await get_tree().process_frame
 
     assert_eq(playground.stamina_tuning.one_hand_seconds, 20.0)
+
+func test_run_scene_applies_equipped_chaser_theme_from_cosmetic_loadout() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+    var cosmetic_loadout := CosmeticLoadoutScript.new()
+
+    assert_not_null(playground)
+    cosmetic_loadout.chaser_theme_id = &"glitch"
+    playground.cosmetic_loadout = cosmetic_loadout
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    assert_eq(playground.get_chaser_for_test().chaser_theme.theme_id, &"glitch")
+
+    playground.reset_for_test()
+    assert_eq(playground.get_chaser_for_test().chaser_theme.theme_id, &"glitch")
 
 func test_run_scene_handholds_have_required_group() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")

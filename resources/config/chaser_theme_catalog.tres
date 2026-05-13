@@ -1,0 +1,10 @@
+[gd_resource type="Resource" script_class="ChaserThemeCatalog" load_steps=5 format=3]
+
+[ext_resource type="Script" path="res://resources/config/chaser_theme_catalog.gd" id="1_script"]
+[ext_resource type="Resource" path="res://resources/config/chaser_theme_rising_void.tres" id="2_rising_void"]
+[ext_resource type="Resource" path="res://resources/config/chaser_theme_hot_coffee.tres" id="3_hot_coffee"]
+[ext_resource type="Resource" path="res://resources/config/chaser_theme_glitch.tres" id="4_glitch"]
+
+[resource]
+script = ExtResource("1_script")
+themes = [ExtResource("2_rising_void"), ExtResource("3_hot_coffee"), ExtResource("4_glitch")]

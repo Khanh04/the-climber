@@ -3,8 +3,11 @@ extends GutTest
 const EconomyTuningScript = preload("res://resources/config/economy_tuning.gd")
 const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
 const RewardedAdsTuningScript = preload("res://resources/config/rewarded_ads_tuning.gd")
+const ChaserThemeCatalogScript = preload("res://resources/config/chaser_theme_catalog.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
+const ChaserThemeScript = preload("res://resources/config/chaser_theme.gd")
 const ChaserTuningScript = preload("res://resources/config/chaser_tuning.gd")
+const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
 const CosmeticsTuningScript = preload("res://resources/config/cosmetics_tuning.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
 
@@ -81,6 +84,68 @@ func test_chaser_tuning_rejects_invalid_feedback_ranges() -> void:
     tuning.far_distance_for_min_intensity_meters = tuning.near_distance_for_max_intensity_meters
 
     assert_false(tuning.is_valid())
+
+func test_default_chaser_theme_is_valid() -> void:
+    var theme: ChaserThemeScript = load("res://resources/config/chaser_theme_rising_void.tres") as ChaserThemeScript
+
+    assert_not_null(theme)
+    assert_true(theme.is_valid())
+
+func test_invalid_chaser_theme_is_detected() -> void:
+    var theme := ChaserThemeScript.new()
+    theme.audio_loop_stream = load("res://assets/audio/chaser_pressure_loop.tres") as AudioStream
+    theme.pulse_max_frequency_hz = 0.25
+    theme.pulse_min_frequency_hz = 0.5
+
+    assert_false(theme.is_valid())
+
+func test_chaser_theme_rejects_non_positive_audio_curve_exponents() -> void:
+    var theme := ChaserThemeScript.new()
+    theme.audio_loop_stream = load("res://assets/audio/chaser_pressure_loop.tres") as AudioStream
+    theme.audio_pitch_curve_exponent = 0.0
+
+    assert_false(theme.is_valid())
+
+func test_concrete_chaser_themes_swap_distinct_audio_and_pulse_profiles() -> void:
+    var rising_void_theme: ChaserThemeScript = load("res://resources/config/chaser_theme_rising_void.tres") as ChaserThemeScript
+    var hot_coffee_theme: ChaserThemeScript = load("res://resources/config/chaser_theme_hot_coffee.tres") as ChaserThemeScript
+    var glitch_theme: ChaserThemeScript = load("res://resources/config/chaser_theme_glitch.tres") as ChaserThemeScript
+
+    assert_not_null(rising_void_theme)
+    assert_not_null(hot_coffee_theme)
+    assert_not_null(glitch_theme)
+    assert_ne(rising_void_theme.audio_loop_stream, hot_coffee_theme.audio_loop_stream)
+    assert_ne(hot_coffee_theme.audio_loop_stream, glitch_theme.audio_loop_stream)
+    assert_ne(rising_void_theme.pulse_max_frequency_hz, glitch_theme.pulse_max_frequency_hz)
+    assert_ne(rising_void_theme.audio_volume_curve_exponent, hot_coffee_theme.audio_volume_curve_exponent)
+    assert_ne(hot_coffee_theme.audio_pitch_curve_exponent, glitch_theme.audio_pitch_curve_exponent)
+    assert_ne(hot_coffee_theme.base_fill_color, glitch_theme.base_fill_color)
+
+func test_default_cosmetic_loadout_is_valid() -> void:
+    var loadout: CosmeticLoadoutScript = load("res://resources/config/cosmetic_loadout_default.tres") as CosmeticLoadoutScript
+
+    assert_not_null(loadout)
+    assert_true(loadout.is_valid())
+
+func test_invalid_cosmetic_loadout_is_detected() -> void:
+    var loadout := CosmeticLoadoutScript.new()
+    loadout.chaser_theme_id = StringName()
+
+    assert_false(loadout.is_valid())
+
+func test_default_chaser_theme_catalog_is_valid() -> void:
+    var catalog: ChaserThemeCatalogScript = load("res://resources/config/chaser_theme_catalog.tres") as ChaserThemeCatalogScript
+
+    assert_not_null(catalog)
+    assert_true(catalog.is_valid())
+    assert_eq(catalog.get_required_theme_by_id(&"hot_coffee").theme_id, &"hot_coffee")
+
+func test_invalid_chaser_theme_catalog_is_detected() -> void:
+    var theme: ChaserThemeScript = load("res://resources/config/chaser_theme_rising_void.tres") as ChaserThemeScript
+    var catalog := ChaserThemeCatalogScript.new()
+    catalog.themes = [theme, theme]
+
+    assert_false(catalog.is_valid())
 
 func test_default_cosmetics_tuning_is_valid() -> void:
     var tuning = CosmeticsTuningScript.new()

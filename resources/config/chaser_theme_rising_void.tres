@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ChaserTheme" load_steps=3 format=3]
+
+[ext_resource type="Script" path="res://resources/config/chaser_theme.gd" id="1_script"]
+[ext_resource type="AudioStreamWAV" path="res://assets/audio/chaser_pressure_loop.tres" id="2_loop"]
+
+[resource]
+script = ExtResource("1_script")
+theme_id = &"rising_void"
+audio_loop_stream = ExtResource("2_loop")
+base_fill_color = Color(0.16, 0.09, 0.12, 1)
+high_pressure_fill_color = Color(0.36, 0.1, 0.08, 1)
+glow_color = Color(0.84, 0.22, 0.14, 1)
+crest_color = Color(1, 0.57, 0.3, 1)
+glow_extra_width_pixels = 160.0
+glow_extra_height_pixels = 112.0
+crest_height_pixels = 40.0
+crest_side_inset_pixels = 28.0
+glow_min_alpha = 0.08
+glow_max_alpha = 0.34
+crest_min_alpha = 0.14
+crest_max_alpha = 0.76
+pulse_min_frequency_hz = 0.65
+pulse_max_frequency_hz = 1.9
+audio_volume_curve_exponent = 0.5
+audio_pitch_curve_exponent = 1.35
+glow_max_scale_delta = 0.05
+crest_max_scale_delta = 0.18
+crest_max_lift_pixels = 10.0

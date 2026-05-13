@@ -38,7 +38,7 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 - Supported examples include Rising Void, Hot Coffee, Glitch / Code, and Plastic Ball Pit.
 - Each cosmetic has a distinct spatial audio signature.
 - Audio intensity should increase as the Chaser approaches the player.
-- The current Phase 6 slice uses a checked-in default Chaser loop asset through an `AudioStreamPlayer2D`, with eased pitch and volume driven by feedback intensity.
+- The current Phase 6 slice uses typed `ChaserTheme` Resources so Rising Void, Hot Coffee, and Glitch variants can swap loop assets, colors, pulse behavior, and presentation-only audio response curves through data while `AudioStreamPlayer2D` pitch and volume still respond to feedback intensity.
 
 ## Implementation Notes
 
@@ -62,6 +62,7 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 - Decouple the visual theme from the kill-zone logic.
 - Treat cosmetic selection as a theme bundle containing visuals, particles, and an audio profile.
 - Current feedback intensity blends pace-driven pressure and player proximity to drive a layered Chaser fill, pulsing crest/glow treatment, and audio modulation without moving game rules into the scene.
+- The current implementation uses validated `ChaserTheme` Resources plus a typed run `CosmeticLoadout` and `ChaserThemeCatalog` so the run scene can resolve the equipped Chaser theme without moving presentation data into gameplay code.
 
 ## Post-MVP
 

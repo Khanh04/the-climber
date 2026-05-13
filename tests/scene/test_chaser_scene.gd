@@ -3,6 +3,7 @@ extends GutTest
 const ChaserFeedbackSnapshotScript = preload("res://src/gameplay/chaser/chaser_feedback_snapshot.gd")
 const ChaserKillZoneScript = preload("res://scenes/chaser/chaser_kill_zone.gd")
 const ChaserPacingModelScript = preload("res://src/gameplay/chaser/chaser_pacing_model.gd")
+const ChaserThemeScript = preload("res://resources/config/chaser_theme.gd")
 const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
 
 var _contacted_body: Node = null
@@ -19,6 +20,7 @@ func test_chaser_scene_wires_required_nodes_and_defaults() -> void:
 	assert_not_null(audio_player)
 	assert_true(chaser.monitoring)
 	assert_true(chaser.monitorable)
+	assert_not_null(chaser.chaser_theme)
 	assert_gt(chaser.get_collision_width_pixels(), 0.0)
 	assert_eq(chaser.get_collision_height_pixels(), chaser.kill_zone_height_pixels)
 	assert_eq(chaser.get_feedback_intensity_ratio(), 0.0)
@@ -78,6 +80,57 @@ func test_chaser_scene_feedback_updates_visual_alpha_and_audio_properties() -> v
 	assert_gt(crest_visual.scale.y, 1.0)
 	assert_true(is_equal_approx(audio_player.volume_db, chaser.chaser_tuning.max_audio_volume_db))
 	assert_true(is_equal_approx(audio_player.pitch_scale, chaser.chaser_tuning.max_audio_pitch_scale))
+
+func test_chaser_scene_apply_theme_swaps_visuals_and_audio_without_gameplay_changes() -> void:
+	var chaser: ChaserKillZoneScript = await _instantiate_chaser()
+	var hot_coffee_theme: ChaserThemeScript = load("res://resources/config/chaser_theme_hot_coffee.tres") as ChaserThemeScript
+	var audio_player: AudioStreamPlayer2D = chaser.get_node("IntensityAudioPlayer") as AudioStreamPlayer2D
+	var visual: Polygon2D = chaser.get_node("Visual") as Polygon2D
+	var glow_visual: Polygon2D = chaser.get_node("GlowVisual") as Polygon2D
+
+	assert_not_null(hot_coffee_theme)
+	assert_not_null(audio_player)
+	assert_not_null(visual)
+	assert_not_null(glow_visual)
+
+	chaser.apply_theme(hot_coffee_theme)
+
+	assert_eq(chaser.chaser_theme, hot_coffee_theme)
+	assert_eq(audio_player.stream, hot_coffee_theme.audio_loop_stream)
+	assert_true(is_equal_approx(visual.color.r, hot_coffee_theme.base_fill_color.r))
+	assert_true(is_equal_approx(visual.color.g, hot_coffee_theme.base_fill_color.g))
+	assert_true(is_equal_approx(visual.color.b, hot_coffee_theme.base_fill_color.b))
+	assert_true(is_equal_approx(glow_visual.color.r, hot_coffee_theme.glow_color.r))
+	assert_true(is_equal_approx(glow_visual.color.g, hot_coffee_theme.glow_color.g))
+	assert_true(is_equal_approx(glow_visual.color.b, hot_coffee_theme.glow_color.b))
+
+func test_chaser_scene_theme_can_change_audio_curve_response() -> void:
+	var chaser: ChaserKillZoneScript = await _instantiate_chaser()
+	var hot_coffee_theme: ChaserThemeScript = load("res://resources/config/chaser_theme_hot_coffee.tres") as ChaserThemeScript
+	var glitch_theme: ChaserThemeScript = load("res://resources/config/chaser_theme_glitch.tres") as ChaserThemeScript
+	var audio_player: AudioStreamPlayer2D = chaser.get_node("IntensityAudioPlayer") as AudioStreamPlayer2D
+	var medium_feedback_snapshot := ChaserFeedbackSnapshotScript.new(
+		ChaserPacingModelScript.PaceState.NEUTRAL,
+		4.0,
+		2.75,
+		0.5
+	)
+
+	assert_not_null(hot_coffee_theme)
+	assert_not_null(glitch_theme)
+	assert_not_null(audio_player)
+
+	chaser.reset_to_player_position(1500.0, 100.0, 540.0, 1080.0)
+	chaser.apply_theme(hot_coffee_theme)
+	chaser.sync_feedback(medium_feedback_snapshot, chaser.get_top_edge_y() - (chaser.chaser_tuning.far_distance_for_min_intensity_meters * 100.0), 100.0)
+	var hot_coffee_volume_db: float = audio_player.volume_db
+	var hot_coffee_pitch_scale: float = audio_player.pitch_scale
+
+	chaser.apply_theme(glitch_theme)
+	chaser.sync_feedback(medium_feedback_snapshot, chaser.get_top_edge_y() - (chaser.chaser_tuning.far_distance_for_min_intensity_meters * 100.0), 100.0)
+
+	assert_ne(audio_player.volume_db, hot_coffee_volume_db)
+	assert_ne(audio_player.pitch_scale, hot_coffee_pitch_scale)
 
 func test_chaser_scene_proximity_intensity_increases_when_player_is_close() -> void:
 	var chaser: ChaserKillZoneScript = await _instantiate_chaser()

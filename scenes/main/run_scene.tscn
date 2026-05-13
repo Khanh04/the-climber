@@ -7,6 +7,8 @@
 [ext_resource type="PackedScene" path="res://scenes/ui/run_hud.tscn" id="5_run_hud"]
 [ext_resource type="PackedScene" path="res://scenes/ui/run_end_screen.tscn" id="6_run_end"]
 [ext_resource type="PackedScene" path="res://scenes/chaser/chaser_kill_zone.tscn" id="7_chaser"]
+[ext_resource type="Resource" path="res://resources/config/cosmetic_loadout_default.tres" id="8_loadout"]
+[ext_resource type="Resource" path="res://resources/config/chaser_theme_catalog.tres" id="9_theme_catalog"]
 
 [sub_resource type="Resource" id="Resource_climb"]
 script = ExtResource("2_climb")
@@ -25,6 +27,8 @@ size = Vector2(1200, 80)
 script = ExtResource("1_dev")
 climb_tuning = SubResource("Resource_climb")
 stamina_tuning = SubResource("Resource_stamina")
+cosmetic_loadout = ExtResource("8_loadout")
+chaser_theme_catalog = ExtResource("9_theme_catalog")
 
 [node name="DevCamera" type="Camera2D" parent="." unique_id=173797974]
 unique_name_in_owner = true
