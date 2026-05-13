@@ -9,6 +9,8 @@ const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_f
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunSceneScript = preload("res://scenes/main/run_scene.gd")
+const SaveSchemaScript = preload("res://src/platform/storage/save_schema.gd")
+const SaveSnapshotScript = preload("res://src/platform/storage/save_snapshot.gd")
 const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_service.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 
@@ -59,6 +61,22 @@ func test_run_scene_applies_equipped_chaser_theme_from_cosmetic_loadout() -> voi
 
     playground.reset_for_test()
     assert_eq(playground.get_chaser_for_test().chaser_theme.theme_id, &"glitch")
+
+func test_run_scene_save_snapshot_overrides_default_chaser_theme_selection() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+    var save_snapshot: SaveSnapshotScript = SaveSnapshotScript.new(12, SaveSchemaScript.VERSION, &"hot_coffee")
+
+    assert_not_null(playground)
+    playground.set_save_snapshot(save_snapshot)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    assert_eq(playground.get_chaser_for_test().chaser_theme.theme_id, &"hot_coffee")
+
+    playground.reset_for_test()
+    assert_eq(playground.get_chaser_for_test().chaser_theme.theme_id, &"hot_coffee")
 
 func test_run_scene_handholds_have_required_group() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")

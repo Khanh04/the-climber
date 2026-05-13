@@ -8,12 +8,13 @@ const SaveStorageScript = preload("res://src/platform/storage/save_storage.gd")
 func test_save_snapshot_round_trips_through_local_storage() -> void:
     var local_storage: RefCounted = InMemoryLocalStorageAdapterScript.new()
     var save_storage = SaveStorageScript.new(local_storage)
-    var snapshot: RefCounted = SaveSnapshotScript.new(42)
+    var snapshot: RefCounted = SaveSnapshotScript.new(42, SaveSchemaScript.VERSION, &"glitch")
 
     save_storage.save_snapshot(snapshot)
 
     assert_true(save_storage.has_snapshot())
     assert_eq(save_storage.load_snapshot().wallet_coins, 42)
+    assert_eq(save_storage.load_snapshot().chaser_theme_id, &"glitch")
 
 func test_save_snapshot_dictionary_validation_rejects_unsupported_schema_version() -> void:
     var payload: Dictionary = {
@@ -27,6 +28,7 @@ func test_save_snapshot_dictionary_validation_rejects_negative_wallet_balance() 
     var payload: Dictionary = {
         SaveSchemaScript.KEY_SCHEMA_VERSION: SaveSchemaScript.VERSION,
         SaveSchemaScript.KEY_WALLET_COINS: -1,
+        SaveSchemaScript.KEY_CHASER_THEME_ID: "rising_void",
     }
 
     assert_false(SaveSnapshotScript.is_dictionary_valid(payload))
@@ -38,11 +40,20 @@ func test_save_snapshot_dictionary_validation_rejects_missing_required_fields() 
 
     assert_false(SaveSnapshotScript.is_dictionary_valid(payload))
 
+func test_save_snapshot_dictionary_validation_rejects_empty_chaser_theme_id() -> void:
+    var payload: Dictionary = {
+        SaveSchemaScript.KEY_SCHEMA_VERSION: SaveSchemaScript.VERSION,
+        SaveSchemaScript.KEY_WALLET_COINS: 4,
+        SaveSchemaScript.KEY_CHASER_THEME_ID: "",
+    }
+
+    assert_false(SaveSnapshotScript.is_dictionary_valid(payload))
+
 func test_delete_snapshot_clears_saved_presence() -> void:
     var local_storage: RefCounted = InMemoryLocalStorageAdapterScript.new()
     var save_storage = SaveStorageScript.new(local_storage)
 
-    var snapshot: RefCounted = SaveSnapshotScript.new(5)
+    var snapshot: RefCounted = SaveSnapshotScript.new(5, SaveSchemaScript.VERSION, &"hot_coffee")
     save_storage.save_snapshot(snapshot)
     save_storage.delete_snapshot()
 

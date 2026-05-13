@@ -21,6 +21,7 @@ const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const BottomScreenFallServiceScript = preload("res://src/gameplay/run/bottom_screen_fall_service.gd")
 const RunLoopCoordinatorScript = preload("res://src/gameplay/run/run_loop_coordinator.gd")
 const RunSessionScript = preload("res://src/gameplay/run/run_session.gd")
+const SaveSnapshotScript = preload("res://src/platform/storage/save_snapshot.gd")
 const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_service.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const StaminaRuntimeScript = preload("res://src/gameplay/player/stamina_runtime.gd")
@@ -57,10 +58,13 @@ var _left_aim_preview: Line2D = null
 var _right_aim_preview: Line2D = null
 var _aim_target_marker: Polygon2D = null
 var _debug_reset_pressed: bool = false
+var _save_snapshot: SaveSnapshotScript = null
 var _start_y: float = 0.0
 
 func _ready() -> void:
 	_validate_required_state()
+	cosmetic_loadout = _duplicate_cosmetic_loadout(cosmetic_loadout)
+	_apply_saved_cosmetic_selection()
 	var _connect_result: int = _run_end_screen.connect(&"restart_requested", _on_run_end_restart_requested)
 	var _chaser_connect_result: int = _chaser_kill_zone.connect(&"chaser_contacted", _on_chaser_contacted)
 	_player.set_climb_tuning(climb_tuning)
@@ -71,6 +75,18 @@ func _ready() -> void:
 	_start_y = _reset_anchor.global_position.y
 	_reset_playground()
 	_refresh_ui()
+
+func set_save_snapshot(snapshot: RefCounted) -> void:
+	Validation.require_condition(snapshot != null, "RunScene requires a save snapshot.")
+	Validation.require_condition(snapshot is SaveSnapshotScript, "RunScene requires a SaveSnapshot implementation.")
+	var typed_snapshot: SaveSnapshotScript = snapshot as SaveSnapshotScript
+	typed_snapshot.assert_valid()
+	_save_snapshot = typed_snapshot
+	if not is_node_ready():
+		return
+
+	_apply_saved_cosmetic_selection()
+	_apply_equipped_chaser_theme()
 
 func _physics_process(delta: float) -> void:
 	if _consume_debug_reset_input():
@@ -174,6 +190,9 @@ func _validate_required_state() -> void:
 	cosmetic_loadout.assert_valid()
 	chaser_theme_catalog.assert_valid()
 	var _equipped_theme = chaser_theme_catalog.get_required_theme_by_id(cosmetic_loadout.chaser_theme_id)
+	if _save_snapshot != null:
+		_save_snapshot.assert_valid()
+		var _saved_theme = chaser_theme_catalog.get_required_theme_by_id(_save_snapshot.chaser_theme_id)
 	Validation.require_condition(_player != null, "RunScene requires PlayerCharacter.")
 	Validation.require_condition(_chaser_kill_zone != null, "RunScene requires ChaserKillZone.")
 	Validation.require_condition(_reset_anchor != null, "RunScene requires ResetAnchor.")
@@ -372,6 +391,22 @@ func _apply_equipped_chaser_theme() -> void:
 		return
 
 	_chaser_kill_zone.apply_theme(chaser_theme_catalog.get_required_theme_by_id(cosmetic_loadout.chaser_theme_id))
+
+func _apply_saved_cosmetic_selection() -> void:
+	if _save_snapshot == null:
+		return
+
+	Validation.require_condition(cosmetic_loadout != null, "RunScene requires a cosmetic loadout before applying saved selection.")
+	cosmetic_loadout.chaser_theme_id = _save_snapshot.chaser_theme_id
+
+func _duplicate_cosmetic_loadout(loadout: Resource) -> CosmeticLoadoutScript:
+	Validation.require_condition(loadout != null, "RunScene requires a cosmetic loadout resource.")
+	Validation.require_condition(loadout is CosmeticLoadoutScript, "RunScene requires a CosmeticLoadout resource.")
+	var duplicated_loadout: Resource = (loadout as CosmeticLoadoutScript).duplicate(true)
+	Validation.require_condition(duplicated_loadout is CosmeticLoadoutScript, "RunScene duplicated cosmetic loadout must implement CosmeticLoadout.")
+	var typed_duplicated_loadout: CosmeticLoadoutScript = duplicated_loadout as CosmeticLoadoutScript
+	typed_duplicated_loadout.assert_valid()
+	return typed_duplicated_loadout
 
 func _refresh_ui() -> void:
 	if _stamina == null or _run_ui_view == null:
