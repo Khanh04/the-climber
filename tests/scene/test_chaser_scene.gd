@@ -12,7 +12,9 @@ func test_chaser_scene_wires_required_nodes_and_defaults() -> void:
 	var audio_player: AudioStreamPlayer2D = chaser.get_node("IntensityAudioPlayer") as AudioStreamPlayer2D
 
 	assert_not_null(chaser.get_node_or_null("CollisionShape2D"))
+	assert_not_null(chaser.get_node_or_null("GlowVisual"))
 	assert_not_null(chaser.get_node_or_null("Visual"))
+	assert_not_null(chaser.get_node_or_null("CrestVisual"))
 	assert_not_null(chaser.get_node_or_null("IntensityAudioPlayer"))
 	assert_not_null(audio_player)
 	assert_true(chaser.monitoring)
@@ -51,6 +53,8 @@ func test_chaser_scene_emits_contact_signal_for_player_body() -> void:
 func test_chaser_scene_feedback_updates_visual_alpha_and_audio_properties() -> void:
 	var chaser: ChaserKillZoneScript = await _instantiate_chaser()
 	var audio_player: AudioStreamPlayer2D = chaser.get_node("IntensityAudioPlayer") as AudioStreamPlayer2D
+	var glow_visual: Polygon2D = chaser.get_node("GlowVisual") as Polygon2D
+	var crest_visual: Polygon2D = chaser.get_node("CrestVisual") as Polygon2D
 	var feedback_snapshot := ChaserFeedbackSnapshotScript.new(
 		ChaserPacingModelScript.PaceState.CAMPING,
 		1.0,
@@ -65,7 +69,13 @@ func test_chaser_scene_feedback_updates_visual_alpha_and_audio_properties() -> v
 	assert_eq(chaser.get_feedback_intensity_ratio(), 1.0)
 	assert_not_null(audio_player.stream)
 	assert_false(audio_player.playing)
+	assert_not_null(glow_visual)
+	assert_not_null(crest_visual)
 	assert_true(is_equal_approx((chaser.get_node("Visual") as Polygon2D).color.a, chaser.chaser_tuning.max_visual_alpha))
+	assert_gt(glow_visual.color.a, 0.0)
+	assert_gt(crest_visual.color.a, 0.0)
+	assert_gt(glow_visual.scale.x, 1.0)
+	assert_gt(crest_visual.scale.y, 1.0)
 	assert_true(is_equal_approx(audio_player.volume_db, chaser.chaser_tuning.max_audio_volume_db))
 	assert_true(is_equal_approx(audio_player.pitch_scale, chaser.chaser_tuning.max_audio_pitch_scale))
 
