@@ -86,7 +86,7 @@ func record_height(height_meters: float, delta_seconds: float) -> void:
 
 func get_recent_vertical_progress_meters() -> float:
     Validation.require_condition(_samples.size() > 0, "ChaserPacingModel requires at least one progress sample.")
-    return _samples[_samples.size() - 1].height_meters - _samples[0].height_meters
+    return maxf(0.0, _samples[_samples.size() - 1].height_meters - _samples[0].height_meters)
 
 func get_current_pace_state() -> int:
     return classify_progress(get_recent_vertical_progress_meters(), _tuning)

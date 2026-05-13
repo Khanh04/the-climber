@@ -73,3 +73,16 @@ func test_feedback_snapshot_exposes_current_progress_speed_and_intensity() -> vo
     assert_eq(snapshot.recent_vertical_progress_meters, 1.0)
     assert_eq(snapshot.rise_speed_meters_per_second, 4.25)
     assert_eq(snapshot.speed_intensity_ratio, (4.25 - 0.5) / (5.0 - 0.5))
+
+func test_descending_samples_do_not_produce_negative_progress() -> void:
+    var model := ChaserPacingModelScript.new(ChaserTuningScript.new())
+
+    model.record_height(6.0, 2.0)
+    model.record_height(3.0, 2.0)
+
+    assert_eq(model.get_recent_vertical_progress_meters(), 3.0)
+
+    model.record_height(1.0, 2.0)
+
+    assert_eq(model.get_recent_vertical_progress_meters(), 0.0)
+    assert_eq(model.get_current_feedback_snapshot().recent_vertical_progress_meters, 0.0)

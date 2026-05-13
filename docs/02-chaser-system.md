@@ -38,7 +38,7 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 - Supported examples include Rising Void, Hot Coffee, Glitch / Code, and Plastic Ball Pit.
 - Each cosmetic has a distinct spatial audio signature.
 - Audio intensity should increase as the Chaser approaches the player.
-- The current Phase 6 slice exposes a default intensity seam through visual alpha plus an `AudioStreamPlayer2D` pitch and volume response. A stream is optional for now; the node and intensity mapping are in place so a default loop can be assigned later without changing gameplay code.
+- The current Phase 6 slice uses a checked-in default Chaser loop asset through an `AudioStreamPlayer2D`, with pitch and volume driven by feedback intensity.
 
 ## Implementation Notes
 
@@ -83,6 +83,6 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 
 1. Playtest the current camping and rapid-climb thresholds against slow, average, and expert climb cases.
 2. Choose and tune the initial spawn distance now that it is exposed through validated config.
-3. Assign and tune a default Chaser loop on the existing audio intensity seam.
+3. Refine or replace the current default Chaser loop asset once audio direction is locked.
 4. Use the run-scene pacing snapshot and feedback intensity hooks to capture playtest notes for camping and near-contact pressure.
 5. Evaluate whether first-run onboarding needs a delayed Chaser start in a later phase.

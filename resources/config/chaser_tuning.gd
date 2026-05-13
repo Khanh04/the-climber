@@ -14,10 +14,10 @@ extends Resource
 @export var near_distance_for_max_intensity_meters: float = 4.0
 @export var min_visual_alpha: float = 0.72
 @export var max_visual_alpha: float = 0.96
-@export var min_audio_volume_db: float = -24.0
-@export var max_audio_volume_db: float = -6.0
-@export var min_audio_pitch_scale: float = 0.9
-@export var max_audio_pitch_scale: float = 1.15
+@export var min_audio_volume_db: float = -20.0
+@export var max_audio_volume_db: float = -7.0
+@export var min_audio_pitch_scale: float = 0.98
+@export var max_audio_pitch_scale: float = 1.04
 
 func is_valid() -> bool:
     return sample_window_seconds > 0.0 \

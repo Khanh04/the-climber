@@ -15,10 +15,17 @@ signal feedback_intensity_changed(intensity_ratio: float)
 @onready var _visual: Polygon2D = get_node("Visual") as Polygon2D
 @onready var _audio_player: AudioStreamPlayer2D = get_node("IntensityAudioPlayer") as AudioStreamPlayer2D
 
-var _feedback_intensity_ratio: float = 0.0
+var _feedback_intensity_ratio: float = -1.0
 
 func _ready() -> void:
 	_validate_required_state()
+
+func _exit_tree() -> void:
+	if _audio_player == null:
+		return
+
+	if _audio_player.playing:
+		_audio_player.stop()
 
 func reset_to_player_position(player_body_y: float, pixels_per_meter: float, center_x: float, viewport_width: float) -> void:
 	Validation.require_condition(pixels_per_meter > 0.0, "ChaserKillZone pixels per meter must be positive.")
@@ -39,6 +46,9 @@ func sync_feedback(feedback_snapshot: RefCounted, player_body_y: float, pixels_p
 	Validation.require_condition(feedback_snapshot != null, "ChaserKillZone feedback sync requires a snapshot.")
 	Validation.require_condition(feedback_snapshot is ChaserFeedbackSnapshotScript, "ChaserKillZone feedback sync requires a ChaserFeedbackSnapshot implementation.")
 	Validation.require_condition(pixels_per_meter > 0.0, "ChaserKillZone pixels per meter must be positive.")
+
+	if _should_use_runtime_audio():
+		_ensure_audio_playback()
 
 	var typed_feedback_snapshot: ChaserFeedbackSnapshotScript = feedback_snapshot as ChaserFeedbackSnapshotScript
 	typed_feedback_snapshot.assert_valid()
@@ -85,6 +95,7 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_collision_shape.shape is RectangleShape2D, "ChaserKillZone requires a RectangleShape2D collision shape.")
 	Validation.require_condition(_visual != null, "ChaserKillZone requires Visual.")
 	Validation.require_condition(_audio_player != null, "ChaserKillZone requires IntensityAudioPlayer.")
+	Validation.require_condition(_audio_player.stream != null, "ChaserKillZone requires an assigned audio loop stream.")
 	_resize_to_cover_width(_get_rectangle_shape().size.x)
 	_apply_feedback_intensity(0.0)
 
@@ -116,6 +127,13 @@ func _apply_feedback_intensity(intensity_ratio: float) -> void:
 	_audio_player.volume_db = lerpf(chaser_tuning.min_audio_volume_db, chaser_tuning.max_audio_volume_db, intensity_ratio)
 	_audio_player.pitch_scale = lerpf(chaser_tuning.min_audio_pitch_scale, chaser_tuning.max_audio_pitch_scale, intensity_ratio)
 	feedback_intensity_changed.emit(intensity_ratio)
+
+func _ensure_audio_playback() -> void:
+	if not _audio_player.playing:
+		_audio_player.play()
+
+func _should_use_runtime_audio() -> bool:
+	return DisplayServer.get_name() != "headless"
 
 func _on_body_entered(body: Node) -> void:
 	Validation.require_condition(body != null, "ChaserKillZone body_entered requires a body.")
