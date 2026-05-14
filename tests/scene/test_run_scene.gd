@@ -11,6 +11,9 @@ const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/ge
 const InMemoryLocalStorageAdapterScript = preload("res://src/platform/storage/in_memory_local_storage_adapter.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
+const RewardedAdOutcomeScript = preload("res://src/platform/ads/rewarded_ad_outcome.gd")
+const RewardedAdPlacementScript = preload("res://src/platform/ads/rewarded_ad_placement.gd")
+const RewardedAdResultScript = preload("res://src/platform/ads/rewarded_ad_result.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunSceneScript = preload("res://scenes/main/run_scene.gd")
 const SaveSchemaScript = preload("res://src/platform/storage/save_schema.gd")
@@ -18,6 +21,7 @@ const SaveSnapshotScript = preload("res://src/platform/storage/save_snapshot.gd"
 const SaveStorageScript = preload("res://src/platform/storage/save_storage.gd")
 const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_service.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
+const TransactionSourceScript = preload("res://src/economy/transaction_source.gd")
 const UtcDateScript = preload("res://src/platform/clock/utc_date.gd")
 const UtcDateProviderScript = preload("res://src/platform/clock/utc_date_provider.gd")
 
@@ -308,6 +312,78 @@ func test_run_scene_duplicate_generated_coin_pickups_do_not_double_bank_wallet_o
     assert_eq(playground.get_wallet_for_test().get_coins(), pickup_spawn.coin_amount)
     assert_true(save_storage.has_snapshot())
     assert_eq(save_storage.load_snapshot().wallet_coins, pickup_spawn.coin_amount)
+
+func test_run_scene_persistent_transactions_bank_once_across_reloaded_save_state() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
+    var save_storage: SaveStorageScript = SaveStorageScript.new(local_storage)
+    var first_playground_node: Node = scene.instantiate()
+    var first_playground: RunSceneScript = first_playground_node as RunSceneScript
+
+    assert_not_null(first_playground)
+    first_playground.set_local_storage_adapter(local_storage)
+    add_child_autofree(first_playground)
+    await get_tree().process_frame
+
+    assert_true(first_playground.apply_persistent_coin_transaction("ad_reward:continue_offer_01", TransactionSourceScript.Value.AD_REWARD, 9))
+    assert_eq(first_playground.get_wallet_for_test().get_coins(), 9)
+    assert_true(save_storage.has_snapshot())
+    assert_eq(save_storage.load_snapshot().wallet_coins, 9)
+    assert_eq(save_storage.load_snapshot().applied_persistent_transaction_ids, PackedStringArray(["ad_reward:continue_offer_01"]))
+
+    var second_playground_node: Node = scene.instantiate()
+    var second_playground: RunSceneScript = second_playground_node as RunSceneScript
+
+    assert_not_null(second_playground)
+    second_playground.set_local_storage_adapter(local_storage)
+    add_child_autofree(second_playground)
+    await get_tree().process_frame
+
+    assert_eq(second_playground.get_wallet_for_test().get_coins(), 9)
+    assert_false(second_playground.apply_persistent_coin_transaction("ad_reward:continue_offer_01", TransactionSourceScript.Value.AD_REWARD, 9))
+    assert_eq(second_playground.get_wallet_for_test().get_coins(), 9)
+    assert_eq(save_storage.load_snapshot().wallet_coins, 9)
+
+func test_run_scene_post_run_coin_doubler_banks_run_coins_once_after_run_end() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
+    var save_storage: SaveStorageScript = SaveStorageScript.new(local_storage)
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    playground.set_local_storage_adapter(local_storage)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var pickup_nodes: Array = playground.get_tree().get_nodes_in_group(GeneratedCoinPickupSpawnAdapterScript.GROUP_NAME)
+
+    assert_not_null(player_body)
+    assert_gt(pickup_nodes.size(), 0)
+
+    var raw_pickup_node: Variant = pickup_nodes[0]
+    assert_true(raw_pickup_node is GeneratedCoinPickupSpawnAdapterScript)
+    var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = raw_pickup_node
+    var rewarded_ad_result: RewardedAdResultScript = RewardedAdResultScript.new(
+        RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER,
+        RewardedAdOutcomeScript.Value.COMPLETED,
+        true
+    )
+
+    pickup_spawn.collected.emit(pickup_spawn.socket_id, pickup_spawn.coin_amount, player_body)
+    playground.get_run_session_for_test().end_run(RunEndReasonScript.Value.CHASER_CONTACT)
+
+    assert_true(playground.apply_post_run_coin_doubler_reward(rewarded_ad_result, "summary_01"))
+    assert_eq(playground.get_wallet_for_test().get_coins(), pickup_spawn.coin_amount * 2)
+    assert_true(save_storage.has_snapshot())
+    assert_eq(save_storage.load_snapshot().wallet_coins, pickup_spawn.coin_amount * 2)
+    assert_eq(
+        save_storage.load_snapshot().applied_persistent_transaction_ids,
+        PackedStringArray(["ad_reward:post_run_coin_doubler:summary_01"])
+    )
+    assert_false(playground.apply_post_run_coin_doubler_reward(rewarded_ad_result, "summary_01"))
+    assert_eq(playground.get_wallet_for_test().get_coins(), pickup_spawn.coin_amount * 2)
 
 func test_run_scene_generated_spike_cluster_hazards_end_run() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")

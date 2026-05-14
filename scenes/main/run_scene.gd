@@ -27,6 +27,9 @@ const NormalCoinPickupServiceScript = preload("res://src/gameplay/pickups/normal
 const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
+const PersistentCoinTransactionServiceScript = preload("res://src/economy/persistent_coin_transaction_service.gd")
+const PostRunCoinDoublerGrantServiceScript = preload("res://src/economy/post_run_coin_doubler_grant_service.gd")
+const RewardedAdResultScript = preload("res://src/platform/ads/rewarded_ad_result.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const BottomScreenFallServiceScript = preload("res://src/gameplay/run/bottom_screen_fall_service.gd")
 const JsonFileLocalStorageAdapterScript = preload("res://src/platform/storage/json_file_local_storage_adapter.gd")
@@ -79,6 +82,8 @@ var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop
 var _stamina_fall_service: StaminaFallServiceScript = StaminaFallServiceScript.new()
 var _wind_gust_hazard_contact_service: WindGustHazardContactServiceScript = WindGustHazardContactServiceScript.new()
 var _wallet: WalletScript = WalletScript.new()
+var _persistent_coin_transaction_service: PersistentCoinTransactionServiceScript = PersistentCoinTransactionServiceScript.new()
+var _post_run_coin_doubler_grant_service: PostRunCoinDoublerGrantServiceScript = PostRunCoinDoublerGrantServiceScript.new()
 var _wallet_transaction_service: WalletTransactionServiceScript = WalletTransactionServiceScript.new()
 var _persistent_transaction_ledger: CoinTransactionLedgerScript = CoinTransactionLedgerScript.new()
 var _run_pickup_transaction_ledger: CoinTransactionLedgerScript = CoinTransactionLedgerScript.new()
@@ -204,6 +209,45 @@ func get_run_session_for_test() -> RunSessionScript:
 
 func get_wallet_for_test() -> WalletScript:
 	return _wallet
+
+func apply_persistent_coin_transaction(transaction_id: String, source: int, coin_delta: int) -> bool:
+	Validation.require_condition(_save_storage != null, "RunScene requires save storage before applying persistent coin transactions.")
+	var transaction_applied: bool = _persistent_coin_transaction_service.apply_persistent_transaction(
+		_wallet,
+		_persistent_transaction_ledger,
+		_wallet_transaction_service,
+		transaction_id,
+		source,
+		coin_delta
+	)
+	if not transaction_applied:
+		return false
+
+	_persist_save_state()
+	_refresh_ui()
+	return true
+
+func apply_post_run_coin_doubler_reward(rewarded_ad_result: RefCounted, reward_id: String) -> bool:
+	Validation.require_condition(rewarded_ad_result != null, "RunScene requires a rewarded ad result for post-run coin doubling.")
+	Validation.require_condition(rewarded_ad_result is RewardedAdResultScript, "RunScene requires a RewardedAdResult implementation for post-run coin doubling.")
+	Validation.require_condition(_run_session.get_state() == RunStateScript.Value.ENDED, "RunScene can only apply post-run coin doubler rewards after the run has ended.")
+	Validation.require_condition(_run_session.get_run_earned_coins() > 0, "RunScene requires positive run-earned coins before applying post-run coin doubler rewards.")
+
+	var reward_applied: bool = _post_run_coin_doubler_grant_service.apply_reward(
+		_wallet,
+		_persistent_transaction_ledger,
+		_wallet_transaction_service,
+		_persistent_coin_transaction_service,
+		rewarded_ad_result,
+		reward_id,
+		_run_session.get_run_earned_coins()
+	)
+	if not reward_applied:
+		return false
+
+	_persist_save_state()
+	_refresh_ui()
+	return true
 
 func get_controller_for_test() -> ClimbPrototypeControllerScript:
 	return _controller
