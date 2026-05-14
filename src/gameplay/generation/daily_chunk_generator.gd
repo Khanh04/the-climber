@@ -151,6 +151,9 @@ func _build_handholds(
     ChunkType.assert_valid(chunk_type)
     ChunkDifficultyBand.assert_valid(difficulty_band)
 
+    if chunk_index == 0:
+        return _build_opener_handholds(chunk_type, chunk_rng)
+
     var lane_positions: Array[float] = _get_lane_positions(chunk_rng)
     var lane_pattern: Array[int] = _get_lane_pattern(chunk_type)
     var handholds: Array[GeneratedHandholdSocket] = []
@@ -172,6 +175,61 @@ func _build_handholds(
         handholds.append(GeneratedHandholdSocket.new(handhold_id, local_position, 1.0))
 
     return handholds
+
+func _build_opener_handholds(chunk_type: int, chunk_rng: RandomNumberGenerator) -> Array[GeneratedHandholdSocket]:
+    ChunkType.assert_valid(chunk_type)
+    Validation.require_condition(chunk_rng != null, "DailyChunkGenerator requires an RNG when building opener handholds.")
+
+    var opener_positions: Array[Vector2] = _get_opener_handhold_positions(chunk_type)
+    var handholds: Array[GeneratedHandholdSocket] = []
+
+    for handhold_index in range(opener_positions.size()):
+        var base_position: Vector2 = opener_positions[handhold_index]
+        var x_jitter: float = 0.0
+        var y_jitter: float = 0.0
+
+        if handhold_index >= 2:
+            x_jitter = chunk_rng.randf_range(-0.12, 0.12)
+            y_jitter = chunk_rng.randf_range(-0.14, 0.14)
+
+        var local_position: Vector2 = Vector2(
+            _clamp_local_x(base_position.x + x_jitter),
+            base_position.y + y_jitter
+        )
+        var handhold_id: StringName = StringName("chunk_00_hold_%02d" % handhold_index)
+        handholds.append(GeneratedHandholdSocket.new(handhold_id, local_position, 1.0))
+
+    return handholds
+
+func _get_opener_handhold_positions(chunk_type: int) -> Array[Vector2]:
+    ChunkType.assert_valid(chunk_type)
+
+    match chunk_type:
+        ChunkType.Value.LADDER:
+            return [
+                Vector2(-0.78, -0.52),
+                Vector2(0.78, -0.52),
+                Vector2(-0.78, -2.35),
+                Vector2(0.78, -4.55),
+                Vector2(-0.58, -7.35),
+                Vector2(0.58, -10.75),
+                Vector2(-0.38, -14.95),
+                Vector2(0.38, -19.75),
+            ]
+        ChunkType.Value.ZIGZAG:
+            return [
+                Vector2(-0.78, -0.52),
+                Vector2(0.78, -0.52),
+                Vector2(-1.55, -2.55),
+                Vector2(1.45, -4.85),
+                Vector2(-0.95, -7.55),
+                Vector2(1.05, -10.85),
+                Vector2(-1.35, -14.75),
+                Vector2(0.22, -19.55),
+            ]
+        _:
+            Validation.require_condition(false, "DailyChunkGenerator opener chunks require a supported opener chunk type.")
+            return []
 
 func _build_pickup_sockets(
     chunk_index: int,
@@ -209,9 +267,13 @@ func _build_hazard_sockets(
     var pickup_socket_count: int = ceili(float(_tuning.socket_count_per_chunk) * 0.6)
     var hazard_socket_count: int = maxi(0, _tuning.socket_count_per_chunk - pickup_socket_count)
     var hazard_sockets: Array[GeneratedHazardSocket] = []
+    var hazard_anchor_offset: int = 0
+
+    if chunk_index == 0 and handholds.size() > 3:
+        hazard_anchor_offset = 2
 
     for socket_index in range(hazard_socket_count):
-        var lower_handhold_index: int = (socket_index * 2) % handholds.size()
+        var lower_handhold_index: int = mini(hazard_anchor_offset + (socket_index * 2), handholds.size() - 1)
         var upper_handhold_index: int = mini(lower_handhold_index + 1, handholds.size() - 1)
         var lower_handhold: GeneratedHandholdSocket = handholds[lower_handhold_index]
         var upper_handhold: GeneratedHandholdSocket = handholds[upper_handhold_index]
@@ -230,10 +292,16 @@ func _select_hazard_kind(chunk_index: int, socket_index: int, route_slot: int, d
     ChunkDifficultyBand.assert_valid(difficulty_band)
 
     if route_slot == ChunkRouteSlot.Value.OPENER:
-        return GeneratedHazardKindScript.Value.WIND_GUST
+        return GeneratedHazardKindScript.Value.UPDRAFT
+
+    if route_slot == ChunkRouteSlot.Value.RECOVERY:
+        return GeneratedHazardKindScript.Value.UPDRAFT
 
     if route_slot == ChunkRouteSlot.Value.RISK or route_slot == ChunkRouteSlot.Value.PRESSURE:
         return GeneratedHazardKindScript.Value.SPIKE_CLUSTER
+
+    if route_slot == ChunkRouteSlot.Value.SKILL and difficulty_band == ChunkDifficultyBand.Value.CHALLENGE:
+        return GeneratedHazardKindScript.Value.DOWNDRAFT
 
     if ((chunk_index + socket_index) % 2) == 0:
         return GeneratedHazardKindScript.Value.WIND_GUST
@@ -254,6 +322,16 @@ func _build_hazard_local_position(hazard_kind: int, midpoint: Vector2, chunk_rng
             return Vector2(
                 _clamp_local_x(midpoint.x + chunk_rng.randf_range(-0.22, 0.22)),
                 midpoint.y - 0.15
+            )
+        GeneratedHazardKindScript.Value.DOWNDRAFT:
+            return Vector2(
+                _clamp_local_x(midpoint.x + chunk_rng.randf_range(-0.12, 0.12)),
+                midpoint.y - 0.55
+            )
+        GeneratedHazardKindScript.Value.UPDRAFT:
+            return Vector2(
+                _clamp_local_x(midpoint.x + chunk_rng.randf_range(-0.16, 0.16)),
+                midpoint.y - 0.9
             )
         _:
             Validation.require_condition(false, "DailyChunkGenerator requires a supported hazard kind when building hazard positions.")

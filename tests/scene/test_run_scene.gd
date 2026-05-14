@@ -97,7 +97,7 @@ func test_run_scene_handholds_have_required_group() -> void:
     for handhold in handholds:
         assert_true(handhold is StaticBody2D)
 
-func test_run_scene_starter_holds_are_in_initial_grip_range() -> void:
+func test_run_scene_generated_opener_holds_are_in_initial_grip_range() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
@@ -108,8 +108,9 @@ func test_run_scene_starter_holds_are_in_initial_grip_range() -> void:
 
     var left_anchor: Marker2D = playground.get_left_hand_anchor_for_test()
     var right_anchor: Marker2D = playground.get_right_hand_anchor_for_test()
-    var left_hold: StaticBody2D = playground.get_node("Handholds/HoldStartLeft") as StaticBody2D
-    var right_hold: StaticBody2D = playground.get_node("Handholds/HoldStartRight") as StaticBody2D
+    var starter_holds: Array[StaticBody2D] = _get_generated_opener_hold_pair(playground)
+    var left_hold: StaticBody2D = starter_holds[0]
+    var right_hold: StaticBody2D = starter_holds[1]
 
     assert_not_null(left_anchor)
     assert_not_null(right_anchor)
@@ -128,8 +129,9 @@ func test_run_scene_climb_holds_do_not_block_player_body() -> void:
     await get_tree().process_frame
 
     var player_body: RigidBody2D = playground.get_player_body_for_test()
-    var left_hold: StaticBody2D = playground.get_node("Handholds/HoldStartLeft") as StaticBody2D
-    var right_hold: StaticBody2D = playground.get_node("Handholds/HoldStartRight") as StaticBody2D
+    var starter_holds: Array[StaticBody2D] = _get_generated_opener_hold_pair(playground)
+    var left_hold: StaticBody2D = starter_holds[0]
+    var right_hold: StaticBody2D = starter_holds[1]
     var safe_platform: StaticBody2D = playground.get_node("Handholds/HoldSafePlatform") as StaticBody2D
 
     assert_not_null(player_body)
@@ -166,7 +168,7 @@ func test_run_scene_has_tall_non_blocking_test_route() -> void:
     assert_gte(non_blocking_hold_count, 18)
     assert_gt(lowest_hold_y - highest_hold_y, 1200.0)
 
-func test_run_scene_spawns_generated_chunks_above_authored_starter_route() -> void:
+func test_run_scene_starts_generated_chunks_from_reset_anchor_and_disables_authored_starter_route() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
@@ -175,24 +177,23 @@ func test_run_scene_spawns_generated_chunks_above_authored_starter_route() -> vo
     add_child_autofree(playground)
     await get_tree().process_frame
 
+    var reset_anchor: Marker2D = playground.get_node("ResetAnchor") as Marker2D
     var generated_chunks_root: Node2D = playground.get_node("GeneratedChunks") as Node2D
-    var authored_handholds_root: Node2D = playground.get_node("Handholds") as Node2D
-    var highest_authored_handhold_y: float = INF
-    var generated_handhold_count: int = 0
+    var first_generated_chunk: Node2D = playground.get_generated_chunk_coordinator_for_test().get_chunk_node(0)
+    var disabled_start_hold: StaticBody2D = playground.get_node("Handholds/HoldStartLeft") as StaticBody2D
 
+    assert_not_null(reset_anchor)
     assert_not_null(generated_chunks_root)
-    assert_not_null(authored_handholds_root)
-
-    for handhold in authored_handholds_root.get_children():
-        assert_true(handhold is Node)
-        if not handhold is StaticBody2D:
-            continue
-
-        var authored_handhold: StaticBody2D = handhold
-        highest_authored_handhold_y = minf(highest_authored_handhold_y, authored_handhold.global_position.y)
-
-    assert_lt(highest_authored_handhold_y, INF)
+    assert_not_null(first_generated_chunk)
+    assert_not_null(disabled_start_hold)
     assert_eq(generated_chunks_root.get_child_count(), playground.generation_tuning.chunk_spawn_ahead_count)
+    assert_eq(first_generated_chunk.global_position, reset_anchor.global_position)
+    assert_false(disabled_start_hold.is_in_group(&"handhold"))
+    assert_false(disabled_start_hold.visible)
+    var starter_route_disabled_meta: Variant = disabled_start_hold.get_meta(&"starter_route_disabled")
+    assert_true(starter_route_disabled_meta is bool)
+    var starter_route_disabled: bool = starter_route_disabled_meta
+    assert_true(starter_route_disabled)
 
     for generated_chunk in generated_chunks_root.get_children():
         assert_true(generated_chunk is Node2D)
@@ -204,10 +205,7 @@ func test_run_scene_spawns_generated_chunks_above_authored_starter_route() -> vo
         assert_not_null(generated_handhold_root)
         assert_not_null(pickup_root)
         assert_not_null(hazard_root)
-        assert_lt(generated_chunk_root.global_position.y, highest_authored_handhold_y)
-        generated_handhold_count += generated_handhold_root.get_child_count()
-
-    assert_gt(generated_handhold_count, 0)
+        assert_gte(generated_handhold_root.get_child_count(), 1)
 
 func test_run_scene_generated_coin_pickups_increment_run_coins() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -292,6 +290,68 @@ func test_run_scene_generated_wind_gust_hazards_begin_nonterminal_fall() -> void
     assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
     assert_true(player_body.linear_velocity.is_equal_approx(impulse_vector_pixels))
 
+func test_run_scene_generated_downdraft_hazards_begin_nonterminal_fall() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var impulse_vector_pixels: Vector2 = Vector2(90.0, 260.0)
+    var hazard_spawn: GeneratedHazardSpawnAdapterScript = _wire_generated_hazard_for_test(
+        playground,
+        GeneratedHazardKindScript.Value.DOWNDRAFT,
+        impulse_vector_pixels,
+        &"test_downdraft_hazard"
+    )
+
+    assert_not_null(player_body)
+    assert_not_null(hazard_spawn)
+    player_body.linear_velocity = Vector2.ZERO
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_false(playground.get_run_session_for_test().has_end_reason())
+
+    hazard_spawn.triggered.emit(player_body)
+
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.FALLING)
+    assert_false(playground.get_run_session_for_test().has_end_reason())
+    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
+    assert_true(player_body.linear_velocity.is_equal_approx(impulse_vector_pixels))
+
+func test_run_scene_generated_updraft_hazards_begin_nonterminal_fall() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var impulse_vector_pixels: Vector2 = Vector2(-110.0, -320.0)
+    var hazard_spawn: GeneratedHazardSpawnAdapterScript = _wire_generated_hazard_for_test(
+        playground,
+        GeneratedHazardKindScript.Value.UPDRAFT,
+        impulse_vector_pixels,
+        &"test_updraft_hazard"
+    )
+
+    assert_not_null(player_body)
+    assert_not_null(hazard_spawn)
+    player_body.linear_velocity = Vector2.ZERO
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_false(playground.get_run_session_for_test().has_end_reason())
+
+    hazard_spawn.triggered.emit(player_body)
+
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.FALLING)
+    assert_false(playground.get_run_session_for_test().has_end_reason())
+    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
+    assert_true(player_body.linear_velocity.is_equal_approx(impulse_vector_pixels))
+
 func test_run_scene_camera_follows_player_upward() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
@@ -356,18 +416,7 @@ func test_run_scene_bottom_screen_fall_routes_through_run_session() -> void:
     assert_not_null(player_body)
     assert_not_null(camera)
 
-    playground.get_controller_for_test().get_attachment_state().attach(
-        HandSide.Value.LEFT,
-        &"HoldStartLeft",
-        Vector2(450.0, 1424.0),
-        NodePath("Handholds/HoldStartLeft")
-    )
-    playground.get_controller_for_test().get_attachment_state().attach(
-        HandSide.Value.RIGHT,
-        &"HoldStartRight",
-        Vector2(630.0, 1424.0),
-        NodePath("Handholds/HoldStartRight")
-    )
+    _attach_to_generated_opener_holds(playground)
 
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
@@ -458,12 +507,7 @@ func test_run_scene_chaser_contact_ends_run_without_rescue_and_restart_resets_ch
     assert_not_null(reason_label)
     assert_not_null(restart_button)
 
-    playground.get_controller_for_test().get_attachment_state().attach(
-        HandSide.Value.LEFT,
-        &"HoldStartLeft",
-        Vector2(450.0, 1424.0),
-        NodePath("Handholds/HoldStartLeft")
-    )
+    _attach_to_generated_opener_holds(playground, true, false)
 
     chaser.global_position.y = 100.0
     playground.resolve_chaser_contact_for_test()
@@ -610,12 +654,7 @@ func test_run_scene_left_grip_creates_and_releases_runtime_link() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    playground.get_controller_for_test().get_attachment_state().attach(
-        HandSide.Value.LEFT,
-        &"HoldStartLeft",
-        Vector2(450.0, 1424.0),
-        NodePath("Handholds/HoldStartLeft")
-    )
+    _attach_to_generated_opener_holds(playground, true, false)
     playground.sync_grip_links_for_test()
 
     var left_link: Line2D = playground.get_player_for_test().get_left_runtime_grip_link()
@@ -659,12 +698,7 @@ func test_run_scene_aim_preview_hides_for_attached_hand() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    playground.get_controller_for_test().get_attachment_state().attach(
-        HandSide.Value.LEFT,
-        &"HoldStartLeft",
-        Vector2(450.0, 1424.0),
-        NodePath("Handholds/HoldStartLeft")
-    )
+    _attach_to_generated_opener_holds(playground, true, false)
 
     var input_frame: PlayerInputFrameScript = PlayerInputFrameScript.new([], [], AimInputIntentScript.new(Vector2.RIGHT))
     playground.sync_aim_preview_for_test(input_frame)
@@ -682,7 +716,7 @@ func test_run_scene_reset_clears_runtime_attachments_and_restarts_run() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    playground.get_controller_for_test().get_attachment_state().attach(HandSide.Value.LEFT, &"test_hold", Vector2.ZERO, NodePath("Handholds/HoldStartLeft"))
+    _attach_to_generated_opener_holds(playground, true, false)
     playground.reset_for_test()
 
     assert_eq(playground.get_controller_for_test().get_attachment_state().get_attached_hand_count(), 0)
@@ -735,3 +769,61 @@ func test_run_scene_stamina_fall_routes_through_service_shape() -> void:
     assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.RESCUE_OFFERED)
     assert_true(playground.get_run_session_for_test().has_end_reason())
     assert_eq(playground.get_run_session_for_test().get_end_reason(), RunEndReasonScript.Value.STAMINA_FALL)
+
+func _get_generated_opener_hold_pair(playground: RunSceneScript) -> Array[StaticBody2D]:
+    var chunk_node: Node2D = playground.get_generated_chunk_coordinator_for_test().get_chunk_node(0)
+    var handhold_root: Node = chunk_node.get_node("Handholds")
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var left_anchor: Marker2D = playground.get_left_hand_anchor_for_test()
+    var right_anchor: Marker2D = playground.get_right_hand_anchor_for_test()
+    var left_hold: StaticBody2D = null
+    var right_hold: StaticBody2D = null
+    var left_distance: float = INF
+    var right_distance: float = INF
+
+    assert_not_null(chunk_node)
+    assert_not_null(handhold_root)
+    assert_not_null(player_body)
+    assert_not_null(left_anchor)
+    assert_not_null(right_anchor)
+
+    for handhold in handhold_root.get_children():
+        assert_true(handhold is StaticBody2D)
+        var generated_hold: StaticBody2D = handhold as StaticBody2D
+        if generated_hold.global_position.x <= player_body.global_position.x:
+            var left_candidate_distance: float = left_anchor.global_position.distance_to(generated_hold.global_position)
+            if left_candidate_distance < left_distance:
+                left_hold = generated_hold
+                left_distance = left_candidate_distance
+
+        if generated_hold.global_position.x >= player_body.global_position.x:
+            var right_candidate_distance: float = right_anchor.global_position.distance_to(generated_hold.global_position)
+            if right_candidate_distance < right_distance:
+                right_hold = generated_hold
+                right_distance = right_candidate_distance
+
+    assert_not_null(left_hold)
+    assert_not_null(right_hold)
+    assert_ne(left_hold, right_hold)
+    return [left_hold, right_hold]
+
+func _attach_to_generated_opener_holds(playground: RunSceneScript, attach_left: bool = true, attach_right: bool = true) -> void:
+    var starter_holds: Array[StaticBody2D] = _get_generated_opener_hold_pair(playground)
+    var left_hold: StaticBody2D = starter_holds[0]
+    var right_hold: StaticBody2D = starter_holds[1]
+
+    if attach_left:
+        playground.get_controller_for_test().get_attachment_state().attach(
+            HandSide.Value.LEFT,
+            left_hold.name,
+            left_hold.global_position,
+            left_hold.get_path()
+        )
+
+    if attach_right:
+        playground.get_controller_for_test().get_attachment_state().attach(
+            HandSide.Value.RIGHT,
+            right_hold.name,
+            right_hold.global_position,
+            right_hold.get_path()
+        )

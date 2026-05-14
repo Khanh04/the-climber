@@ -70,6 +70,19 @@ func test_chunk_generation_is_independent_of_call_order() -> void:
 
     assert_eq(_layout_signature(first_layout), _layout_signature(second_layout))
 
+func test_first_chunk_provides_reachable_generated_starter_holds() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+    var grip_range_meters: float = 0.96
+    var left_anchor_local_position: Vector2 = Vector2(-0.42, -0.24)
+    var right_anchor_local_position: Vector2 = Vector2(0.42, -0.24)
+
+    var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
+
+    assert_true(_has_handhold_within_distance(layout.handholds, left_anchor_local_position, grip_range_meters))
+    assert_true(_has_handhold_within_distance(layout.handholds, right_anchor_local_position, grip_range_meters))
+
 func test_generated_chunk_respects_total_placeholder_socket_budget() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
@@ -88,11 +101,20 @@ func test_generator_assigns_specific_hazard_kinds_by_route_pressure() -> void:
     var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
 
     var opener_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
+    var easy_skill_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 2))
+    var challenge_skill_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 7))
     var pressure_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 10))
 
     assert_gt(opener_layout.hazard_sockets.size(), 0)
+    assert_gt(easy_skill_layout.hazard_sockets.size(), 0)
+    assert_gt(challenge_skill_layout.hazard_sockets.size(), 0)
     assert_gt(pressure_layout.hazard_sockets.size(), 0)
-    assert_eq(opener_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.WIND_GUST)
+    assert_eq(opener_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.UPDRAFT)
+    assert_eq(easy_skill_layout.route_slot, ChunkRouteSlotScript.Value.SKILL)
+    assert_eq(easy_skill_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.WIND_GUST)
+    assert_eq(challenge_skill_layout.route_slot, ChunkRouteSlotScript.Value.SKILL)
+    assert_eq(challenge_skill_layout.difficulty_band, ChunkDifficultyBandScript.Value.CHALLENGE)
+    assert_eq(challenge_skill_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.DOWNDRAFT)
     assert_eq(pressure_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.SPIKE_CLUSTER)
 
 func _layout_signature(layout: RefCounted) -> String:
@@ -129,6 +151,17 @@ func _layout_signature(layout: RefCounted) -> String:
 func _require_chunk_layout(layout: RefCounted) -> GeneratedChunkLayoutScript:
     assert_true(layout is GeneratedChunkLayoutScript)
     return layout as GeneratedChunkLayoutScript
+
+func _has_handhold_within_distance(
+    handholds: Array[GeneratedHandholdSocket],
+    anchor_local_position: Vector2,
+    max_distance_meters: float
+) -> bool:
+    for handhold in handholds:
+        if anchor_local_position.distance_to(handhold.local_position) <= max_distance_meters:
+            return true
+
+    return false
 
 func _chunk_type_name(chunk_type: int) -> String:
     match chunk_type:

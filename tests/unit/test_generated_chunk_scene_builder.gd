@@ -52,6 +52,14 @@ func test_scene_builder_creates_non_blocking_handholds_and_runtime_spawn_adapter
     var spike_collision_shape: CollisionShape2D = spike_cluster_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var spike_rectangle_shape: RectangleShape2D = spike_collision_shape.shape as RectangleShape2D
     var spike_visual: Polygon2D = spike_cluster_spawn.get_node("Visual") as Polygon2D
+    var downdraft_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_02") as GeneratedHazardSpawnAdapterScript
+    var downdraft_collision_shape: CollisionShape2D = downdraft_spawn.get_node("CollisionShape2D") as CollisionShape2D
+    var downdraft_rectangle_shape: RectangleShape2D = downdraft_collision_shape.shape as RectangleShape2D
+    var downdraft_visual: Polygon2D = downdraft_spawn.get_node("Visual") as Polygon2D
+    var updraft_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_03") as GeneratedHazardSpawnAdapterScript
+    var updraft_collision_shape: CollisionShape2D = updraft_spawn.get_node("CollisionShape2D") as CollisionShape2D
+    var updraft_rectangle_shape: RectangleShape2D = updraft_collision_shape.shape as RectangleShape2D
+    var updraft_visual: Polygon2D = updraft_spawn.get_node("Visual") as Polygon2D
 
     assert_not_null(handhold)
     assert_true(handhold.is_in_group(&"handhold"))
@@ -92,6 +100,28 @@ func test_scene_builder_creates_non_blocking_handholds_and_runtime_spawn_adapter
     assert_eq(spike_rectangle_shape.size, Vector2(28.0, 24.0))
     assert_not_null(spike_visual)
 
+    assert_not_null(downdraft_spawn)
+    assert_true(downdraft_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
+    assert_true(downdraft_spawn.is_in_group(GeneratedHazardSpawnAdapterScript.DOWNDRAFT_GROUP_NAME))
+    assert_eq(downdraft_spawn.hazard_kind, GeneratedHazardKindScript.Value.DOWNDRAFT)
+    assert_true(downdraft_spawn.position.is_equal_approx(Vector2(10.0, -260.0)))
+    assert_not_null(downdraft_collision_shape)
+    assert_not_null(downdraft_rectangle_shape)
+    assert_eq(downdraft_rectangle_shape.size, Vector2(72.0, 96.0))
+    assert_true(downdraft_spawn.get_impulse_vector_pixels().is_equal_approx(Vector2(-90.0, 260.0)))
+    assert_not_null(downdraft_visual)
+
+    assert_not_null(updraft_spawn)
+    assert_true(updraft_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
+    assert_true(updraft_spawn.is_in_group(GeneratedHazardSpawnAdapterScript.UPDRAFT_GROUP_NAME))
+    assert_eq(updraft_spawn.hazard_kind, GeneratedHazardKindScript.Value.UPDRAFT)
+    assert_true(updraft_spawn.position.is_equal_approx(Vector2(-110.0, -180.0)))
+    assert_not_null(updraft_collision_shape)
+    assert_not_null(updraft_rectangle_shape)
+    assert_eq(updraft_rectangle_shape.size, Vector2(68.0, 92.0))
+    assert_true(updraft_spawn.get_impulse_vector_pixels().is_equal_approx(Vector2(110.0, -320.0)))
+    assert_not_null(updraft_visual)
+
 func _build_layout_fixture() -> GeneratedChunkLayoutScript:
     var handholds: Array[GeneratedHandholdSocketScript] = [
         GeneratedHandholdSocketScript.new(&"chunk_02_hold_00", Vector2(-1.2, -1.5)),
@@ -103,6 +133,8 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
     var hazard_sockets: Array[GeneratedHazardSocketScript] = [
         GeneratedHazardSocketScript.new(&"chunk_02_hazard_00", GeneratedHazardKindScript.Value.WIND_GUST, Vector2(-0.4, -2.1)),
         GeneratedHazardSocketScript.new(&"chunk_02_hazard_01", GeneratedHazardKindScript.Value.SPIKE_CLUSTER, Vector2(0.9, -3.1)),
+        GeneratedHazardSocketScript.new(&"chunk_02_hazard_02", GeneratedHazardKindScript.Value.DOWNDRAFT, Vector2(0.1, -2.6)),
+        GeneratedHazardSocketScript.new(&"chunk_02_hazard_03", GeneratedHazardKindScript.Value.UPDRAFT, Vector2(-1.1, -1.8)),
     ]
 
     return GeneratedChunkLayoutScript.new(

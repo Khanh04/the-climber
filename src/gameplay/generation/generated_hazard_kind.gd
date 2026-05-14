@@ -4,6 +4,8 @@ extends RefCounted
 enum Value {
 	SPIKE_CLUSTER,
 	WIND_GUST,
+	DOWNDRAFT,
+	UPDRAFT,
 }
 
 static func is_valid(value: int) -> bool:
@@ -11,6 +13,10 @@ static func is_valid(value: int) -> bool:
 		Value.SPIKE_CLUSTER:
 			return true
 		Value.WIND_GUST:
+			return true
+		Value.DOWNDRAFT:
+			return true
+		Value.UPDRAFT:
 			return true
 		_:
 			return false
@@ -25,6 +31,10 @@ static func to_label(value: int) -> String:
 			return "SPIKE_CLUSTER"
 		Value.WIND_GUST:
 			return "WIND_GUST"
+		Value.DOWNDRAFT:
+			return "DOWNDRAFT"
+		Value.UPDRAFT:
+			return "UPDRAFT"
 		_:
 			Validation.require_condition(false, "Unsupported generated hazard kind label.")
 			return ""

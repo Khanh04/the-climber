@@ -127,14 +127,27 @@ func _build_hazard_spawn(hazard_socket: GeneratedHazardSocket) -> GeneratedHazar
 
 func _build_hazard_impulse_vector(hazard_socket: GeneratedHazardSocket) -> Vector2:
     hazard_socket.assert_valid()
-    if hazard_socket.hazard_kind != GeneratedHazardKindScript.Value.WIND_GUST:
-        return Vector2.ZERO
+    match hazard_socket.hazard_kind:
+        GeneratedHazardKindScript.Value.WIND_GUST:
+            var wind_horizontal_impulse: float = 220.0
+            if hazard_socket.local_position.x < 0.0:
+                return Vector2(wind_horizontal_impulse, -140.0)
 
-    var horizontal_impulse: float = 220.0
-    if hazard_socket.local_position.x < 0.0:
-        return Vector2(horizontal_impulse, -140.0)
+            return Vector2(-wind_horizontal_impulse, -140.0)
+        GeneratedHazardKindScript.Value.DOWNDRAFT:
+            var downdraft_horizontal_impulse: float = 90.0
+            if hazard_socket.local_position.x < 0.0:
+                return Vector2(downdraft_horizontal_impulse, 260.0)
 
-    return Vector2(-horizontal_impulse, -140.0)
+            return Vector2(-downdraft_horizontal_impulse, 260.0)
+        GeneratedHazardKindScript.Value.UPDRAFT:
+            var updraft_horizontal_impulse: float = 110.0
+            if hazard_socket.local_position.x < 0.0:
+                return Vector2(updraft_horizontal_impulse, -320.0)
+
+            return Vector2(-updraft_horizontal_impulse, -320.0)
+        _:
+            return Vector2.ZERO
 
 func _meters_to_pixels(local_position_meters: Vector2) -> Vector2:
     return local_position_meters * _pixels_per_meter

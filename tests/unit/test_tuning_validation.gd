@@ -68,12 +68,6 @@ func test_generation_tuning_rejects_non_positive_chunk_width() -> void:
 
     assert_false(tuning.is_valid())
 
-func test_generation_tuning_rejects_non_positive_starter_chunk_gap() -> void:
-    var tuning = GenerationTuningScript.new()
-    tuning.starter_chunk_gap_meters = 0.0
-
-    assert_false(tuning.is_valid())
-
 func test_generation_tuning_rejects_non_increasing_difficulty_band_heights() -> void:
     var tuning = GenerationTuningScript.new()
     tuning.baseline_band_max_height_meters = tuning.easy_band_max_height_meters

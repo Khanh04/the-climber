@@ -90,6 +90,7 @@ func _ready() -> void:
 	_chaser_pacing_model = ChaserPacingModelScript.new(_chaser_kill_zone.chaser_tuning)
 	_apply_equipped_chaser_theme()
 	_start_y = _reset_anchor.global_position.y
+	_disable_authored_starter_route()
 	_configure_generated_chunks()
 	_reset_playground()
 	_refresh_ui()
@@ -388,10 +389,8 @@ func _record_height() -> void:
 func _configure_generated_chunks() -> void:
 	Validation.require_condition(_generated_chunk_coordinator != null, "RunScene requires GeneratedChunks before configuring generated chunks.")
 	var pixels_per_meter: float = _get_climb_tuning_float(&"pixels_per_meter")
-	var starter_top_y: float = _find_highest_authored_handhold_y()
-	var starter_gap_pixels: float = generation_tuning.starter_chunk_gap_meters * pixels_per_meter
-	var generated_world_origin: Vector2 = Vector2(_reset_anchor.global_position.x, starter_top_y - starter_gap_pixels)
-	var chunk_start_height_offset_meters: float = maxf(0.0, (_start_y - generated_world_origin.y) / pixels_per_meter)
+	var generated_world_origin: Vector2 = _reset_anchor.global_position
+	var chunk_start_height_offset_meters: float = 0.0
 	var seed_key: String = DailySeedKey.current_utc(SystemUtcDateProviderScript.new())
 	var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(
 		pixels_per_meter,
@@ -412,6 +411,31 @@ func _configure_generated_chunks() -> void:
 	if not _generated_chunk_coordinator.chunk_spawned.is_connected(_on_generated_chunk_spawned):
 		var _chunk_spawn_connect_result: int = _generated_chunk_coordinator.chunk_spawned.connect(_on_generated_chunk_spawned)
 
+func _disable_authored_starter_route() -> void:
+	Validation.require_condition(_starter_handholds_root != null, "RunScene requires authored Handholds before disabling the starter route.")
+
+	for handhold in _starter_handholds_root.get_children():
+		Validation.require_condition(handhold is Node, "RunScene authored handhold children must be nodes.")
+		if not handhold is StaticBody2D:
+			continue
+
+		var authored_handhold: StaticBody2D = handhold as StaticBody2D
+		if not _should_disable_authored_starter_handhold(authored_handhold):
+			continue
+
+		authored_handhold.remove_from_group(climb_tuning.handhold_group_name)
+		authored_handhold.visible = false
+		authored_handhold.set_meta(&"starter_route_disabled", true)
+		var collision_shape: CollisionShape2D = authored_handhold.get_node_or_null("CollisionShape2D") as CollisionShape2D
+		if collision_shape != null:
+			collision_shape.disabled = true
+
+func _should_disable_authored_starter_handhold(handhold: StaticBody2D) -> bool:
+	Validation.require_condition(handhold != null, "RunScene starter-route filtering requires a handhold.")
+	return handhold.is_in_group(climb_tuning.handhold_group_name) \
+		and handhold.collision_mask == 0 \
+		and handhold.global_position.y < _reset_anchor.global_position.y
+
 func _sync_generated_chunks() -> void:
 	if _generated_chunk_coordinator == null:
 		return
@@ -431,24 +455,6 @@ func _collect_attached_hold_paths() -> Array[NodePath]:
 		hold_paths.append(attachment_state.get_hold_path(HandSideScript.Value.RIGHT))
 
 	return hold_paths
-
-func _find_highest_authored_handhold_y() -> float:
-	Validation.require_condition(_starter_handholds_root != null, "RunScene requires authored handholds before locating the starter route ceiling.")
-	var highest_handhold_y: float = INF
-
-	for handhold in _starter_handholds_root.get_children():
-		Validation.require_condition(handhold is Node, "RunScene authored handhold children must be nodes.")
-		if not handhold is StaticBody2D:
-			continue
-
-		var authored_handhold: StaticBody2D = handhold
-		if not authored_handhold.is_in_group(climb_tuning.handhold_group_name):
-			continue
-
-		highest_handhold_y = minf(highest_handhold_y, authored_handhold.global_position.y)
-
-	Validation.require_condition(highest_handhold_y < INF, "RunScene requires at least one authored starter handhold.")
-	return highest_handhold_y
 
 func _on_generated_chunk_spawned(chunk_node: Node2D) -> void:
 	Validation.require_condition(chunk_node != null, "RunScene generated chunk hookup requires a chunk node.")
@@ -493,7 +499,7 @@ func _on_generated_hazard_triggered(body: Node, hazard_spawn: GeneratedHazardSpa
 	match hazard_spawn.hazard_kind:
 		GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
 			_lethal_hazard_contact_service.resolve(_controller, _player, _run_session)
-		GeneratedHazardKindScript.Value.WIND_GUST:
+		GeneratedHazardKindScript.Value.WIND_GUST, GeneratedHazardKindScript.Value.DOWNDRAFT, GeneratedHazardKindScript.Value.UPDRAFT:
 			_wind_gust_hazard_contact_service.resolve(
 				_controller,
 				_player,
