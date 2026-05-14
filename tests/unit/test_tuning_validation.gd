@@ -62,6 +62,18 @@ func test_invalid_generation_tuning_is_detected() -> void:
 
     assert_false(tuning.is_valid())
 
+func test_generation_tuning_rejects_non_positive_chunk_width() -> void:
+    var tuning = GenerationTuningScript.new()
+    tuning.chunk_width_meters = 0.0
+
+    assert_false(tuning.is_valid())
+
+func test_generation_tuning_rejects_non_increasing_difficulty_band_heights() -> void:
+    var tuning = GenerationTuningScript.new()
+    tuning.baseline_band_max_height_meters = tuning.easy_band_max_height_meters
+
+    assert_false(tuning.is_valid())
+
 func test_default_chaser_tuning_is_valid() -> void:
     var tuning = ChaserTuningScript.new()
 
