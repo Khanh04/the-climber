@@ -16,6 +16,17 @@ const SaveSchemaScript = preload("res://src/platform/storage/save_schema.gd")
 const SaveSnapshotScript = preload("res://src/platform/storage/save_snapshot.gd")
 const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_service.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
+const UtcDateScript = preload("res://src/platform/clock/utc_date.gd")
+const UtcDateProviderScript = preload("res://src/platform/clock/utc_date_provider.gd")
+
+class StubUtcDateProvider extends UtcDateProviderScript:
+    var _utc_date: UtcDateScript
+
+    func _init(year: int, month: int, day: int) -> void:
+        _utc_date = UtcDateScript.new(year, month, day)
+
+    func get_current_utc_date() -> UtcDateScript:
+        return _utc_date
 
 func test_run_scene_wires_required_nodes_and_starts_run() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -168,7 +179,7 @@ func test_run_scene_has_tall_non_blocking_test_route() -> void:
     assert_gte(non_blocking_hold_count, 18)
     assert_gt(lowest_hold_y - highest_hold_y, 1200.0)
 
-func test_run_scene_starts_generated_chunks_from_reset_anchor_and_disables_authored_starter_route() -> void:
+func test_run_scene_starts_generated_chunks_from_reset_anchor_without_authored_starter_route_nodes() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
@@ -180,20 +191,14 @@ func test_run_scene_starts_generated_chunks_from_reset_anchor_and_disables_autho
     var reset_anchor: Marker2D = playground.get_node("ResetAnchor") as Marker2D
     var generated_chunks_root: Node2D = playground.get_node("GeneratedChunks") as Node2D
     var first_generated_chunk: Node2D = playground.get_generated_chunk_coordinator_for_test().get_chunk_node(0)
-    var disabled_start_hold: StaticBody2D = playground.get_node("Handholds/HoldStartLeft") as StaticBody2D
+    var removed_start_hold: Node = playground.get_node_or_null("Handholds/HoldStartLeft")
 
     assert_not_null(reset_anchor)
     assert_not_null(generated_chunks_root)
     assert_not_null(first_generated_chunk)
-    assert_not_null(disabled_start_hold)
+    assert_null(removed_start_hold)
     assert_eq(generated_chunks_root.get_child_count(), playground.generation_tuning.chunk_spawn_ahead_count)
     assert_eq(first_generated_chunk.global_position, reset_anchor.global_position)
-    assert_false(disabled_start_hold.is_in_group(&"handhold"))
-    assert_false(disabled_start_hold.visible)
-    var starter_route_disabled_meta: Variant = disabled_start_hold.get_meta(&"starter_route_disabled")
-    assert_true(starter_route_disabled_meta is bool)
-    var starter_route_disabled: bool = starter_route_disabled_meta
-    assert_true(starter_route_disabled)
 
     for generated_chunk in generated_chunks_root.get_children():
         assert_true(generated_chunk is Node2D)
@@ -206,6 +211,34 @@ func test_run_scene_starts_generated_chunks_from_reset_anchor_and_disables_autho
         assert_not_null(pickup_root)
         assert_not_null(hazard_root)
         assert_gte(generated_handhold_root.get_child_count(), 1)
+
+func test_run_scene_generated_seed_key_tracks_injected_utc_rollover() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var first_playground_node: Node = scene.instantiate()
+    var first_playground: RunSceneScript = first_playground_node as RunSceneScript
+    var second_playground_node: Node = scene.instantiate()
+    var second_playground: RunSceneScript = second_playground_node as RunSceneScript
+
+    assert_not_null(first_playground)
+    assert_not_null(second_playground)
+    first_playground.set_utc_date_provider(StubUtcDateProvider.new(2026, 5, 14))
+    second_playground.set_utc_date_provider(StubUtcDateProvider.new(2026, 5, 15))
+    add_child_autofree(first_playground)
+    add_child_autofree(second_playground)
+    await get_tree().process_frame
+
+    var first_generated_chunk: Node2D = first_playground.get_generated_chunk_coordinator_for_test().get_chunk_node(0)
+    var second_generated_chunk: Node2D = second_playground.get_generated_chunk_coordinator_for_test().get_chunk_node(0)
+    var first_seed_key: String = _get_required_string_meta(first_generated_chunk, &"seed_key")
+    var second_seed_key: String = _get_required_string_meta(second_generated_chunk, &"seed_key")
+    var first_generator_version: String = _get_required_string_meta(first_generated_chunk, &"generator_version")
+    var second_generator_version: String = _get_required_string_meta(second_generated_chunk, &"generator_version")
+
+    assert_eq(first_seed_key, "generator_v1:2026-05-14")
+    assert_eq(second_seed_key, "generator_v1:2026-05-15")
+    assert_ne(first_seed_key, second_seed_key)
+    assert_eq(first_generator_version, first_playground.generation_tuning.generator_version)
+    assert_eq(second_generator_version, second_playground.generation_tuning.generator_version)
 
 func test_run_scene_generated_coin_pickups_increment_run_coins() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -827,3 +860,11 @@ func _attach_to_generated_opener_holds(playground: RunSceneScript, attach_left: 
             right_hold.global_position,
             right_hold.get_path()
         )
+
+func _get_required_string_meta(node: Node, key: StringName) -> String:
+    assert_not_null(node)
+    assert_true(node.has_meta(key))
+    var raw_value: Variant = node.get_meta(key)
+    assert_true(raw_value is String)
+    var typed_value: String = raw_value
+    return typed_value

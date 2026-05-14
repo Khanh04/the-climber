@@ -35,6 +35,7 @@ const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_se
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const StaminaRuntimeScript = preload("res://src/gameplay/player/stamina_runtime.gd")
 const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
+const UtcDateProviderScript = preload("res://src/platform/clock/utc_date_provider.gd")
 const SystemUtcDateProviderScript = preload("res://src/platform/clock/system_utc_date_provider.gd")
 const RunUiPresenterScript = preload("res://src/ui/run_ui_presenter.gd")
 const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
@@ -77,6 +78,7 @@ var _aim_target_marker: Polygon2D = null
 var _debug_reset_pressed: bool = false
 var _save_snapshot: SaveSnapshotScript = null
 var _start_y: float = 0.0
+var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
 
 func _ready() -> void:
 	_validate_required_state()
@@ -90,7 +92,6 @@ func _ready() -> void:
 	_chaser_pacing_model = ChaserPacingModelScript.new(_chaser_kill_zone.chaser_tuning)
 	_apply_equipped_chaser_theme()
 	_start_y = _reset_anchor.global_position.y
-	_disable_authored_starter_route()
 	_configure_generated_chunks()
 	_reset_playground()
 	_refresh_ui()
@@ -106,6 +107,17 @@ func set_save_snapshot(snapshot: RefCounted) -> void:
 
 	_apply_saved_cosmetic_selection()
 	_apply_equipped_chaser_theme()
+
+func set_utc_date_provider(date_provider: RefCounted) -> void:
+	Validation.require_condition(date_provider != null, "RunScene requires a UTC date provider.")
+	Validation.require_condition(date_provider is UtcDateProviderScript, "RunScene requires a UtcDateProvider implementation.")
+	utc_date_provider = date_provider as UtcDateProviderScript
+	if not is_node_ready():
+		return
+
+	_configure_generated_chunks()
+	_reset_playground()
+	_refresh_ui()
 
 func _physics_process(delta: float) -> void:
 	if _consume_debug_reset_input():
@@ -209,6 +221,7 @@ func _validate_required_state() -> void:
 	Validation.require_condition(generation_tuning != null, "RunScene requires generation tuning.")
 	Validation.require_condition(cosmetic_loadout != null, "RunScene requires a cosmetic loadout.")
 	Validation.require_condition(chaser_theme_catalog != null, "RunScene requires a chaser theme catalog.")
+	Validation.require_condition(utc_date_provider != null, "RunScene requires a UTC date provider.")
 	climb_tuning.assert_valid()
 	stamina_tuning.assert_valid()
 	generation_tuning.assert_valid()
@@ -391,7 +404,7 @@ func _configure_generated_chunks() -> void:
 	var pixels_per_meter: float = _get_climb_tuning_float(&"pixels_per_meter")
 	var generated_world_origin: Vector2 = _reset_anchor.global_position
 	var chunk_start_height_offset_meters: float = 0.0
-	var seed_key: String = DailySeedKey.current_utc(SystemUtcDateProviderScript.new())
+	var seed_key: String = DailySeedKey.current_utc(utc_date_provider)
 	var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(
 		pixels_per_meter,
 		climb_tuning.handhold_group_name,
@@ -410,31 +423,6 @@ func _configure_generated_chunks() -> void:
 	)
 	if not _generated_chunk_coordinator.chunk_spawned.is_connected(_on_generated_chunk_spawned):
 		var _chunk_spawn_connect_result: int = _generated_chunk_coordinator.chunk_spawned.connect(_on_generated_chunk_spawned)
-
-func _disable_authored_starter_route() -> void:
-	Validation.require_condition(_starter_handholds_root != null, "RunScene requires authored Handholds before disabling the starter route.")
-
-	for handhold in _starter_handholds_root.get_children():
-		Validation.require_condition(handhold is Node, "RunScene authored handhold children must be nodes.")
-		if not handhold is StaticBody2D:
-			continue
-
-		var authored_handhold: StaticBody2D = handhold as StaticBody2D
-		if not _should_disable_authored_starter_handhold(authored_handhold):
-			continue
-
-		authored_handhold.remove_from_group(climb_tuning.handhold_group_name)
-		authored_handhold.visible = false
-		authored_handhold.set_meta(&"starter_route_disabled", true)
-		var collision_shape: CollisionShape2D = authored_handhold.get_node_or_null("CollisionShape2D") as CollisionShape2D
-		if collision_shape != null:
-			collision_shape.disabled = true
-
-func _should_disable_authored_starter_handhold(handhold: StaticBody2D) -> bool:
-	Validation.require_condition(handhold != null, "RunScene starter-route filtering requires a handhold.")
-	return handhold.is_in_group(climb_tuning.handhold_group_name) \
-		and handhold.collision_mask == 0 \
-		and handhold.global_position.y < _reset_anchor.global_position.y
 
 func _sync_generated_chunks() -> void:
 	if _generated_chunk_coordinator == null:
