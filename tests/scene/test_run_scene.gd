@@ -5,6 +5,9 @@ const ChaserFeedbackSnapshotScript = preload("res://src/gameplay/chaser/chaser_f
 const ChaserPacingModelScript = preload("res://src/gameplay/chaser/chaser_pacing_model.gd")
 const ChaserKillZoneScript = preload("res://scenes/chaser/chaser_kill_zone.gd")
 const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
+const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickups/generated_coin_pickup_spawn_adapter.gd")
+const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
+const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/generated_hazard_spawn_adapter.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
@@ -32,6 +35,7 @@ func test_run_scene_wires_required_nodes_and_starts_run() -> void:
     assert_not_null(playground.get_node_or_null("DevCamera"))
     assert_not_null(playground.get_node_or_null("UiLayer/RunHud"))
     assert_not_null(playground.get_node_or_null("UiLayer/RunEndScreen"))
+    assert_not_null(playground.get_node_or_null("GeneratedChunks"))
     assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
 
 func test_run_scene_uses_extended_starting_stamina_for_playtesting() -> void:
@@ -162,6 +166,132 @@ func test_run_scene_has_tall_non_blocking_test_route() -> void:
     assert_gte(non_blocking_hold_count, 18)
     assert_gt(lowest_hold_y - highest_hold_y, 1200.0)
 
+func test_run_scene_spawns_generated_chunks_above_authored_starter_route() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var generated_chunks_root: Node2D = playground.get_node("GeneratedChunks") as Node2D
+    var authored_handholds_root: Node2D = playground.get_node("Handholds") as Node2D
+    var highest_authored_handhold_y: float = INF
+    var generated_handhold_count: int = 0
+
+    assert_not_null(generated_chunks_root)
+    assert_not_null(authored_handholds_root)
+
+    for handhold in authored_handholds_root.get_children():
+        assert_true(handhold is Node)
+        if not handhold is StaticBody2D:
+            continue
+
+        var authored_handhold: StaticBody2D = handhold
+        highest_authored_handhold_y = minf(highest_authored_handhold_y, authored_handhold.global_position.y)
+
+    assert_lt(highest_authored_handhold_y, INF)
+    assert_eq(generated_chunks_root.get_child_count(), playground.generation_tuning.chunk_spawn_ahead_count)
+
+    for generated_chunk in generated_chunks_root.get_children():
+        assert_true(generated_chunk is Node2D)
+        var generated_chunk_root: Node2D = generated_chunk as Node2D
+        var generated_handhold_root: Node = generated_chunk_root.get_node("Handholds")
+        var pickup_root: Node = generated_chunk_root.get_node("Pickups")
+        var hazard_root: Node = generated_chunk_root.get_node("Hazards")
+
+        assert_not_null(generated_handhold_root)
+        assert_not_null(pickup_root)
+        assert_not_null(hazard_root)
+        assert_lt(generated_chunk_root.global_position.y, highest_authored_handhold_y)
+        generated_handhold_count += generated_handhold_root.get_child_count()
+
+    assert_gt(generated_handhold_count, 0)
+
+func test_run_scene_generated_coin_pickups_increment_run_coins() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var pickup_nodes: Array = playground.get_tree().get_nodes_in_group(GeneratedCoinPickupSpawnAdapterScript.GROUP_NAME)
+
+    assert_not_null(player_body)
+    assert_gt(pickup_nodes.size(), 0)
+
+    var raw_pickup_node: Variant = pickup_nodes[0]
+    assert_true(raw_pickup_node is GeneratedCoinPickupSpawnAdapterScript)
+    var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = raw_pickup_node
+    assert_not_null(pickup_spawn)
+    assert_eq(playground.get_run_session_for_test().get_run_earned_coins(), 0)
+
+    pickup_spawn.collected.emit(pickup_spawn.socket_id, pickup_spawn.coin_amount, player_body)
+
+    assert_eq(playground.get_run_session_for_test().get_run_earned_coins(), pickup_spawn.coin_amount)
+
+func test_run_scene_generated_spike_cluster_hazards_end_run() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var hazard_spawn: GeneratedHazardSpawnAdapterScript = _wire_generated_hazard_for_test(
+        playground,
+        GeneratedHazardKindScript.Value.SPIKE_CLUSTER,
+        Vector2.ZERO,
+        &"test_spike_hazard"
+    )
+
+    assert_not_null(player_body)
+    assert_not_null(hazard_spawn)
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+
+    hazard_spawn.triggered.emit(player_body)
+
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.ENDED)
+    assert_eq(playground.get_run_session_for_test().get_end_reason(), RunEndReasonScript.Value.LETHAL_HAZARD)
+    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
+
+func test_run_scene_generated_wind_gust_hazards_begin_nonterminal_fall() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var impulse_vector_pixels: Vector2 = Vector2(-240.0, -160.0)
+    var hazard_spawn: GeneratedHazardSpawnAdapterScript = _wire_generated_hazard_for_test(
+        playground,
+        GeneratedHazardKindScript.Value.WIND_GUST,
+        impulse_vector_pixels,
+        &"test_wind_hazard"
+    )
+
+    assert_not_null(player_body)
+    assert_not_null(hazard_spawn)
+    player_body.linear_velocity = Vector2.ZERO
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_false(playground.get_run_session_for_test().has_end_reason())
+
+    hazard_spawn.triggered.emit(player_body)
+
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.FALLING)
+    assert_false(playground.get_run_session_for_test().has_end_reason())
+    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
+    assert_true(player_body.linear_velocity.is_equal_approx(impulse_vector_pixels))
+
 func test_run_scene_camera_follows_player_upward() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
@@ -183,6 +313,33 @@ func test_run_scene_camera_follows_player_upward() -> void:
 
     assert_lt(camera.global_position.y, starting_camera_y)
     assert_eq(camera.global_position.y, player_body.global_position.y - playground.get_camera_player_lower_screen_offset_for_test())
+
+func _wire_generated_hazard_for_test(
+    playground: RunSceneScript,
+    hazard_kind: int,
+    impulse_vector_pixels: Vector2,
+    socket_id: StringName
+) -> GeneratedHazardSpawnAdapterScript:
+    var chunk_node: Node2D = Node2D.new()
+    chunk_node.name = &"GeneratedChunkHarness"
+
+    var pickup_root: Node = Node.new()
+    pickup_root.name = &"Pickups"
+    chunk_node.add_child(pickup_root)
+
+    var hazard_root: Node = Node.new()
+    hazard_root.name = &"Hazards"
+    chunk_node.add_child(hazard_root)
+
+    var hazard_spawn: GeneratedHazardSpawnAdapterScript = GeneratedHazardSpawnAdapterScript.new()
+    hazard_spawn.name = socket_id
+    hazard_spawn.configure_hazard(socket_id, hazard_kind, Vector2.ZERO, impulse_vector_pixels)
+    hazard_root.add_child(hazard_spawn)
+
+    playground.add_child(chunk_node)
+    playground._on_generated_chunk_spawned(chunk_node)
+
+    return hazard_spawn
 
 func test_run_scene_bottom_screen_fall_routes_through_run_session() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")

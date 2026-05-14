@@ -1,6 +1,8 @@
 class_name DailyChunkGenerator
 extends RefCounted
 
+const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
+
 var _tuning: GenerationTuning
 
 func _init(tuning_value: GenerationTuning) -> void:
@@ -22,7 +24,7 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
     var chunk_type: int = _select_chunk_type(route_slot, difficulty_band, chunk_rng)
     var handholds: Array[GeneratedHandholdSocket] = _build_handholds(chunk_index, chunk_type, difficulty_band, chunk_rng)
     var pickup_sockets: Array[GeneratedPickupSocket] = _build_pickup_sockets(chunk_index, handholds, chunk_rng)
-    var hazard_sockets: Array[GeneratedHazardSocket] = _build_hazard_sockets(chunk_index, handholds, chunk_rng)
+    var hazard_sockets: Array[GeneratedHazardSocket] = _build_hazard_sockets(chunk_index, route_slot, difficulty_band, handholds, chunk_rng)
 
     return GeneratedChunkLayout.new(
         seed_key,
@@ -195,10 +197,14 @@ func _build_pickup_sockets(
 
 func _build_hazard_sockets(
     chunk_index: int,
+    route_slot: int,
+    difficulty_band: int,
     handholds: Array[GeneratedHandholdSocket],
     chunk_rng: RandomNumberGenerator
 ) -> Array[GeneratedHazardSocket]:
     Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator requires handholds before generating hazard sockets.")
+    ChunkRouteSlot.assert_valid(route_slot)
+    ChunkDifficultyBand.assert_valid(difficulty_band)
 
     var pickup_socket_count: int = ceili(float(_tuning.socket_count_per_chunk) * 0.6)
     var hazard_socket_count: int = maxi(0, _tuning.socket_count_per_chunk - pickup_socket_count)
@@ -210,14 +216,48 @@ func _build_hazard_sockets(
         var lower_handhold: GeneratedHandholdSocket = handholds[lower_handhold_index]
         var upper_handhold: GeneratedHandholdSocket = handholds[upper_handhold_index]
         var midpoint: Vector2 = (lower_handhold.local_position + upper_handhold.local_position) * 0.5
-        var local_position: Vector2 = Vector2(
-            _clamp_local_x(midpoint.x + chunk_rng.randf_range(-0.35, 0.35)),
-            midpoint.y + 0.4
-        )
+        var hazard_kind: int = _select_hazard_kind(chunk_index, socket_index, route_slot, difficulty_band)
+        var local_position: Vector2 = _build_hazard_local_position(hazard_kind, midpoint, chunk_rng)
         var socket_id: StringName = StringName("chunk_%02d_hazard_%02d" % [chunk_index, socket_index])
-        hazard_sockets.append(GeneratedHazardSocket.new(socket_id, local_position))
+        hazard_sockets.append(GeneratedHazardSocket.new(socket_id, hazard_kind, local_position))
 
     return hazard_sockets
+
+func _select_hazard_kind(chunk_index: int, socket_index: int, route_slot: int, difficulty_band: int) -> int:
+    Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when selecting a hazard kind.")
+    Validation.require_condition(socket_index >= 0, "DailyChunkGenerator socket index cannot be negative when selecting a hazard kind.")
+    ChunkRouteSlot.assert_valid(route_slot)
+    ChunkDifficultyBand.assert_valid(difficulty_band)
+
+    if route_slot == ChunkRouteSlot.Value.OPENER:
+        return GeneratedHazardKindScript.Value.WIND_GUST
+
+    if route_slot == ChunkRouteSlot.Value.RISK or route_slot == ChunkRouteSlot.Value.PRESSURE:
+        return GeneratedHazardKindScript.Value.SPIKE_CLUSTER
+
+    if ((chunk_index + socket_index) % 2) == 0:
+        return GeneratedHazardKindScript.Value.WIND_GUST
+
+    return GeneratedHazardKindScript.Value.SPIKE_CLUSTER
+
+func _build_hazard_local_position(hazard_kind: int, midpoint: Vector2, chunk_rng: RandomNumberGenerator) -> Vector2:
+    GeneratedHazardKindScript.assert_valid(hazard_kind)
+    Validation.require_condition(chunk_rng != null, "DailyChunkGenerator requires an RNG when building hazard positions.")
+
+    match hazard_kind:
+        GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
+            return Vector2(
+                _clamp_local_x(midpoint.x + chunk_rng.randf_range(-0.35, 0.35)),
+                midpoint.y + 0.4
+            )
+        GeneratedHazardKindScript.Value.WIND_GUST:
+            return Vector2(
+                _clamp_local_x(midpoint.x + chunk_rng.randf_range(-0.22, 0.22)),
+                midpoint.y - 0.15
+            )
+        _:
+            Validation.require_condition(false, "DailyChunkGenerator requires a supported hazard kind when building hazard positions.")
+            return midpoint
 
 func _get_lane_positions(chunk_rng: RandomNumberGenerator) -> Array[float]:
     var half_width: float = _tuning.chunk_width_meters * 0.5

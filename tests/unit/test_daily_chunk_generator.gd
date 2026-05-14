@@ -5,6 +5,7 @@ const ChunkRouteSlotScript = preload("res://src/gameplay/generation/chunk_route_
 const ChunkTypeScript = preload("res://src/gameplay/generation/chunk_type.gd")
 const DailyChunkGeneratorScript = preload("res://src/gameplay/generation/daily_chunk_generator.gd")
 const GeneratedChunkLayoutScript = preload("res://src/gameplay/generation/generated_chunk_layout.gd")
+const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 
 func test_build_chunk_is_stable_for_same_seed_and_index() -> void:
@@ -81,6 +82,19 @@ func test_generated_chunk_respects_total_placeholder_socket_budget() -> void:
     assert_eq(total_socket_count, tuning.socket_count_per_chunk)
     assert_gt(typed_layout.handholds.size(), 0)
 
+func test_generator_assigns_specific_hazard_kinds_by_route_pressure() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var opener_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
+    var pressure_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 10))
+
+    assert_gt(opener_layout.hazard_sockets.size(), 0)
+    assert_gt(pressure_layout.hazard_sockets.size(), 0)
+    assert_eq(opener_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.WIND_GUST)
+    assert_eq(pressure_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.SPIKE_CLUSTER)
+
 func _layout_signature(layout: RefCounted) -> String:
     var typed_layout: GeneratedChunkLayoutScript = _require_chunk_layout(layout)
     var signature_parts: PackedStringArray = PackedStringArray([
@@ -102,7 +116,12 @@ func _layout_signature(layout: RefCounted) -> String:
 
     for hazard_socket in typed_layout.hazard_sockets:
         var _append_hazard_result: bool = signature_parts.append(
-            "%s@%.3f,%.3f" % [String(hazard_socket.socket_id), hazard_socket.local_position.x, hazard_socket.local_position.y]
+            "%s:%s@%.3f,%.3f" % [
+                String(hazard_socket.socket_id),
+                GeneratedHazardKindScript.to_label(hazard_socket.hazard_kind),
+                hazard_socket.local_position.x,
+                hazard_socket.local_position.y,
+            ]
         )
 
     return "|".join(signature_parts)

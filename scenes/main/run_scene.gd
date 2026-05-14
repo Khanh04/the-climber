@@ -10,10 +10,19 @@ const ClimbPrototypeControllerScript = preload("res://src/gameplay/player/climb_
 const ClimbPrototypeFrameResultScript = preload("res://src/gameplay/player/climb_prototype_frame_result.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
 const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
+const DailyChunkGeneratorScript = preload("res://src/gameplay/generation/daily_chunk_generator.gd")
 const DesktopDebugInputAdapterScript = preload("res://src/gameplay/player/desktop_debug_input_adapter.gd")
+const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickups/generated_coin_pickup_spawn_adapter.gd")
+const GeneratedChunkCoordinatorScript = preload("res://src/gameplay/generation/generated_chunk_coordinator.gd")
+const GeneratedChunkSceneBuilderScript = preload("res://src/gameplay/generation/generated_chunk_scene_builder.gd")
+const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
+const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/generated_hazard_spawn_adapter.gd")
+const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.gd")
+const LethalHazardContactServiceScript = preload("res://src/gameplay/hazards/lethal_hazard_contact_service.gd")
 const MobileTouchInputAdapterScript = preload("res://src/gameplay/player/mobile_touch_input_adapter.gd")
+const NormalCoinPickupServiceScript = preload("res://src/gameplay/pickups/normal_coin_pickup_service.gd")
 const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
@@ -26,18 +35,23 @@ const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_se
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const StaminaRuntimeScript = preload("res://src/gameplay/player/stamina_runtime.gd")
 const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
+const SystemUtcDateProviderScript = preload("res://src/platform/clock/system_utc_date_provider.gd")
 const RunUiPresenterScript = preload("res://src/ui/run_ui_presenter.gd")
 const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
+const WindGustHazardContactServiceScript = preload("res://src/gameplay/hazards/wind_gust_hazard_contact_service.gd")
 
 @export var climb_tuning: ClimbPrototypeTuningScript
 @export var stamina_tuning: StaminaTuningScript
+@export var generation_tuning: GenerationTuningScript
 @export var cosmetic_loadout: CosmeticLoadoutScript
 @export var chaser_theme_catalog: ChaserThemeCatalogScript
 
 @onready var _player: PlayerCharacterScript = %PlayerCharacter
 @onready var _chaser_kill_zone: ChaserKillZoneScript = get_node("ChaserKillZone") as ChaserKillZoneScript
+@onready var _generated_chunk_coordinator: GeneratedChunkCoordinatorScript = %GeneratedChunks
 @onready var _reset_anchor: Marker2D = %ResetAnchor
 @onready var _camera: Camera2D = %DevCamera
+@onready var _starter_handholds_root: Node2D = get_node("Handholds") as Node2D
 @onready var _run_hud: Control = %RunHud
 @onready var _run_end_screen: Control = %RunEndScreen
 @onready var _run_ui_view = RunUiViewScript.new(_run_hud, _run_end_screen)
@@ -50,9 +64,12 @@ var _controller: ClimbPrototypeControllerScript
 var _chaser_contact_service: ChaserContactServiceScript = ChaserContactServiceScript.new()
 var _chaser_pacing_model: ChaserPacingModelScript
 var _bottom_screen_fall_service: BottomScreenFallServiceScript = BottomScreenFallServiceScript.new()
+var _lethal_hazard_contact_service: LethalHazardContactServiceScript = LethalHazardContactServiceScript.new()
+var _normal_coin_pickup_service: NormalCoinPickupServiceScript = NormalCoinPickupServiceScript.new()
 var _run_loop_coordinator: RunLoopCoordinatorScript = RunLoopCoordinatorScript.new()
 var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop_coordinator)
 var _stamina_fall_service: StaminaFallServiceScript = StaminaFallServiceScript.new()
+var _wind_gust_hazard_contact_service: WindGustHazardContactServiceScript = WindGustHazardContactServiceScript.new()
 var _active_touch_positions: PackedVector2Array = PackedVector2Array()
 var _left_aim_preview: Line2D = null
 var _right_aim_preview: Line2D = null
@@ -73,6 +90,7 @@ func _ready() -> void:
 	_chaser_pacing_model = ChaserPacingModelScript.new(_chaser_kill_zone.chaser_tuning)
 	_apply_equipped_chaser_theme()
 	_start_y = _reset_anchor.global_position.y
+	_configure_generated_chunks()
 	_reset_playground()
 	_refresh_ui()
 
@@ -96,6 +114,7 @@ func _physics_process(delta: float) -> void:
 
 	var input_frame: PlayerInputFrameScript = _create_input_frame()
 	_update_camera_follow()
+	_sync_generated_chunks()
 	_update_chaser(delta)
 
 	if _resolve_bottom_screen_fall_if_needed():
@@ -157,6 +176,9 @@ func get_right_hand_anchor_for_test() -> Marker2D:
 func get_chaser_for_test() -> ChaserKillZoneScript:
 	return _chaser_kill_zone
 
+func get_generated_chunk_coordinator_for_test() -> GeneratedChunkCoordinatorScript:
+	return _generated_chunk_coordinator
+
 func get_chaser_feedback_snapshot_for_test() -> ChaserFeedbackSnapshotScript:
 	Validation.require_condition(_chaser_pacing_model != null, "RunScene requires a chaser pacing model for feedback snapshots.")
 	return _chaser_pacing_model.get_current_feedback_snapshot()
@@ -183,10 +205,12 @@ func get_bottom_fall_margin_for_test() -> float:
 func _validate_required_state() -> void:
 	Validation.require_condition(climb_tuning != null, "RunScene requires climb tuning.")
 	Validation.require_condition(stamina_tuning != null, "RunScene requires stamina tuning.")
+	Validation.require_condition(generation_tuning != null, "RunScene requires generation tuning.")
 	Validation.require_condition(cosmetic_loadout != null, "RunScene requires a cosmetic loadout.")
 	Validation.require_condition(chaser_theme_catalog != null, "RunScene requires a chaser theme catalog.")
 	climb_tuning.assert_valid()
 	stamina_tuning.assert_valid()
+	generation_tuning.assert_valid()
 	cosmetic_loadout.assert_valid()
 	chaser_theme_catalog.assert_valid()
 	var _equipped_theme = chaser_theme_catalog.get_required_theme_by_id(cosmetic_loadout.chaser_theme_id)
@@ -195,8 +219,10 @@ func _validate_required_state() -> void:
 		var _saved_theme = chaser_theme_catalog.get_required_theme_by_id(_save_snapshot.chaser_theme_id)
 	Validation.require_condition(_player != null, "RunScene requires PlayerCharacter.")
 	Validation.require_condition(_chaser_kill_zone != null, "RunScene requires ChaserKillZone.")
+	Validation.require_condition(_generated_chunk_coordinator != null, "RunScene requires GeneratedChunks coordinator.")
 	Validation.require_condition(_reset_anchor != null, "RunScene requires ResetAnchor.")
 	Validation.require_condition(_camera != null, "RunScene requires DevCamera.")
+	Validation.require_condition(_starter_handholds_root != null, "RunScene requires Handholds.")
 	Validation.require_condition(_run_hud != null, "RunScene requires RunHud.")
 	Validation.require_condition(_run_end_screen != null, "RunScene requires RunEndScreen.")
 	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "RunScene requires at least one handhold.")
@@ -359,6 +385,130 @@ func _calculate_current_height_meters() -> float:
 func _record_height() -> void:
 	_run_session.record_height(_calculate_current_height_meters())
 
+func _configure_generated_chunks() -> void:
+	Validation.require_condition(_generated_chunk_coordinator != null, "RunScene requires GeneratedChunks before configuring generated chunks.")
+	var pixels_per_meter: float = _get_climb_tuning_float(&"pixels_per_meter")
+	var starter_top_y: float = _find_highest_authored_handhold_y()
+	var starter_gap_pixels: float = generation_tuning.starter_chunk_gap_meters * pixels_per_meter
+	var generated_world_origin: Vector2 = Vector2(_reset_anchor.global_position.x, starter_top_y - starter_gap_pixels)
+	var chunk_start_height_offset_meters: float = maxf(0.0, (_start_y - generated_world_origin.y) / pixels_per_meter)
+	var seed_key: String = DailySeedKey.current_utc(SystemUtcDateProviderScript.new())
+	var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(
+		pixels_per_meter,
+		climb_tuning.handhold_group_name,
+		Vector2(128.0, 34.0),
+		2,
+		0
+	)
+	var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(generation_tuning)
+	_generated_chunk_coordinator.configure(
+		generation_tuning,
+		generator,
+		builder,
+		seed_key,
+		generated_world_origin,
+		chunk_start_height_offset_meters
+	)
+	if not _generated_chunk_coordinator.chunk_spawned.is_connected(_on_generated_chunk_spawned):
+		var _chunk_spawn_connect_result: int = _generated_chunk_coordinator.chunk_spawned.connect(_on_generated_chunk_spawned)
+
+func _sync_generated_chunks() -> void:
+	if _generated_chunk_coordinator == null:
+		return
+
+	_generated_chunk_coordinator.sync_chunks_for_height(_calculate_current_height_meters(), _collect_attached_hold_paths())
+
+func _collect_attached_hold_paths() -> Array[NodePath]:
+	var hold_paths: Array[NodePath] = []
+	if _controller == null:
+		return hold_paths
+
+	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
+	if attachment_state.is_attached(HandSideScript.Value.LEFT):
+		hold_paths.append(attachment_state.get_hold_path(HandSideScript.Value.LEFT))
+
+	if attachment_state.is_attached(HandSideScript.Value.RIGHT):
+		hold_paths.append(attachment_state.get_hold_path(HandSideScript.Value.RIGHT))
+
+	return hold_paths
+
+func _find_highest_authored_handhold_y() -> float:
+	Validation.require_condition(_starter_handholds_root != null, "RunScene requires authored handholds before locating the starter route ceiling.")
+	var highest_handhold_y: float = INF
+
+	for handhold in _starter_handholds_root.get_children():
+		Validation.require_condition(handhold is Node, "RunScene authored handhold children must be nodes.")
+		if not handhold is StaticBody2D:
+			continue
+
+		var authored_handhold: StaticBody2D = handhold
+		if not authored_handhold.is_in_group(climb_tuning.handhold_group_name):
+			continue
+
+		highest_handhold_y = minf(highest_handhold_y, authored_handhold.global_position.y)
+
+	Validation.require_condition(highest_handhold_y < INF, "RunScene requires at least one authored starter handhold.")
+	return highest_handhold_y
+
+func _on_generated_chunk_spawned(chunk_node: Node2D) -> void:
+	Validation.require_condition(chunk_node != null, "RunScene generated chunk hookup requires a chunk node.")
+	_connect_generated_pickups(chunk_node)
+	_connect_generated_hazards(chunk_node)
+
+func _connect_generated_pickups(chunk_node: Node2D) -> void:
+	var pickup_root: Node = chunk_node.get_node("Pickups")
+	for pickup_child in pickup_root.get_children():
+		Validation.require_condition(pickup_child is GeneratedCoinPickupSpawnAdapterScript, "RunScene generated pickups must use GeneratedCoinPickupSpawnAdapter.")
+		var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = pickup_child as GeneratedCoinPickupSpawnAdapterScript
+		var _connect_result: int = pickup_spawn.collected.connect(_on_generated_coin_pickup_collected)
+
+func _connect_generated_hazards(chunk_node: Node2D) -> void:
+	var hazard_root: Node = chunk_node.get_node("Hazards")
+	for hazard_child in hazard_root.get_children():
+		Validation.require_condition(hazard_child is GeneratedHazardSpawnAdapterScript, "RunScene generated hazards must use GeneratedHazardSpawnAdapter.")
+		var hazard_spawn: GeneratedHazardSpawnAdapterScript = hazard_child as GeneratedHazardSpawnAdapterScript
+		var _connect_result: int = hazard_spawn.triggered.connect(_on_generated_hazard_triggered.bind(hazard_spawn))
+
+func _on_generated_coin_pickup_collected(socket_id: StringName, coin_amount: int, body: Node) -> void:
+	Validation.require_condition(not String(socket_id).is_empty(), "RunScene generated coin pickup requires a socket id.")
+	if not _is_run_active_for_generated_spawns():
+		return
+
+	var pickup_applied: bool = _normal_coin_pickup_service.resolve(body, _player, _run_session, coin_amount)
+	if not pickup_applied:
+		return
+
+	_refresh_ui()
+
+func _on_generated_hazard_triggered(body: Node, hazard_spawn: GeneratedHazardSpawnAdapterScript) -> void:
+	Validation.require_condition(hazard_spawn != null, "RunScene generated hazard hookup requires a hazard spawn.")
+	Validation.require_condition(not String(hazard_spawn.socket_id).is_empty(), "RunScene generated hazard contact requires a socket id.")
+	if body != _player.get_player_body():
+		return
+
+	var run_state: int = _run_session.get_state()
+	if run_state == RunStateScript.Value.READY or run_state == RunStateScript.Value.ENDED:
+		return
+
+	match hazard_spawn.hazard_kind:
+		GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
+			_lethal_hazard_contact_service.resolve(_controller, _player, _run_session)
+		GeneratedHazardKindScript.Value.WIND_GUST:
+			_wind_gust_hazard_contact_service.resolve(
+				_controller,
+				_player,
+				_run_session,
+				hazard_spawn.get_impulse_vector_pixels()
+			)
+		_:
+			Validation.require_condition(false, "RunScene requires a supported generated hazard kind.")
+	_clear_aim_preview()
+	_refresh_ui()
+
+func _is_run_active_for_generated_spawns() -> bool:
+	var run_state: int = _run_session.get_state()
+	return run_state == RunStateScript.Value.CLIMBING or run_state == RunStateScript.Value.FALLING or run_state == RunStateScript.Value.RESCUE_OFFERED
+
 func _reset_playground() -> void:
 	_clear_aim_preview()
 
@@ -372,6 +522,8 @@ func _reset_playground() -> void:
 	_run_session.start_run()
 	if _chaser_pacing_model != null:
 		_chaser_pacing_model.reset()
+	if _generated_chunk_coordinator != null:
+		_generated_chunk_coordinator.reset_chunks()
 	_player.reset_physics(_reset_anchor.global_position)
 	_camera.global_position = Vector2(
 		_reset_anchor.global_position.x,

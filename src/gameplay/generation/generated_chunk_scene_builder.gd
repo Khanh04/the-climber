@@ -1,8 +1,12 @@
 class_name GeneratedChunkSceneBuilder
 extends RefCounted
 
-const PICKUP_SOCKET_MARKER_GROUP_NAME: StringName = &"generated_pickup_socket_marker"
-const HAZARD_SOCKET_MARKER_GROUP_NAME: StringName = &"generated_hazard_socket_marker"
+const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickups/generated_coin_pickup_spawn_adapter.gd")
+const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
+const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/generated_hazard_spawn_adapter.gd")
+
+const PICKUP_GROUP_NAME: StringName = GeneratedCoinPickupSpawnAdapterScript.GROUP_NAME
+const HAZARD_GROUP_NAME: StringName = GeneratedHazardSpawnAdapterScript.GROUP_NAME
 
 var _pixels_per_meter: float
 var _handhold_group_name: StringName
@@ -37,25 +41,25 @@ func build_chunk_node(layout: GeneratedChunkLayout) -> Node2D:
     handhold_root.name = &"Handholds"
     chunk_root.add_child(handhold_root)
 
-    var pickup_marker_root: Node2D = Node2D.new()
-    pickup_marker_root.name = &"PickupSocketMarkers"
-    chunk_root.add_child(pickup_marker_root)
+    var pickup_root: Node2D = Node2D.new()
+    pickup_root.name = &"Pickups"
+    chunk_root.add_child(pickup_root)
 
-    var hazard_marker_root: Node2D = Node2D.new()
-    hazard_marker_root.name = &"HazardSocketMarkers"
-    chunk_root.add_child(hazard_marker_root)
+    var hazard_root: Node2D = Node2D.new()
+    hazard_root.name = &"Hazards"
+    chunk_root.add_child(hazard_root)
 
     for handhold_socket in layout.handholds:
         var handhold_body: StaticBody2D = _build_handhold_body(handhold_socket)
         handhold_root.add_child(handhold_body)
 
     for pickup_socket in layout.pickup_sockets:
-        var pickup_marker: Node2D = _build_pickup_socket_marker(pickup_socket)
-        pickup_marker_root.add_child(pickup_marker)
+        var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = _build_pickup_spawn(pickup_socket)
+        pickup_root.add_child(pickup_spawn)
 
     for hazard_socket in layout.hazard_sockets:
-        var hazard_marker: Node2D = _build_hazard_socket_marker(hazard_socket)
-        hazard_marker_root.add_child(hazard_marker)
+        var hazard_spawn: GeneratedHazardSpawnAdapterScript = _build_hazard_spawn(hazard_socket)
+        hazard_root.add_child(hazard_spawn)
 
     return chunk_root
 
@@ -100,48 +104,37 @@ func _build_handhold_body(handhold_socket: GeneratedHandholdSocket) -> StaticBod
 
     return handhold_body
 
-func _build_pickup_socket_marker(pickup_socket: GeneratedPickupSocket) -> Node2D:
+func _build_pickup_spawn(pickup_socket: GeneratedPickupSocket) -> GeneratedCoinPickupSpawnAdapterScript:
     pickup_socket.assert_valid()
 
-    var marker_root: Node2D = Node2D.new()
-    marker_root.name = pickup_socket.socket_id
-    marker_root.position = _meters_to_pixels(pickup_socket.local_position)
-    marker_root.add_to_group(PICKUP_SOCKET_MARKER_GROUP_NAME)
-    marker_root.set_meta(&"socket_kind", &"pickup")
+    var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = GeneratedCoinPickupSpawnAdapterScript.new()
+    pickup_spawn.name = pickup_socket.socket_id
+    pickup_spawn.configure(pickup_socket.socket_id, _meters_to_pixels(pickup_socket.local_position))
+    return pickup_spawn
 
-    var marker_visual: Polygon2D = Polygon2D.new()
-    marker_visual.name = &"Visual"
-    marker_visual.color = Color(0.96, 0.85, 0.24, 0.9)
-    marker_visual.polygon = PackedVector2Array([
-        Vector2(0.0, -12.0),
-        Vector2(10.0, 0.0),
-        Vector2(0.0, 12.0),
-        Vector2(-10.0, 0.0),
-    ])
-    marker_root.add_child(marker_visual)
-
-    return marker_root
-
-func _build_hazard_socket_marker(hazard_socket: GeneratedHazardSocket) -> Node2D:
+func _build_hazard_spawn(hazard_socket: GeneratedHazardSocket) -> GeneratedHazardSpawnAdapterScript:
     hazard_socket.assert_valid()
 
-    var marker_root: Node2D = Node2D.new()
-    marker_root.name = hazard_socket.socket_id
-    marker_root.position = _meters_to_pixels(hazard_socket.local_position)
-    marker_root.add_to_group(HAZARD_SOCKET_MARKER_GROUP_NAME)
-    marker_root.set_meta(&"socket_kind", &"hazard")
+    var hazard_spawn: GeneratedHazardSpawnAdapterScript = GeneratedHazardSpawnAdapterScript.new()
+    hazard_spawn.name = hazard_socket.socket_id
+    hazard_spawn.configure_hazard(
+        hazard_socket.socket_id,
+        hazard_socket.hazard_kind,
+        _meters_to_pixels(hazard_socket.local_position),
+        _build_hazard_impulse_vector(hazard_socket)
+    )
+    return hazard_spawn
 
-    var marker_visual: Polygon2D = Polygon2D.new()
-    marker_visual.name = &"Visual"
-    marker_visual.color = Color(0.93, 0.32, 0.27, 0.92)
-    marker_visual.polygon = PackedVector2Array([
-        Vector2(0.0, -12.0),
-        Vector2(11.0, 10.0),
-        Vector2(-11.0, 10.0),
-    ])
-    marker_root.add_child(marker_visual)
+func _build_hazard_impulse_vector(hazard_socket: GeneratedHazardSocket) -> Vector2:
+    hazard_socket.assert_valid()
+    if hazard_socket.hazard_kind != GeneratedHazardKindScript.Value.WIND_GUST:
+        return Vector2.ZERO
 
-    return marker_root
+    var horizontal_impulse: float = 220.0
+    if hazard_socket.local_position.x < 0.0:
+        return Vector2(horizontal_impulse, -140.0)
+
+    return Vector2(-horizontal_impulse, -140.0)
 
 func _meters_to_pixels(local_position_meters: Vector2) -> Vector2:
     return local_position_meters * _pixels_per_meter

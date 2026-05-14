@@ -1,0 +1,146 @@
+class_name GeneratedHazardSpawnAdapter
+extends Area2D
+
+const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
+
+signal triggered(body: Node)
+
+const GROUP_NAME: StringName = &"generated_hazard"
+const SPIKE_CLUSTER_GROUP_NAME: StringName = &"generated_spike_cluster_hazard"
+const WIND_GUST_GROUP_NAME: StringName = &"generated_wind_gust_hazard"
+
+var socket_id: StringName = StringName()
+var hazard_kind: int = -1
+var impulse_vector_pixels: Vector2 = Vector2.ZERO
+
+var _has_triggered: bool = false
+
+func configure_hazard(
+	socket_id_value: StringName,
+	hazard_kind_value: int,
+	local_position_pixels_value: Vector2,
+	impulse_vector_pixels_value: Vector2 = Vector2.ZERO,
+	collision_layer_value: int = 16,
+	collision_mask_value: int = 1
+) -> void:
+	Validation.require_condition(not String(socket_id_value).is_empty(), "GeneratedHazardSpawnAdapter requires a socket id.")
+	GeneratedHazardKindScript.assert_valid(hazard_kind_value)
+	Validation.require_condition(collision_layer_value > 0, "GeneratedHazardSpawnAdapter collision layer must be positive.")
+	Validation.require_condition(collision_mask_value > 0, "GeneratedHazardSpawnAdapter collision mask must be positive.")
+	if hazard_kind_value == GeneratedHazardKindScript.Value.WIND_GUST:
+		Validation.require_condition(impulse_vector_pixels_value != Vector2.ZERO, "GeneratedHazardSpawnAdapter wind gust hazards require a non-zero impulse vector.")
+
+	socket_id = socket_id_value
+	hazard_kind = hazard_kind_value
+	impulse_vector_pixels = impulse_vector_pixels_value
+	position = local_position_pixels_value
+	collision_layer = collision_layer_value
+	collision_mask = collision_mask_value
+	monitoring = true
+	monitorable = true
+	add_to_group(GROUP_NAME)
+	add_to_group(_get_specific_group_name())
+	set_meta(&"socket_kind", &"hazard")
+	set_meta(&"hazard_kind", GeneratedHazardKindScript.to_label(hazard_kind))
+	set_meta(&"impulse_vector_x", impulse_vector_pixels.x)
+	set_meta(&"impulse_vector_y", impulse_vector_pixels.y)
+	_ensure_presentation()
+
+func _ready() -> void:
+	_validate_required_state()
+	if not body_entered.is_connected(_on_body_entered):
+		var _connect_result: int = body_entered.connect(_on_body_entered)
+
+func _validate_required_state() -> void:
+	Validation.require_condition(not String(socket_id).is_empty(), "GeneratedHazardSpawnAdapter must be configured before entering the scene tree.")
+	GeneratedHazardKindScript.assert_valid(hazard_kind)
+	if hazard_kind == GeneratedHazardKindScript.Value.WIND_GUST:
+		Validation.require_condition(impulse_vector_pixels != Vector2.ZERO, "GeneratedHazardSpawnAdapter wind gust hazards require a non-zero impulse vector.")
+	Validation.require_condition(get_node_or_null("CollisionShape2D") is CollisionShape2D, "GeneratedHazardSpawnAdapter requires CollisionShape2D.")
+	Validation.require_condition(get_node_or_null("Visual") is Polygon2D, "GeneratedHazardSpawnAdapter requires Visual.")
+
+func get_impulse_vector_pixels() -> Vector2:
+	return impulse_vector_pixels
+
+func _build_collision_shape() -> Shape2D:
+	var rectangle_shape: RectangleShape2D = RectangleShape2D.new()
+	rectangle_shape.size = _get_collision_size_for_kind()
+	return rectangle_shape
+
+func _build_visual_polygon() -> PackedVector2Array:
+	match hazard_kind:
+		GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
+			return PackedVector2Array([
+				Vector2(0.0, -12.0),
+				Vector2(11.0, 10.0),
+				Vector2(-11.0, 10.0),
+			])
+		GeneratedHazardKindScript.Value.WIND_GUST:
+			return PackedVector2Array([
+				Vector2(-22.0, -16.0),
+				Vector2(10.0, -16.0),
+				Vector2(24.0, 0.0),
+				Vector2(10.0, 16.0),
+				Vector2(-22.0, 16.0),
+				Vector2(-8.0, 0.0),
+			])
+		_:
+			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind polygon.")
+			return PackedVector2Array()
+
+func _build_visual_color() -> Color:
+	match hazard_kind:
+		GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
+			return Color(0.93, 0.32, 0.27, 0.92)
+		GeneratedHazardKindScript.Value.WIND_GUST:
+			return Color(0.29, 0.72, 0.96, 0.88)
+		_:
+			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind color.")
+			return Color.WHITE
+
+func _get_collision_size_for_kind() -> Vector2:
+	match hazard_kind:
+		GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
+			return Vector2(28.0, 24.0)
+		GeneratedHazardKindScript.Value.WIND_GUST:
+			return Vector2(96.0, 56.0)
+		_:
+			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind collision size.")
+			return Vector2.ZERO
+
+func _get_specific_group_name() -> StringName:
+	match hazard_kind:
+		GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
+			return SPIKE_CLUSTER_GROUP_NAME
+		GeneratedHazardKindScript.Value.WIND_GUST:
+			return WIND_GUST_GROUP_NAME
+		_:
+			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind group.")
+			return StringName()
+
+func _ensure_presentation() -> void:
+	var collision_shape: CollisionShape2D = get_node_or_null("CollisionShape2D") as CollisionShape2D
+	if collision_shape == null:
+		collision_shape = CollisionShape2D.new()
+		collision_shape.name = &"CollisionShape2D"
+		add_child(collision_shape)
+
+	collision_shape.shape = _build_collision_shape()
+
+	var visual: Polygon2D = get_node_or_null("Visual") as Polygon2D
+	if visual == null:
+		visual = Polygon2D.new()
+		visual.name = &"Visual"
+		add_child(visual)
+
+	visual.color = _build_visual_color()
+	visual.polygon = _build_visual_polygon()
+
+func _on_body_entered(body: Node) -> void:
+	Validation.require_condition(body != null, "GeneratedHazardSpawnAdapter body_entered requires a body.")
+	if _has_triggered:
+		return
+
+	_has_triggered = true
+	monitoring = false
+	triggered.emit(body)

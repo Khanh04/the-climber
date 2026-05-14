@@ -9,6 +9,8 @@
 [ext_resource type="PackedScene" path="res://scenes/chaser/chaser_kill_zone.tscn" id="7_chaser"]
 [ext_resource type="Resource" path="res://resources/config/cosmetic_loadout_default.tres" id="8_loadout"]
 [ext_resource type="Resource" path="res://resources/config/chaser_theme_catalog.tres" id="9_theme_catalog"]
+[ext_resource type="Script" path="res://resources/config/generation_tuning.gd" id="10_generation"]
+[ext_resource type="Script" path="res://src/gameplay/generation/generated_chunk_coordinator.gd" id="11_generated_chunks"]
 
 [sub_resource type="Resource" id="Resource_climb"]
 script = ExtResource("2_climb")
@@ -16,6 +18,9 @@ script = ExtResource("2_climb")
 [sub_resource type="Resource" id="Resource_stamina"]
 script = ExtResource("3_stamina")
 one_hand_seconds = 20.0
+
+[sub_resource type="Resource" id="Resource_generation"]
+script = ExtResource("10_generation")
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_hold"]
 size = Vector2(128, 34)
@@ -27,6 +32,7 @@ size = Vector2(1200, 80)
 script = ExtResource("1_dev")
 climb_tuning = SubResource("Resource_climb")
 stamina_tuning = SubResource("Resource_stamina")
+generation_tuning = SubResource("Resource_generation")
 cosmetic_loadout = ExtResource("8_loadout")
 chaser_theme_catalog = ExtResource("9_theme_catalog")
 
@@ -55,6 +61,10 @@ unique_name_in_owner = true
 position = Vector2(540, 2396)
 
 [node name="Handholds" type="Node2D" parent="." unique_id=142891664]
+
+[node name="GeneratedChunks" type="Node2D" parent="." unique_id=1704810011]
+unique_name_in_owner = true
+script = ExtResource("11_generated_chunks")
 
 [node name="HoldSafePlatform" type="StaticBody2D" parent="Handholds" unique_id=1100838222 groups=["handhold"]]
 position = Vector2(540, 1557)
