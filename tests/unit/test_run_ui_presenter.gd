@@ -43,6 +43,7 @@ func test_build_run_end_screen_state_hides_screen_for_active_run() -> void:
 	assert_false(run_end_state.visible)
 	assert_false(run_end_state.rescue_offered)
 	assert_false(run_end_state.has_end_reason)
+	assert_false(run_end_state.show_post_run_coin_doubler)
 	assert_eq(run_end_state.wallet_coins, 5)
 
 func test_build_run_end_screen_state_marks_rescue_offer_and_end_reason() -> void:
@@ -59,5 +60,24 @@ func test_build_run_end_screen_state_marks_rescue_offer_and_end_reason() -> void
 	assert_true(run_end_state.visible)
 	assert_true(run_end_state.rescue_offered)
 	assert_true(run_end_state.has_end_reason)
+	assert_false(run_end_state.show_post_run_coin_doubler)
 	assert_eq(run_end_state.wallet_coins, 11)
 	assert_eq(run_end_state.end_reason, RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
+
+func test_build_run_end_screen_state_surfaces_post_run_coin_doubler_offer() -> void:
+	var presenter: RunUiPresenterScript = RunUiPresenterScript.new(RunLoopCoordinatorScript.new())
+	var run_session: RefCounted = RunSessionScript.new()
+	var wallet: RefCounted = WalletScript.new(11)
+
+	run_session.call("start_run")
+	run_session.call("add_run_earned_coins", 4)
+	run_session.call("end_run", RunEndReasonScript.Value.CHASER_CONTACT)
+
+	var run_end_state: RunEndScreenStateScript = presenter.build_run_end_screen_state(run_session, wallet, true)
+
+	assert_true(run_end_state.visible)
+	assert_false(run_end_state.rescue_offered)
+	assert_true(run_end_state.has_end_reason)
+	assert_true(run_end_state.show_post_run_coin_doubler)
+	assert_eq(run_end_state.run_earned_coins, 4)
+	assert_eq(run_end_state.end_reason, RunEndReasonScript.Value.CHASER_CONTACT)

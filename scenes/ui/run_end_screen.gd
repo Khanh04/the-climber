@@ -2,6 +2,7 @@ class_name RunEndScreen
 extends Control
 
 signal restart_requested
+signal post_run_coin_doubler_requested
 
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
@@ -9,10 +10,12 @@ const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
 @onready var _title_label: Label = get_node("CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
 @onready var _reason_label: Label = get_node("CenterContainer/Panel/ContentMargin/Content/ReasonLabel") as Label
 @onready var _summary_label: Label = get_node("CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
+@onready var _post_run_coin_doubler_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
 @onready var _restart_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
 
 func _ready() -> void:
 	_validate_required_nodes()
+	var _post_run_coin_doubler_connect_result: int = _post_run_coin_doubler_button.connect(&"pressed", Callable(self, "_on_post_run_coin_doubler_button_pressed"))
 	var _connect_result: int = _restart_button.connect(&"pressed", Callable(self, "_on_restart_button_pressed"))
 
 func apply_state(state: RefCounted) -> void:
@@ -28,8 +31,10 @@ func apply_state(state: RefCounted) -> void:
 	var final_height_meters: float = typed_state.get("final_height_meters")
 	var wallet_coins: int = typed_state.get("wallet_coins")
 	var run_earned_coins: int = typed_state.get("run_earned_coins")
+	var show_post_run_coin_doubler: bool = typed_state.get("show_post_run_coin_doubler")
 
 	visible = is_visible_state
+	_post_run_coin_doubler_button.visible = show_post_run_coin_doubler
 	if not visible:
 		return
 
@@ -39,6 +44,9 @@ func apply_state(state: RefCounted) -> void:
 
 	if is_rescue_offered_state:
 		_summary_label.text += "\nRestart is available now. Rewarded continue arrives in Phase 9."
+
+func _on_post_run_coin_doubler_button_pressed() -> void:
+	post_run_coin_doubler_requested.emit()
 
 func _format_end_reason(reason: int) -> String:
 	RunEndReasonScript.assert_valid(reason)
@@ -67,4 +75,5 @@ func _validate_required_nodes() -> void:
 	Validation.require_condition(_title_label != null, "RunEndScreen requires TitleLabel.")
 	Validation.require_condition(_reason_label != null, "RunEndScreen requires ReasonLabel.")
 	Validation.require_condition(_summary_label != null, "RunEndScreen requires SummaryLabel.")
+	Validation.require_condition(_post_run_coin_doubler_button != null, "RunEndScreen requires PostRunCoinDoublerButton.")
 	Validation.require_condition(_restart_button != null, "RunEndScreen requires RestartButton.")

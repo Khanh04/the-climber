@@ -10,6 +10,7 @@ var wallet_coins: int = 0
 var run_earned_coins: int = 0
 var has_end_reason: bool = false
 var end_reason: int = -1
+var show_post_run_coin_doubler: bool = false
 
 func _init(
 	visible_value: bool = false,
@@ -18,7 +19,8 @@ func _init(
 	wallet_coins_value: int = 0,
 	run_earned_coins_value: int = 0,
 	has_end_reason_value: bool = false,
-	end_reason_value: int = -1
+	end_reason_value: int = -1,
+	show_post_run_coin_doubler_value: bool = false
 ) -> void:
 	visible = visible_value
 	rescue_offered = rescue_offered_value
@@ -27,12 +29,16 @@ func _init(
 	run_earned_coins = run_earned_coins_value
 	has_end_reason = has_end_reason_value
 	end_reason = end_reason_value
+	show_post_run_coin_doubler = show_post_run_coin_doubler_value
 
 func assert_valid() -> void:
 	Validation.require_condition(final_height_meters >= 0.0, "RunEndScreenState final height cannot be negative.")
 	Validation.require_condition(wallet_coins >= 0, "RunEndScreenState wallet coins cannot be negative.")
 	Validation.require_condition(run_earned_coins >= 0, "RunEndScreenState run-earned coins cannot be negative.")
 	Validation.require_condition(not rescue_offered or visible, "RunEndScreenState rescue-offered UI must also be visible.")
+	Validation.require_condition(not show_post_run_coin_doubler or visible, "RunEndScreenState post-run doubler offer must also be visible.")
+	Validation.require_condition(not show_post_run_coin_doubler or not rescue_offered, "RunEndScreenState cannot show the post-run doubler while rescue is offered.")
+	Validation.require_condition(not show_post_run_coin_doubler or run_earned_coins > 0, "RunEndScreenState post-run doubler requires positive run-earned coins.")
 
 	if has_end_reason:
 		RunEndReasonScript.assert_valid(end_reason)

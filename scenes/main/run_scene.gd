@@ -29,7 +29,9 @@ const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_f
 const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
 const PersistentCoinTransactionServiceScript = preload("res://src/economy/persistent_coin_transaction_service.gd")
 const PostRunCoinDoublerGrantServiceScript = preload("res://src/economy/post_run_coin_doubler_grant_service.gd")
+const RewardedAdPlacementScript = preload("res://src/platform/ads/rewarded_ad_placement.gd")
 const RewardedAdResultScript = preload("res://src/platform/ads/rewarded_ad_result.gd")
+const RewardedAdsAdapterScript = preload("res://src/platform/ads/rewarded_ads_adapter.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const BottomScreenFallServiceScript = preload("res://src/gameplay/run/bottom_screen_fall_service.gd")
 const JsonFileLocalStorageAdapterScript = preload("res://src/platform/storage/json_file_local_storage_adapter.gd")
@@ -43,6 +45,7 @@ const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_se
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const StaminaRuntimeScript = preload("res://src/gameplay/player/stamina_runtime.gd")
 const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
+const UnavailableRewardedAdsAdapterScript = preload("res://src/platform/ads/unavailable_rewarded_ads_adapter.gd")
 const UtcDateProviderScript = preload("res://src/platform/clock/utc_date_provider.gd")
 const SystemUtcDateProviderScript = preload("res://src/platform/clock/system_utc_date_provider.gd")
 const RunUiPresenterScript = preload("res://src/ui/run_ui_presenter.gd")
@@ -82,6 +85,7 @@ var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop
 var _stamina_fall_service: StaminaFallServiceScript = StaminaFallServiceScript.new()
 var _wind_gust_hazard_contact_service: WindGustHazardContactServiceScript = WindGustHazardContactServiceScript.new()
 var _wallet: WalletScript = WalletScript.new()
+var _rewarded_ads_adapter: RewardedAdsAdapterScript = UnavailableRewardedAdsAdapterScript.new()
 var _persistent_coin_transaction_service: PersistentCoinTransactionServiceScript = PersistentCoinTransactionServiceScript.new()
 var _post_run_coin_doubler_grant_service: PostRunCoinDoublerGrantServiceScript = PostRunCoinDoublerGrantServiceScript.new()
 var _wallet_transaction_service: WalletTransactionServiceScript = WalletTransactionServiceScript.new()
@@ -95,6 +99,7 @@ var _debug_reset_pressed: bool = false
 var _save_snapshot: SaveSnapshotScript = null
 var _local_storage_adapter: LocalStorageAdapterScript = null
 var _save_storage: SaveStorageScript = null
+var _post_run_coin_doubler_reward_id: String = ""
 var _start_y: float = 0.0
 var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
 
@@ -105,6 +110,7 @@ func _ready() -> void:
 	cosmetic_loadout = _duplicate_cosmetic_loadout(cosmetic_loadout)
 	_apply_saved_cosmetic_selection()
 	var _connect_result: int = _run_end_screen.connect(&"restart_requested", _on_run_end_restart_requested)
+	var _post_run_coin_doubler_connect_result: int = _run_end_screen.connect(&"post_run_coin_doubler_requested", _on_post_run_coin_doubler_requested)
 	var _chaser_connect_result: int = _chaser_kill_zone.connect(&"chaser_contacted", _on_chaser_contacted)
 	_player.set_climb_tuning(climb_tuning)
 	_stamina = StaminaRuntimeScript.new(stamina_tuning)
@@ -129,6 +135,15 @@ func set_local_storage_adapter(local_storage_adapter: RefCounted) -> void:
 		_apply_saved_cosmetic_selection()
 		_apply_equipped_chaser_theme()
 		_refresh_ui()
+
+func set_rewarded_ads_adapter(rewarded_ads_adapter: RefCounted) -> void:
+	Validation.require_condition(rewarded_ads_adapter != null, "RunScene requires a rewarded ads adapter.")
+	Validation.require_condition(rewarded_ads_adapter is RewardedAdsAdapterScript, "RunScene requires a RewardedAdsAdapter implementation.")
+	_rewarded_ads_adapter = rewarded_ads_adapter as RewardedAdsAdapterScript
+	if not is_node_ready():
+		return
+
+	_refresh_ui()
 
 func set_save_snapshot(snapshot: RefCounted) -> void:
 	Validation.require_condition(snapshot != null, "RunScene requires a save snapshot.")
@@ -232,6 +247,7 @@ func apply_post_run_coin_doubler_reward(rewarded_ad_result: RefCounted, reward_i
 	Validation.require_condition(rewarded_ad_result is RewardedAdResultScript, "RunScene requires a RewardedAdResult implementation for post-run coin doubling.")
 	Validation.require_condition(_run_session.get_state() == RunStateScript.Value.ENDED, "RunScene can only apply post-run coin doubler rewards after the run has ended.")
 	Validation.require_condition(_run_session.get_run_earned_coins() > 0, "RunScene requires positive run-earned coins before applying post-run coin doubler rewards.")
+	var bound_reward_id: String = _bind_post_run_coin_doubler_reward_id(reward_id)
 
 	var reward_applied: bool = _post_run_coin_doubler_grant_service.apply_reward(
 		_wallet,
@@ -239,7 +255,7 @@ func apply_post_run_coin_doubler_reward(rewarded_ad_result: RefCounted, reward_i
 		_wallet_transaction_service,
 		_persistent_coin_transaction_service,
 		rewarded_ad_result,
-		reward_id,
+		bound_reward_id,
 		_run_session.get_run_earned_coins()
 	)
 	if not reward_applied:
@@ -600,6 +616,7 @@ func _reset_playground() -> void:
 	_desktop_input.reset()
 	_mobile_input.reset()
 	_active_touch_positions = PackedVector2Array()
+	_post_run_coin_doubler_reward_id = ""
 	_run_pickup_transaction_ledger = CoinTransactionLedgerScript.new()
 	_run_session = RunSessionScript.new()
 	_run_session.start_run()
@@ -685,12 +702,24 @@ func _refresh_ui() -> void:
 		return
 
 	var hud_state: RefCounted = _run_ui_presenter.build_hud_state(_run_session, _stamina, _wallet)
-	var run_end_state: RefCounted = _run_ui_presenter.build_run_end_screen_state(_run_session, _wallet)
+	var run_end_state: RefCounted = _run_ui_presenter.build_run_end_screen_state(_run_session, _wallet, _can_offer_post_run_coin_doubler())
 	_run_ui_view.apply_state_snapshots(hud_state, run_end_state)
 
 func _on_run_end_restart_requested() -> void:
 	_reset_playground()
 	_refresh_ui()
+
+func _on_post_run_coin_doubler_requested() -> void:
+	if not _can_offer_post_run_coin_doubler():
+		_refresh_ui()
+		return
+
+	var rewarded_ad_result: RefCounted = _rewarded_ads_adapter.show(RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER)
+	Validation.require_condition(rewarded_ad_result != null, "RunScene rewarded ads adapter must return a rewarded ad result.")
+	Validation.require_condition(rewarded_ad_result is RewardedAdResultScript, "RunScene rewarded ads adapter must return a RewardedAdResult implementation.")
+	var reward_applied: bool = apply_post_run_coin_doubler_reward(rewarded_ad_result, _get_or_create_post_run_coin_doubler_reward_id())
+	if not reward_applied:
+		_refresh_ui()
 
 func _on_chaser_contacted(body: Node) -> void:
 	Validation.require_condition(body != null, "RunScene chaser contact requires a body.")
@@ -704,6 +733,37 @@ func _on_chaser_contacted(body: Node) -> void:
 	_chaser_contact_service.resolve(_controller, _player, _run_session)
 	_clear_aim_preview()
 	_refresh_ui()
+
+func _can_offer_post_run_coin_doubler() -> bool:
+	Validation.require_condition(_rewarded_ads_adapter != null, "RunScene requires a rewarded ads adapter before checking post-run doubler availability.")
+	if _run_session.get_state() != RunStateScript.Value.ENDED:
+		return false
+
+	if _run_session.get_run_earned_coins() <= 0:
+		return false
+
+	if not _rewarded_ads_adapter.can_show(RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER):
+		return false
+
+	var reward_id: String = _get_or_create_post_run_coin_doubler_reward_id()
+	var transaction_id: String = _post_run_coin_doubler_grant_service.build_transaction_id(reward_id)
+	return not _persistent_transaction_ledger.has_transaction_id(transaction_id)
+
+func _get_or_create_post_run_coin_doubler_reward_id() -> String:
+	Validation.require_condition(_run_session.get_state() == RunStateScript.Value.ENDED, "RunScene can only build a post-run coin doubler reward id after the run has ended.")
+	if _post_run_coin_doubler_reward_id.is_empty():
+		_post_run_coin_doubler_reward_id = "run_summary_%s" % str(_run_session.get_instance_id())
+	return _post_run_coin_doubler_reward_id
+
+func _bind_post_run_coin_doubler_reward_id(reward_id: String) -> String:
+	Validation.require_condition(not reward_id.is_empty(), "RunScene post-run coin doubler reward id cannot be empty.")
+	if _post_run_coin_doubler_reward_id.is_empty():
+		_post_run_coin_doubler_reward_id = reward_id
+	Validation.require_condition(
+		_post_run_coin_doubler_reward_id == reward_id,
+		"RunScene post-run coin doubler reward id must remain stable for the current run summary."
+	)
+	return _post_run_coin_doubler_reward_id
 
 func _get_climb_tuning_float(property_name: StringName) -> float:
 	var property_value: Variant = climb_tuning.get(property_name)

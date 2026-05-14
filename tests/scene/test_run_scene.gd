@@ -14,6 +14,7 @@ const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physic
 const RewardedAdOutcomeScript = preload("res://src/platform/ads/rewarded_ad_outcome.gd")
 const RewardedAdPlacementScript = preload("res://src/platform/ads/rewarded_ad_placement.gd")
 const RewardedAdResultScript = preload("res://src/platform/ads/rewarded_ad_result.gd")
+const RewardedAdsAdapterScript = preload("res://src/platform/ads/rewarded_ads_adapter.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunSceneScript = preload("res://scenes/main/run_scene.gd")
 const SaveSchemaScript = preload("res://src/platform/storage/save_schema.gd")
@@ -33,6 +34,25 @@ class StubUtcDateProvider extends UtcDateProviderScript:
 
     func get_current_utc_date() -> UtcDateScript:
         return _utc_date
+
+class StubRewardedAdsAdapter extends RewardedAdsAdapterScript:
+    var _can_show_post_run_coin_doubler: bool = false
+    var _rewarded_ad_result: RewardedAdResultScript
+    var show_call_count: int = 0
+
+    func _init(can_show_post_run_coin_doubler: bool, rewarded_ad_result: RewardedAdResultScript) -> void:
+        _can_show_post_run_coin_doubler = can_show_post_run_coin_doubler
+        _rewarded_ad_result = rewarded_ad_result
+
+    func can_show(placement_value: int) -> bool:
+        RewardedAdPlacementScript.assert_valid(placement_value)
+        return _can_show_post_run_coin_doubler and placement_value == RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER
+
+    func show(placement_value: int) -> RefCounted:
+        RewardedAdPlacementScript.assert_valid(placement_value)
+        Validation.require_condition(can_show(placement_value), "StubRewardedAdsAdapter cannot show the requested placement.")
+        show_call_count += 1
+        return _rewarded_ad_result
 
 func test_run_scene_wires_required_nodes_and_starts_run() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -384,6 +404,53 @@ func test_run_scene_post_run_coin_doubler_banks_run_coins_once_after_run_end() -
     )
     assert_false(playground.apply_post_run_coin_doubler_reward(rewarded_ad_result, "summary_01"))
     assert_eq(playground.get_wallet_for_test().get_coins(), pickup_spawn.coin_amount * 2)
+
+func test_run_scene_run_end_screen_requests_post_run_coin_doubler_through_rewarded_ads_adapter() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
+    var save_storage: SaveStorageScript = SaveStorageScript.new(local_storage)
+    var rewarded_ad_result: RewardedAdResultScript = RewardedAdResultScript.new(
+        RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER,
+        RewardedAdOutcomeScript.Value.COMPLETED,
+        true
+    )
+    var rewarded_ads_adapter: StubRewardedAdsAdapter = StubRewardedAdsAdapter.new(true, rewarded_ad_result)
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    playground.set_local_storage_adapter(local_storage)
+    playground.set_rewarded_ads_adapter(rewarded_ads_adapter)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var pickup_nodes: Array = playground.get_tree().get_nodes_in_group(GeneratedCoinPickupSpawnAdapterScript.GROUP_NAME)
+
+    assert_not_null(player_body)
+    assert_gt(pickup_nodes.size(), 0)
+
+    var raw_pickup_node: Variant = pickup_nodes[0]
+    assert_true(raw_pickup_node is GeneratedCoinPickupSpawnAdapterScript)
+    var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = raw_pickup_node
+    var post_run_coin_doubler_button: Button = playground.get_node(
+        "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton"
+    ) as Button
+
+    assert_not_null(post_run_coin_doubler_button)
+
+    pickup_spawn.collected.emit(pickup_spawn.socket_id, pickup_spawn.coin_amount, player_body)
+    playground.resolve_chaser_contact_for_test()
+
+    assert_true(post_run_coin_doubler_button.visible)
+
+    var _emit_result: int = post_run_coin_doubler_button.emit_signal("pressed")
+
+    assert_eq(rewarded_ads_adapter.show_call_count, 1)
+    assert_eq(playground.get_wallet_for_test().get_coins(), pickup_spawn.coin_amount * 2)
+    assert_true(save_storage.has_snapshot())
+    assert_eq(save_storage.load_snapshot().wallet_coins, pickup_spawn.coin_amount * 2)
+    assert_false(post_run_coin_doubler_button.visible)
 
 func test_run_scene_generated_spike_cluster_hazards_end_run() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")

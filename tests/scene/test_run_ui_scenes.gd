@@ -7,6 +7,7 @@ const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
 
 var _restart_requested: bool = false
+var _post_run_coin_doubler_requested: bool = false
 
 func test_run_hud_scene_wires_required_nodes() -> void:
 	var scene: PackedScene = load("res://scenes/ui/run_hud.tscn")
@@ -68,14 +69,16 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	await get_tree().process_frame
 
 	_restart_requested = false
+	_post_run_coin_doubler_requested = false
 	var _connect_result: int = screen.connect(&"restart_requested", Callable(self, "_mark_restart_requested"))
+	var _post_run_coin_doubler_connect_result: int = screen.connect(&"post_run_coin_doubler_requested", Callable(self, "_mark_post_run_coin_doubler_requested"))
 	screen.call(
 		"apply_state",
 		RunEndScreenStateScript.new(
 			true,
 			true,
 			23.0,
-				6,
+			6,
 			6,
 			true,
 			RunEndReasonScript.Value.BOTTOM_SCREEN_FALL
@@ -85,22 +88,62 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	var title_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
 	var reason_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/ReasonLabel") as Label
 	var summary_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
+	var post_run_coin_doubler_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
 	var restart_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
 
 	assert_true(screen.visible)
 	assert_not_null(title_label)
 	assert_not_null(reason_label)
 	assert_not_null(summary_label)
+	assert_not_null(post_run_coin_doubler_button)
 	assert_not_null(restart_button)
 	assert_eq(title_label.text, "Rescue Offered")
 	assert_eq(reason_label.text, "Reason: Bottom-screen fall")
 	assert_string_contains(summary_label.text, "Height: 23.0 m")
 	assert_string_contains(summary_label.text, "Wallet Coins: 6")
 	assert_string_contains(summary_label.text, "Run Coins: 6")
+	assert_false(post_run_coin_doubler_button.visible)
 
 	var _emit_result: int = restart_button.emit_signal("pressed")
 
 	assert_true(_restart_requested)
+	assert_false(_post_run_coin_doubler_requested)
+
+func test_run_end_screen_shows_post_run_coin_doubler_button_when_available() -> void:
+	var scene: PackedScene = load("res://scenes/ui/run_end_screen.tscn")
+	var screen_node: Node = scene.instantiate()
+
+	assert_not_null(screen_node)
+	assert_true(screen_node is Control)
+	var screen: Control = screen_node as Control
+	assert_not_null(screen)
+	add_child_autofree(screen)
+	await get_tree().process_frame
+
+	_post_run_coin_doubler_requested = false
+	var _connect_result: int = screen.connect(&"post_run_coin_doubler_requested", Callable(self, "_mark_post_run_coin_doubler_requested"))
+	screen.call(
+		"apply_state",
+		RunEndScreenStateScript.new(
+			true,
+			false,
+			31.0,
+			9,
+			5,
+			true,
+			RunEndReasonScript.Value.CHASER_CONTACT,
+			true
+		)
+	)
+
+	var post_run_coin_doubler_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
+
+	assert_not_null(post_run_coin_doubler_button)
+	assert_true(post_run_coin_doubler_button.visible)
+
+	var _emit_result: int = post_run_coin_doubler_button.emit_signal("pressed")
+
+	assert_true(_post_run_coin_doubler_requested)
 
 func test_run_ui_view_applies_snapshots_to_both_controls() -> void:
 	var hud_scene: PackedScene = load("res://scenes/ui/run_hud.tscn")
@@ -138,3 +181,6 @@ func test_run_ui_view_applies_snapshots_to_both_controls() -> void:
 
 func _mark_restart_requested() -> void:
 	_restart_requested = true
+
+func _mark_post_run_coin_doubler_requested() -> void:
+	_post_run_coin_doubler_requested = true

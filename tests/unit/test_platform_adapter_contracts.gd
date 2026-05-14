@@ -3,6 +3,7 @@ extends GutTest
 const RewardedAdPlacementScript = preload("res://src/platform/ads/rewarded_ad_placement.gd")
 const RewardedAdOutcomeScript = preload("res://src/platform/ads/rewarded_ad_outcome.gd")
 const RewardedAdResultScript = preload("res://src/platform/ads/rewarded_ad_result.gd")
+const UnavailableRewardedAdsAdapterScript = preload("res://src/platform/ads/unavailable_rewarded_ads_adapter.gd")
 const HapticFeedbackTypeScript = preload("res://src/platform/haptics/haptic_feedback_type.gd")
 const AppLifecycleEventScript = preload("res://src/platform/lifecycle/app_lifecycle_event.gd")
 const AppLifecycleStateScript = preload("res://src/platform/lifecycle/app_lifecycle_state.gd")
@@ -47,6 +48,17 @@ func test_rewarded_ad_result_requires_completed_ads_to_grant_rewards() -> void:
     assert_true(rewarded_result.is_valid())
     assert_true(cancelled_result.is_valid())
     assert_false(invalid_result.is_valid())
+
+func test_unavailable_rewarded_ads_adapter_returns_unavailable_result() -> void:
+    var adapter: UnavailableRewardedAdsAdapterScript = UnavailableRewardedAdsAdapterScript.new()
+    var raw_result: RefCounted = adapter.show(RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER)
+
+    assert_false(adapter.can_show(RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER))
+    assert_true(raw_result is RewardedAdResultScript)
+    var result: RewardedAdResultScript = raw_result as RewardedAdResultScript
+    assert_eq(result.placement, RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER)
+    assert_eq(result.outcome, RewardedAdOutcomeScript.Value.UNAVAILABLE)
+    assert_false(result.reward_granted)
 
 func test_haptics_and_lifecycle_contract_enums_cover_supported_values() -> void:
     assert_true(HapticFeedbackTypeScript.is_valid(HapticFeedbackTypeScript.Value.LIGHT_IMPACT))
