@@ -22,6 +22,7 @@ func test_run_hud_scene_wires_required_nodes() -> void:
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/HeightMetric/HeightValueLabel"))
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/StaminaMetric/StaminaValueLabel"))
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/StaminaMetric/StaminaBar"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/WalletMetric/WalletValueLabel"))
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/CoinsMetric/CoinsValueLabel"))
 
 func test_run_hud_scene_displays_height_stamina_and_run_coins() -> void:
@@ -35,21 +36,24 @@ func test_run_hud_scene_displays_height_stamina_and_run_coins() -> void:
 	add_child_autofree(hud)
 	await get_tree().process_frame
 
-	hud.call("apply_state", RunHudStateScript.new(18.5, 7.0, 20.0, 4, RunStateScript.Value.CLIMBING))
+	hud.call("apply_state", RunHudStateScript.new(18.5, 7.0, 20.0, 9, 4, RunStateScript.Value.CLIMBING))
 
 	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/HeightMetric/HeightValueLabel") as Label
 	var stamina_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/StaminaMetric/StaminaValueLabel") as Label
 	var stamina_bar: ProgressBar = hud.get_node("Panel/ContentMargin/Metrics/StaminaMetric/StaminaBar") as ProgressBar
+	var wallet_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/WalletMetric/WalletValueLabel") as Label
 	var coins_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/CoinsMetric/CoinsValueLabel") as Label
 
 	assert_not_null(height_value_label)
 	assert_not_null(stamina_value_label)
 	assert_not_null(stamina_bar)
+	assert_not_null(wallet_value_label)
 	assert_not_null(coins_value_label)
 	assert_eq(height_value_label.text, "18.5 m")
 	assert_eq(stamina_value_label.text, "7.0 / 20.0")
 	assert_eq(stamina_bar.max_value, 20.0)
 	assert_eq(stamina_bar.value, 7.0)
+	assert_eq(wallet_value_label.text, "9")
 	assert_eq(coins_value_label.text, "4")
 
 func test_run_end_screen_shows_summary_and_emits_restart() -> void:
@@ -71,6 +75,7 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 			true,
 			true,
 			23.0,
+				6,
 			6,
 			true,
 			RunEndReasonScript.Value.BOTTOM_SCREEN_FALL
@@ -90,6 +95,7 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	assert_eq(title_label.text, "Rescue Offered")
 	assert_eq(reason_label.text, "Reason: Bottom-screen fall")
 	assert_string_contains(summary_label.text, "Height: 23.0 m")
+	assert_string_contains(summary_label.text, "Wallet Coins: 6")
 	assert_string_contains(summary_label.text, "Run Coins: 6")
 
 	var _emit_result: int = restart_button.emit_signal("pressed")
@@ -117,8 +123,8 @@ func test_run_ui_view_applies_snapshots_to_both_controls() -> void:
 
 	var ui_view = RunUiViewScript.new(hud, screen)
 	ui_view.apply_state_snapshots(
-		RunHudStateScript.new(14.0, 5.0, 8.0, 2, RunStateScript.Value.CLIMBING),
-		RunEndScreenStateScript.new(true, true, 14.0, 2, true, RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
+		RunHudStateScript.new(14.0, 5.0, 8.0, 7, 2, RunStateScript.Value.CLIMBING),
+		RunEndScreenStateScript.new(true, true, 14.0, 7, 2, true, RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
 	)
 
 	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/HeightMetric/HeightValueLabel") as Label

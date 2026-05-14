@@ -26,6 +26,7 @@ func apply_state(state: RefCounted) -> void:
 	var is_rescue_offered_state: bool = typed_state.get("rescue_offered")
 	var end_reason: int = typed_state.get("end_reason")
 	var final_height_meters: float = typed_state.get("final_height_meters")
+	var wallet_coins: int = typed_state.get("wallet_coins")
 	var run_earned_coins: int = typed_state.get("run_earned_coins")
 
 	visible = is_visible_state
@@ -34,7 +35,7 @@ func apply_state(state: RefCounted) -> void:
 
 	_title_label.text = "Rescue Offered" if is_rescue_offered_state else "Run Ended"
 	_reason_label.text = "Reason: %s" % _format_end_reason(end_reason)
-	_summary_label.text = "Height: %.1f m\nRun Coins: %d" % [final_height_meters, run_earned_coins]
+	_summary_label.text = "Height: %.1f m\nWallet Coins: %d\nRun Coins: %d" % [final_height_meters, wallet_coins, run_earned_coins]
 
 	if is_rescue_offered_state:
 		_summary_label.text += "\nRestart is available now. Rewarded continue arrives in Phase 9."

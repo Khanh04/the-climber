@@ -9,6 +9,7 @@ const ChaserThemeCatalogScript = preload("res://resources/config/chaser_theme_ca
 const ClimbPrototypeControllerScript = preload("res://src/gameplay/player/climb_prototype_controller.gd")
 const ClimbPrototypeFrameResultScript = preload("res://src/gameplay/player/climb_prototype_frame_result.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
+const CoinTransactionLedgerScript = preload("res://src/economy/coin_transaction_ledger.gd")
 const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
 const DailyChunkGeneratorScript = preload("res://src/gameplay/generation/daily_chunk_generator.gd")
 const DesktopDebugInputAdapterScript = preload("res://src/gameplay/player/desktop_debug_input_adapter.gd")
@@ -28,9 +29,13 @@ const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_f
 const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const BottomScreenFallServiceScript = preload("res://src/gameplay/run/bottom_screen_fall_service.gd")
+const JsonFileLocalStorageAdapterScript = preload("res://src/platform/storage/json_file_local_storage_adapter.gd")
+const LocalStorageAdapterScript = preload("res://src/platform/storage/local_storage_adapter.gd")
 const RunLoopCoordinatorScript = preload("res://src/gameplay/run/run_loop_coordinator.gd")
 const RunSessionScript = preload("res://src/gameplay/run/run_session.gd")
+const SaveSchemaScript = preload("res://src/platform/storage/save_schema.gd")
 const SaveSnapshotScript = preload("res://src/platform/storage/save_snapshot.gd")
+const SaveStorageScript = preload("res://src/platform/storage/save_storage.gd")
 const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_service.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const StaminaRuntimeScript = preload("res://src/gameplay/player/stamina_runtime.gd")
@@ -39,6 +44,8 @@ const UtcDateProviderScript = preload("res://src/platform/clock/utc_date_provide
 const SystemUtcDateProviderScript = preload("res://src/platform/clock/system_utc_date_provider.gd")
 const RunUiPresenterScript = preload("res://src/ui/run_ui_presenter.gd")
 const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
+const WalletScript = preload("res://src/economy/wallet.gd")
+const WalletTransactionServiceScript = preload("res://src/economy/wallet_transaction_service.gd")
 const WindGustHazardContactServiceScript = preload("res://src/gameplay/hazards/wind_gust_hazard_contact_service.gd")
 
 @export var climb_tuning: ClimbPrototypeTuningScript
@@ -71,17 +78,25 @@ var _run_loop_coordinator: RunLoopCoordinatorScript = RunLoopCoordinatorScript.n
 var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop_coordinator)
 var _stamina_fall_service: StaminaFallServiceScript = StaminaFallServiceScript.new()
 var _wind_gust_hazard_contact_service: WindGustHazardContactServiceScript = WindGustHazardContactServiceScript.new()
+var _wallet: WalletScript = WalletScript.new()
+var _wallet_transaction_service: WalletTransactionServiceScript = WalletTransactionServiceScript.new()
+var _persistent_transaction_ledger: CoinTransactionLedgerScript = CoinTransactionLedgerScript.new()
+var _run_pickup_transaction_ledger: CoinTransactionLedgerScript = CoinTransactionLedgerScript.new()
 var _active_touch_positions: PackedVector2Array = PackedVector2Array()
 var _left_aim_preview: Line2D = null
 var _right_aim_preview: Line2D = null
 var _aim_target_marker: Polygon2D = null
 var _debug_reset_pressed: bool = false
 var _save_snapshot: SaveSnapshotScript = null
+var _local_storage_adapter: LocalStorageAdapterScript = null
+var _save_storage: SaveStorageScript = null
 var _start_y: float = 0.0
 var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
 
 func _ready() -> void:
 	_validate_required_state()
+	_initialize_save_storage()
+	_load_or_create_save_state()
 	cosmetic_loadout = _duplicate_cosmetic_loadout(cosmetic_loadout)
 	_apply_saved_cosmetic_selection()
 	var _connect_result: int = _run_end_screen.connect(&"restart_requested", _on_run_end_restart_requested)
@@ -96,17 +111,33 @@ func _ready() -> void:
 	_reset_playground()
 	_refresh_ui()
 
+func set_local_storage_adapter(local_storage_adapter: RefCounted) -> void:
+	Validation.require_condition(local_storage_adapter != null, "RunScene requires a local storage adapter.")
+	Validation.require_condition(local_storage_adapter is LocalStorageAdapterScript, "RunScene requires a LocalStorageAdapter implementation.")
+	_local_storage_adapter = local_storage_adapter as LocalStorageAdapterScript
+	if not is_node_ready():
+		return
+
+	_initialize_save_storage()
+	if _save_snapshot == null:
+		_load_or_create_save_state()
+		_apply_saved_cosmetic_selection()
+		_apply_equipped_chaser_theme()
+		_refresh_ui()
+
 func set_save_snapshot(snapshot: RefCounted) -> void:
 	Validation.require_condition(snapshot != null, "RunScene requires a save snapshot.")
 	Validation.require_condition(snapshot is SaveSnapshotScript, "RunScene requires a SaveSnapshot implementation.")
 	var typed_snapshot: SaveSnapshotScript = snapshot as SaveSnapshotScript
 	typed_snapshot.assert_valid()
 	_save_snapshot = typed_snapshot
+	_hydrate_runtime_save_state_from_snapshot()
 	if not is_node_ready():
 		return
 
 	_apply_saved_cosmetic_selection()
 	_apply_equipped_chaser_theme()
+	_refresh_ui()
 
 func set_utc_date_provider(date_provider: RefCounted) -> void:
 	Validation.require_condition(date_provider != null, "RunScene requires a UTC date provider.")
@@ -170,6 +201,9 @@ func reset_for_test() -> void:
 
 func get_run_session_for_test() -> RunSessionScript:
 	return _run_session
+
+func get_wallet_for_test() -> WalletScript:
+	return _wallet
 
 func get_controller_for_test() -> ClimbPrototypeControllerScript:
 	return _controller
@@ -468,10 +502,20 @@ func _on_generated_coin_pickup_collected(socket_id: StringName, coin_amount: int
 	if not _is_run_active_for_generated_spawns():
 		return
 
-	var pickup_applied: bool = _normal_coin_pickup_service.resolve(body, _player, _run_session, coin_amount)
+	var pickup_applied: bool = _normal_coin_pickup_service.resolve(
+		socket_id,
+		body,
+		_player,
+		_run_session,
+		_wallet,
+		_run_pickup_transaction_ledger,
+		_wallet_transaction_service,
+		coin_amount
+	)
 	if not pickup_applied:
 		return
 
+	_persist_save_state()
 	_refresh_ui()
 
 func _on_generated_hazard_triggered(body: Node, hazard_spawn: GeneratedHazardSpawnAdapterScript) -> void:
@@ -512,6 +556,7 @@ func _reset_playground() -> void:
 	_desktop_input.reset()
 	_mobile_input.reset()
 	_active_touch_positions = PackedVector2Array()
+	_run_pickup_transaction_ledger = CoinTransactionLedgerScript.new()
 	_run_session = RunSessionScript.new()
 	_run_session.start_run()
 	if _chaser_pacing_model != null:
@@ -554,12 +599,49 @@ func _duplicate_cosmetic_loadout(loadout: Resource) -> CosmeticLoadoutScript:
 	typed_duplicated_loadout.assert_valid()
 	return typed_duplicated_loadout
 
+func _initialize_save_storage() -> void:
+	if _local_storage_adapter == null:
+		_local_storage_adapter = JsonFileLocalStorageAdapterScript.new()
+	_save_storage = SaveStorageScript.new(_local_storage_adapter)
+
+func _load_or_create_save_state() -> void:
+	Validation.require_condition(_save_storage != null, "RunScene requires save storage before loading save state.")
+	if _save_snapshot == null:
+		if _save_storage.has_snapshot():
+			_save_snapshot = _save_storage.load_snapshot()
+		else:
+			_save_snapshot = SaveSnapshotScript.new(0, SaveSchemaScript.VERSION, cosmetic_loadout.chaser_theme_id, PackedStringArray())
+
+	_hydrate_runtime_save_state_from_snapshot()
+
+func _hydrate_runtime_save_state_from_snapshot() -> void:
+	if _save_snapshot == null:
+		return
+
+	_save_snapshot.assert_valid()
+	_wallet = WalletScript.new(_save_snapshot.wallet_coins)
+	_persistent_transaction_ledger = CoinTransactionLedgerScript.new(_save_snapshot.applied_persistent_transaction_ids)
+
+func _persist_save_state() -> void:
+	Validation.require_condition(_save_storage != null, "RunScene requires save storage before persisting save state.")
+	var chaser_theme_id: StringName = cosmetic_loadout.chaser_theme_id
+	if _save_snapshot != null:
+		chaser_theme_id = _save_snapshot.chaser_theme_id
+	var snapshot: SaveSnapshotScript = SaveSnapshotScript.new(
+		_wallet.get_coins(),
+		SaveSchemaScript.VERSION,
+		chaser_theme_id,
+		_persistent_transaction_ledger.get_transaction_ids()
+	)
+	_save_storage.save_snapshot(snapshot)
+	_save_snapshot = snapshot
+
 func _refresh_ui() -> void:
 	if _stamina == null or _run_ui_view == null:
 		return
 
-	var hud_state: RefCounted = _run_ui_presenter.build_hud_state(_run_session, _stamina)
-	var run_end_state: RefCounted = _run_ui_presenter.build_run_end_screen_state(_run_session)
+	var hud_state: RefCounted = _run_ui_presenter.build_hud_state(_run_session, _stamina, _wallet)
+	var run_end_state: RefCounted = _run_ui_presenter.build_run_end_screen_state(_run_session, _wallet)
 	_run_ui_view.apply_state_snapshots(hud_state, run_end_state)
 
 func _on_run_end_restart_requested() -> void:

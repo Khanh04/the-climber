@@ -8,12 +8,14 @@ const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.g
 const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickups/generated_coin_pickup_spawn_adapter.gd")
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/generated_hazard_spawn_adapter.gd")
+const InMemoryLocalStorageAdapterScript = preload("res://src/platform/storage/in_memory_local_storage_adapter.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunSceneScript = preload("res://scenes/main/run_scene.gd")
 const SaveSchemaScript = preload("res://src/platform/storage/save_schema.gd")
 const SaveSnapshotScript = preload("res://src/platform/storage/save_snapshot.gd")
+const SaveStorageScript = preload("res://src/platform/storage/save_storage.gd")
 const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_service.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const UtcDateScript = preload("res://src/platform/clock/utc_date.gd")
@@ -89,6 +91,7 @@ func test_run_scene_save_snapshot_overrides_default_chaser_theme_selection() -> 
     await get_tree().process_frame
 
     assert_eq(playground.get_chaser_for_test().chaser_theme.theme_id, &"hot_coffee")
+    assert_eq(playground.get_wallet_for_test().get_coins(), 12)
 
     playground.reset_for_test()
     assert_eq(playground.get_chaser_for_test().chaser_theme.theme_id, &"hot_coffee")
@@ -244,8 +247,11 @@ func test_run_scene_generated_coin_pickups_increment_run_coins() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
+    var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
+    var save_storage: SaveStorageScript = SaveStorageScript.new(local_storage)
 
     assert_not_null(playground)
+    playground.set_local_storage_adapter(local_storage)
     add_child_autofree(playground)
     await get_tree().process_frame
 
@@ -258,12 +264,50 @@ func test_run_scene_generated_coin_pickups_increment_run_coins() -> void:
     var raw_pickup_node: Variant = pickup_nodes[0]
     assert_true(raw_pickup_node is GeneratedCoinPickupSpawnAdapterScript)
     var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = raw_pickup_node
+    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/WalletMetric/WalletValueLabel") as Label
     assert_not_null(pickup_spawn)
+    assert_not_null(wallet_value_label)
     assert_eq(playground.get_run_session_for_test().get_run_earned_coins(), 0)
+    assert_eq(playground.get_wallet_for_test().get_coins(), 0)
+    assert_eq(wallet_value_label.text, "0")
 
     pickup_spawn.collected.emit(pickup_spawn.socket_id, pickup_spawn.coin_amount, player_body)
 
     assert_eq(playground.get_run_session_for_test().get_run_earned_coins(), pickup_spawn.coin_amount)
+    assert_eq(playground.get_wallet_for_test().get_coins(), pickup_spawn.coin_amount)
+    assert_eq(wallet_value_label.text, str(pickup_spawn.coin_amount))
+    assert_true(save_storage.has_snapshot())
+    assert_eq(save_storage.load_snapshot().wallet_coins, pickup_spawn.coin_amount)
+
+func test_run_scene_duplicate_generated_coin_pickups_do_not_double_bank_wallet_or_run_coins() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+    var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
+    var save_storage: SaveStorageScript = SaveStorageScript.new(local_storage)
+
+    assert_not_null(playground)
+    playground.set_local_storage_adapter(local_storage)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var pickup_nodes: Array = playground.get_tree().get_nodes_in_group(GeneratedCoinPickupSpawnAdapterScript.GROUP_NAME)
+
+    assert_not_null(player_body)
+    assert_gt(pickup_nodes.size(), 0)
+
+    var raw_pickup_node: Variant = pickup_nodes[0]
+    assert_true(raw_pickup_node is GeneratedCoinPickupSpawnAdapterScript)
+    var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = raw_pickup_node
+
+    pickup_spawn.collected.emit(pickup_spawn.socket_id, pickup_spawn.coin_amount, player_body)
+    pickup_spawn.collected.emit(pickup_spawn.socket_id, pickup_spawn.coin_amount, player_body)
+
+    assert_eq(playground.get_run_session_for_test().get_run_earned_coins(), pickup_spawn.coin_amount)
+    assert_eq(playground.get_wallet_for_test().get_coins(), pickup_spawn.coin_amount)
+    assert_true(save_storage.has_snapshot())
+    assert_eq(save_storage.load_snapshot().wallet_coins, pickup_spawn.coin_amount)
 
 func test_run_scene_generated_spike_cluster_hazards_end_run() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -475,15 +519,18 @@ func test_run_scene_hud_displays_initial_run_snapshot() -> void:
 
     var height_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/HeightMetric/HeightValueLabel") as Label
     var stamina_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/StaminaMetric/StaminaValueLabel") as Label
+    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/WalletMetric/WalletValueLabel") as Label
     var coins_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/CoinsMetric/CoinsValueLabel") as Label
     var run_end_screen: Control = playground.get_node("UiLayer/RunEndScreen") as Control
 
     assert_not_null(height_value_label)
     assert_not_null(stamina_value_label)
+    assert_not_null(wallet_value_label)
     assert_not_null(coins_value_label)
     assert_not_null(run_end_screen)
     assert_eq(height_value_label.text, "0.0 m")
     assert_eq(stamina_value_label.text, "20.0 / 20.0")
+    assert_eq(wallet_value_label.text, "0")
     assert_eq(coins_value_label.text, "0")
     assert_false(run_end_screen.visible)
 
@@ -511,11 +558,14 @@ func test_run_scene_bottom_screen_fall_shows_run_end_screen() -> void:
 
     var run_end_screen: Control = playground.get_node("UiLayer/RunEndScreen") as Control
     var title_label: Label = playground.get_node("UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
+    var summary_label: Label = playground.get_node("UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
 
     assert_not_null(run_end_screen)
     assert_not_null(title_label)
+    assert_not_null(summary_label)
     assert_true(run_end_screen.visible)
     assert_eq(title_label.text, "Rescue Offered")
+    assert_true(summary_label.text.contains("Wallet Coins: 0"))
 
 func test_run_scene_chaser_contact_ends_run_without_rescue_and_restart_resets_chaser() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
