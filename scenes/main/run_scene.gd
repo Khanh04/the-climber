@@ -47,6 +47,9 @@ const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const BottomScreenFallServiceScript = preload("res://src/gameplay/run/bottom_screen_fall_service.gd")
 const JsonFileLocalStorageAdapterScript = preload("res://src/platform/storage/json_file_local_storage_adapter.gd")
 const LocalStorageAdapterScript = preload("res://src/platform/storage/local_storage_adapter.gd")
+const AppLifecycleAdapterScript = preload("res://src/platform/lifecycle/app_lifecycle_adapter.gd")
+const AppLifecycleEventScript = preload("res://src/platform/lifecycle/app_lifecycle_event.gd")
+const GodotAppLifecycleAdapterScript = preload("res://src/platform/lifecycle/godot_app_lifecycle_adapter.gd")
 const RunLoopCoordinatorScript = preload("res://src/gameplay/run/run_loop_coordinator.gd")
 const RunSessionScript = preload("res://src/gameplay/run/run_session.gd")
 const SaveSchemaScript = preload("res://src/platform/storage/save_schema.gd")
@@ -109,6 +112,7 @@ var _cosmetic_unlock_purchase_service: CosmeticUnlockPurchaseServiceScript = Cos
 var _player_cosmetic_applicator: PlayerCosmeticApplicatorScript = PlayerCosmeticApplicatorScript.new()
 var _store_presenter: StorePresenterScript = StorePresenterScript.new(_cosmetic_loadout_service)
 var _rewarded_ads_adapter: RewardedAdsAdapterScript = RewardedAdsAdapterFactoryScript.create_default()
+var _app_lifecycle_adapter: AppLifecycleAdapterScript = GodotAppLifecycleAdapterScript.new()
 var _persistent_coin_transaction_service: PersistentCoinTransactionServiceScript = PersistentCoinTransactionServiceScript.new()
 var _post_run_coin_doubler_grant_service: PostRunCoinDoublerGrantServiceScript = PostRunCoinDoublerGrantServiceScript.new()
 var _rewarded_continue_service: RewardedContinueServiceScript = RewardedContinueServiceScript.new()
@@ -178,6 +182,15 @@ func set_rewarded_ads_adapter(rewarded_ads_adapter: RefCounted) -> void:
 
 	_refresh_ui()
 
+func set_app_lifecycle_adapter(app_lifecycle_adapter: RefCounted) -> void:
+	Validation.require_condition(app_lifecycle_adapter != null, "RunScene requires an app lifecycle adapter.")
+	Validation.require_condition(app_lifecycle_adapter is AppLifecycleAdapterScript, "RunScene requires an AppLifecycleAdapter implementation.")
+	_app_lifecycle_adapter = app_lifecycle_adapter as AppLifecycleAdapterScript
+	if not is_node_ready():
+		return
+
+	_consume_app_lifecycle_events()
+
 func set_save_snapshot(snapshot: RefCounted) -> void:
 	Validation.require_condition(snapshot != null, "RunScene requires a save snapshot.")
 	Validation.require_condition(snapshot is SaveSnapshotScript, "RunScene requires a SaveSnapshot implementation.")
@@ -204,6 +217,8 @@ func set_utc_date_provider(date_provider: RefCounted) -> void:
 	_refresh_ui()
 
 func _physics_process(delta: float) -> void:
+	_consume_app_lifecycle_events()
+
 	if _pause_menu_visible:
 		return
 
@@ -257,6 +272,13 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventScreenTouch:
 		_update_touch_position(event as InputEventScreenTouch)
 
+func _notification(notification_id: int) -> void:
+	if _app_lifecycle_adapter is GodotAppLifecycleAdapterScript:
+		var godot_lifecycle_adapter: GodotAppLifecycleAdapterScript = _app_lifecycle_adapter as GodotAppLifecycleAdapterScript
+		var notification_recorded: bool = godot_lifecycle_adapter.record_notification(notification_id)
+		if notification_recorded and is_node_ready():
+			_consume_app_lifecycle_events()
+
 func reset_for_test() -> void:
 	_reset_playground()
 
@@ -286,6 +308,9 @@ func show_pause_menu_for_test() -> void:
 
 func is_pause_menu_visible_for_test() -> bool:
 	return _pause_menu_visible
+
+func consume_app_lifecycle_events_for_test() -> void:
+	_consume_app_lifecycle_events()
 
 func apply_persistent_coin_transaction(transaction_id: String, source: int, coin_delta: int) -> bool:
 	Validation.require_condition(_save_storage != null, "RunScene requires save storage before applying persistent coin transactions.")
@@ -921,6 +946,28 @@ func _toggle_pause_requested() -> void:
 		return
 
 	_show_pause_menu()
+
+func _consume_app_lifecycle_events() -> void:
+	Validation.require_condition(_app_lifecycle_adapter != null, "RunScene requires an app lifecycle adapter before consuming lifecycle events.")
+	var lifecycle_events: PackedInt32Array = _app_lifecycle_adapter.consume_pending_events()
+	for lifecycle_event: int in lifecycle_events:
+		_handle_app_lifecycle_event(lifecycle_event)
+
+func _handle_app_lifecycle_event(lifecycle_event: int) -> void:
+	AppLifecycleEventScript.assert_valid(lifecycle_event)
+	match lifecycle_event:
+		AppLifecycleEventScript.Value.PAUSED:
+			_show_pause_menu()
+		AppLifecycleEventScript.Value.ENTERED_BACKGROUND:
+			_show_pause_menu()
+		AppLifecycleEventScript.Value.QUIT_REQUESTED:
+			_show_pause_menu()
+		AppLifecycleEventScript.Value.RESUMED:
+			_refresh_ui()
+		AppLifecycleEventScript.Value.ENTERED_FOREGROUND:
+			_refresh_ui()
+		_:
+			Validation.require_condition(false, "RunScene requires a supported app lifecycle event.")
 
 func _show_store() -> void:
 	_ensure_store_shell()

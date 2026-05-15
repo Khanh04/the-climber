@@ -11,6 +11,9 @@ const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickup
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/generated_hazard_spawn_adapter.gd")
 const InMemoryLocalStorageAdapterScript = preload("res://src/platform/storage/in_memory_local_storage_adapter.gd")
+const AppLifecycleAdapterScript = preload("res://src/platform/lifecycle/app_lifecycle_adapter.gd")
+const AppLifecycleEventScript = preload("res://src/platform/lifecycle/app_lifecycle_event.gd")
+const AppLifecycleStateScript = preload("res://src/platform/lifecycle/app_lifecycle_state.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
 const RewardedAdOutcomeScript = preload("res://src/platform/ads/rewarded_ad_outcome.gd")
@@ -90,6 +93,36 @@ class StubRewardedAdsAdapter extends RewardedAdsAdapterScript:
             _:
                 Validation.require_condition(false, "StubRewardedAdsAdapter requires a supported placement.")
                 return RewardedAdResultScript.new(placement_value, RewardedAdOutcomeScript.Value.UNAVAILABLE, false)
+
+class StubAppLifecycleAdapter extends AppLifecycleAdapterScript:
+    var _current_state: int = AppLifecycleStateScript.Value.ACTIVE
+    var _pending_events: PackedInt32Array = PackedInt32Array()
+
+    func queue_event(event_value: int) -> void:
+        AppLifecycleEventScript.assert_valid(event_value)
+        match event_value:
+            AppLifecycleEventScript.Value.PAUSED:
+                _current_state = AppLifecycleStateScript.Value.PAUSED
+            AppLifecycleEventScript.Value.ENTERED_BACKGROUND:
+                _current_state = AppLifecycleStateScript.Value.BACKGROUND
+            AppLifecycleEventScript.Value.RESUMED:
+                _current_state = AppLifecycleStateScript.Value.ACTIVE
+            AppLifecycleEventScript.Value.ENTERED_FOREGROUND:
+                _current_state = AppLifecycleStateScript.Value.ACTIVE
+            AppLifecycleEventScript.Value.QUIT_REQUESTED:
+                _current_state = AppLifecycleStateScript.Value.PAUSED
+            _:
+                Validation.require_condition(false, "StubAppLifecycleAdapter requires a supported event.")
+
+        var _append_result: bool = _pending_events.append(event_value)
+
+    func get_current_state() -> int:
+        return _current_state
+
+    func consume_pending_events() -> PackedInt32Array:
+        var events: PackedInt32Array = _pending_events.duplicate()
+        _pending_events = PackedInt32Array()
+        return events
 
 func test_run_scene_wires_required_nodes_and_starts_run() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -493,6 +526,33 @@ func test_run_scene_pause_menu_pauses_resumes_and_restarts() -> void:
     assert_false(get_tree().paused)
     assert_false(pause_menu.visible)
     assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+
+func test_run_scene_lifecycle_background_event_opens_pause_menu() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var lifecycle_adapter := StubAppLifecycleAdapter.new()
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    playground.set_app_lifecycle_adapter(lifecycle_adapter)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    lifecycle_adapter.queue_event(AppLifecycleEventScript.Value.ENTERED_BACKGROUND)
+    playground.consume_app_lifecycle_events_for_test()
+
+    var pause_menu: Control = playground.get_pause_menu_for_test()
+
+    assert_not_null(pause_menu)
+    assert_true(playground.is_pause_menu_visible_for_test())
+    assert_true(get_tree().paused)
+    assert_true(pause_menu.visible)
+
+    var resume_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/ResumeButton") as Button
+    var _resume_emit_result: int = resume_button.emit_signal("pressed")
+
+    assert_false(playground.is_pause_menu_visible_for_test())
+    assert_false(get_tree().paused)
 
 func test_run_scene_post_run_coin_doubler_banks_run_coins_once_after_run_end() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
