@@ -44,6 +44,7 @@ func test_build_run_end_screen_state_hides_screen_for_active_run() -> void:
 	assert_false(run_end_state.rescue_offered)
 	assert_false(run_end_state.has_end_reason)
 	assert_false(run_end_state.show_post_run_coin_doubler)
+	assert_false(_get_show_rewarded_continue(run_end_state))
 	assert_eq(run_end_state.wallet_coins, 5)
 
 func test_build_run_end_screen_state_marks_rescue_offer_and_end_reason() -> void:
@@ -61,8 +62,26 @@ func test_build_run_end_screen_state_marks_rescue_offer_and_end_reason() -> void
 	assert_true(run_end_state.rescue_offered)
 	assert_true(run_end_state.has_end_reason)
 	assert_false(run_end_state.show_post_run_coin_doubler)
+	assert_false(_get_show_rewarded_continue(run_end_state))
 	assert_eq(run_end_state.wallet_coins, 11)
 	assert_eq(run_end_state.end_reason, RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
+
+func test_build_run_end_screen_state_surfaces_rewarded_continue_offer() -> void:
+	var presenter: RunUiPresenterScript = RunUiPresenterScript.new(RunLoopCoordinatorScript.new())
+	var run_session: RefCounted = RunSessionScript.new()
+	var wallet: RefCounted = WalletScript.new(13)
+
+	run_session.call("start_run")
+	run_session.call("begin_fall")
+	run_session.call("resolve_fall", RunEndReasonScript.Value.MISSED_GRIP_FALL)
+
+	var run_end_state: RunEndScreenStateScript = presenter.build_run_end_screen_state_with_ad_offers(run_session, wallet, false, true)
+
+	assert_true(run_end_state.visible)
+	assert_true(run_end_state.rescue_offered)
+	assert_false(run_end_state.show_post_run_coin_doubler)
+	assert_true(_get_show_rewarded_continue(run_end_state))
+	assert_eq(run_end_state.end_reason, RunEndReasonScript.Value.MISSED_GRIP_FALL)
 
 func test_build_run_end_screen_state_surfaces_post_run_coin_doubler_offer() -> void:
 	var presenter: RunUiPresenterScript = RunUiPresenterScript.new(RunLoopCoordinatorScript.new())
@@ -79,5 +98,31 @@ func test_build_run_end_screen_state_surfaces_post_run_coin_doubler_offer() -> v
 	assert_false(run_end_state.rescue_offered)
 	assert_true(run_end_state.has_end_reason)
 	assert_true(run_end_state.show_post_run_coin_doubler)
+	assert_false(_get_show_rewarded_continue(run_end_state))
 	assert_eq(run_end_state.run_earned_coins, 4)
 	assert_eq(run_end_state.end_reason, RunEndReasonScript.Value.CHASER_CONTACT)
+
+func test_build_run_end_screen_state_surfaces_ad_feedback_message() -> void:
+	var presenter: RunUiPresenterScript = RunUiPresenterScript.new(RunLoopCoordinatorScript.new())
+	var run_session: RefCounted = RunSessionScript.new()
+	var wallet: RefCounted = WalletScript.new(13)
+
+	run_session.call("start_run")
+	run_session.call("begin_fall")
+	run_session.call("resolve_fall", RunEndReasonScript.Value.MISSED_GRIP_FALL)
+
+	var run_end_state: RunEndScreenStateScript = presenter.build_run_end_screen_state_with_ad_offers(
+		run_session, wallet, false, true, "Ad cancelled — you can try again."
+	)
+
+	assert_true(_get_show_rewarded_continue(run_end_state))
+	var raw_message: Variant = run_end_state.get("ad_feedback_message")
+	assert_true(raw_message is String)
+	var message: String = raw_message
+	assert_eq(message, "Ad cancelled — you can try again.")
+
+func _get_show_rewarded_continue(run_end_state: RunEndScreenStateScript) -> bool:
+	var raw_show_rewarded_continue: Variant = run_end_state.get("show_rewarded_continue")
+	assert_true(raw_show_rewarded_continue is bool)
+	var show_rewarded_continue: bool = raw_show_rewarded_continue
+	return show_rewarded_continue

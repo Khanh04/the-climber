@@ -11,6 +11,8 @@ var run_earned_coins: int = 0
 var has_end_reason: bool = false
 var end_reason: int = -1
 var show_post_run_coin_doubler: bool = false
+var show_rewarded_continue: bool = false
+var ad_feedback_message: String = ""
 
 func _init(
 	visible_value: bool = false,
@@ -37,8 +39,12 @@ func assert_valid() -> void:
 	Validation.require_condition(run_earned_coins >= 0, "RunEndScreenState run-earned coins cannot be negative.")
 	Validation.require_condition(not rescue_offered or visible, "RunEndScreenState rescue-offered UI must also be visible.")
 	Validation.require_condition(not show_post_run_coin_doubler or visible, "RunEndScreenState post-run doubler offer must also be visible.")
+	Validation.require_condition(not show_rewarded_continue or visible, "RunEndScreenState rewarded continue offer must also be visible.")
+	Validation.require_condition(not show_rewarded_continue or rescue_offered, "RunEndScreenState rewarded continue requires rescue to be offered.")
 	Validation.require_condition(not show_post_run_coin_doubler or not rescue_offered, "RunEndScreenState cannot show the post-run doubler while rescue is offered.")
+	Validation.require_condition(not show_post_run_coin_doubler or not show_rewarded_continue, "RunEndScreenState cannot show rewarded continue and the post-run doubler together.")
 	Validation.require_condition(not show_post_run_coin_doubler or run_earned_coins > 0, "RunEndScreenState post-run doubler requires positive run-earned coins.")
+	Validation.require_condition(ad_feedback_message.is_empty() or show_rewarded_continue, "RunEndScreenState ad feedback message requires rewarded continue to be shown.")
 
 	if has_end_reason:
 		RunEndReasonScript.assert_valid(end_reason)

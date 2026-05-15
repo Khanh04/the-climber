@@ -36,23 +36,58 @@ class StubUtcDateProvider extends UtcDateProviderScript:
         return _utc_date
 
 class StubRewardedAdsAdapter extends RewardedAdsAdapterScript:
+    var _can_show_continue: bool = false
+    var _continue_rewarded_ad_result: RewardedAdResultScript = null
     var _can_show_post_run_coin_doubler: bool = false
-    var _rewarded_ad_result: RewardedAdResultScript
+    var _post_run_coin_doubler_rewarded_ad_result: RewardedAdResultScript = null
     var show_call_count: int = 0
+    var last_shown_placement: int = -1
 
-    func _init(can_show_post_run_coin_doubler: bool, rewarded_ad_result: RewardedAdResultScript) -> void:
+    func _init(
+        can_show_continue: bool = false,
+        continue_rewarded_ad_result: RewardedAdResultScript = null,
+        can_show_post_run_coin_doubler: bool = false,
+        post_run_coin_doubler_rewarded_ad_result: RewardedAdResultScript = null
+    ) -> void:
+        _can_show_continue = can_show_continue
+        _continue_rewarded_ad_result = continue_rewarded_ad_result
         _can_show_post_run_coin_doubler = can_show_post_run_coin_doubler
-        _rewarded_ad_result = rewarded_ad_result
+        _post_run_coin_doubler_rewarded_ad_result = post_run_coin_doubler_rewarded_ad_result
 
     func can_show(placement_value: int) -> bool:
         RewardedAdPlacementScript.assert_valid(placement_value)
-        return _can_show_post_run_coin_doubler and placement_value == RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER
+        match placement_value:
+            RewardedAdPlacementScript.Value.CONTINUE:
+                return _can_show_continue
+            RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER:
+                return _can_show_post_run_coin_doubler
+            RewardedAdPlacementScript.Value.PRE_RUN_VENDING_MACHINE:
+                return false
+            _:
+                Validation.require_condition(false, "StubRewardedAdsAdapter requires a supported placement.")
+                return false
 
     func show(placement_value: int) -> RefCounted:
         RewardedAdPlacementScript.assert_valid(placement_value)
         Validation.require_condition(can_show(placement_value), "StubRewardedAdsAdapter cannot show the requested placement.")
         show_call_count += 1
-        return _rewarded_ad_result
+        last_shown_placement = placement_value
+        match placement_value:
+            RewardedAdPlacementScript.Value.CONTINUE:
+                Validation.require_condition(_continue_rewarded_ad_result != null, "StubRewardedAdsAdapter requires a continue result when continue ads are enabled.")
+                return _continue_rewarded_ad_result
+            RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER:
+                Validation.require_condition(
+                    _post_run_coin_doubler_rewarded_ad_result != null,
+                    "StubRewardedAdsAdapter requires a post-run doubler result when that placement is enabled."
+                )
+                return _post_run_coin_doubler_rewarded_ad_result
+            RewardedAdPlacementScript.Value.PRE_RUN_VENDING_MACHINE:
+                Validation.require_condition(false, "StubRewardedAdsAdapter does not support pre-run vending machine tests.")
+                return RewardedAdResultScript.new(placement_value, RewardedAdOutcomeScript.Value.UNAVAILABLE, false)
+            _:
+                Validation.require_condition(false, "StubRewardedAdsAdapter requires a supported placement.")
+                return RewardedAdResultScript.new(placement_value, RewardedAdOutcomeScript.Value.UNAVAILABLE, false)
 
 func test_run_scene_wires_required_nodes_and_starts_run() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -414,7 +449,7 @@ func test_run_scene_run_end_screen_requests_post_run_coin_doubler_through_reward
         RewardedAdOutcomeScript.Value.COMPLETED,
         true
     )
-    var rewarded_ads_adapter: StubRewardedAdsAdapter = StubRewardedAdsAdapter.new(true, rewarded_ad_result)
+    var rewarded_ads_adapter: StubRewardedAdsAdapter = StubRewardedAdsAdapter.new(false, null, true, rewarded_ad_result)
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
 
@@ -447,10 +482,244 @@ func test_run_scene_run_end_screen_requests_post_run_coin_doubler_through_reward
     var _emit_result: int = post_run_coin_doubler_button.emit_signal("pressed")
 
     assert_eq(rewarded_ads_adapter.show_call_count, 1)
+    assert_eq(rewarded_ads_adapter.last_shown_placement, RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER)
     assert_eq(playground.get_wallet_for_test().get_coins(), pickup_spawn.coin_amount * 2)
     assert_true(save_storage.has_snapshot())
     assert_eq(save_storage.load_snapshot().wallet_coins, pickup_spawn.coin_amount * 2)
     assert_false(post_run_coin_doubler_button.visible)
+
+func test_run_scene_run_end_screen_requests_rewarded_continue_through_rewarded_ads_adapter() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var rewarded_ad_result: RewardedAdResultScript = RewardedAdResultScript.new(
+        RewardedAdPlacementScript.Value.CONTINUE,
+        RewardedAdOutcomeScript.Value.COMPLETED,
+        true
+    )
+    var rewarded_ads_adapter: StubRewardedAdsAdapter = StubRewardedAdsAdapter.new(true, rewarded_ad_result)
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    playground.set_rewarded_ads_adapter(rewarded_ads_adapter)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+    var rewarded_continue_button: Button = playground.get_node(
+        "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton"
+    ) as Button
+    var run_end_screen: Control = playground.get_node("UiLayer/RunEndScreen") as Control
+
+    assert_not_null(player_body)
+    assert_not_null(camera)
+    assert_not_null(rewarded_continue_button)
+    assert_not_null(run_end_screen)
+
+    var viewport_size: Vector2 = playground.get_viewport_rect().size
+    player_body.global_position = Vector2(
+        player_body.global_position.x,
+        camera.global_position.y + (viewport_size.y * 0.5) + playground.get_bottom_fall_margin_for_test() + 24.0
+    )
+    playground._physics_process(0.0)
+
+    assert_true(run_end_screen.visible)
+    assert_true(rewarded_continue_button.visible)
+
+    var _emit_result: int = rewarded_continue_button.emit_signal("pressed")
+
+    assert_eq(rewarded_ads_adapter.show_call_count, 1)
+    assert_eq(rewarded_ads_adapter.last_shown_placement, RewardedAdPlacementScript.Value.CONTINUE)
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_true(playground.get_run_session_for_test().has_used_rescue())
+    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
+    assert_eq(playground.get_controller_for_test().get_attachment_state().get_attached_hand_count(), 2)
+    assert_false(run_end_screen.visible)
+
+    playground._physics_process(0.0)
+
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+
+func test_run_scene_rewarded_continue_stays_available_after_cancelled_ad_attempt() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var rewarded_ad_result: RewardedAdResultScript = RewardedAdResultScript.new(
+        RewardedAdPlacementScript.Value.CONTINUE,
+        RewardedAdOutcomeScript.Value.CANCELLED,
+        false
+    )
+    var rewarded_ads_adapter: StubRewardedAdsAdapter = StubRewardedAdsAdapter.new(true, rewarded_ad_result)
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    playground.set_rewarded_ads_adapter(rewarded_ads_adapter)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+    var rewarded_continue_button: Button = playground.get_node(
+        "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton"
+    ) as Button
+
+    assert_not_null(player_body)
+    assert_not_null(camera)
+    assert_not_null(rewarded_continue_button)
+
+    var viewport_size: Vector2 = playground.get_viewport_rect().size
+    player_body.global_position = Vector2(
+        player_body.global_position.x,
+        camera.global_position.y + (viewport_size.y * 0.5) + playground.get_bottom_fall_margin_for_test() + 24.0
+    )
+    playground._physics_process(0.0)
+
+    assert_true(rewarded_continue_button.visible)
+
+    var _emit_result: int = rewarded_continue_button.emit_signal("pressed")
+
+    assert_eq(rewarded_ads_adapter.show_call_count, 1)
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.RESCUE_OFFERED)
+    assert_false(playground.get_run_session_for_test().has_used_rescue())
+    assert_true(rewarded_continue_button.visible)
+    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
+
+    var ad_feedback_label: Label = playground.get_node(
+        "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/AdFeedbackLabel"
+    ) as Label
+    assert_not_null(ad_feedback_label)
+    assert_true(ad_feedback_label.visible)
+    assert_string_contains(ad_feedback_label.text, "cancelled")
+
+func test_run_scene_shows_failed_feedback_after_failed_ad_attempt() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var rewarded_ad_result: RewardedAdResultScript = RewardedAdResultScript.new(
+        RewardedAdPlacementScript.Value.CONTINUE,
+        RewardedAdOutcomeScript.Value.FAILED,
+        false
+    )
+    var rewarded_ads_adapter: StubRewardedAdsAdapter = StubRewardedAdsAdapter.new(true, rewarded_ad_result)
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    playground.set_rewarded_ads_adapter(rewarded_ads_adapter)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+    var rewarded_continue_button: Button = playground.get_node(
+        "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton"
+    ) as Button
+
+    assert_not_null(player_body)
+    assert_not_null(camera)
+    assert_not_null(rewarded_continue_button)
+
+    var viewport_size: Vector2 = playground.get_viewport_rect().size
+    player_body.global_position = Vector2(
+        player_body.global_position.x,
+        camera.global_position.y + (viewport_size.y * 0.5) + playground.get_bottom_fall_margin_for_test() + 24.0
+    )
+    playground._physics_process(0.0)
+
+    assert_true(rewarded_continue_button.visible)
+
+    var _emit_result: int = rewarded_continue_button.emit_signal("pressed")
+
+    assert_eq(rewarded_ads_adapter.show_call_count, 1)
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.RESCUE_OFFERED)
+    assert_false(playground.get_run_session_for_test().has_used_rescue())
+    assert_true(rewarded_continue_button.visible)
+
+    var ad_feedback_label: Label = playground.get_node(
+        "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/AdFeedbackLabel"
+    ) as Label
+    assert_not_null(ad_feedback_label)
+    assert_true(ad_feedback_label.visible)
+    assert_string_contains(ad_feedback_label.text, "failed")
+
+func test_run_scene_hides_rewarded_continue_when_ads_are_unavailable() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+    var rewarded_continue_button: Button = playground.get_node(
+        "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton"
+    ) as Button
+    var summary_label: Label = playground.get_node("UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
+
+    assert_not_null(player_body)
+    assert_not_null(camera)
+    assert_not_null(rewarded_continue_button)
+    assert_not_null(summary_label)
+
+    var viewport_size: Vector2 = playground.get_viewport_rect().size
+    player_body.global_position = Vector2(
+        player_body.global_position.x,
+        camera.global_position.y + (viewport_size.y * 0.5) + playground.get_bottom_fall_margin_for_test() + 24.0
+    )
+    playground._physics_process(0.0)
+
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.RESCUE_OFFERED)
+    assert_false(rewarded_continue_button.visible)
+    assert_string_contains(summary_label.text, "Rewarded continue is unavailable")
+
+func test_run_scene_second_eligible_fall_after_rewarded_continue_does_not_offer_another_continue() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var rewarded_ad_result: RewardedAdResultScript = RewardedAdResultScript.new(
+        RewardedAdPlacementScript.Value.CONTINUE,
+        RewardedAdOutcomeScript.Value.COMPLETED,
+        true
+    )
+    var rewarded_ads_adapter: StubRewardedAdsAdapter = StubRewardedAdsAdapter.new(true, rewarded_ad_result)
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    playground.set_rewarded_ads_adapter(rewarded_ads_adapter)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+    var rewarded_continue_button: Button = playground.get_node(
+        "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton"
+    ) as Button
+    var title_label: Label = playground.get_node("UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
+
+    assert_not_null(player_body)
+    assert_not_null(camera)
+    assert_not_null(rewarded_continue_button)
+    assert_not_null(title_label)
+
+    var viewport_size: Vector2 = playground.get_viewport_rect().size
+    player_body.global_position = Vector2(
+        player_body.global_position.x,
+        camera.global_position.y + (viewport_size.y * 0.5) + playground.get_bottom_fall_margin_for_test() + 24.0
+    )
+    playground._physics_process(0.0)
+
+    var _emit_result: int = rewarded_continue_button.emit_signal("pressed")
+
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+
+    player_body.global_position = Vector2(
+        player_body.global_position.x,
+        camera.global_position.y + (viewport_size.y * 0.5) + playground.get_bottom_fall_margin_for_test() + 48.0
+    )
+    playground._physics_process(0.0)
+
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.ENDED)
+    assert_true(playground.get_run_session_for_test().has_used_rescue())
+    assert_false(rewarded_continue_button.visible)
+    assert_eq(title_label.text, "Run Ended")
 
 func test_run_scene_generated_spike_cluster_hazards_end_run() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")

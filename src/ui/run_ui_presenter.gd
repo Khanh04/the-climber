@@ -39,6 +39,15 @@ func build_hud_state(run_session: RefCounted, stamina: RefCounted, wallet: RefCo
 	return hud_state
 
 func build_run_end_screen_state(run_session: RefCounted, wallet: RefCounted, show_post_run_coin_doubler: bool = false) -> RunEndScreenStateScript:
+	return build_run_end_screen_state_with_ad_offers(run_session, wallet, show_post_run_coin_doubler, false)
+
+func build_run_end_screen_state_with_ad_offers(
+	run_session: RefCounted,
+	wallet: RefCounted,
+	show_post_run_coin_doubler: bool = false,
+	show_rewarded_continue: bool = false,
+	ad_feedback_message: String = ""
+) -> RunEndScreenStateScript:
 	Validation.require_condition(run_session != null, "RunUiPresenter requires a run session to build run-end state.")
 	Validation.require_condition(run_session is RunSessionScript, "RunUiPresenter requires a RunSession implementation for run-end state.")
 	Validation.require_condition(wallet != null, "RunUiPresenter requires a wallet to build run-end state.")
@@ -62,5 +71,8 @@ func build_run_end_screen_state(run_session: RefCounted, wallet: RefCounted, sho
 		end_reason,
 		show_post_run_coin_doubler
 	)
+	var run_end_state_object: Object = run_end_state
+	run_end_state_object.set("show_rewarded_continue", show_rewarded_continue)
+	run_end_state_object.set("ad_feedback_message", ad_feedback_message)
 	run_end_state.assert_valid()
 	return run_end_state

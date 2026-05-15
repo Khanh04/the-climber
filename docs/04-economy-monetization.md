@@ -96,7 +96,11 @@ Create a progression and monetization layer that rewards risk, preserves fairnes
 
 - Rewarded Continue appears only after a valid fall or run-ending mistake, and grants one immediate rescue for that run.
 - Rewarded Continue and Mulligan Drone share the same rescue limit and should not stack in the same run unless explicitly rebalanced later.
+- The current Phase 9 slice routes Rewarded Continue through the typed rewarded-ads adapter boundary and the shared `RunSession.consume_rescue()` flow.
+- The current Rewarded Continue implementation restores full stamina, snaps the player back onto a valid handhold pair in the current loaded route window, and grants no coins.
+- If a requested Rewarded Continue ad is unavailable, cancelled, or fails, the rescue prompt remains active and restart stays available.
 - Post-run Coin Doubler appears on the run summary screen and doubles coins already banked from pickups.
+- The current Post-run Coin Doubler implementation remains a separate once-per-summary ad reward and does not consume the shared rescue limit.
 - Pre-run Vending Machine appears before starting a run and grants one random single-run consumable booster.
 - Ad placements should be frequency-capped and suppressed after recent ad watches to avoid fatigue.
 

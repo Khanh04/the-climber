@@ -7,6 +7,7 @@ const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
 
 var _restart_requested: bool = false
+var _rewarded_continue_requested: bool = false
 var _post_run_coin_doubler_requested: bool = false
 
 func test_run_hud_scene_wires_required_nodes() -> void:
@@ -69,8 +70,10 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	await get_tree().process_frame
 
 	_restart_requested = false
+	_rewarded_continue_requested = false
 	_post_run_coin_doubler_requested = false
 	var _connect_result: int = screen.connect(&"restart_requested", Callable(self, "_mark_restart_requested"))
+	var _rewarded_continue_connect_result: int = screen.connect(&"rewarded_continue_requested", Callable(self, "_mark_rewarded_continue_requested"))
 	var _post_run_coin_doubler_connect_result: int = screen.connect(&"post_run_coin_doubler_requested", Callable(self, "_mark_post_run_coin_doubler_requested"))
 	screen.call(
 		"apply_state",
@@ -88,6 +91,7 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	var title_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
 	var reason_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/ReasonLabel") as Label
 	var summary_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
+	var rewarded_continue_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton") as Button
 	var post_run_coin_doubler_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
 	var restart_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
 
@@ -95,6 +99,7 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	assert_not_null(title_label)
 	assert_not_null(reason_label)
 	assert_not_null(summary_label)
+	assert_not_null(rewarded_continue_button)
 	assert_not_null(post_run_coin_doubler_button)
 	assert_not_null(restart_button)
 	assert_eq(title_label.text, "Rescue Offered")
@@ -102,12 +107,91 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	assert_string_contains(summary_label.text, "Height: 23.0 m")
 	assert_string_contains(summary_label.text, "Wallet Coins: 6")
 	assert_string_contains(summary_label.text, "Run Coins: 6")
+	assert_false(rewarded_continue_button.visible)
 	assert_false(post_run_coin_doubler_button.visible)
 
 	var _emit_result: int = restart_button.emit_signal("pressed")
 
 	assert_true(_restart_requested)
+	assert_false(_rewarded_continue_requested)
 	assert_false(_post_run_coin_doubler_requested)
+
+func test_run_end_screen_shows_rewarded_continue_button_when_available() -> void:
+	var scene: PackedScene = load("res://scenes/ui/run_end_screen.tscn")
+	var screen_node: Node = scene.instantiate()
+
+	assert_not_null(screen_node)
+	assert_true(screen_node is Control)
+	var screen: Control = screen_node as Control
+	assert_not_null(screen)
+	add_child_autofree(screen)
+	await get_tree().process_frame
+
+	_rewarded_continue_requested = false
+	var _connect_result: int = screen.connect(&"rewarded_continue_requested", Callable(self, "_mark_rewarded_continue_requested"))
+	var state: RunEndScreenStateScript = RunEndScreenStateScript.new(
+		true,
+		true,
+		31.0,
+		9,
+		5,
+		true,
+		RunEndReasonScript.Value.BOTTOM_SCREEN_FALL,
+		false
+	)
+	var state_object: Object = state
+	state_object.set("show_rewarded_continue", true)
+	screen.call("apply_state", state)
+
+	var rewarded_continue_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton") as Button
+	var post_run_coin_doubler_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
+	var summary_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
+
+	assert_not_null(rewarded_continue_button)
+	assert_not_null(post_run_coin_doubler_button)
+	assert_not_null(summary_label)
+	assert_true(rewarded_continue_button.visible)
+	assert_false(post_run_coin_doubler_button.visible)
+	assert_string_contains(summary_label.text, "Watch an ad to continue this run once")
+
+	var ad_feedback_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/AdFeedbackLabel") as Label
+	assert_not_null(ad_feedback_label)
+	assert_false(ad_feedback_label.visible)
+
+	var _emit_result: int = rewarded_continue_button.emit_signal("pressed")
+
+	assert_true(_rewarded_continue_requested)
+
+func test_run_end_screen_shows_ad_feedback_message_when_provided() -> void:
+	var scene: PackedScene = load("res://scenes/ui/run_end_screen.tscn")
+	var screen_node: Node = scene.instantiate()
+
+	assert_not_null(screen_node)
+	assert_true(screen_node is Control)
+	var screen: Control = screen_node as Control
+	assert_not_null(screen)
+	add_child_autofree(screen)
+	await get_tree().process_frame
+
+	var state: RunEndScreenStateScript = RunEndScreenStateScript.new(
+		true,
+		true,
+		31.0,
+		9,
+		5,
+		true,
+		RunEndReasonScript.Value.BOTTOM_SCREEN_FALL,
+		false
+	)
+	var state_object: Object = state
+	state_object.set("show_rewarded_continue", true)
+	state_object.set("ad_feedback_message", "Ad cancelled — you can try again.")
+	screen.call("apply_state", state)
+
+	var ad_feedback_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/AdFeedbackLabel") as Label
+	assert_not_null(ad_feedback_label)
+	assert_true(ad_feedback_label.visible)
+	assert_eq(ad_feedback_label.text, "Ad cancelled — you can try again.")
 
 func test_run_end_screen_shows_post_run_coin_doubler_button_when_available() -> void:
 	var scene: PackedScene = load("res://scenes/ui/run_end_screen.tscn")
@@ -181,6 +265,9 @@ func test_run_ui_view_applies_snapshots_to_both_controls() -> void:
 
 func _mark_restart_requested() -> void:
 	_restart_requested = true
+
+func _mark_rewarded_continue_requested() -> void:
+	_rewarded_continue_requested = true
 
 func _mark_post_run_coin_doubler_requested() -> void:
 	_post_run_coin_doubler_requested = true

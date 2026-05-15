@@ -29,10 +29,12 @@ const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_f
 const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
 const PersistentCoinTransactionServiceScript = preload("res://src/economy/persistent_coin_transaction_service.gd")
 const PostRunCoinDoublerGrantServiceScript = preload("res://src/economy/post_run_coin_doubler_grant_service.gd")
+const RewardedAdOutcomeScript = preload("res://src/platform/ads/rewarded_ad_outcome.gd")
 const RewardedAdPlacementScript = preload("res://src/platform/ads/rewarded_ad_placement.gd")
 const RewardedAdResultScript = preload("res://src/platform/ads/rewarded_ad_result.gd")
 const RewardedAdsAdapterScript = preload("res://src/platform/ads/rewarded_ads_adapter.gd")
 const RewardedAdsAdapterFactoryScript = preload("res://src/platform/ads/rewarded_ads_adapter_factory.gd")
+const RewardedContinueServiceScript = preload("res://src/gameplay/run/rewarded_continue_service.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const BottomScreenFallServiceScript = preload("res://src/gameplay/run/bottom_screen_fall_service.gd")
 const JsonFileLocalStorageAdapterScript = preload("res://src/platform/storage/json_file_local_storage_adapter.gd")
@@ -88,6 +90,8 @@ var _wallet: WalletScript = WalletScript.new()
 var _rewarded_ads_adapter: RewardedAdsAdapterScript = RewardedAdsAdapterFactoryScript.create_default()
 var _persistent_coin_transaction_service: PersistentCoinTransactionServiceScript = PersistentCoinTransactionServiceScript.new()
 var _post_run_coin_doubler_grant_service: PostRunCoinDoublerGrantServiceScript = PostRunCoinDoublerGrantServiceScript.new()
+var _rewarded_continue_service: RewardedContinueServiceScript = RewardedContinueServiceScript.new()
+var _rewarded_continue_feedback_message: String = ""
 var _wallet_transaction_service: WalletTransactionServiceScript = WalletTransactionServiceScript.new()
 var _persistent_transaction_ledger: CoinTransactionLedgerScript = CoinTransactionLedgerScript.new()
 var _run_pickup_transaction_ledger: CoinTransactionLedgerScript = CoinTransactionLedgerScript.new()
@@ -110,6 +114,7 @@ func _ready() -> void:
 	cosmetic_loadout = _duplicate_cosmetic_loadout(cosmetic_loadout)
 	_apply_saved_cosmetic_selection()
 	var _connect_result: int = _run_end_screen.connect(&"restart_requested", _on_run_end_restart_requested)
+	var _rewarded_continue_connect_result: int = _run_end_screen.connect(&"rewarded_continue_requested", _on_rewarded_continue_requested)
 	var _post_run_coin_doubler_connect_result: int = _run_end_screen.connect(&"post_run_coin_doubler_requested", _on_post_run_coin_doubler_requested)
 	var _chaser_connect_result: int = _chaser_kill_zone.connect(&"chaser_contacted", _on_chaser_contacted)
 	_player.set_climb_tuning(climb_tuning)
@@ -262,6 +267,19 @@ func apply_post_run_coin_doubler_reward(rewarded_ad_result: RefCounted, reward_i
 		return false
 
 	_persist_save_state()
+	_refresh_ui()
+	return true
+
+func apply_rewarded_continue(rewarded_ad_result: RefCounted) -> bool:
+	Validation.require_condition(rewarded_ad_result != null, "RunScene requires a rewarded ad result for rewarded continue.")
+	Validation.require_condition(rewarded_ad_result is RewardedAdResultScript, "RunScene requires a RewardedAdResult implementation for rewarded continue.")
+	Validation.require_condition(_run_session.get_state() == RunStateScript.Value.RESCUE_OFFERED, "RunScene can only apply rewarded continue while rescue is offered.")
+	var reward_applied: bool = _rewarded_continue_service.apply_reward(_run_session, rewarded_ad_result)
+	if not reward_applied:
+		return false
+
+	_restore_rewarded_continue()
+	_clear_aim_preview()
 	_refresh_ui()
 	return true
 
@@ -617,6 +635,7 @@ func _reset_playground() -> void:
 	_mobile_input.reset()
 	_active_touch_positions = PackedVector2Array()
 	_post_run_coin_doubler_reward_id = ""
+	_rewarded_continue_feedback_message = ""
 	_run_pickup_transaction_ledger = CoinTransactionLedgerScript.new()
 	_run_session = RunSessionScript.new()
 	_run_session.start_run()
@@ -702,12 +721,37 @@ func _refresh_ui() -> void:
 		return
 
 	var hud_state: RefCounted = _run_ui_presenter.build_hud_state(_run_session, _stamina, _wallet)
-	var run_end_state: RefCounted = _run_ui_presenter.build_run_end_screen_state(_run_session, _wallet, _can_offer_post_run_coin_doubler())
+	var run_end_state: RefCounted = _run_ui_presenter.build_run_end_screen_state_with_ad_offers(
+		_run_session,
+		_wallet,
+		_can_offer_post_run_coin_doubler(),
+		_can_offer_rewarded_continue(),
+		_rewarded_continue_feedback_message
+	)
 	_run_ui_view.apply_state_snapshots(hud_state, run_end_state)
 
 func _on_run_end_restart_requested() -> void:
 	_reset_playground()
 	_refresh_ui()
+
+func _on_rewarded_continue_requested() -> void:
+	if not _can_offer_rewarded_continue():
+		_refresh_ui()
+		return
+
+	var rewarded_ad_result: RefCounted = _rewarded_ads_adapter.show(RewardedAdPlacementScript.Value.CONTINUE)
+	Validation.require_condition(rewarded_ad_result != null, "RunScene rewarded ads adapter must return a rewarded ad result.")
+	Validation.require_condition(rewarded_ad_result is RewardedAdResultScript, "RunScene rewarded ads adapter must return a RewardedAdResult implementation.")
+	if not apply_rewarded_continue(rewarded_ad_result):
+		var typed_result: RewardedAdResultScript = rewarded_ad_result
+		match typed_result.outcome:
+			RewardedAdOutcomeScript.Value.CANCELLED:
+				_rewarded_continue_feedback_message = "Ad cancelled — you can try again."
+			RewardedAdOutcomeScript.Value.FAILED:
+				_rewarded_continue_feedback_message = "Ad failed to load — you can try again."
+			_:
+				_rewarded_continue_feedback_message = ""
+		_refresh_ui()
 
 func _on_post_run_coin_doubler_requested() -> void:
 	if not _can_offer_post_run_coin_doubler():
@@ -733,6 +777,13 @@ func _on_chaser_contacted(body: Node) -> void:
 	_chaser_contact_service.resolve(_controller, _player, _run_session)
 	_clear_aim_preview()
 	_refresh_ui()
+
+func _can_offer_rewarded_continue() -> bool:
+	Validation.require_condition(_rewarded_ads_adapter != null, "RunScene requires a rewarded ads adapter before checking rewarded continue availability.")
+	if _run_session.get_state() != RunStateScript.Value.RESCUE_OFFERED:
+		return false
+
+	return _rewarded_ads_adapter.can_show(RewardedAdPlacementScript.Value.CONTINUE)
 
 func _can_offer_post_run_coin_doubler() -> bool:
 	Validation.require_condition(_rewarded_ads_adapter != null, "RunScene requires a rewarded ads adapter before checking post-run doubler availability.")
@@ -764,6 +815,85 @@ func _bind_post_run_coin_doubler_reward_id(reward_id: String) -> String:
 		"RunScene post-run coin doubler reward id must remain stable for the current run summary."
 	)
 	return _post_run_coin_doubler_reward_id
+
+func _restore_rewarded_continue() -> void:
+	var rescue_hold_targets: Array[HandholdTargetScript] = _find_rewarded_continue_hold_targets()
+	Validation.require_condition(rescue_hold_targets.size() == 2, "RunScene rewarded continue requires exactly two rescue hold targets.")
+	var left_hold_target: HandholdTargetScript = rescue_hold_targets[0]
+	var right_hold_target: HandholdTargetScript = rescue_hold_targets[1]
+	var rescue_body_position: Vector2 = _calculate_rewarded_continue_body_position(left_hold_target, right_hold_target)
+
+	_controller.reset()
+	_player.reset_physics(rescue_body_position)
+	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
+	attachment_state.attach(HandSideScript.Value.LEFT, left_hold_target.hold_id, left_hold_target.attach_position, left_hold_target.hold_path)
+	attachment_state.attach(HandSideScript.Value.RIGHT, right_hold_target.hold_id, right_hold_target.attach_position, right_hold_target.hold_path)
+	_player.sync_runtime_grip_joints(attachment_state)
+	_player.sync_runtime_grip_links(attachment_state)
+	_camera.global_position = Vector2(
+		_camera.global_position.x,
+		rescue_body_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
+	)
+	_sync_generated_chunks()
+
+func _find_rewarded_continue_hold_targets() -> Array[HandholdTargetScript]:
+	var handholds: Array[StaticBody2D] = []
+	for handhold in get_tree().get_nodes_in_group(climb_tuning.handhold_group_name):
+		Validation.require_condition(handhold is StaticBody2D, "RunScene rescue handholds must be StaticBody2D instances.")
+		handholds.append(handhold as StaticBody2D)
+
+	Validation.require_condition(handholds.size() >= 2, "RunScene rewarded continue requires at least two handholds.")
+	var target_body_y: float = _camera.global_position.y + _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
+	var target_hold_average_y: float = target_body_y - _get_climb_tuning_float(&"grip_hang_offset_pixels")
+	var target_center_x: float = _camera.global_position.x
+	var target_anchor_spacing: float = _player.get_left_hand_anchor_global_position().distance_to(_player.get_right_hand_anchor_global_position())
+	var best_score: float = INF
+	var best_left_hold: StaticBody2D = null
+	var best_right_hold: StaticBody2D = null
+
+	for first_index in range(handholds.size() - 1):
+		for second_index in range(first_index + 1, handholds.size()):
+			var first_hold: StaticBody2D = handholds[first_index]
+			var second_hold: StaticBody2D = handholds[second_index]
+			var left_hold: StaticBody2D = first_hold
+			var right_hold: StaticBody2D = second_hold
+			if left_hold.global_position.x > right_hold.global_position.x:
+				var swapped_hold: StaticBody2D = left_hold
+				left_hold = right_hold
+				right_hold = swapped_hold
+
+			var average_position: Vector2 = (left_hold.global_position + right_hold.global_position) * 0.5
+			var spacing_x: float = absf(right_hold.global_position.x - left_hold.global_position.x)
+			var vertical_target_penalty: float = absf(average_position.y - target_hold_average_y)
+			var horizontal_target_penalty: float = absf(average_position.x - target_center_x)
+			var spacing_penalty: float = absf(spacing_x - target_anchor_spacing)
+			var vertical_alignment_penalty: float = absf(left_hold.global_position.y - right_hold.global_position.y)
+			var collapse_penalty: float = 0.0
+			if spacing_x < 48.0:
+				collapse_penalty = 1000.0
+
+			var score: float = vertical_target_penalty \
+				+ (horizontal_target_penalty * 0.35) \
+				+ (spacing_penalty * 0.5) \
+				+ (vertical_alignment_penalty * 0.75) \
+				+ collapse_penalty
+			if score < best_score:
+				best_score = score
+				best_left_hold = left_hold
+				best_right_hold = right_hold
+
+	Validation.require_condition(best_left_hold != null, "RunScene rewarded continue requires a left rescue handhold.")
+	Validation.require_condition(best_right_hold != null, "RunScene rewarded continue requires a right rescue handhold.")
+	return [
+		HandholdTargetScript.new(best_left_hold.name, best_left_hold.global_position, best_left_hold.get_path()),
+		HandholdTargetScript.new(best_right_hold.name, best_right_hold.global_position, best_right_hold.get_path()),
+	]
+
+func _calculate_rewarded_continue_body_position(left_hold_target: HandholdTargetScript, right_hold_target: HandholdTargetScript) -> Vector2:
+	left_hold_target.assert_valid()
+	right_hold_target.assert_valid()
+	var average_hold_position: Vector2 = (left_hold_target.attach_position + right_hold_target.attach_position) * 0.5
+	return average_hold_position + Vector2.DOWN * _get_climb_tuning_float(&"grip_hang_offset_pixels")
 
 func _get_climb_tuning_float(property_name: StringName) -> float:
 	var property_value: Variant = climb_tuning.get(property_name)
