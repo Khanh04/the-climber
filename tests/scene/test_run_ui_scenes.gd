@@ -11,6 +11,7 @@ const CosmeticSlotScript = preload("res://src/cosmetics/cosmetic_slot.gd")
 const PauseMenuStateScript = preload("res://src/ui/pause_menu_state.gd")
 
 var _restart_requested: bool = false
+var _start_requested: bool = false
 var _rewarded_continue_requested: bool = false
 var _post_run_coin_doubler_requested: bool = false
 var _store_requested: bool = false
@@ -20,6 +21,54 @@ var _settings_requested: bool = false
 var _selected_store_item_id: StringName = StringName()
 var _purchase_store_item_id: StringName = StringName()
 var _equip_store_item_id: StringName = StringName()
+
+func test_project_launches_to_main_menu_scene() -> void:
+	var raw_main_scene_path: Variant = ProjectSettings.get_setting("application/run/main_scene")
+	assert_true(raw_main_scene_path is String)
+	var main_scene_path: String = raw_main_scene_path
+	assert_eq(main_scene_path, "res://scenes/main/main_menu_scene.tscn")
+
+func test_main_menu_scene_wires_required_nodes() -> void:
+	var scene: PackedScene = load("res://scenes/main/main_menu_scene.tscn")
+	var menu_scene_node: Node = scene.instantiate()
+
+	assert_not_null(menu_scene_node)
+	assert_true(menu_scene_node is Control)
+	var menu_scene: Control = menu_scene_node as Control
+	assert_not_null(menu_scene)
+	add_child_autofree(menu_scene)
+	await get_tree().process_frame
+
+	assert_not_null(menu_scene.get_node_or_null("MainMenu"))
+	assert_not_null(menu_scene.get_node_or_null("MainMenu/CenterContainer/Panel/ContentMargin/Content/StartButton"))
+	assert_not_null(menu_scene.get_node_or_null("MainMenu/CenterContainer/Panel/ContentMargin/Content/SettingsButton"))
+
+func test_main_menu_emits_start_and_settings_requests() -> void:
+	var scene: PackedScene = load("res://scenes/ui/main_menu.tscn")
+	var menu_node: Node = scene.instantiate()
+
+	assert_not_null(menu_node)
+	assert_true(menu_node is Control)
+	var menu: Control = menu_node as Control
+	assert_not_null(menu)
+	add_child_autofree(menu)
+	await get_tree().process_frame
+
+	_start_requested = false
+	_settings_requested = false
+	var _start_connect_result: int = menu.connect(&"start_requested", Callable(self, "_mark_start_requested"))
+	var _settings_connect_result: int = menu.connect(&"settings_requested", Callable(self, "_mark_settings_requested"))
+	var start_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/StartButton") as Button
+	var settings_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
+
+	assert_not_null(start_button)
+	assert_not_null(settings_button)
+	assert_true(settings_button.disabled)
+	var _start_emit_result: int = start_button.emit_signal("pressed")
+	var _settings_emit_result: int = settings_button.emit_signal("pressed")
+
+	assert_true(_start_requested)
+	assert_true(_settings_requested)
 
 func test_run_hud_scene_wires_required_nodes() -> void:
 	var scene: PackedScene = load("res://scenes/ui/run_hud.tscn")
@@ -436,6 +485,9 @@ func test_pause_menu_displays_state_and_emits_actions() -> void:
 
 func _mark_restart_requested() -> void:
 	_restart_requested = true
+
+func _mark_start_requested() -> void:
+	_start_requested = true
 
 func _mark_rewarded_continue_requested() -> void:
 	_rewarded_continue_requested = true

@@ -210,7 +210,7 @@ Implementation outcomes:
 - Tune touch controls and input ergonomics on mobile-first assumptions.
 - Add pause, resume, and app lifecycle handling behind adapters. Pause/resume has started with a typed in-run pause overlay plus HUD and keyboard entry points.
 - Add haptics and audio settings boundaries.
-- Add basic main menu, settings, run result, rescue, and store flows.
+- Add basic main menu, settings, run result, rescue, and store flows. Main menu has started with a dedicated launch scene that routes into the run.
 - Run performance pass on generated chunks, Chaser, pickups, and player physics.
 - Add export presets once target platforms are selected.
 - Audit docs against implemented behavior.
