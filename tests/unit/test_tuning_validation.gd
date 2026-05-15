@@ -83,8 +83,8 @@ func test_generation_tuning_rejects_invalid_lane_position_ratios() -> void:
 
 func test_generation_tuning_rejects_opener_spacing_that_exceeds_chunk_height() -> void:
     var tuning = GenerationTuningScript.new()
-    tuning.opener_first_row_height_meters = 4.5
-    tuning.opener_top_padding_meters = 4.0
+    tuning.opener_first_row_height_meters = tuning.segment_height_meters * 0.8
+    tuning.opener_top_padding_meters = tuning.segment_height_meters * 0.25
 
     assert_false(tuning.is_valid())
 

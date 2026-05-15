@@ -77,6 +77,114 @@ func test_main_menu_emits_start_and_settings_requests() -> void:
 	assert_true(_start_requested)
 	assert_true(_settings_requested)
 
+func test_menu_buttons_use_mobile_sized_touch_targets() -> void:
+	var main_menu_scene: PackedScene = load("res://scenes/ui/main_menu.tscn")
+	var pause_menu_scene: PackedScene = load("res://scenes/ui/pause_menu.tscn")
+	var settings_menu_scene: PackedScene = load("res://scenes/ui/settings_menu.tscn")
+	var main_menu_node: Node = main_menu_scene.instantiate()
+	var pause_menu_node: Node = pause_menu_scene.instantiate()
+	var settings_menu_node: Node = settings_menu_scene.instantiate()
+
+	assert_not_null(main_menu_node)
+	assert_not_null(pause_menu_node)
+	assert_not_null(settings_menu_node)
+	assert_true(main_menu_node is Control)
+	assert_true(pause_menu_node is Control)
+	assert_true(settings_menu_node is Control)
+	var main_menu: Control = main_menu_node as Control
+	var pause_menu: Control = pause_menu_node as Control
+	var settings_menu: Control = settings_menu_node as Control
+	assert_not_null(main_menu)
+	assert_not_null(pause_menu)
+	assert_not_null(settings_menu)
+	add_child_autofree(main_menu)
+	add_child_autofree(pause_menu)
+	add_child_autofree(settings_menu)
+	await get_tree().process_frame
+
+	var start_button: Button = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content/StartButton") as Button
+	var main_settings_button: Button = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
+	var resume_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/ResumeButton") as Button
+	var restart_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
+	var pause_settings_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
+	var close_button: Button = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/Header/CloseButton") as Button
+	var back_button: Button = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/BackButton") as Button
+
+	assert_not_null(start_button)
+	assert_not_null(main_settings_button)
+	assert_not_null(resume_button)
+	assert_not_null(restart_button)
+	assert_not_null(pause_settings_button)
+	assert_not_null(close_button)
+	assert_not_null(back_button)
+	assert_eq(start_button.size_flags_horizontal, 3)
+	assert_eq(main_settings_button.size_flags_horizontal, 3)
+	assert_eq(resume_button.size_flags_horizontal, 3)
+	assert_eq(restart_button.size_flags_horizontal, 3)
+	assert_eq(pause_settings_button.size_flags_horizontal, 3)
+	assert_eq(back_button.size_flags_horizontal, 3)
+	assert_gte(start_button.custom_minimum_size.y, 84.0)
+	assert_gte(main_settings_button.custom_minimum_size.y, 84.0)
+	assert_gte(resume_button.custom_minimum_size.y, 72.0)
+	assert_gte(restart_button.custom_minimum_size.y, 72.0)
+	assert_gte(pause_settings_button.custom_minimum_size.y, 72.0)
+	assert_gte(close_button.custom_minimum_size.y, 60.0)
+	assert_gte(back_button.custom_minimum_size.y, 72.0)
+
+func test_menu_panels_fit_portrait_phone_widths_better() -> void:
+	var main_menu_scene: PackedScene = load("res://scenes/ui/main_menu.tscn")
+	var pause_menu_scene: PackedScene = load("res://scenes/ui/pause_menu.tscn")
+	var settings_menu_scene: PackedScene = load("res://scenes/ui/settings_menu.tscn")
+	var main_menu_node: Node = main_menu_scene.instantiate()
+	var pause_menu_node: Node = pause_menu_scene.instantiate()
+	var settings_menu_node: Node = settings_menu_scene.instantiate()
+
+	assert_not_null(main_menu_node)
+	assert_not_null(pause_menu_node)
+	assert_not_null(settings_menu_node)
+	assert_true(main_menu_node is Control)
+	assert_true(pause_menu_node is Control)
+	assert_true(settings_menu_node is Control)
+	var main_menu: Control = main_menu_node as Control
+	var pause_menu: Control = pause_menu_node as Control
+	var settings_menu: Control = settings_menu_node as Control
+	assert_not_null(main_menu)
+	assert_not_null(pause_menu)
+	assert_not_null(settings_menu)
+	add_child_autofree(main_menu)
+	add_child_autofree(pause_menu)
+	add_child_autofree(settings_menu)
+	await get_tree().process_frame
+
+	var main_panel: PanelContainer = main_menu.get_node("CenterContainer/Panel") as PanelContainer
+	var pause_panel: PanelContainer = pause_menu.get_node("CenterContainer/Panel") as PanelContainer
+	var settings_panel: PanelContainer = settings_menu.get_node("CenterContainer/Panel") as PanelContainer
+	var main_content: VBoxContainer = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content") as VBoxContainer
+	var pause_content: VBoxContainer = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content") as VBoxContainer
+	var settings_content: VBoxContainer = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content") as VBoxContainer
+	var volume_label: Label = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/VolumeRow/VolumeLabel") as Label
+	var split_label: Label = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/TouchSplitRow/TouchSplitLabel") as Label
+	var dead_zone_label: Label = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/TouchDeadZoneRow/TouchDeadZoneLabel") as Label
+
+	assert_not_null(main_panel)
+	assert_not_null(pause_panel)
+	assert_not_null(settings_panel)
+	assert_not_null(main_content)
+	assert_not_null(pause_content)
+	assert_not_null(settings_content)
+	assert_not_null(volume_label)
+	assert_not_null(split_label)
+	assert_not_null(dead_zone_label)
+	assert_lte(main_panel.custom_minimum_size.x, 360.0)
+	assert_lte(pause_panel.custom_minimum_size.x, 360.0)
+	assert_lte(settings_panel.custom_minimum_size.x, 388.0)
+	assert_lte(main_content.get_theme_constant("separation"), 12)
+	assert_lte(pause_content.get_theme_constant("separation"), 10)
+	assert_lte(settings_content.get_theme_constant("separation"), 10)
+	assert_lte(volume_label.custom_minimum_size.x, 104.0)
+	assert_lte(split_label.custom_minimum_size.x, 104.0)
+	assert_lte(dead_zone_label.custom_minimum_size.x, 104.0)
+
 func test_run_hud_scene_wires_required_nodes() -> void:
 	var scene: PackedScene = load("res://scenes/ui/run_hud.tscn")
 	var hud_node: Node = scene.instantiate()

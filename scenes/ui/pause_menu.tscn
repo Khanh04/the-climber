@@ -33,19 +33,19 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="CenterContainer"]
-custom_minimum_size = Vector2(430, 360)
+custom_minimum_size = Vector2(360, 432)
 layout_mode = 2
 
 [node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
+theme_override_constants/margin_left = 18
+theme_override_constants/margin_top = 18
+theme_override_constants/margin_right = 18
+theme_override_constants/margin_bottom = 18
 
 [node name="Content" type="VBoxContainer" parent="CenterContainer/Panel/ContentMargin"]
 layout_mode = 2
-theme_override_constants/separation = 12
+theme_override_constants/separation = 10
 
 [node name="TitleLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
 layout_mode = 2
@@ -58,13 +58,19 @@ text = "Height: 0.0 m\nWallet Coins: 0\nRun Coins: 0"
 horizontal_alignment = 1
 
 [node name="ResumeButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Resume"
 
 [node name="RestartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Restart Run"
 
 [node name="SettingsButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Settings"

@@ -31,19 +31,19 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="CenterContainer"]
-custom_minimum_size = Vector2(520, 430)
+custom_minimum_size = Vector2(360, 430)
 layout_mode = 2
 
 [node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel"]
 layout_mode = 2
-theme_override_constants/margin_left = 28
-theme_override_constants/margin_top = 28
-theme_override_constants/margin_right = 28
-theme_override_constants/margin_bottom = 28
+theme_override_constants/margin_left = 22
+theme_override_constants/margin_top = 22
+theme_override_constants/margin_right = 22
+theme_override_constants/margin_bottom = 22
 
 [node name="Content" type="VBoxContainer" parent="CenterContainer/Panel/ContentMargin"]
 layout_mode = 2
-theme_override_constants/separation = 14
+theme_override_constants/separation = 12
 
 [node name="TitleLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
 layout_mode = 2
@@ -56,9 +56,13 @@ text = "Today's Climb"
 horizontal_alignment = 1
 
 [node name="StartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+custom_minimum_size = Vector2(0, 84)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Start Climb"
 
 [node name="SettingsButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+custom_minimum_size = Vector2(0, 84)
 layout_mode = 2
+size_flags_horizontal = 3
 text = "Settings"
