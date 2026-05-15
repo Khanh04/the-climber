@@ -39,18 +39,21 @@ static func is_dictionary_valid(payload: Dictionary) -> bool:
 	var raw_chaser_theme_id: Variant = payload[SaveSchemaScript.KEY_CHASER_THEME_ID]
 	var raw_applied_persistent_transaction_ids: Variant = payload[SaveSchemaScript.KEY_APPLIED_PERSISTENT_TRANSACTION_IDS]
 
-	if not raw_schema_version is int:
+	if not _is_integer_number_variant(raw_schema_version):
 		return false
 
-	if not raw_wallet_coins is int:
+	if not _is_integer_number_variant(raw_wallet_coins):
 		return false
+
+	var schema_version_value: int = _integer_from_variant(raw_schema_version, "Save schema version must be an integer.")
+	var wallet_coin_count: int = _integer_from_variant(raw_wallet_coins, "Save wallet coins must be an integer.")
 
 	if not (raw_chaser_theme_id is String or raw_chaser_theme_id is StringName):
 		return false
 
 	var chaser_theme_id_string: String = _theme_id_string_from_variant(raw_chaser_theme_id)
-	return raw_schema_version == SaveSchemaScript.VERSION \
-		and raw_wallet_coins >= 0 \
+	return schema_version_value == SaveSchemaScript.VERSION \
+		and wallet_coin_count >= 0 \
 		and not chaser_theme_id_string.is_empty() \
 		and _is_transaction_id_collection_valid(raw_applied_persistent_transaction_ids)
 
@@ -65,16 +68,14 @@ static func assert_dictionary_valid(payload: Dictionary) -> void:
 	var raw_chaser_theme_id: Variant = payload[SaveSchemaScript.KEY_CHASER_THEME_ID]
 	var raw_applied_persistent_transaction_ids: Variant = payload[SaveSchemaScript.KEY_APPLIED_PERSISTENT_TRANSACTION_IDS]
 
-	Validation.require_condition(raw_schema_version is int, "Save schema version must be an integer.")
-	Validation.require_condition(raw_wallet_coins is int, "Save wallet coins must be an integer.")
+	var schema_version_value: int = _integer_from_variant(raw_schema_version, "Save schema version must be an integer.")
+	var wallet_coin_count: int = _integer_from_variant(raw_wallet_coins, "Save wallet coins must be an integer.")
 	Validation.require_condition(raw_chaser_theme_id is String or raw_chaser_theme_id is StringName, "Save chaser theme id must be a string.")
 	Validation.require_condition(
 		raw_applied_persistent_transaction_ids is Array or raw_applied_persistent_transaction_ids is PackedStringArray,
 		"Save applied persistent transaction ids must be an array of strings."
 	)
 
-	var schema_version_value: int = raw_schema_version
-	var wallet_coin_count: int = raw_wallet_coins
 	var chaser_theme_id_value: String = _theme_id_string_from_variant(raw_chaser_theme_id)
 	var transaction_ids: PackedStringArray = _transaction_ids_from_variant(raw_applied_persistent_transaction_ids)
 
@@ -86,8 +87,8 @@ static func assert_dictionary_valid(payload: Dictionary) -> void:
 static func from_dictionary(payload: Dictionary) -> RefCounted:
 	assert_dictionary_valid(payload)
 
-	var wallet_coin_count: int = payload[SaveSchemaScript.KEY_WALLET_COINS]
-	var schema_version_value: int = payload[SaveSchemaScript.KEY_SCHEMA_VERSION]
+	var wallet_coin_count: int = _integer_from_variant(payload[SaveSchemaScript.KEY_WALLET_COINS], "Save wallet coins must be an integer.")
+	var schema_version_value: int = _integer_from_variant(payload[SaveSchemaScript.KEY_SCHEMA_VERSION], "Save schema version must be an integer.")
 	var chaser_theme_id_value: StringName = StringName(_theme_id_string_from_variant(payload[SaveSchemaScript.KEY_CHASER_THEME_ID]))
 	var transaction_ids: PackedStringArray = _transaction_ids_from_variant(payload[SaveSchemaScript.KEY_APPLIED_PERSISTENT_TRANSACTION_IDS])
 	return SELF_SCRIPT.new(wallet_coin_count, schema_version_value, chaser_theme_id_value, transaction_ids)
@@ -122,6 +123,25 @@ static func _theme_id_string_from_variant(raw_chaser_theme_id: Variant) -> Strin
 
 static func _theme_id_string_from_string_name(raw_chaser_theme_id: StringName) -> String:
 	return String(raw_chaser_theme_id)
+
+static func _is_integer_number_variant(raw_value: Variant) -> bool:
+	if raw_value is int:
+		return true
+
+	if raw_value is float:
+		var raw_float: float = raw_value
+		return raw_float == float(floori(raw_float))
+
+	return false
+
+static func _integer_from_variant(raw_value: Variant, validation_message: String) -> int:
+	Validation.require_condition(_is_integer_number_variant(raw_value), validation_message)
+	if raw_value is int:
+		var raw_int: int = raw_value
+		return raw_int
+
+	var raw_float: float = raw_value
+	return int(raw_float)
 
 static func _is_transaction_id_collection_valid(raw_transaction_ids: Variant) -> bool:
 	var parsed_transaction_ids: PackedStringArray = PackedStringArray()

@@ -27,6 +27,25 @@ func test_save_snapshot_dictionary_validation_rejects_unsupported_schema_version
 
     assert_false(SaveSnapshotScript.is_dictionary_valid(payload))
 
+func test_save_snapshot_from_dictionary_accepts_integer_valued_json_numbers() -> void:
+    var payload: Dictionary = {
+        SaveSchemaScript.KEY_SCHEMA_VERSION: float(SaveSchemaScript.VERSION),
+        SaveSchemaScript.KEY_WALLET_COINS: 4.0,
+        SaveSchemaScript.KEY_CHASER_THEME_ID: "glitch",
+        SaveSchemaScript.KEY_APPLIED_PERSISTENT_TRANSACTION_IDS: ["ad_reward:post_run_coin_doubler:run_summary_7"],
+    }
+
+    assert_true(SaveSnapshotScript.is_dictionary_valid(payload))
+
+    var raw_snapshot: RefCounted = SaveSnapshotScript.from_dictionary(payload)
+
+    assert_true(raw_snapshot is SaveSnapshotScript)
+    var snapshot: SaveSnapshotScript = raw_snapshot as SaveSnapshotScript
+    assert_eq(snapshot.schema_version, SaveSchemaScript.VERSION)
+    assert_eq(snapshot.wallet_coins, 4)
+    assert_eq(snapshot.chaser_theme_id, &"glitch")
+    assert_eq(snapshot.applied_persistent_transaction_ids, PackedStringArray(["ad_reward:post_run_coin_doubler:run_summary_7"]))
+
 func test_save_snapshot_dictionary_validation_rejects_negative_wallet_balance() -> void:
     var payload: Dictionary = {
         SaveSchemaScript.KEY_SCHEMA_VERSION: SaveSchemaScript.VERSION,
