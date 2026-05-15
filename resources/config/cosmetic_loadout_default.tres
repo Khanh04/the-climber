@@ -5,3 +5,6 @@
 [resource]
 script = ExtResource("1_script")
 chaser_theme_id = &"rising_void"
+body_cosmetic_id = &"body_default"
+left_hand_cosmetic_id = &"left_hand_default"
+right_hand_cosmetic_id = &"right_hand_default"

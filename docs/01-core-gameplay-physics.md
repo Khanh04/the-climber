@@ -76,6 +76,7 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 - Treat the skeleton-driven collision bodies as gameplay authority.
 - Treat skin visuals as presentation authority only.
 - Validate that every cosmetic can be swapped without changing the physics profile.
+- The current implementation applies player cosmetics only under `CosmeticVisualRoot`, `LeftHandCosmeticRoot`, and `RightHandCosmeticRoot`; the applicator owns only presentation nodes and revalidates visual roots after applying a loadout.
 
 ### Camera Behavior
 

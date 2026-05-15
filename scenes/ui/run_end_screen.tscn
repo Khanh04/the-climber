@@ -64,6 +64,10 @@ visible = false
 layout_mode = 2
 text = "Watch Ad: Double Run Coins"
 
+[node name="StoreButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+layout_mode = 2
+text = "Store"
+
 [node name="RestartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
 layout_mode = 2
 text = "Restart Run"

@@ -10,7 +10,14 @@ const ClimbPrototypeControllerScript = preload("res://src/gameplay/player/climb_
 const ClimbPrototypeFrameResultScript = preload("res://src/gameplay/player/climb_prototype_frame_result.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
 const CoinTransactionLedgerScript = preload("res://src/economy/coin_transaction_ledger.gd")
+const CosmeticInventoryScript = preload("res://src/cosmetics/cosmetic_inventory.gd")
+const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_catalog.gd")
+const CosmeticItemScript = preload("res://resources/config/cosmetic_item.gd")
 const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
+const CosmeticLoadoutServiceScript = preload("res://src/cosmetics/cosmetic_loadout_service.gd")
+const CosmeticPurchaseOutcomeScript = preload("res://src/cosmetics/cosmetic_purchase_outcome.gd")
+const CosmeticPurchaseResultScript = preload("res://src/cosmetics/cosmetic_purchase_result.gd")
+const CosmeticUnlockPurchaseServiceScript = preload("res://src/cosmetics/cosmetic_unlock_purchase_service.gd")
 const DailyChunkGeneratorScript = preload("res://src/gameplay/generation/daily_chunk_generator.gd")
 const DesktopDebugInputAdapterScript = preload("res://src/gameplay/player/desktop_debug_input_adapter.gd")
 const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickups/generated_coin_pickup_spawn_adapter.gd")
@@ -24,6 +31,7 @@ const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.
 const LethalHazardContactServiceScript = preload("res://src/gameplay/hazards/lethal_hazard_contact_service.gd")
 const MobileTouchInputAdapterScript = preload("res://src/gameplay/player/mobile_touch_input_adapter.gd")
 const NormalCoinPickupServiceScript = preload("res://src/gameplay/pickups/normal_coin_pickup_service.gd")
+const PlayerCosmeticApplicatorScript = preload("res://src/cosmetics/player_cosmetic_applicator.gd")
 const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
@@ -48,6 +56,9 @@ const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_se
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const StaminaRuntimeScript = preload("res://src/gameplay/player/stamina_runtime.gd")
 const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
+const StorePresenterScript = preload("res://src/ui/store_presenter.gd")
+const StoreShellScript = preload("res://scenes/ui/store_shell.gd")
+const StoreShellScene = preload("res://scenes/ui/store_shell.tscn")
 const UtcDateProviderScript = preload("res://src/platform/clock/utc_date_provider.gd")
 const SystemUtcDateProviderScript = preload("res://src/platform/clock/system_utc_date_provider.gd")
 const RunUiPresenterScript = preload("res://src/ui/run_ui_presenter.gd")
@@ -61,6 +72,7 @@ const WindGustHazardContactServiceScript = preload("res://src/gameplay/hazards/w
 @export var generation_tuning: GenerationTuningScript
 @export var cosmetic_loadout: CosmeticLoadoutScript
 @export var chaser_theme_catalog: ChaserThemeCatalogScript
+@export var cosmetic_item_catalog: CosmeticItemCatalogScript
 
 @onready var _player: PlayerCharacterScript = %PlayerCharacter
 @onready var _chaser_kill_zone: ChaserKillZoneScript = get_node("ChaserKillZone") as ChaserKillZoneScript
@@ -70,6 +82,7 @@ const WindGustHazardContactServiceScript = preload("res://src/gameplay/hazards/w
 @onready var _starter_handholds_root: Node2D = get_node("Handholds") as Node2D
 @onready var _run_hud: Control = %RunHud
 @onready var _run_end_screen: Control = %RunEndScreen
+@onready var _ui_layer: CanvasLayer = get_node("UiLayer") as CanvasLayer
 @onready var _run_ui_view = RunUiViewScript.new(_run_hud, _run_end_screen)
 
 var _run_session: RunSessionScript = RunSessionScript.new()
@@ -87,6 +100,11 @@ var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop
 var _stamina_fall_service: StaminaFallServiceScript = StaminaFallServiceScript.new()
 var _wind_gust_hazard_contact_service: WindGustHazardContactServiceScript = WindGustHazardContactServiceScript.new()
 var _wallet: WalletScript = WalletScript.new()
+var _cosmetic_inventory: CosmeticInventoryScript = CosmeticInventoryScript.new()
+var _cosmetic_loadout_service: CosmeticLoadoutServiceScript = CosmeticLoadoutServiceScript.new()
+var _cosmetic_unlock_purchase_service: CosmeticUnlockPurchaseServiceScript = CosmeticUnlockPurchaseServiceScript.new()
+var _player_cosmetic_applicator: PlayerCosmeticApplicatorScript = PlayerCosmeticApplicatorScript.new()
+var _store_presenter: StorePresenterScript = StorePresenterScript.new(_cosmetic_loadout_service)
 var _rewarded_ads_adapter: RewardedAdsAdapterScript = RewardedAdsAdapterFactoryScript.create_default()
 var _persistent_coin_transaction_service: PersistentCoinTransactionServiceScript = PersistentCoinTransactionServiceScript.new()
 var _post_run_coin_doubler_grant_service: PostRunCoinDoublerGrantServiceScript = PostRunCoinDoublerGrantServiceScript.new()
@@ -103,6 +121,9 @@ var _debug_reset_pressed: bool = false
 var _save_snapshot: SaveSnapshotScript = null
 var _local_storage_adapter: LocalStorageAdapterScript = null
 var _save_storage: SaveStorageScript = null
+var _store_shell: StoreShellScript = null
+var _store_selected_item_id: StringName = StringName()
+var _store_feedback_message: String = ""
 var _post_run_coin_doubler_reward_id: String = ""
 var _start_y: float = 0.0
 var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
@@ -116,12 +137,13 @@ func _ready() -> void:
 	var _connect_result: int = _run_end_screen.connect(&"restart_requested", _on_run_end_restart_requested)
 	var _rewarded_continue_connect_result: int = _run_end_screen.connect(&"rewarded_continue_requested", _on_rewarded_continue_requested)
 	var _post_run_coin_doubler_connect_result: int = _run_end_screen.connect(&"post_run_coin_doubler_requested", _on_post_run_coin_doubler_requested)
+	var _store_connect_result: int = _run_end_screen.connect(&"store_requested", _on_store_requested)
 	var _chaser_connect_result: int = _chaser_kill_zone.connect(&"chaser_contacted", _on_chaser_contacted)
 	_player.set_climb_tuning(climb_tuning)
 	_stamina = StaminaRuntimeScript.new(stamina_tuning)
 	_controller = ClimbPrototypeControllerScript.new(climb_tuning, _stamina)
 	_chaser_pacing_model = ChaserPacingModelScript.new(_chaser_kill_zone.chaser_tuning)
-	_apply_equipped_chaser_theme()
+	_apply_cosmetic_loadout()
 	_start_y = _reset_anchor.global_position.y
 	_configure_generated_chunks()
 	_reset_playground()
@@ -138,7 +160,7 @@ func set_local_storage_adapter(local_storage_adapter: RefCounted) -> void:
 	if _save_snapshot == null:
 		_load_or_create_save_state()
 		_apply_saved_cosmetic_selection()
-		_apply_equipped_chaser_theme()
+		_apply_cosmetic_loadout()
 		_refresh_ui()
 
 func set_rewarded_ads_adapter(rewarded_ads_adapter: RefCounted) -> void:
@@ -161,7 +183,7 @@ func set_save_snapshot(snapshot: RefCounted) -> void:
 		return
 
 	_apply_saved_cosmetic_selection()
-	_apply_equipped_chaser_theme()
+	_apply_cosmetic_loadout()
 	_refresh_ui()
 
 func set_utc_date_provider(date_provider: RefCounted) -> void:
@@ -230,6 +252,18 @@ func get_run_session_for_test() -> RunSessionScript:
 func get_wallet_for_test() -> WalletScript:
 	return _wallet
 
+func get_cosmetic_inventory_for_test() -> CosmeticInventoryScript:
+	return _cosmetic_inventory
+
+func get_cosmetic_loadout_for_test() -> CosmeticLoadoutScript:
+	return cosmetic_loadout
+
+func get_store_shell_for_test() -> StoreShellScript:
+	return _store_shell
+
+func show_store_for_test() -> void:
+	_show_store()
+
 func apply_persistent_coin_transaction(transaction_id: String, source: int, coin_delta: int) -> bool:
 	Validation.require_condition(_save_storage != null, "RunScene requires save storage before applying persistent coin transactions.")
 	var transaction_applied: bool = _persistent_coin_transaction_service.apply_persistent_transaction(
@@ -246,6 +280,36 @@ func apply_persistent_coin_transaction(transaction_id: String, source: int, coin
 	_persist_save_state()
 	_refresh_ui()
 	return true
+
+func purchase_cosmetic_item(item_id: StringName) -> CosmeticPurchaseResultScript:
+	Validation.require_condition(not item_id.is_empty(), "RunScene cosmetic purchase item id cannot be empty.")
+	Validation.require_condition(_save_storage != null, "RunScene requires save storage before purchasing cosmetics.")
+	var result: CosmeticPurchaseResultScript = _cosmetic_unlock_purchase_service.purchase_item(
+		_wallet,
+		_cosmetic_inventory,
+		cosmetic_item_catalog,
+		_persistent_transaction_ledger,
+		_wallet_transaction_service,
+		_persistent_coin_transaction_service,
+		item_id
+	)
+	_store_selected_item_id = result.item_id
+	_store_feedback_message = _format_cosmetic_purchase_result(result)
+	if result.outcome == CosmeticPurchaseOutcomeScript.Value.PURCHASED:
+		_persist_save_state()
+
+	_refresh_ui()
+	return result
+
+func equip_cosmetic_item(item_id: StringName) -> void:
+	Validation.require_condition(not item_id.is_empty(), "RunScene cosmetic equip item id cannot be empty.")
+	Validation.require_condition(_save_storage != null, "RunScene requires save storage before equipping cosmetics.")
+	_cosmetic_loadout_service.equip_item(cosmetic_loadout, _cosmetic_inventory, cosmetic_item_catalog, item_id)
+	_store_selected_item_id = item_id
+	_store_feedback_message = "Equipped %s." % cosmetic_item_catalog.get_required_item_by_id(item_id).display_name
+	_apply_cosmetic_loadout()
+	_persist_save_state()
+	_refresh_ui()
 
 func apply_post_run_coin_doubler_reward(rewarded_ad_result: RefCounted, reward_id: String) -> bool:
 	Validation.require_condition(rewarded_ad_result != null, "RunScene requires a rewarded ad result for post-run coin doubling.")
@@ -333,16 +397,23 @@ func _validate_required_state() -> void:
 	Validation.require_condition(generation_tuning != null, "RunScene requires generation tuning.")
 	Validation.require_condition(cosmetic_loadout != null, "RunScene requires a cosmetic loadout.")
 	Validation.require_condition(chaser_theme_catalog != null, "RunScene requires a chaser theme catalog.")
+	Validation.require_condition(cosmetic_item_catalog != null, "RunScene requires a cosmetic item catalog.")
 	Validation.require_condition(utc_date_provider != null, "RunScene requires a UTC date provider.")
 	climb_tuning.assert_valid()
 	stamina_tuning.assert_valid()
 	generation_tuning.assert_valid()
 	cosmetic_loadout.assert_valid()
 	chaser_theme_catalog.assert_valid()
+	cosmetic_item_catalog.assert_valid()
+	_cosmetic_loadout_service.assert_loadout_matches_catalog(cosmetic_loadout, cosmetic_item_catalog)
 	var _equipped_theme = chaser_theme_catalog.get_required_theme_by_id(cosmetic_loadout.chaser_theme_id)
 	if _save_snapshot != null:
 		_save_snapshot.assert_valid()
 		var _saved_theme = chaser_theme_catalog.get_required_theme_by_id(_save_snapshot.chaser_theme_id)
+		var _saved_body_item = cosmetic_item_catalog.get_required_item_by_id(_save_snapshot.body_cosmetic_id)
+		var _saved_left_hand_item = cosmetic_item_catalog.get_required_item_by_id(_save_snapshot.left_hand_cosmetic_id)
+		var _saved_right_hand_item = cosmetic_item_catalog.get_required_item_by_id(_save_snapshot.right_hand_cosmetic_id)
+		var _saved_chaser_item = cosmetic_item_catalog.get_required_chaser_item_by_theme_id(_save_snapshot.chaser_theme_id)
 	Validation.require_condition(_player != null, "RunScene requires PlayerCharacter.")
 	Validation.require_condition(_chaser_kill_zone != null, "RunScene requires ChaserKillZone.")
 	Validation.require_condition(_generated_chunk_coordinator != null, "RunScene requires GeneratedChunks coordinator.")
@@ -351,6 +422,7 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_starter_handholds_root != null, "RunScene requires Handholds.")
 	Validation.require_condition(_run_hud != null, "RunScene requires RunHud.")
 	Validation.require_condition(_run_end_screen != null, "RunScene requires RunEndScreen.")
+	Validation.require_condition(_ui_layer != null, "RunScene requires UiLayer.")
 	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "RunScene requires at least one handhold.")
 
 func _create_input_frame() -> PlayerInputFrameScript:
@@ -649,7 +721,7 @@ func _reset_playground() -> void:
 		_reset_anchor.global_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 	)
 	if _chaser_kill_zone != null:
-		_apply_equipped_chaser_theme()
+		_apply_cosmetic_loadout()
 		_chaser_kill_zone.reset_to_player_position(
 			_player.get_body_global_position().y,
 			_get_climb_tuning_float(&"pixels_per_meter"),
@@ -663,12 +735,28 @@ func _apply_equipped_chaser_theme() -> void:
 
 	_chaser_kill_zone.apply_theme(chaser_theme_catalog.get_required_theme_by_id(cosmetic_loadout.chaser_theme_id))
 
+func _apply_cosmetic_loadout() -> void:
+	if _player == null or cosmetic_loadout == null or cosmetic_item_catalog == null:
+		return
+
+	_cosmetic_loadout_service.assert_loadout_matches_catalog(cosmetic_loadout, cosmetic_item_catalog)
+	if _cosmetic_inventory != null:
+		_cosmetic_loadout_service.assert_loadout_owned(cosmetic_loadout, _cosmetic_inventory, cosmetic_item_catalog)
+	_player_cosmetic_applicator.apply_loadout(_player, cosmetic_loadout, cosmetic_item_catalog)
+	_apply_equipped_chaser_theme()
+
 func _apply_saved_cosmetic_selection() -> void:
 	if _save_snapshot == null:
 		return
 
 	Validation.require_condition(cosmetic_loadout != null, "RunScene requires a cosmetic loadout before applying saved selection.")
 	cosmetic_loadout.chaser_theme_id = _save_snapshot.chaser_theme_id
+	cosmetic_loadout.body_cosmetic_id = _save_snapshot.body_cosmetic_id
+	cosmetic_loadout.left_hand_cosmetic_id = _save_snapshot.left_hand_cosmetic_id
+	cosmetic_loadout.right_hand_cosmetic_id = _save_snapshot.right_hand_cosmetic_id
+	cosmetic_loadout.assert_valid()
+	_cosmetic_loadout_service.assert_loadout_matches_catalog(cosmetic_loadout, cosmetic_item_catalog)
+	_cosmetic_loadout_service.assert_loadout_owned(cosmetic_loadout, _cosmetic_inventory, cosmetic_item_catalog)
 
 func _duplicate_cosmetic_loadout(loadout: Resource) -> CosmeticLoadoutScript:
 	Validation.require_condition(loadout != null, "RunScene requires a cosmetic loadout resource.")
@@ -690,7 +778,16 @@ func _load_or_create_save_state() -> void:
 		if _save_storage.has_snapshot():
 			_save_snapshot = _save_storage.load_snapshot()
 		else:
-			_save_snapshot = SaveSnapshotScript.new(0, SaveSchemaScript.VERSION, cosmetic_loadout.chaser_theme_id, PackedStringArray())
+			_save_snapshot = SaveSnapshotScript.new(
+				0,
+				SaveSchemaScript.VERSION,
+				cosmetic_loadout.chaser_theme_id,
+				PackedStringArray(),
+				_get_owned_item_ids_for_new_save(),
+				cosmetic_loadout.body_cosmetic_id,
+				cosmetic_loadout.left_hand_cosmetic_id,
+				cosmetic_loadout.right_hand_cosmetic_id
+			)
 
 	_hydrate_runtime_save_state_from_snapshot()
 
@@ -701,17 +798,36 @@ func _hydrate_runtime_save_state_from_snapshot() -> void:
 	_save_snapshot.assert_valid()
 	_wallet = WalletScript.new(_save_snapshot.wallet_coins)
 	_persistent_transaction_ledger = CoinTransactionLedgerScript.new(_save_snapshot.applied_persistent_transaction_ids)
+	_cosmetic_inventory = CosmeticInventoryScript.new(_save_snapshot.owned_cosmetic_ids, cosmetic_item_catalog.get_default_unlocked_item_ids())
+
+func _get_owned_item_ids_for_new_save() -> PackedStringArray:
+	var owned_item_ids: PackedStringArray = cosmetic_item_catalog.get_default_unlocked_item_ids()
+	_append_unique_owned_item_id(owned_item_ids, cosmetic_loadout.body_cosmetic_id)
+	_append_unique_owned_item_id(owned_item_ids, cosmetic_loadout.left_hand_cosmetic_id)
+	_append_unique_owned_item_id(owned_item_ids, cosmetic_loadout.right_hand_cosmetic_id)
+	var chaser_item: CosmeticItemScript = cosmetic_item_catalog.get_required_chaser_item_by_theme_id(cosmetic_loadout.chaser_theme_id)
+	_append_unique_owned_item_id(owned_item_ids, chaser_item.item_id)
+	return owned_item_ids
+
+func _append_unique_owned_item_id(owned_item_ids: PackedStringArray, item_id: StringName) -> void:
+	Validation.require_condition(not item_id.is_empty(), "RunScene new save owned item id cannot be empty.")
+	var item_id_string: String = String(item_id)
+	if not owned_item_ids.has(item_id_string):
+		var _append_result: bool = owned_item_ids.append(item_id_string)
 
 func _persist_save_state() -> void:
 	Validation.require_condition(_save_storage != null, "RunScene requires save storage before persisting save state.")
-	var chaser_theme_id: StringName = cosmetic_loadout.chaser_theme_id
-	if _save_snapshot != null:
-		chaser_theme_id = _save_snapshot.chaser_theme_id
+	Validation.require_condition(_cosmetic_inventory != null, "RunScene requires cosmetic inventory before persisting save state.")
+	_cosmetic_loadout_service.assert_loadout_owned(cosmetic_loadout, _cosmetic_inventory, cosmetic_item_catalog)
 	var snapshot: SaveSnapshotScript = SaveSnapshotScript.new(
 		_wallet.get_coins(),
 		SaveSchemaScript.VERSION,
-		chaser_theme_id,
-		_persistent_transaction_ledger.get_transaction_ids()
+		cosmetic_loadout.chaser_theme_id,
+		_persistent_transaction_ledger.get_transaction_ids(),
+		_cosmetic_inventory.get_owned_item_ids(),
+		cosmetic_loadout.body_cosmetic_id,
+		cosmetic_loadout.left_hand_cosmetic_id,
+		cosmetic_loadout.right_hand_cosmetic_id
 	)
 	_save_storage.save_snapshot(snapshot)
 	_save_snapshot = snapshot
@@ -729,6 +845,54 @@ func _refresh_ui() -> void:
 		_rewarded_continue_feedback_message
 	)
 	_run_ui_view.apply_state_snapshots(hud_state, run_end_state)
+	if _store_shell != null and _store_shell.visible:
+		_refresh_store_ui()
+
+func _show_store() -> void:
+	_ensure_store_shell()
+	_refresh_store_ui()
+
+func _ensure_store_shell() -> void:
+	if _store_shell != null:
+		return
+
+	Validation.require_condition(_ui_layer != null, "RunScene requires UiLayer before showing the store.")
+	var store_node: Node = StoreShellScene.instantiate()
+	Validation.require_condition(store_node != null, "RunScene store scene must instantiate a node.")
+	Validation.require_condition(store_node is StoreShellScript, "RunScene store scene must instantiate StoreShell.")
+	_store_shell = store_node as StoreShellScript
+	_ui_layer.add_child(_store_shell)
+	var _select_connect_result: int = _store_shell.connect(&"item_selected", _on_store_item_selected)
+	var _purchase_connect_result: int = _store_shell.connect(&"purchase_requested", _on_store_purchase_requested)
+	var _equip_connect_result: int = _store_shell.connect(&"equip_requested", _on_store_equip_requested)
+	var _closed_connect_result: int = _store_shell.connect(&"closed", _on_store_closed)
+
+func _refresh_store_ui() -> void:
+	Validation.require_condition(_store_shell != null, "RunScene requires StoreShell before refreshing store UI.")
+	var store_state: RefCounted = _store_presenter.build_state(
+		cosmetic_item_catalog,
+		_cosmetic_inventory,
+		cosmetic_loadout,
+		_wallet,
+		_store_selected_item_id,
+		_store_feedback_message
+	)
+	_store_shell.apply_state(store_state)
+
+func _format_cosmetic_purchase_result(result: CosmeticPurchaseResultScript) -> String:
+	Validation.require_condition(result != null, "RunScene requires a cosmetic purchase result to format feedback.")
+	result.assert_valid()
+	var item_display_name: String = cosmetic_item_catalog.get_required_item_by_id(result.item_id).display_name
+	match result.outcome:
+		CosmeticPurchaseOutcomeScript.Value.PURCHASED:
+			return "Unlocked %s." % item_display_name
+		CosmeticPurchaseOutcomeScript.Value.ALREADY_OWNED:
+			return "%s is already owned." % item_display_name
+		CosmeticPurchaseOutcomeScript.Value.INSUFFICIENT_FUNDS:
+			return "Not enough coins for %s." % item_display_name
+		_:
+			Validation.require_condition(false, "RunScene requires a supported cosmetic purchase outcome.")
+			return ""
 
 func _on_run_end_restart_requested() -> void:
 	_reset_playground()
@@ -764,6 +928,24 @@ func _on_post_run_coin_doubler_requested() -> void:
 	var reward_applied: bool = apply_post_run_coin_doubler_reward(rewarded_ad_result, _get_or_create_post_run_coin_doubler_reward_id())
 	if not reward_applied:
 		_refresh_ui()
+
+func _on_store_requested() -> void:
+	_show_store()
+
+func _on_store_item_selected(item_id: StringName) -> void:
+	Validation.require_condition(not item_id.is_empty(), "RunScene store selected item id cannot be empty.")
+	_store_selected_item_id = item_id
+	_store_feedback_message = ""
+	_refresh_store_ui()
+
+func _on_store_purchase_requested(item_id: StringName) -> void:
+	var _result: CosmeticPurchaseResultScript = purchase_cosmetic_item(item_id)
+
+func _on_store_equip_requested(item_id: StringName) -> void:
+	equip_cosmetic_item(item_id)
+
+func _on_store_closed() -> void:
+	_store_feedback_message = ""
 
 func _on_chaser_contacted(body: Node) -> void:
 	Validation.require_condition(body != null, "RunScene chaser contact requires a body.")

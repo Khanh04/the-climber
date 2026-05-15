@@ -5,10 +5,17 @@ const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
+const StoreItemStateScript = preload("res://src/ui/store_item_state.gd")
+const StoreStateScript = preload("res://src/ui/store_state.gd")
+const CosmeticSlotScript = preload("res://src/cosmetics/cosmetic_slot.gd")
 
 var _restart_requested: bool = false
 var _rewarded_continue_requested: bool = false
 var _post_run_coin_doubler_requested: bool = false
+var _store_requested: bool = false
+var _selected_store_item_id: StringName = StringName()
+var _purchase_store_item_id: StringName = StringName()
+var _equip_store_item_id: StringName = StringName()
 
 func test_run_hud_scene_wires_required_nodes() -> void:
 	var scene: PackedScene = load("res://scenes/ui/run_hud.tscn")
@@ -72,9 +79,11 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	_restart_requested = false
 	_rewarded_continue_requested = false
 	_post_run_coin_doubler_requested = false
+	_store_requested = false
 	var _connect_result: int = screen.connect(&"restart_requested", Callable(self, "_mark_restart_requested"))
 	var _rewarded_continue_connect_result: int = screen.connect(&"rewarded_continue_requested", Callable(self, "_mark_rewarded_continue_requested"))
 	var _post_run_coin_doubler_connect_result: int = screen.connect(&"post_run_coin_doubler_requested", Callable(self, "_mark_post_run_coin_doubler_requested"))
+	var _store_connect_result: int = screen.connect(&"store_requested", Callable(self, "_mark_store_requested"))
 	screen.call(
 		"apply_state",
 		RunEndScreenStateScript.new(
@@ -93,6 +102,7 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	var summary_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
 	var rewarded_continue_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton") as Button
 	var post_run_coin_doubler_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
+	var store_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/StoreButton") as Button
 	var restart_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
 
 	assert_true(screen.visible)
@@ -101,6 +111,7 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	assert_not_null(summary_label)
 	assert_not_null(rewarded_continue_button)
 	assert_not_null(post_run_coin_doubler_button)
+	assert_not_null(store_button)
 	assert_not_null(restart_button)
 	assert_eq(title_label.text, "Rescue Offered")
 	assert_eq(reason_label.text, "Reason: Bottom-screen fall")
@@ -115,6 +126,40 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	assert_true(_restart_requested)
 	assert_false(_rewarded_continue_requested)
 	assert_false(_post_run_coin_doubler_requested)
+	assert_false(_store_requested)
+
+func test_run_end_screen_emits_store_request() -> void:
+	var scene: PackedScene = load("res://scenes/ui/run_end_screen.tscn")
+	var screen_node: Node = scene.instantiate()
+
+	assert_not_null(screen_node)
+	assert_true(screen_node is Control)
+	var screen: Control = screen_node as Control
+	assert_not_null(screen)
+	add_child_autofree(screen)
+	await get_tree().process_frame
+
+	_store_requested = false
+	var _connect_result: int = screen.connect(&"store_requested", Callable(self, "_mark_store_requested"))
+	screen.call(
+		"apply_state",
+		RunEndScreenStateScript.new(
+			true,
+			false,
+			23.0,
+			6,
+			6,
+			true,
+			RunEndReasonScript.Value.CHASER_CONTACT
+		)
+	)
+
+	var store_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/StoreButton") as Button
+
+	assert_not_null(store_button)
+	var _emit_result: int = store_button.emit_signal("pressed")
+
+	assert_true(_store_requested)
 
 func test_run_end_screen_shows_rewarded_continue_button_when_available() -> void:
 	var scene: PackedScene = load("res://scenes/ui/run_end_screen.tscn")
@@ -263,6 +308,67 @@ func test_run_ui_view_applies_snapshots_to_both_controls() -> void:
 	assert_true(screen.visible)
 	assert_eq(title_label.text, "Rescue Offered")
 
+func test_store_shell_displays_state_and_emits_purchase_intent() -> void:
+	var scene: PackedScene = load("res://scenes/ui/store_shell.tscn")
+	var shell_node: Node = scene.instantiate()
+
+	assert_not_null(shell_node)
+	assert_true(shell_node is Control)
+	var shell: Control = shell_node as Control
+	assert_not_null(shell)
+	add_child_autofree(shell)
+	await get_tree().process_frame
+
+	_selected_store_item_id = StringName()
+	_purchase_store_item_id = StringName()
+	var _select_connect_result: int = shell.connect(&"item_selected", Callable(self, "_mark_store_item_selected"))
+	var _purchase_connect_result: int = shell.connect(&"purchase_requested", Callable(self, "_mark_store_purchase_requested"))
+	shell.call("apply_state", StoreStateScript.new(20, _create_store_item_states(), &"chaser_hot_coffee"))
+
+	var wallet_label: Label = shell.get_node("CenterContainer/Panel/ContentMargin/Content/Header/WalletLabel") as Label
+	var item_list: ItemList = shell.get_node("CenterContainer/Panel/ContentMargin/Content/ItemList") as ItemList
+	var selected_name_label: Label = shell.get_node("CenterContainer/Panel/ContentMargin/Content/SelectedNameLabel") as Label
+	var purchase_button: Button = shell.get_node("CenterContainer/Panel/ContentMargin/Content/Actions/PurchaseButton") as Button
+
+	assert_true(shell.visible)
+	assert_eq(wallet_label.text, "Wallet: 20")
+	assert_eq(item_list.get_item_count(), 2)
+	assert_eq(selected_name_label.text, "Hot Coffee")
+	assert_true(purchase_button.visible)
+	assert_false(purchase_button.disabled)
+
+	var _item_emit_result: int = item_list.emit_signal("item_selected", 0)
+	var _purchase_emit_result: int = purchase_button.emit_signal("pressed")
+
+	assert_eq(_selected_store_item_id, &"body_default")
+	assert_eq(_purchase_store_item_id, &"chaser_hot_coffee")
+
+func test_store_shell_displays_owned_item_and_emits_equip_intent() -> void:
+	var scene: PackedScene = load("res://scenes/ui/store_shell.tscn")
+	var shell_node: Node = scene.instantiate()
+
+	assert_not_null(shell_node)
+	assert_true(shell_node is Control)
+	var shell: Control = shell_node as Control
+	assert_not_null(shell)
+	add_child_autofree(shell)
+	await get_tree().process_frame
+
+	_equip_store_item_id = StringName()
+	var _equip_connect_result: int = shell.connect(&"equip_requested", Callable(self, "_mark_store_equip_requested"))
+	shell.call("apply_state", StoreStateScript.new(20, _create_store_item_states(), &"body_default"))
+
+	var selected_name_label: Label = shell.get_node("CenterContainer/Panel/ContentMargin/Content/SelectedNameLabel") as Label
+	var equip_button: Button = shell.get_node("CenterContainer/Panel/ContentMargin/Content/Actions/EquipButton") as Button
+
+	assert_eq(selected_name_label.text, "Trail Jacket")
+	assert_true(equip_button.visible)
+	assert_false(equip_button.disabled)
+
+	var _emit_result: int = equip_button.emit_signal("pressed")
+
+	assert_eq(_equip_store_item_id, &"body_default")
+
 func _mark_restart_requested() -> void:
 	_restart_requested = true
 
@@ -271,3 +377,21 @@ func _mark_rewarded_continue_requested() -> void:
 
 func _mark_post_run_coin_doubler_requested() -> void:
 	_post_run_coin_doubler_requested = true
+
+func _mark_store_requested() -> void:
+	_store_requested = true
+
+func _mark_store_item_selected(item_id: StringName) -> void:
+	_selected_store_item_id = item_id
+
+func _mark_store_purchase_requested(item_id: StringName) -> void:
+	_purchase_store_item_id = item_id
+
+func _mark_store_equip_requested(item_id: StringName) -> void:
+	_equip_store_item_id = item_id
+
+func _create_store_item_states() -> Array[StoreItemStateScript]:
+	return [
+		StoreItemStateScript.new(&"body_default", "Trail Jacket", CosmeticSlotScript.Value.BODY, 0, true, false, false, true),
+		StoreItemStateScript.new(&"chaser_hot_coffee", "Hot Coffee", CosmeticSlotScript.Value.CHASER_THEME, 15, false, false, true, false),
+	]

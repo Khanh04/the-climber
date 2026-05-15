@@ -63,11 +63,12 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 - Treat cosmetic selection as a theme bundle containing visuals, particles, and an audio profile.
 - Current feedback intensity blends pace-driven pressure and player proximity to drive a layered Chaser fill, pulsing crest/glow treatment, and audio modulation without moving game rules into the scene.
 - The current implementation uses validated `ChaserTheme` Resources plus a typed run `CosmeticLoadout` and `ChaserThemeCatalog` so the run scene can resolve the equipped Chaser theme without moving presentation data into gameplay code.
-- The current run-scene seam can also project a persisted `SaveSnapshot` Chaser theme id onto the local cosmetic loadout, so saved player-owned Chaser selection overrides the scene default when a save bootstrap passes one in.
+- Chaser themes are also represented as `CosmeticItem` entries in the store catalog; ownership is tracked by cosmetic item id while the loadout persists the selected `ChaserTheme` id for presentation lookup.
+- The current run-scene seam projects persisted `SaveSnapshot` cosmetic loadout fields onto the local cosmetic loadout, so saved player-owned Chaser selection overrides the scene default when a save bootstrap passes one in.
 
 ## Post-MVP
 
-- Multiple Chaser themes such as Hot Coffee, Glitch / Code, and Plastic Ball Pit.
+- Additional Chaser themes beyond the starter Rising Void, Hot Coffee, and Glitch catalog.
 - Per-theme spatial audio, particles, and screen-edge warning treatments.
 - More nuanced pacing curves based on run altitude, player skill, and recent near-death events.
 

@@ -3,8 +3,11 @@ extends GutTest
 const ClimbPrototypeFrameResultScript = preload("res://src/gameplay/player/climb_prototype_frame_result.gd")
 const HandAttachmentStateScript = preload("res://src/gameplay/player/hand_attachment_state.gd")
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
+const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_catalog.gd")
+const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
 const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
+const PlayerCosmeticApplicatorScript = preload("res://src/cosmetics/player_cosmetic_applicator.gd")
 
 func test_player_character_scene_wires_required_nodes() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
@@ -75,6 +78,32 @@ func test_player_character_hand_cosmetic_roots_follow_hand_anchors() -> void:
     player.get_right_hand_cosmetic_root().add_child(right_visual)
 
     player.assert_visual_roots_physics_neutral()
+
+func test_player_cosmetic_applicator_adds_visuals_without_changing_physics() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var catalog: CosmeticItemCatalogScript = load("res://resources/config/cosmetic_item_catalog.tres") as CosmeticItemCatalogScript
+    var loadout := CosmeticLoadoutScript.new()
+    var applicator := PlayerCosmeticApplicatorScript.new()
+    var body: RigidBody2D = player.get_player_body()
+    var starting_mass: float = body.mass
+    var starting_collision_layer: int = body.collision_layer
+    var starting_collision_mask: int = body.collision_mask
+    var starting_collision_shape: Shape2D = player.get_body_collision_shape().shape
+
+    assert_not_null(catalog)
+    loadout.body_cosmetic_id = &"body_sunrise_jacket"
+    loadout.left_hand_cosmetic_id = &"left_hand_gold_grip"
+    loadout.right_hand_cosmetic_id = &"right_hand_gold_grip"
+    applicator.apply_loadout(player, loadout, catalog)
+
+    assert_not_null(player.get_cosmetic_visual_root().get_node_or_null("AppliedBodyCosmetic"))
+    assert_not_null(player.get_left_hand_cosmetic_root().get_node_or_null("AppliedLeftHandCosmetic"))
+    assert_not_null(player.get_right_hand_cosmetic_root().get_node_or_null("AppliedRightHandCosmetic"))
+    player.assert_visual_roots_physics_neutral()
+    assert_eq(body.mass, starting_mass)
+    assert_eq(body.collision_layer, starting_collision_layer)
+    assert_eq(body.collision_mask, starting_collision_mask)
+    assert_eq(player.get_body_collision_shape().shape, starting_collision_shape)
 
 func test_player_character_grip_joints_target_player_body() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()

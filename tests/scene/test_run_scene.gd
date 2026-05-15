@@ -5,6 +5,8 @@ const ChaserFeedbackSnapshotScript = preload("res://src/gameplay/chaser/chaser_f
 const ChaserPacingModelScript = preload("res://src/gameplay/chaser/chaser_pacing_model.gd")
 const ChaserKillZoneScript = preload("res://scenes/chaser/chaser_kill_zone.gd")
 const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
+const CosmeticPurchaseOutcomeScript = preload("res://src/cosmetics/cosmetic_purchase_outcome.gd")
+const CosmeticPurchaseResultScript = preload("res://src/cosmetics/cosmetic_purchase_result.gd")
 const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickups/generated_coin_pickup_spawn_adapter.gd")
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/generated_hazard_spawn_adapter.gd")
@@ -142,7 +144,16 @@ func test_run_scene_save_snapshot_overrides_default_chaser_theme_selection() -> 
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
-    var save_snapshot: SaveSnapshotScript = SaveSnapshotScript.new(12, SaveSchemaScript.VERSION, &"hot_coffee")
+    var save_snapshot: SaveSnapshotScript = SaveSnapshotScript.new(
+        12,
+        SaveSchemaScript.VERSION,
+        &"hot_coffee",
+        PackedStringArray(),
+        PackedStringArray(["body_default", "left_hand_default", "right_hand_default", "chaser_hot_coffee"]),
+        &"body_default",
+        &"left_hand_default",
+        &"right_hand_default"
+    )
 
     assert_not_null(playground)
     playground.set_save_snapshot(save_snapshot)
@@ -398,6 +409,57 @@ func test_run_scene_persistent_transactions_bank_once_across_reloaded_save_state
     assert_false(second_playground.apply_persistent_coin_transaction("ad_reward:continue_offer_01", TransactionSourceScript.Value.AD_REWARD, 9))
     assert_eq(second_playground.get_wallet_for_test().get_coins(), 9)
     assert_eq(save_storage.load_snapshot().wallet_coins, 9)
+
+func test_run_scene_purchases_equips_and_persists_cosmetics() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
+    var save_storage: SaveStorageScript = SaveStorageScript.new(local_storage)
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    playground.set_local_storage_adapter(local_storage)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    assert_true(playground.apply_persistent_coin_transaction("debug_dev:store_test_grant", TransactionSourceScript.Value.DEBUG_DEV, 40))
+
+    var purchase_result: CosmeticPurchaseResultScript = playground.purchase_cosmetic_item(&"body_sunrise_jacket")
+
+    assert_eq(purchase_result.outcome, CosmeticPurchaseOutcomeScript.Value.PURCHASED)
+    assert_eq(playground.get_wallet_for_test().get_coins(), 28)
+    assert_true(playground.get_cosmetic_inventory_for_test().is_owned(&"body_sunrise_jacket"))
+
+    playground.equip_cosmetic_item(&"body_sunrise_jacket")
+
+    var applied_body_cosmetic: Node = playground.get_player_for_test().get_cosmetic_visual_root().get_node_or_null("AppliedBodyCosmetic")
+    var snapshot: SaveSnapshotScript = save_storage.load_snapshot()
+
+    assert_eq(playground.get_cosmetic_loadout_for_test().body_cosmetic_id, &"body_sunrise_jacket")
+    assert_not_null(applied_body_cosmetic)
+    assert_eq(snapshot.wallet_coins, 28)
+    assert_eq(snapshot.body_cosmetic_id, &"body_sunrise_jacket")
+    assert_true(snapshot.owned_cosmetic_ids.has("body_sunrise_jacket"))
+    assert_true(snapshot.applied_persistent_transaction_ids.has("purchase:cosmetic_unlock:body_sunrise_jacket"))
+
+func test_run_scene_show_store_creates_dedicated_store_shell() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    playground.show_store_for_test()
+
+    var store_shell: Control = playground.get_store_shell_for_test()
+    assert_not_null(store_shell)
+    var item_list: ItemList = store_shell.get_node("CenterContainer/Panel/ContentMargin/Content/ItemList") as ItemList
+
+    assert_true(store_shell.visible)
+    assert_not_null(item_list)
+    assert_gt(item_list.get_item_count(), 0)
 
 func test_run_scene_post_run_coin_doubler_banks_run_coins_once_after_run_end() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")

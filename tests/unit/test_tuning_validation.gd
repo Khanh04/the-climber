@@ -7,6 +7,7 @@ const ChaserThemeCatalogScript = preload("res://resources/config/chaser_theme_ca
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 const ChaserThemeScript = preload("res://resources/config/chaser_theme.gd")
 const ChaserTuningScript = preload("res://resources/config/chaser_tuning.gd")
+const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_catalog.gd")
 const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
 const CosmeticsTuningScript = preload("res://resources/config/cosmetics_tuning.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
@@ -144,6 +145,19 @@ func test_invalid_cosmetic_loadout_is_detected() -> void:
     loadout.chaser_theme_id = StringName()
 
     assert_false(loadout.is_valid())
+
+func test_cosmetic_loadout_rejects_empty_player_cosmetic_ids() -> void:
+    var loadout := CosmeticLoadoutScript.new()
+    loadout.body_cosmetic_id = StringName()
+
+    assert_false(loadout.is_valid())
+
+func test_default_cosmetic_item_catalog_is_valid() -> void:
+    var catalog: CosmeticItemCatalogScript = load("res://resources/config/cosmetic_item_catalog.tres") as CosmeticItemCatalogScript
+
+    assert_not_null(catalog)
+    assert_true(catalog.is_valid())
+    assert_eq(catalog.get_required_item_by_id(&"body_default").item_id, &"body_default")
 
 func test_default_chaser_theme_catalog_is_valid() -> void:
     var catalog: ChaserThemeCatalogScript = load("res://resources/config/chaser_theme_catalog.tres") as ChaserThemeCatalogScript

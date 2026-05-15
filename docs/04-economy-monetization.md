@@ -83,6 +83,9 @@ Create a progression and monetization layer that rewards risk, preserves fairnes
 - Surface run-scoped consumables separately from permanent unlocks.
 - Keep the Supporter Pack clearly distinct from consumables to avoid confusion.
 - Define the Supporter Pack as a recurring subscription product, not a one-time unlock.
+- The current Phase 10 store shell uses a typed `CosmeticItemCatalog` for permanent player body, hand, and Chaser theme unlocks.
+- Coin cosmetic unlocks spend wallet coins through persistent purchase transactions, then persist owned cosmetic ids and equipped loadout fields in save schema v4.
+- Store UI dispatches item selection, purchase, equip, and close signals; `RunScene` coordinates wallet, inventory, loadout, persistence, and visual application.
 
 ### Initial Balance Targets
 

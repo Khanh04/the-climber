@@ -11,6 +11,7 @@
 [ext_resource type="Resource" path="res://resources/config/chaser_theme_catalog.tres" id="9_theme_catalog"]
 [ext_resource type="Script" path="res://resources/config/generation_tuning.gd" id="10_generation"]
 [ext_resource type="Script" path="res://src/gameplay/generation/generated_chunk_coordinator.gd" id="11_generated_chunks"]
+[ext_resource type="Resource" path="res://resources/config/cosmetic_item_catalog.tres" id="12_cosmetic_catalog"]
 
 [sub_resource type="Resource" id="Resource_climb"]
 script = ExtResource("2_climb")
@@ -35,6 +36,7 @@ stamina_tuning = SubResource("Resource_stamina")
 generation_tuning = SubResource("Resource_generation")
 cosmetic_loadout = ExtResource("8_loadout")
 chaser_theme_catalog = ExtResource("9_theme_catalog")
+cosmetic_item_catalog = ExtResource("12_cosmetic_catalog")
 
 [node name="DevCamera" type="Camera2D" parent="." unique_id=173797974]
 unique_name_in_owner = true

@@ -185,13 +185,15 @@ Acceptance gates:
 
 Purpose: give coins a simple visual sink without gameplay-affecting stats.
 
+Status: implemented as a starter typed cosmetics catalog, persistent inventory/loadout slice, player visual applicator, Chaser theme store integration, and dedicated store shell coordinated by the main run scene.
+
 Implementation outcomes:
 
-- Add typed cosmetic item Resources.
-- Add inventory and loadout models.
-- Add cosmetic unlock purchases with wallet transactions.
-- Add a visual application point on the player scene.
-- Add a minimal store/loadout UI shell.
+- Added typed cosmetic item Resources and a catalog for player body, hand, and Chaser theme cosmetics.
+- Added inventory and expanded loadout models persisted through save schema v4.
+- Added cosmetic unlock purchases through wallet purchase transactions with duplicate prevention.
+- Added player visual application through existing physics-neutral player cosmetic roots.
+- Added a minimal dedicated store/loadout UI shell that dispatches typed intents to `RunScene`.
 
 Acceptance gates:
 
@@ -231,11 +233,11 @@ Every phase should pass these checks before being considered complete:
 
 ## Recommended Next Sprint
 
-Start with Phase 6 now that Phases 3 through 5 are implemented and the main run scene is in place.
+Start Phase 11 now that the playable loop includes Chaser pressure, deterministic generation, coins, rewarded ad hooks, and the Phase 10 cosmetics store shell.
 
 Sprint outcomes:
 
-- Add the typed Chaser pacing model and scene boundary.
-- Wire Chaser contact to the existing run-end flow as a non-rescueable failure.
-- Add focused pacing tests and scene collision tests for the Chaser slice.
-- Keep `sh scripts/validate.sh` green while preserving the current run-loop contract.
+- Tune touch controls and input ergonomics around mobile-first play.
+- Add pause, resume, lifecycle, haptics, audio settings, and menu/store navigation polish behind typed boundaries.
+- Run a performance and UX pass across generated chunks, Chaser, pickups, player physics, ads, save/load, and the store shell.
+- Keep `sh scripts/validate.sh` green while auditing docs against implemented MVP behavior.

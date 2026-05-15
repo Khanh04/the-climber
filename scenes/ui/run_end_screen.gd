@@ -4,6 +4,7 @@ extends Control
 signal restart_requested
 signal rewarded_continue_requested
 signal post_run_coin_doubler_requested
+signal store_requested
 
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
@@ -14,12 +15,14 @@ const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
 @onready var _ad_feedback_label: Label = get_node("CenterContainer/Panel/ContentMargin/Content/AdFeedbackLabel") as Label
 @onready var _rewarded_continue_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton") as Button
 @onready var _post_run_coin_doubler_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
+@onready var _store_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/StoreButton") as Button
 @onready var _restart_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
 
 func _ready() -> void:
 	_validate_required_nodes()
 	var _rewarded_continue_connect_result: int = _rewarded_continue_button.connect(&"pressed", Callable(self, "_on_rewarded_continue_button_pressed"))
 	var _post_run_coin_doubler_connect_result: int = _post_run_coin_doubler_button.connect(&"pressed", Callable(self, "_on_post_run_coin_doubler_button_pressed"))
+	var _store_connect_result: int = _store_button.connect(&"pressed", Callable(self, "_on_store_button_pressed"))
 	var _connect_result: int = _restart_button.connect(&"pressed", Callable(self, "_on_restart_button_pressed"))
 
 func apply_state(state: RefCounted) -> void:
@@ -63,6 +66,9 @@ func _on_rewarded_continue_button_pressed() -> void:
 func _on_post_run_coin_doubler_button_pressed() -> void:
 	post_run_coin_doubler_requested.emit()
 
+func _on_store_button_pressed() -> void:
+	store_requested.emit()
+
 func _format_end_reason(reason: int) -> String:
 	RunEndReasonScript.assert_valid(reason)
 
@@ -93,4 +99,5 @@ func _validate_required_nodes() -> void:
 	Validation.require_condition(_ad_feedback_label != null, "RunEndScreen requires AdFeedbackLabel.")
 	Validation.require_condition(_rewarded_continue_button != null, "RunEndScreen requires RewardedContinueButton.")
 	Validation.require_condition(_post_run_coin_doubler_button != null, "RunEndScreen requires PostRunCoinDoublerButton.")
+	Validation.require_condition(_store_button != null, "RunEndScreen requires StoreButton.")
 	Validation.require_condition(_restart_button != null, "RunEndScreen requires RestartButton.")
