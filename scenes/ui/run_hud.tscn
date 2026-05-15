@@ -80,3 +80,7 @@ text = "Run Coins"
 [node name="CoinsValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/CoinsMetric" unique_name_in_owner=true]
 layout_mode = 2
 text = "0"
+
+[node name="PauseButton" type="Button" parent="Panel/ContentMargin/Metrics" unique_name_in_owner=true]
+layout_mode = 2
+text = "Pause"

@@ -461,6 +461,39 @@ func test_run_scene_show_store_creates_dedicated_store_shell() -> void:
     assert_not_null(item_list)
     assert_gt(item_list.get_item_count(), 0)
 
+func test_run_scene_pause_menu_pauses_resumes_and_restarts() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    playground.show_pause_menu_for_test()
+
+    var pause_menu: Control = playground.get_pause_menu_for_test()
+    assert_not_null(pause_menu)
+    assert_true(playground.is_pause_menu_visible_for_test())
+    assert_true(get_tree().paused)
+    assert_true(pause_menu.visible)
+
+    var resume_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/ResumeButton") as Button
+    var _resume_emit_result: int = resume_button.emit_signal("pressed")
+
+    assert_false(playground.is_pause_menu_visible_for_test())
+    assert_false(get_tree().paused)
+    assert_false(pause_menu.visible)
+
+    playground.show_pause_menu_for_test()
+    var restart_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
+    var _restart_emit_result: int = restart_button.emit_signal("pressed")
+
+    assert_false(playground.is_pause_menu_visible_for_test())
+    assert_false(get_tree().paused)
+    assert_false(pause_menu.visible)
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+
 func test_run_scene_post_run_coin_doubler_banks_run_coins_once_after_run_end() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()

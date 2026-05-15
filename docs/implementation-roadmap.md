@@ -208,7 +208,7 @@ Purpose: prepare the complete MVP loop for mobile testing and eventual export.
 Implementation outcomes:
 
 - Tune touch controls and input ergonomics on mobile-first assumptions.
-- Add pause, resume, and app lifecycle handling behind adapters.
+- Add pause, resume, and app lifecycle handling behind adapters. Pause/resume has started with a typed in-run pause overlay plus HUD and keyboard entry points.
 - Add haptics and audio settings boundaries.
 - Add basic main menu, settings, run result, rescue, and store flows.
 - Run performance pass on generated chunks, Chaser, pickups, and player physics.

@@ -56,6 +56,9 @@ const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_se
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const StaminaRuntimeScript = preload("res://src/gameplay/player/stamina_runtime.gd")
 const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
+const PauseMenuScript = preload("res://scenes/ui/pause_menu.gd")
+const PauseMenuStateScript = preload("res://src/ui/pause_menu_state.gd")
+const PauseMenuScene = preload("res://scenes/ui/pause_menu.tscn")
 const StorePresenterScript = preload("res://src/ui/store_presenter.gd")
 const StoreShellScript = preload("res://scenes/ui/store_shell.gd")
 const StoreShellScene = preload("res://scenes/ui/store_shell.tscn")
@@ -124,6 +127,8 @@ var _save_storage: SaveStorageScript = null
 var _store_shell: StoreShellScript = null
 var _store_selected_item_id: StringName = StringName()
 var _store_feedback_message: String = ""
+var _pause_menu: PauseMenuScript = null
+var _pause_menu_visible: bool = false
 var _post_run_coin_doubler_reward_id: String = ""
 var _start_y: float = 0.0
 var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
@@ -138,6 +143,7 @@ func _ready() -> void:
 	var _rewarded_continue_connect_result: int = _run_end_screen.connect(&"rewarded_continue_requested", _on_rewarded_continue_requested)
 	var _post_run_coin_doubler_connect_result: int = _run_end_screen.connect(&"post_run_coin_doubler_requested", _on_post_run_coin_doubler_requested)
 	var _store_connect_result: int = _run_end_screen.connect(&"store_requested", _on_store_requested)
+	var _pause_connect_result: int = _run_hud.connect(&"pause_requested", _on_pause_requested)
 	var _chaser_connect_result: int = _chaser_kill_zone.connect(&"chaser_contacted", _on_chaser_contacted)
 	_player.set_climb_tuning(climb_tuning)
 	_stamina = StaminaRuntimeScript.new(stamina_tuning)
@@ -198,6 +204,9 @@ func set_utc_date_provider(date_provider: RefCounted) -> void:
 	_refresh_ui()
 
 func _physics_process(delta: float) -> void:
+	if _pause_menu_visible:
+		return
+
 	if _consume_debug_reset_input():
 		_reset_playground()
 		_refresh_ui()
@@ -234,6 +243,11 @@ func _physics_process(delta: float) -> void:
 	_refresh_ui()
 
 func _input(event: InputEvent) -> void:
+	if event.is_action_pressed(&"pause_menu"):
+		_toggle_pause_requested()
+		get_viewport().set_input_as_handled()
+		return
+
 	if event.is_action_pressed(&"debug_reset_run"):
 		_reset_playground()
 		_refresh_ui()
@@ -263,6 +277,15 @@ func get_store_shell_for_test() -> StoreShellScript:
 
 func show_store_for_test() -> void:
 	_show_store()
+
+func get_pause_menu_for_test() -> PauseMenuScript:
+	return _pause_menu
+
+func show_pause_menu_for_test() -> void:
+	_show_pause_menu()
+
+func is_pause_menu_visible_for_test() -> bool:
+	return _pause_menu_visible
 
 func apply_persistent_coin_transaction(transaction_id: String, source: int, coin_delta: int) -> bool:
 	Validation.require_condition(_save_storage != null, "RunScene requires save storage before applying persistent coin transactions.")
@@ -847,6 +870,57 @@ func _refresh_ui() -> void:
 	_run_ui_view.apply_state_snapshots(hud_state, run_end_state)
 	if _store_shell != null and _store_shell.visible:
 		_refresh_store_ui()
+	if _pause_menu != null:
+		_refresh_pause_menu_ui()
+
+func _show_pause_menu() -> void:
+	if _run_session.get_state() == RunStateScript.Value.ENDED:
+		return
+
+	_ensure_pause_menu()
+	_pause_menu_visible = true
+	get_tree().paused = true
+	_refresh_pause_menu_ui()
+
+func _resume_from_pause_menu() -> void:
+	if not _pause_menu_visible:
+		return
+
+	_pause_menu_visible = false
+	get_tree().paused = false
+	_refresh_pause_menu_ui()
+	_refresh_ui()
+
+func _ensure_pause_menu() -> void:
+	if _pause_menu != null:
+		return
+
+	Validation.require_condition(_ui_layer != null, "RunScene requires UiLayer before showing the pause menu.")
+	var pause_node: Node = PauseMenuScene.instantiate()
+	Validation.require_condition(pause_node != null, "RunScene pause menu scene must instantiate a node.")
+	Validation.require_condition(pause_node is PauseMenuScript, "RunScene pause menu scene must instantiate PauseMenu.")
+	_pause_menu = pause_node as PauseMenuScript
+	_ui_layer.add_child(_pause_menu)
+	var _resume_connect_result: int = _pause_menu.connect(&"resume_requested", _on_pause_resume_requested)
+	var _restart_connect_result: int = _pause_menu.connect(&"restart_requested", _on_pause_restart_requested)
+	var _settings_connect_result: int = _pause_menu.connect(&"settings_requested", _on_pause_settings_requested)
+
+func _refresh_pause_menu_ui() -> void:
+	Validation.require_condition(_pause_menu != null, "RunScene requires PauseMenu before refreshing pause UI.")
+	var pause_state: PauseMenuStateScript = PauseMenuStateScript.new(
+		_pause_menu_visible,
+		_run_session.get_height_meters(),
+		_wallet.get_coins(),
+		_run_session.get_run_earned_coins()
+	)
+	_pause_menu.apply_state(pause_state)
+
+func _toggle_pause_requested() -> void:
+	if _pause_menu_visible:
+		_resume_from_pause_menu()
+		return
+
+	_show_pause_menu()
 
 func _show_store() -> void:
 	_ensure_store_shell()
@@ -897,6 +971,21 @@ func _format_cosmetic_purchase_result(result: CosmeticPurchaseResultScript) -> S
 func _on_run_end_restart_requested() -> void:
 	_reset_playground()
 	_refresh_ui()
+
+func _on_pause_requested() -> void:
+	_show_pause_menu()
+
+func _on_pause_resume_requested() -> void:
+	_resume_from_pause_menu()
+
+func _on_pause_restart_requested() -> void:
+	_pause_menu_visible = false
+	get_tree().paused = false
+	_reset_playground()
+	_refresh_ui()
+
+func _on_pause_settings_requested() -> void:
+	_refresh_pause_menu_ui()
 
 func _on_rewarded_continue_requested() -> void:
 	if not _can_offer_rewarded_continue():

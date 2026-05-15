@@ -8,11 +8,15 @@ const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
 const StoreItemStateScript = preload("res://src/ui/store_item_state.gd")
 const StoreStateScript = preload("res://src/ui/store_state.gd")
 const CosmeticSlotScript = preload("res://src/cosmetics/cosmetic_slot.gd")
+const PauseMenuStateScript = preload("res://src/ui/pause_menu_state.gd")
 
 var _restart_requested: bool = false
 var _rewarded_continue_requested: bool = false
 var _post_run_coin_doubler_requested: bool = false
 var _store_requested: bool = false
+var _pause_requested: bool = false
+var _resume_requested: bool = false
+var _settings_requested: bool = false
 var _selected_store_item_id: StringName = StringName()
 var _purchase_store_item_id: StringName = StringName()
 var _equip_store_item_id: StringName = StringName()
@@ -33,6 +37,7 @@ func test_run_hud_scene_wires_required_nodes() -> void:
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/StaminaMetric/StaminaBar"))
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/WalletMetric/WalletValueLabel"))
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/CoinsMetric/CoinsValueLabel"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/PauseButton"))
 
 func test_run_hud_scene_displays_height_stamina_and_run_coins() -> void:
 	var scene: PackedScene = load("res://scenes/ui/run_hud.tscn")
@@ -52,18 +57,40 @@ func test_run_hud_scene_displays_height_stamina_and_run_coins() -> void:
 	var stamina_bar: ProgressBar = hud.get_node("Panel/ContentMargin/Metrics/StaminaMetric/StaminaBar") as ProgressBar
 	var wallet_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/WalletMetric/WalletValueLabel") as Label
 	var coins_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/CoinsMetric/CoinsValueLabel") as Label
+	var pause_button: Button = hud.get_node("Panel/ContentMargin/Metrics/PauseButton") as Button
 
 	assert_not_null(height_value_label)
 	assert_not_null(stamina_value_label)
 	assert_not_null(stamina_bar)
 	assert_not_null(wallet_value_label)
 	assert_not_null(coins_value_label)
+	assert_not_null(pause_button)
 	assert_eq(height_value_label.text, "18.5 m")
 	assert_eq(stamina_value_label.text, "7.0 / 20.0")
 	assert_eq(stamina_bar.max_value, 20.0)
 	assert_eq(stamina_bar.value, 7.0)
 	assert_eq(wallet_value_label.text, "9")
 	assert_eq(coins_value_label.text, "4")
+
+func test_run_hud_emits_pause_request() -> void:
+	var scene: PackedScene = load("res://scenes/ui/run_hud.tscn")
+	var hud_node: Node = scene.instantiate()
+
+	assert_not_null(hud_node)
+	assert_true(hud_node is Control)
+	var hud: Control = hud_node as Control
+	assert_not_null(hud)
+	add_child_autofree(hud)
+	await get_tree().process_frame
+
+	_pause_requested = false
+	var _connect_result: int = hud.connect(&"pause_requested", Callable(self, "_mark_pause_requested"))
+	var pause_button: Button = hud.get_node("Panel/ContentMargin/Metrics/PauseButton") as Button
+
+	assert_not_null(pause_button)
+	var _emit_result: int = pause_button.emit_signal("pressed")
+
+	assert_true(_pause_requested)
 
 func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	var scene: PackedScene = load("res://scenes/ui/run_end_screen.tscn")
@@ -369,6 +396,44 @@ func test_store_shell_displays_owned_item_and_emits_equip_intent() -> void:
 
 	assert_eq(_equip_store_item_id, &"body_default")
 
+func test_pause_menu_displays_state_and_emits_actions() -> void:
+	var scene: PackedScene = load("res://scenes/ui/pause_menu.tscn")
+	var menu_node: Node = scene.instantiate()
+
+	assert_not_null(menu_node)
+	assert_true(menu_node is Control)
+	var menu: Control = menu_node as Control
+	assert_not_null(menu)
+	add_child_autofree(menu)
+	await get_tree().process_frame
+
+	_resume_requested = false
+	_restart_requested = false
+	_settings_requested = false
+	var _resume_connect_result: int = menu.connect(&"resume_requested", Callable(self, "_mark_resume_requested"))
+	var _restart_connect_result: int = menu.connect(&"restart_requested", Callable(self, "_mark_restart_requested"))
+	var _settings_connect_result: int = menu.connect(&"settings_requested", Callable(self, "_mark_settings_requested"))
+	menu.call("apply_state", PauseMenuStateScript.new(true, 18.5, 22, 5))
+
+	var summary_label: Label = menu.get_node("CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
+	var resume_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/ResumeButton") as Button
+	var restart_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
+	var settings_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
+
+	assert_true(menu.visible)
+	assert_eq(summary_label.text, "Height: 18.5 m\nWallet Coins: 22\nRun Coins: 5")
+	assert_not_null(resume_button)
+	assert_not_null(restart_button)
+	assert_not_null(settings_button)
+
+	var _resume_emit_result: int = resume_button.emit_signal("pressed")
+	var _restart_emit_result: int = restart_button.emit_signal("pressed")
+	var _settings_emit_result: int = settings_button.emit_signal("pressed")
+
+	assert_true(_resume_requested)
+	assert_true(_restart_requested)
+	assert_true(_settings_requested)
+
 func _mark_restart_requested() -> void:
 	_restart_requested = true
 
@@ -380,6 +445,15 @@ func _mark_post_run_coin_doubler_requested() -> void:
 
 func _mark_store_requested() -> void:
 	_store_requested = true
+
+func _mark_pause_requested() -> void:
+	_pause_requested = true
+
+func _mark_resume_requested() -> void:
+	_resume_requested = true
+
+func _mark_settings_requested() -> void:
+	_settings_requested = true
 
 func _mark_store_item_selected(item_id: StringName) -> void:
 	_selected_store_item_id = item_id
