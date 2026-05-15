@@ -47,8 +47,14 @@ func test_challenge_band_chunks_can_schedule_pressure_slots() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
     var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+    var pressure_chunk_index: int = _find_first_chunk_index_with_route_slot_and_band(
+        generator,
+        seed_key,
+        ChunkRouteSlotScript.Value.PRESSURE,
+        ChunkDifficultyBandScript.Value.CHALLENGE
+    )
 
-    var layout: RefCounted = generator.build_chunk(seed_key, 10)
+    var layout: RefCounted = generator.build_chunk(seed_key, pressure_chunk_index)
     var typed_layout: GeneratedChunkLayoutScript = _require_chunk_layout(layout)
 
     assert_eq(typed_layout.difficulty_band, ChunkDifficultyBandScript.Value.CHALLENGE)
@@ -83,6 +89,20 @@ func test_first_chunk_provides_reachable_generated_starter_holds() -> void:
     assert_true(_has_handhold_within_distance(layout.handholds, left_anchor_local_position, grip_range_meters))
     assert_true(_has_handhold_within_distance(layout.handholds, right_anchor_local_position, grip_range_meters))
 
+func test_first_chunk_respects_tuned_segment_height_and_avoids_legacy_span() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
+    var furthest_upward_hold_height_meters: float = 0.0
+
+    for handhold in layout.handholds:
+        furthest_upward_hold_height_meters = maxf(furthest_upward_hold_height_meters, -handhold.local_position.y)
+
+    assert_lte(furthest_upward_hold_height_meters, tuning.segment_height_meters)
+    assert_lt(furthest_upward_hold_height_meters, 12.0)
+
 func test_generated_chunk_respects_total_placeholder_socket_budget() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
@@ -99,11 +119,29 @@ func test_generator_assigns_specific_hazard_kinds_by_route_pressure() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
     var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+    var easy_skill_chunk_index: int = _find_first_chunk_index_with_route_slot_and_band(
+        generator,
+        seed_key,
+        ChunkRouteSlotScript.Value.SKILL,
+        ChunkDifficultyBandScript.Value.EASY
+    )
+    var challenge_skill_chunk_index: int = _find_first_chunk_index_with_route_slot_and_band(
+        generator,
+        seed_key,
+        ChunkRouteSlotScript.Value.SKILL,
+        ChunkDifficultyBandScript.Value.CHALLENGE
+    )
+    var pressure_chunk_index: int = _find_first_chunk_index_with_route_slot_and_band(
+        generator,
+        seed_key,
+        ChunkRouteSlotScript.Value.PRESSURE,
+        ChunkDifficultyBandScript.Value.CHALLENGE
+    )
 
     var opener_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
-    var easy_skill_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 2))
-    var challenge_skill_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 7))
-    var pressure_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 10))
+    var easy_skill_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, easy_skill_chunk_index))
+    var challenge_skill_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, challenge_skill_chunk_index))
+    var pressure_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, pressure_chunk_index))
 
     assert_gt(opener_layout.hazard_sockets.size(), 0)
     assert_gt(easy_skill_layout.hazard_sockets.size(), 0)
@@ -254,6 +292,28 @@ func _find_layout_by_chunk_type(
 
     fail_test("Expected to find chunk type %s in the scanned layouts." % _chunk_type_name(chunk_type))
     return _require_chunk_layout(generator.build_chunk(seed_keys[0], 1))
+
+func _find_first_chunk_index_with_route_slot_and_band(
+    generator: DailyChunkGeneratorScript,
+    seed_key: String,
+    route_slot: int,
+    difficulty_band: int
+) -> int:
+    ChunkRouteSlotScript.assert_valid(route_slot)
+    ChunkDifficultyBandScript.assert_valid(difficulty_band)
+
+    for chunk_index in range(1, 81):
+        var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, chunk_index))
+        if layout.route_slot == route_slot and layout.difficulty_band == difficulty_band:
+            return chunk_index
+
+    fail_test(
+        "Expected to find route slot %s in difficulty band %s within the scanned chunk range." % [
+            _route_slot_name(route_slot),
+            _difficulty_band_name(difficulty_band),
+        ]
+    )
+    return 1
 
 func _count_rows_with_dual_side_options(handholds: Array[GeneratedHandholdSocket], lane_choice_threshold: float) -> int:
     var row_keys: Array[int] = []

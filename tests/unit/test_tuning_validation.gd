@@ -81,6 +81,13 @@ func test_generation_tuning_rejects_invalid_lane_position_ratios() -> void:
 
     assert_false(tuning.is_valid())
 
+func test_generation_tuning_rejects_opener_spacing_that_exceeds_chunk_height() -> void:
+    var tuning = GenerationTuningScript.new()
+    tuning.opener_first_row_height_meters = 4.5
+    tuning.opener_top_padding_meters = 4.0
+
+    assert_false(tuning.is_valid())
+
 func test_generation_tuning_rejects_invalid_pickup_socket_ratio() -> void:
     var tuning = GenerationTuningScript.new()
     tuning.pickup_socket_ratio = 1.0

@@ -209,56 +209,43 @@ func _build_opener_handholds(chunk_type: int, chunk_rng: RandomNumberGenerator) 
     ChunkType.assert_valid(chunk_type)
     Validation.require_condition(chunk_rng != null, "DailyChunkGenerator requires an RNG when building opener handholds.")
 
-    var opener_positions: Array[Vector2] = _get_opener_handhold_positions(chunk_type)
+    var hold_rows: Array[PackedInt32Array] = _tuning.get_opener_hold_rows(chunk_type)
+    var lane_positions: Array[float] = _get_opener_lane_positions()
     var handholds: Array[GeneratedHandholdSocket] = []
+    Validation.require_condition(hold_rows.size() > 0, "DailyChunkGenerator opener generation requires at least one handhold row.")
+    var last_row_height_meters: float = _tuning.segment_height_meters - _tuning.opener_top_padding_meters
+    var row_step_height_meters: float = 0.0
+    if hold_rows.size() > 1:
+        row_step_height_meters = (last_row_height_meters - _tuning.opener_first_row_height_meters) / float(hold_rows.size() - 1)
 
-    for handhold_index in range(opener_positions.size()):
-        var base_position: Vector2 = opener_positions[handhold_index]
-        var x_jitter: float = 0.0
-        var y_jitter: float = 0.0
+    var handhold_sequence_index: int = 0
 
-        if handhold_index >= 2:
-            x_jitter = chunk_rng.randf_range(-0.12, 0.12)
-            y_jitter = chunk_rng.randf_range(-0.14, 0.14)
+    for row_index in range(hold_rows.size()):
+        var row_lane_indices: PackedInt32Array = hold_rows[row_index]
+        Validation.require_condition(row_lane_indices.size() > 0, "DailyChunkGenerator opener handhold rows cannot be empty.")
+        var row_height_meters: float = _tuning.opener_first_row_height_meters + (row_step_height_meters * float(row_index))
 
-        var local_position: Vector2 = Vector2(
-            _clamp_local_x(base_position.x + x_jitter),
-            base_position.y + y_jitter
-        )
-        var handhold_id: StringName = StringName("chunk_00_hold_%02d" % handhold_index)
-        handholds.append(GeneratedHandholdSocket.new(handhold_id, local_position, 1.0))
+        for lane_entry_index in range(row_lane_indices.size()):
+            var lane_index: int = row_lane_indices[lane_entry_index]
+            Validation.require_condition(lane_index >= 0 and lane_index < lane_positions.size(), "DailyChunkGenerator opener lane pattern index is out of bounds.")
+            var local_position: Vector2 = Vector2(
+                _clamp_local_x(lane_positions[lane_index] + chunk_rng.randf_range(-_tuning.opener_horizontal_jitter_meters, _tuning.opener_horizontal_jitter_meters)),
+                -(row_height_meters + chunk_rng.randf_range(-_tuning.opener_vertical_jitter_meters, _tuning.opener_vertical_jitter_meters))
+            )
+            var handhold_id: StringName = StringName("chunk_00_hold_%02d" % handhold_sequence_index)
+            handholds.append(GeneratedHandholdSocket.new(handhold_id, local_position, 1.0))
+            handhold_sequence_index += 1
 
     return handholds
 
-func _get_opener_handhold_positions(chunk_type: int) -> Array[Vector2]:
-    ChunkType.assert_valid(chunk_type)
-
-    match chunk_type:
-        ChunkType.Value.LADDER:
-            return [
-                Vector2(-0.78, -0.52),
-                Vector2(0.78, -0.52),
-                Vector2(-0.78, -2.35),
-                Vector2(0.78, -4.55),
-                Vector2(-0.58, -7.35),
-                Vector2(0.58, -10.75),
-                Vector2(-0.38, -14.95),
-                Vector2(0.38, -19.75),
-            ]
-        ChunkType.Value.ZIGZAG:
-            return [
-                Vector2(-0.78, -0.52),
-                Vector2(0.78, -0.52),
-                Vector2(-1.55, -2.55),
-                Vector2(1.45, -4.85),
-                Vector2(-0.95, -7.55),
-                Vector2(1.05, -10.85),
-                Vector2(-1.35, -14.75),
-                Vector2(0.22, -19.55),
-            ]
-        _:
-            Validation.require_condition(false, "DailyChunkGenerator opener chunks require a supported opener chunk type.")
-            return []
+func _get_opener_lane_positions() -> Array[float]:
+    var half_width: float = _tuning.chunk_width_meters * 0.5
+    return [
+        -(half_width * _tuning.outer_lane_position_ratio),
+        -(half_width * _tuning.inner_lane_position_ratio),
+        half_width * _tuning.inner_lane_position_ratio,
+        half_width * _tuning.outer_lane_position_ratio,
+    ]
 
 func _build_pickup_sockets(
     chunk_index: int,

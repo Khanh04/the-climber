@@ -34,6 +34,7 @@ func test_sync_chunks_prunes_old_window_but_keeps_retained_chunk_paths() -> void
     add_child_autofree(coordinator)
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
     var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(100.0)
+    var chunk_start_height_offset_meters: float = 12.0
 
     coordinator.configure(
         tuning,
@@ -41,7 +42,7 @@ func test_sync_chunks_prunes_old_window_but_keeps_retained_chunk_paths() -> void
         builder,
         DailySeedKey.from_utc_date(2026, 5, 14),
         Vector2(540.0, 240.0),
-        12.0
+        chunk_start_height_offset_meters
     )
     coordinator.reset_chunks()
 
@@ -49,10 +50,15 @@ func test_sync_chunks_prunes_old_window_but_keeps_retained_chunk_paths() -> void
     var retained_handhold_container: Node = retained_chunk.get_node("Handholds")
     var retained_handhold: StaticBody2D = retained_handhold_container.get_child(0) as StaticBody2D
     var retained_hold_path: NodePath = retained_handhold.get_path()
+    var current_height_meters: float = 108.0
+    var generated_height_meters: float = maxf(0.0, current_height_meters - chunk_start_height_offset_meters)
+    var anchor_chunk_index: int = floori(generated_height_meters / tuning.segment_height_meters)
+    var min_chunk_index: int = maxi(0, anchor_chunk_index - tuning.chunk_keep_behind_count)
+    var max_chunk_index: int = anchor_chunk_index + tuning.chunk_spawn_ahead_count - 1
 
-    coordinator.sync_chunks_for_height(108.0, [retained_hold_path])
+    coordinator.sync_chunks_for_height(current_height_meters, [retained_hold_path])
 
     assert_not_null(coordinator.get_chunk_node(0))
     assert_null(coordinator.get_chunk_node(1))
-    assert_not_null(coordinator.get_chunk_node(3))
-    assert_not_null(coordinator.get_chunk_node(6))
+    assert_not_null(coordinator.get_chunk_node(min_chunk_index))
+    assert_not_null(coordinator.get_chunk_node(max_chunk_index))
