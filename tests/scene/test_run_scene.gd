@@ -554,6 +554,48 @@ func test_run_scene_lifecycle_background_event_opens_pause_menu() -> void:
     assert_false(playground.is_pause_menu_visible_for_test())
     assert_false(get_tree().paused)
 
+func test_run_scene_pause_settings_overlay_keeps_run_paused() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    playground.set_local_storage_adapter(local_storage)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    playground.show_pause_menu_for_test()
+    var pause_menu: Control = playground.get_pause_menu_for_test()
+    assert_not_null(pause_menu)
+    var settings_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
+    assert_not_null(settings_button)
+
+    var _settings_emit_result: int = settings_button.emit_signal("pressed")
+    var settings_menu: Control = playground.get_settings_menu_for_test()
+
+    assert_not_null(settings_menu)
+    assert_true(settings_menu.visible)
+    assert_true(playground.is_pause_menu_visible_for_test())
+    assert_true(get_tree().paused)
+
+    var haptics_check_box: CheckBox = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/HapticsCheckBox") as CheckBox
+    var back_button: Button = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/BackButton") as Button
+    assert_not_null(haptics_check_box)
+    assert_not_null(back_button)
+    var _haptics_emit_result: int = haptics_check_box.emit_signal("toggled", false)
+    var _back_emit_result: int = back_button.emit_signal("pressed")
+
+    assert_false(settings_menu.visible)
+    assert_true(playground.is_pause_menu_visible_for_test())
+    assert_true(get_tree().paused)
+
+    var resume_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/ResumeButton") as Button
+    var _resume_emit_result: int = resume_button.emit_signal("pressed")
+
+    assert_false(playground.is_pause_menu_visible_for_test())
+    assert_false(get_tree().paused)
+
 func test_run_scene_post_run_coin_doubler_banks_run_coins_once_after_run_end() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()

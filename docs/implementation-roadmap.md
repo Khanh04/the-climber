@@ -208,9 +208,9 @@ Purpose: prepare the complete MVP loop for mobile testing and eventual export.
 Implementation outcomes:
 
 - Tune touch controls and input ergonomics on mobile-first assumptions.
-- Add pause, resume, and app lifecycle handling behind adapters. Pause/resume has started with a typed in-run pause overlay plus HUD and keyboard entry points.
-- Add haptics and audio settings boundaries.
-- Add basic main menu, settings, run result, rescue, and store flows. Main menu has started with a dedicated launch scene that routes into the run.
+- Add pause, resume, and app lifecycle handling behind adapters. Pause/resume has started with a typed in-run pause overlay plus HUD and keyboard entry points, and settings can now open over the pause flow without resuming gameplay.
+- Add haptics and audio settings boundaries. Phase 11 has started with versioned app settings, an audio settings adapter, haptics adapters/factory, and touch-zone settings consumed by mobile input.
+- Add basic main menu, settings, run result, rescue, and store flows. Main menu has started with a dedicated launch scene that routes into the run, and the shared settings overlay now opens from menu and pause entry points.
 - Run performance pass on generated chunks, Chaser, pickups, and player physics.
 - Add export presets once target platforms are selected.
 - Audit docs against implemented behavior.

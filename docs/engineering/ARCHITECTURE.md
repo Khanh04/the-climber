@@ -21,7 +21,7 @@ The Climber is a Godot 4.4+ mobile-first 2D physics game. The MVP architecture p
 - `src/gameplay/pickups/`: normal coins, special coin stacks, scatter behavior, and pickup events.
 - `src/economy/`: wallet, inventory, consumables, reward grants, and entitlement state.
 - `src/cosmetics/`: visual-only loadouts, themes, and physics-neutral cosmetic validation.
-- `src/platform/`: rewarded ads, local storage, UTC clock/date, haptics, app lifecycle, purchases, subscriptions, sharing, permissions, and future camera/social adapters.
+- `src/platform/`: rewarded ads, local storage, app settings storage, audio settings, UTC clock/date, haptics, app lifecycle, purchases, subscriptions, sharing, permissions, and future camera/social adapters.
 - `src/ui/`: HUD, run summary, ad prompts, vending UI, store shell, and settings.
 
 ## Scene Boundaries
@@ -43,6 +43,7 @@ The Climber is a Godot 4.4+ mobile-first 2D physics game. The MVP architecture p
 
 - Platform seams are defined as typed adapters under `src/platform/` with no gameplay code calling SDKs directly.
 - Phase 1 contract boundaries are: local storage, UTC clock/date, rewarded ads, haptics, app lifecycle, purchases, subscriptions, and future sharing.
+- Phase 11 app settings use a separate versioned snapshot from gameplay save data and apply audio, haptics, and touch preferences through typed adapters or typed input settings.
 - Persistence dictionaries and SDK payload dictionaries are boundary-only data. They must be parsed into typed models immediately and validated before use.
 - Save data uses an explicit schema version and must fail fast on unsupported versions, missing required fields, or corrupt values.
 

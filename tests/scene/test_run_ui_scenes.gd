@@ -5,6 +5,7 @@ const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
+const SettingsStateScript = preload("res://src/ui/settings_state.gd")
 const StoreItemStateScript = preload("res://src/ui/store_item_state.gd")
 const StoreStateScript = preload("res://src/ui/store_state.gd")
 const CosmeticSlotScript = preload("res://src/cosmetics/cosmetic_slot.gd")
@@ -18,6 +19,12 @@ var _store_requested: bool = false
 var _pause_requested: bool = false
 var _resume_requested: bool = false
 var _settings_requested: bool = false
+var _settings_closed: bool = false
+var _settings_audio_muted: bool = false
+var _settings_master_volume_ratio: float = -1.0
+var _settings_haptics_enabled: bool = false
+var _settings_touch_split_ratio: float = -1.0
+var _settings_touch_dead_zone_ratio: float = -1.0
 var _selected_store_item_id: StringName = StringName()
 var _purchase_store_item_id: StringName = StringName()
 var _equip_store_item_id: StringName = StringName()
@@ -63,7 +70,7 @@ func test_main_menu_emits_start_and_settings_requests() -> void:
 
 	assert_not_null(start_button)
 	assert_not_null(settings_button)
-	assert_true(settings_button.disabled)
+	assert_false(settings_button.disabled)
 	var _start_emit_result: int = start_button.emit_signal("pressed")
 	var _settings_emit_result: int = settings_button.emit_signal("pressed")
 
@@ -483,6 +490,61 @@ func test_pause_menu_displays_state_and_emits_actions() -> void:
 	assert_true(_restart_requested)
 	assert_true(_settings_requested)
 
+func test_settings_menu_displays_state_and_emits_setting_intents() -> void:
+	var scene: PackedScene = load("res://scenes/ui/settings_menu.tscn")
+	var menu_node: Node = scene.instantiate()
+
+	assert_not_null(menu_node)
+	assert_true(menu_node is Control)
+	var menu: Control = menu_node as Control
+	assert_not_null(menu)
+	add_child_autofree(menu)
+	await get_tree().process_frame
+
+	_settings_closed = false
+	_settings_audio_muted = false
+	_settings_master_volume_ratio = -1.0
+	_settings_haptics_enabled = false
+	_settings_touch_split_ratio = -1.0
+	_settings_touch_dead_zone_ratio = -1.0
+	var _closed_connect_result: int = menu.connect(&"closed", Callable(self, "_mark_settings_closed"))
+	var _audio_connect_result: int = menu.connect(&"audio_muted_changed", Callable(self, "_mark_settings_audio_muted"))
+	var _volume_connect_result: int = menu.connect(&"master_volume_changed", Callable(self, "_mark_settings_master_volume"))
+	var _haptics_connect_result: int = menu.connect(&"haptics_enabled_changed", Callable(self, "_mark_settings_haptics_enabled"))
+	var _split_connect_result: int = menu.connect(&"touch_split_changed", Callable(self, "_mark_settings_touch_split"))
+	var _dead_zone_connect_result: int = menu.connect(&"touch_center_dead_zone_changed", Callable(self, "_mark_settings_touch_dead_zone"))
+	menu.call("apply_state", SettingsStateScript.new(true, true, 0.65, false, 0.58, 0.07))
+
+	var audio_mute_check_box: CheckBox = menu.get_node("CenterContainer/Panel/ContentMargin/Content/AudioMuteCheckBox") as CheckBox
+	var volume_slider: HSlider = menu.get_node("CenterContainer/Panel/ContentMargin/Content/VolumeRow/VolumeSlider") as HSlider
+	var volume_value_label: Label = menu.get_node("CenterContainer/Panel/ContentMargin/Content/VolumeRow/VolumeValueLabel") as Label
+	var haptics_check_box: CheckBox = menu.get_node("CenterContainer/Panel/ContentMargin/Content/HapticsCheckBox") as CheckBox
+	var touch_split_slider: HSlider = menu.get_node("CenterContainer/Panel/ContentMargin/Content/TouchSplitRow/TouchSplitSlider") as HSlider
+	var touch_dead_zone_slider: HSlider = menu.get_node("CenterContainer/Panel/ContentMargin/Content/TouchDeadZoneRow/TouchDeadZoneSlider") as HSlider
+	var back_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/BackButton") as Button
+
+	assert_true(menu.visible)
+	assert_true(audio_mute_check_box.button_pressed)
+	assert_eq(volume_slider.value, 0.65)
+	assert_eq(volume_value_label.text, "65%")
+	assert_false(haptics_check_box.button_pressed)
+	assert_eq(touch_split_slider.value, 0.58)
+	assert_eq(touch_dead_zone_slider.value, 0.07)
+
+	var _audio_emit_result: int = audio_mute_check_box.emit_signal("toggled", false)
+	var _volume_emit_result: int = volume_slider.emit_signal("value_changed", 0.35)
+	var _haptics_emit_result: int = haptics_check_box.emit_signal("toggled", true)
+	var _split_emit_result: int = touch_split_slider.emit_signal("value_changed", 0.45)
+	var _dead_zone_emit_result: int = touch_dead_zone_slider.emit_signal("value_changed", 0.10)
+	var _back_emit_result: int = back_button.emit_signal("pressed")
+
+	assert_false(_settings_audio_muted)
+	assert_eq(_settings_master_volume_ratio, 0.35)
+	assert_true(_settings_haptics_enabled)
+	assert_eq(_settings_touch_split_ratio, 0.45)
+	assert_eq(_settings_touch_dead_zone_ratio, 0.10)
+	assert_true(_settings_closed)
+
 func _mark_restart_requested() -> void:
 	_restart_requested = true
 
@@ -506,6 +568,24 @@ func _mark_resume_requested() -> void:
 
 func _mark_settings_requested() -> void:
 	_settings_requested = true
+
+func _mark_settings_closed() -> void:
+	_settings_closed = true
+
+func _mark_settings_audio_muted(audio_muted: bool) -> void:
+	_settings_audio_muted = audio_muted
+
+func _mark_settings_master_volume(master_volume_ratio: float) -> void:
+	_settings_master_volume_ratio = master_volume_ratio
+
+func _mark_settings_haptics_enabled(haptics_enabled: bool) -> void:
+	_settings_haptics_enabled = haptics_enabled
+
+func _mark_settings_touch_split(touch_split_ratio: float) -> void:
+	_settings_touch_split_ratio = touch_split_ratio
+
+func _mark_settings_touch_dead_zone(touch_dead_zone_ratio: float) -> void:
+	_settings_touch_dead_zone_ratio = touch_dead_zone_ratio
 
 func _mark_store_item_selected(item_id: StringName) -> void:
 	_selected_store_item_id = item_id

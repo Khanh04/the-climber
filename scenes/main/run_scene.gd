@@ -28,6 +28,13 @@ const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/ge
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.gd")
+const AppSettingsSnapshotScript = preload("res://src/platform/storage/app_settings_snapshot.gd")
+const AppSettingsStorageScript = preload("res://src/platform/storage/app_settings_storage.gd")
+const AudioSettingsAdapterScript = preload("res://src/platform/audio/audio_settings_adapter.gd")
+const GodotAudioSettingsAdapterScript = preload("res://src/platform/audio/godot_audio_settings_adapter.gd")
+const HapticFeedbackTypeScript = preload("res://src/platform/haptics/haptic_feedback_type.gd")
+const HapticsAdapterScript = preload("res://src/platform/haptics/haptics_adapter.gd")
+const HapticsAdapterFactoryScript = preload("res://src/platform/haptics/haptics_adapter_factory.gd")
 const LethalHazardContactServiceScript = preload("res://src/gameplay/hazards/lethal_hazard_contact_service.gd")
 const MobileTouchInputAdapterScript = preload("res://src/gameplay/player/mobile_touch_input_adapter.gd")
 const NormalCoinPickupServiceScript = preload("res://src/gameplay/pickups/normal_coin_pickup_service.gd")
@@ -62,6 +69,9 @@ const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
 const PauseMenuScript = preload("res://scenes/ui/pause_menu.gd")
 const PauseMenuStateScript = preload("res://src/ui/pause_menu_state.gd")
 const PauseMenuScene = preload("res://scenes/ui/pause_menu.tscn")
+const SettingsMenuScript = preload("res://scenes/ui/settings_menu.gd")
+const SettingsMenuScene = preload("res://scenes/ui/settings_menu.tscn")
+const SettingsPresenterScript = preload("res://src/ui/settings_presenter.gd")
 const StorePresenterScript = preload("res://src/ui/store_presenter.gd")
 const StoreShellScript = preload("res://scenes/ui/store_shell.gd")
 const StoreShellScene = preload("res://scenes/ui/store_shell.tscn")
@@ -113,6 +123,8 @@ var _player_cosmetic_applicator: PlayerCosmeticApplicatorScript = PlayerCosmetic
 var _store_presenter: StorePresenterScript = StorePresenterScript.new(_cosmetic_loadout_service)
 var _rewarded_ads_adapter: RewardedAdsAdapterScript = RewardedAdsAdapterFactoryScript.create_default()
 var _app_lifecycle_adapter: AppLifecycleAdapterScript = GodotAppLifecycleAdapterScript.new()
+var _audio_settings_adapter: AudioSettingsAdapterScript = GodotAudioSettingsAdapterScript.new()
+var _haptics_adapter: HapticsAdapterScript = HapticsAdapterFactoryScript.create_default()
 var _persistent_coin_transaction_service: PersistentCoinTransactionServiceScript = PersistentCoinTransactionServiceScript.new()
 var _post_run_coin_doubler_grant_service: PostRunCoinDoublerGrantServiceScript = PostRunCoinDoublerGrantServiceScript.new()
 var _rewarded_continue_service: RewardedContinueServiceScript = RewardedContinueServiceScript.new()
@@ -125,9 +137,13 @@ var _left_aim_preview: Line2D = null
 var _right_aim_preview: Line2D = null
 var _aim_target_marker: Polygon2D = null
 var _debug_reset_pressed: bool = false
+var _app_settings_snapshot: AppSettingsSnapshotScript = null
+var _app_settings_storage: AppSettingsStorageScript = null
 var _save_snapshot: SaveSnapshotScript = null
 var _local_storage_adapter: LocalStorageAdapterScript = null
 var _save_storage: SaveStorageScript = null
+var _settings_menu: SettingsMenuScript = null
+var _settings_presenter: SettingsPresenterScript = SettingsPresenterScript.new()
 var _store_shell: StoreShellScript = null
 var _store_selected_item_id: StringName = StringName()
 var _store_feedback_message: String = ""
@@ -140,6 +156,9 @@ var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
 func _ready() -> void:
 	_validate_required_state()
 	_initialize_save_storage()
+	_initialize_app_settings_storage()
+	_load_or_create_app_settings()
+	_apply_app_settings()
 	_load_or_create_save_state()
 	cosmetic_loadout = _duplicate_cosmetic_loadout(cosmetic_loadout)
 	_apply_saved_cosmetic_selection()
@@ -167,11 +186,15 @@ func set_local_storage_adapter(local_storage_adapter: RefCounted) -> void:
 		return
 
 	_initialize_save_storage()
+	_initialize_app_settings_storage()
+	_load_or_create_app_settings()
+	_apply_app_settings()
 	if _save_snapshot == null:
 		_load_or_create_save_state()
 		_apply_saved_cosmetic_selection()
 		_apply_cosmetic_loadout()
 		_refresh_ui()
+	_refresh_settings_menu()
 
 func set_rewarded_ads_adapter(rewarded_ads_adapter: RefCounted) -> void:
 	Validation.require_condition(rewarded_ads_adapter != null, "RunScene requires a rewarded ads adapter.")
@@ -190,6 +213,20 @@ func set_app_lifecycle_adapter(app_lifecycle_adapter: RefCounted) -> void:
 		return
 
 	_consume_app_lifecycle_events()
+
+func set_audio_settings_adapter(audio_settings_adapter: RefCounted) -> void:
+	Validation.require_condition(audio_settings_adapter != null, "RunScene requires an audio settings adapter.")
+	Validation.require_condition(audio_settings_adapter is AudioSettingsAdapterScript, "RunScene requires an AudioSettingsAdapter implementation.")
+	_audio_settings_adapter = audio_settings_adapter as AudioSettingsAdapterScript
+	if not is_node_ready():
+		return
+
+	_apply_app_settings()
+
+func set_haptics_adapter(haptics_adapter: RefCounted) -> void:
+	Validation.require_condition(haptics_adapter != null, "RunScene requires a haptics adapter.")
+	Validation.require_condition(haptics_adapter is HapticsAdapterScript, "RunScene requires a HapticsAdapter implementation.")
+	_haptics_adapter = haptics_adapter as HapticsAdapterScript
 
 func set_save_snapshot(snapshot: RefCounted) -> void:
 	Validation.require_condition(snapshot != null, "RunScene requires a save snapshot.")
@@ -254,6 +291,7 @@ func _physics_process(delta: float) -> void:
 		var stamina_fall_service: Object = _stamina_fall_service
 		stamina_fall_service.call("resolve", _player, _run_session)
 		_clear_aim_preview()
+		_trigger_haptic_feedback(HapticFeedbackTypeScript.Value.WARNING)
 
 	_refresh_ui()
 
@@ -303,8 +341,14 @@ func show_store_for_test() -> void:
 func get_pause_menu_for_test() -> PauseMenuScript:
 	return _pause_menu
 
+func get_settings_menu_for_test() -> SettingsMenuScript:
+	return _settings_menu
+
 func show_pause_menu_for_test() -> void:
 	_show_pause_menu()
+
+func show_settings_menu_for_test() -> void:
+	_show_settings_menu()
 
 func is_pause_menu_visible_for_test() -> bool:
 	return _pause_menu_visible
@@ -475,7 +519,12 @@ func _validate_required_state() -> void:
 
 func _create_input_frame() -> PlayerInputFrameScript:
 	if _active_touch_positions.size() > 0:
-		return _mobile_input.create_input_frame(get_viewport_rect().size, _active_touch_positions)
+		Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before creating mobile input frames.")
+		return _mobile_input.create_input_frame(
+			get_viewport_rect().size,
+			_active_touch_positions,
+			_app_settings_snapshot.to_touch_input_settings()
+		)
 
 	return _desktop_input.create_input_frame(
 		Input.is_action_pressed(&"debug_left_grip"),
@@ -714,6 +763,7 @@ func _on_generated_coin_pickup_collected(socket_id: StringName, coin_amount: int
 		return
 
 	_persist_save_state()
+	_trigger_haptic_feedback(HapticFeedbackTypeScript.Value.LIGHT_IMPACT)
 	_refresh_ui()
 
 func _on_generated_hazard_triggered(body: Node, hazard_spawn: GeneratedHazardSpawnAdapterScript) -> void:
@@ -739,6 +789,7 @@ func _on_generated_hazard_triggered(body: Node, hazard_spawn: GeneratedHazardSpa
 		_:
 			Validation.require_condition(false, "RunScene requires a supported generated hazard kind.")
 	_clear_aim_preview()
+	_trigger_haptic_feedback(HapticFeedbackTypeScript.Value.WARNING)
 	_refresh_ui()
 
 func _is_run_active_for_generated_spawns() -> bool:
@@ -820,6 +871,43 @@ func _initialize_save_storage() -> void:
 		_local_storage_adapter = JsonFileLocalStorageAdapterScript.new()
 	_save_storage = SaveStorageScript.new(_local_storage_adapter)
 
+func _initialize_app_settings_storage() -> void:
+	if _local_storage_adapter == null:
+		_local_storage_adapter = JsonFileLocalStorageAdapterScript.new()
+	_app_settings_storage = AppSettingsStorageScript.new(_local_storage_adapter)
+
+func _load_or_create_app_settings() -> void:
+	Validation.require_condition(_app_settings_storage != null, "RunScene requires app settings storage before loading app settings.")
+	if _app_settings_storage.has_snapshot():
+		_app_settings_snapshot = _app_settings_storage.load_snapshot()
+	else:
+		_app_settings_snapshot = AppSettingsSnapshotScript.new()
+
+func _apply_app_settings() -> void:
+	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before applying them.")
+	Validation.require_condition(_audio_settings_adapter != null, "RunScene requires an audio settings adapter before applying app settings.")
+	_audio_settings_adapter.apply_master_settings(_app_settings_snapshot.master_volume_ratio, _app_settings_snapshot.audio_muted)
+
+func _trigger_haptic_feedback(feedback_type: int) -> void:
+	HapticFeedbackTypeScript.assert_valid(feedback_type)
+	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before triggering haptic feedback.")
+	Validation.require_condition(_haptics_adapter != null, "RunScene requires a haptics adapter before triggering haptic feedback.")
+	if not _app_settings_snapshot.haptics_enabled:
+		return
+
+	if not _haptics_adapter.supports_feedback(feedback_type):
+		return
+
+	_haptics_adapter.trigger_feedback(feedback_type)
+
+func _persist_app_settings() -> void:
+	Validation.require_condition(_app_settings_storage != null, "RunScene requires app settings storage before saving app settings.")
+	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before saving app settings.")
+	_app_settings_snapshot.assert_valid()
+	_app_settings_storage.save_snapshot(_app_settings_snapshot)
+	_apply_app_settings()
+	_refresh_settings_menu(true)
+
 func _load_or_create_save_state() -> void:
 	Validation.require_condition(_save_storage != null, "RunScene requires save storage before loading save state.")
 	if _save_snapshot == null:
@@ -897,6 +985,8 @@ func _refresh_ui() -> void:
 		_refresh_store_ui()
 	if _pause_menu != null:
 		_refresh_pause_menu_ui()
+	if _settings_menu != null:
+		_refresh_settings_menu(_settings_menu.visible)
 
 func _show_pause_menu() -> void:
 	if _run_session.get_state() == RunStateScript.Value.ENDED:
@@ -911,6 +1001,7 @@ func _resume_from_pause_menu() -> void:
 	if not _pause_menu_visible:
 		return
 
+	_hide_settings_menu()
 	_pause_menu_visible = false
 	get_tree().paused = false
 	_refresh_pause_menu_ui()
@@ -973,6 +1064,40 @@ func _show_store() -> void:
 	_ensure_store_shell()
 	_refresh_store_ui()
 
+func _show_settings_menu() -> void:
+	_ensure_settings_menu()
+	_refresh_settings_menu(true)
+
+func _hide_settings_menu() -> void:
+	if _settings_menu == null:
+		return
+
+	_refresh_settings_menu(false)
+
+func _ensure_settings_menu() -> void:
+	if _settings_menu != null:
+		return
+
+	Validation.require_condition(_ui_layer != null, "RunScene requires UiLayer before showing the settings menu.")
+	var settings_node: Node = SettingsMenuScene.instantiate()
+	Validation.require_condition(settings_node != null, "RunScene settings menu scene must instantiate a node.")
+	Validation.require_condition(settings_node is SettingsMenuScript, "RunScene settings menu scene must instantiate SettingsMenu.")
+	_settings_menu = settings_node as SettingsMenuScript
+	_ui_layer.add_child(_settings_menu)
+	var _closed_connect_result: int = _settings_menu.connect(&"closed", _on_settings_closed)
+	var _audio_muted_connect_result: int = _settings_menu.connect(&"audio_muted_changed", _on_settings_audio_muted_changed)
+	var _volume_connect_result: int = _settings_menu.connect(&"master_volume_changed", _on_settings_master_volume_changed)
+	var _haptics_connect_result: int = _settings_menu.connect(&"haptics_enabled_changed", _on_settings_haptics_enabled_changed)
+	var _touch_split_connect_result: int = _settings_menu.connect(&"touch_split_changed", _on_settings_touch_split_changed)
+	var _touch_dead_zone_connect_result: int = _settings_menu.connect(&"touch_center_dead_zone_changed", _on_settings_touch_center_dead_zone_changed)
+
+func _refresh_settings_menu(visible: bool = false) -> void:
+	if _settings_menu == null:
+		return
+
+	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before refreshing settings UI.")
+	_settings_menu.apply_state(_settings_presenter.build_state(_app_settings_snapshot, visible))
+
 func _ensure_store_shell() -> void:
 	if _store_shell != null:
 		return
@@ -1026,13 +1151,42 @@ func _on_pause_resume_requested() -> void:
 	_resume_from_pause_menu()
 
 func _on_pause_restart_requested() -> void:
+	_hide_settings_menu()
 	_pause_menu_visible = false
 	get_tree().paused = false
 	_reset_playground()
 	_refresh_ui()
 
 func _on_pause_settings_requested() -> void:
-	_refresh_pause_menu_ui()
+	_show_settings_menu()
+
+func _on_settings_closed() -> void:
+	_hide_settings_menu()
+
+func _on_settings_audio_muted_changed(audio_muted: bool) -> void:
+	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before changing audio mute.")
+	_app_settings_snapshot.audio_muted = audio_muted
+	_persist_app_settings()
+
+func _on_settings_master_volume_changed(master_volume_ratio: float) -> void:
+	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before changing master volume.")
+	_app_settings_snapshot.master_volume_ratio = master_volume_ratio
+	_persist_app_settings()
+
+func _on_settings_haptics_enabled_changed(haptics_enabled: bool) -> void:
+	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before changing haptics.")
+	_app_settings_snapshot.haptics_enabled = haptics_enabled
+	_persist_app_settings()
+
+func _on_settings_touch_split_changed(touch_split_ratio: float) -> void:
+	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before changing touch split.")
+	_app_settings_snapshot.touch_split_ratio = touch_split_ratio
+	_persist_app_settings()
+
+func _on_settings_touch_center_dead_zone_changed(touch_center_dead_zone_ratio: float) -> void:
+	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before changing touch center dead zone.")
+	_app_settings_snapshot.touch_center_dead_zone_ratio = touch_center_dead_zone_ratio
+	_persist_app_settings()
 
 func _on_rewarded_continue_requested() -> void:
 	if not _can_offer_rewarded_continue():
@@ -1042,7 +1196,9 @@ func _on_rewarded_continue_requested() -> void:
 	var rewarded_ad_result: RefCounted = _rewarded_ads_adapter.show(RewardedAdPlacementScript.Value.CONTINUE)
 	Validation.require_condition(rewarded_ad_result != null, "RunScene rewarded ads adapter must return a rewarded ad result.")
 	Validation.require_condition(rewarded_ad_result is RewardedAdResultScript, "RunScene rewarded ads adapter must return a RewardedAdResult implementation.")
-	if not apply_rewarded_continue(rewarded_ad_result):
+	if apply_rewarded_continue(rewarded_ad_result):
+		_trigger_haptic_feedback(HapticFeedbackTypeScript.Value.SUCCESS)
+	else:
 		var typed_result: RewardedAdResultScript = rewarded_ad_result
 		match typed_result.outcome:
 			RewardedAdOutcomeScript.Value.CANCELLED:
@@ -1075,10 +1231,13 @@ func _on_store_item_selected(item_id: StringName) -> void:
 	_refresh_store_ui()
 
 func _on_store_purchase_requested(item_id: StringName) -> void:
-	var _result: CosmeticPurchaseResultScript = purchase_cosmetic_item(item_id)
+	var result: CosmeticPurchaseResultScript = purchase_cosmetic_item(item_id)
+	if result.outcome == CosmeticPurchaseOutcomeScript.Value.PURCHASED:
+		_trigger_haptic_feedback(HapticFeedbackTypeScript.Value.SUCCESS)
 
 func _on_store_equip_requested(item_id: StringName) -> void:
 	equip_cosmetic_item(item_id)
+	_trigger_haptic_feedback(HapticFeedbackTypeScript.Value.LIGHT_IMPACT)
 
 func _on_store_closed() -> void:
 	_store_feedback_message = ""
@@ -1094,6 +1253,7 @@ func _on_chaser_contacted(body: Node) -> void:
 
 	_chaser_contact_service.resolve(_controller, _player, _run_session)
 	_clear_aim_preview()
+	_trigger_haptic_feedback(HapticFeedbackTypeScript.Value.ERROR)
 	_refresh_ui()
 
 func _can_offer_rewarded_continue() -> bool:

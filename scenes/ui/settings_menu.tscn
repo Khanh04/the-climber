@@ -1,0 +1,140 @@
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/ui/settings_menu.gd" id="1_settings"]
+
+[node name="SettingsMenu" type="Control"]
+process_mode = 3
+visible = false
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 0
+script = ExtResource("1_settings")
+
+[node name="Backdrop" type="ColorRect" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+color = Color(0.015, 0.02, 0.024, 0.72)
+
+[node name="CenterContainer" type="CenterContainer" parent="."]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+
+[node name="Panel" type="PanelContainer" parent="CenterContainer"]
+custom_minimum_size = Vector2(520, 520)
+layout_mode = 2
+
+[node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel"]
+layout_mode = 2
+theme_override_constants/margin_left = 24
+theme_override_constants/margin_top = 24
+theme_override_constants/margin_right = 24
+theme_override_constants/margin_bottom = 24
+
+[node name="Content" type="VBoxContainer" parent="CenterContainer/Panel/ContentMargin"]
+layout_mode = 2
+theme_override_constants/separation = 14
+
+[node name="Header" type="HBoxContainer" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 2
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/Header"]
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Settings"
+
+[node name="CloseButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content/Header" unique_name_in_owner=true]
+layout_mode = 2
+text = "Close"
+
+[node name="AudioMuteCheckBox" type="CheckBox" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+layout_mode = 2
+text = "Mute Audio"
+
+[node name="VolumeRow" type="HBoxContainer" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="VolumeLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/VolumeRow"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+text = "Volume"
+
+[node name="VolumeSlider" type="HSlider" parent="CenterContainer/Panel/ContentMargin/Content/VolumeRow" unique_name_in_owner=true]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 1.0
+step = 0.05
+value = 1.0
+
+[node name="VolumeValueLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/VolumeRow" unique_name_in_owner=true]
+custom_minimum_size = Vector2(58, 0)
+layout_mode = 2
+text = "100%"
+horizontal_alignment = 2
+
+[node name="HapticsCheckBox" type="CheckBox" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+layout_mode = 2
+button_pressed = true
+text = "Haptics"
+
+[node name="TouchSplitRow" type="HBoxContainer" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TouchSplitLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/TouchSplitRow"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+text = "Left Zone"
+
+[node name="TouchSplitSlider" type="HSlider" parent="CenterContainer/Panel/ContentMargin/Content/TouchSplitRow" unique_name_in_owner=true]
+layout_mode = 2
+size_flags_horizontal = 3
+min_value = 0.35
+max_value = 0.65
+step = 0.01
+value = 0.5
+
+[node name="TouchSplitValueLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/TouchSplitRow" unique_name_in_owner=true]
+custom_minimum_size = Vector2(58, 0)
+layout_mode = 2
+text = "50%"
+horizontal_alignment = 2
+
+[node name="TouchDeadZoneRow" type="HBoxContainer" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 2
+theme_override_constants/separation = 10
+
+[node name="TouchDeadZoneLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/TouchDeadZoneRow"]
+custom_minimum_size = Vector2(140, 0)
+layout_mode = 2
+text = "Center Gap"
+
+[node name="TouchDeadZoneSlider" type="HSlider" parent="CenterContainer/Panel/ContentMargin/Content/TouchDeadZoneRow" unique_name_in_owner=true]
+layout_mode = 2
+size_flags_horizontal = 3
+max_value = 0.2
+step = 0.01
+value = 0.0
+
+[node name="TouchDeadZoneValueLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/TouchDeadZoneRow" unique_name_in_owner=true]
+custom_minimum_size = Vector2(58, 0)
+layout_mode = 2
+text = "0%"
+horizontal_alignment = 2
+
+[node name="BackButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+layout_mode = 2
+text = "Back"

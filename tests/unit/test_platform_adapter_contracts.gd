@@ -6,7 +6,11 @@ const RewardedAdResultScript = preload("res://src/platform/ads/rewarded_ad_resul
 const DesktopPreviewRewardedAdsAdapterScript = preload("res://src/platform/ads/desktop_preview_rewarded_ads_adapter.gd")
 const RewardedAdsAdapterFactoryScript = preload("res://src/platform/ads/rewarded_ads_adapter_factory.gd")
 const UnavailableRewardedAdsAdapterScript = preload("res://src/platform/ads/unavailable_rewarded_ads_adapter.gd")
+const GodotAudioSettingsAdapterScript = preload("res://src/platform/audio/godot_audio_settings_adapter.gd")
+const GodotHapticsAdapterScript = preload("res://src/platform/haptics/godot_haptics_adapter.gd")
+const HapticsAdapterFactoryScript = preload("res://src/platform/haptics/haptics_adapter_factory.gd")
 const HapticFeedbackTypeScript = preload("res://src/platform/haptics/haptic_feedback_type.gd")
+const UnavailableHapticsAdapterScript = preload("res://src/platform/haptics/unavailable_haptics_adapter.gd")
 const AppLifecycleEventScript = preload("res://src/platform/lifecycle/app_lifecycle_event.gd")
 const AppLifecycleStateScript = preload("res://src/platform/lifecycle/app_lifecycle_state.gd")
 const StoreProductKindScript = preload("res://src/platform/commerce/store_product_kind.gd")
@@ -100,6 +104,33 @@ func test_haptics_and_lifecycle_contract_enums_cover_supported_values() -> void:
     assert_true(AppLifecycleEventScript.is_valid(AppLifecycleEventScript.Value.ENTERED_FOREGROUND))
     assert_true(AppLifecycleEventScript.is_valid(AppLifecycleEventScript.Value.QUIT_REQUESTED))
     assert_false(AppLifecycleEventScript.is_valid(34))
+
+func test_haptics_adapter_factory_uses_android_adapter_only_for_android_runtime() -> void:
+    var android_adapter: RefCounted = HapticsAdapterFactoryScript.create_for_runtime("vulkan", "Android")
+    var desktop_adapter: RefCounted = HapticsAdapterFactoryScript.create_for_runtime("x11", "Linux")
+
+    assert_true(android_adapter is GodotHapticsAdapterScript)
+    assert_true(desktop_adapter is UnavailableHapticsAdapterScript)
+
+func test_unavailable_haptics_adapter_reports_unsupported_feedback() -> void:
+    var adapter := UnavailableHapticsAdapterScript.new()
+
+    assert_false(adapter.supports_feedback(HapticFeedbackTypeScript.Value.LIGHT_IMPACT))
+
+func test_godot_audio_settings_adapter_applies_master_mute_and_volume() -> void:
+    var adapter := GodotAudioSettingsAdapterScript.new()
+    var master_bus_index: int = AudioServer.get_bus_index("Master")
+    assert_gte(master_bus_index, 0)
+    var original_mute: bool = AudioServer.is_bus_mute(master_bus_index)
+    var original_volume_db: float = AudioServer.get_bus_volume_db(master_bus_index)
+
+    adapter.apply_master_settings(0.5, true)
+
+    assert_true(adapter.is_master_muted())
+    assert_true(is_equal_approx(adapter.get_master_volume_ratio(), 0.5))
+
+    AudioServer.set_bus_mute(master_bus_index, original_mute)
+    AudioServer.set_bus_volume_db(master_bus_index, original_volume_db)
 
 func test_store_products_and_purchase_results_require_valid_ids_and_kinds() -> void:
     var product = StoreProductScript.new(
