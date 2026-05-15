@@ -1399,6 +1399,47 @@ func test_run_scene_aim_preview_hides_for_attached_hand() -> void:
     assert_not_null(playground.get_node_or_null("RightAimPreview"))
     assert_not_null(playground.get_node_or_null("AimTargetMarker"))
 
+func test_run_scene_mobile_drag_updates_pull_preview_and_release_clears_it() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    _attach_to_generated_opener_holds(playground, true, false)
+
+    var touch_press := InputEventScreenTouch.new()
+    touch_press.index = 0
+    touch_press.pressed = true
+    touch_press.position = Vector2(18.0, 180.0)
+    playground._input(touch_press)
+
+    var touch_drag := InputEventScreenDrag.new()
+    touch_drag.index = 0
+    touch_drag.position = Vector2(54.0, 126.0)
+    playground._input(touch_drag)
+
+    playground._physics_process(1.0 / 60.0)
+
+    assert_null(playground.get_node_or_null("LeftAimPreview"))
+    assert_not_null(playground.get_node_or_null("RightAimPreview"))
+    assert_not_null(playground.get_node_or_null("AimTargetMarker"))
+
+    var touch_release := InputEventScreenTouch.new()
+    touch_release.index = 0
+    touch_release.pressed = false
+    touch_release.position = Vector2(54.0, 126.0)
+    playground._input(touch_release)
+
+    playground._physics_process(1.0 / 60.0)
+    await get_tree().process_frame
+
+    assert_null(playground.get_node_or_null("LeftAimPreview"))
+    assert_null(playground.get_node_or_null("RightAimPreview"))
+    assert_null(playground.get_node_or_null("AimTargetMarker"))
+
 func test_run_scene_reset_clears_runtime_attachments_and_restarts_run() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()

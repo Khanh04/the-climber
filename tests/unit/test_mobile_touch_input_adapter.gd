@@ -1,7 +1,9 @@
 extends GutTest
 
+const HandAttachmentStateScript = preload("res://src/gameplay/player/hand_attachment_state.gd")
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const MobileTouchInputAdapterScript = preload("res://src/gameplay/player/mobile_touch_input_adapter.gd")
+const MobileTouchContactScript = preload("res://src/gameplay/player/mobile_touch_contact.gd")
 const TouchInputSettingsScript = preload("res://src/gameplay/player/touch_input_settings.gd")
 
 var _default_touch_settings: TouchInputSettingsScript = TouchInputSettingsScript.new()
@@ -48,6 +50,51 @@ func test_touch_input_does_not_emit_aim_intent() -> void:
     var adapter := MobileTouchInputAdapterScript.new()
     var viewport_size := Vector2(100.0, 200.0)
     var input_frame := adapter.create_input_frame(viewport_size, PackedVector2Array([Vector2(10.0, 50.0)]), _default_touch_settings)
+
+    assert_false(input_frame.has_aim_intent())
+
+func test_single_attached_hand_drag_emits_pull_aim_intent() -> void:
+    var adapter := MobileTouchInputAdapterScript.new()
+    var viewport_size := Vector2(100.0, 200.0)
+    var attachment_state := HandAttachmentStateScript.new()
+    var touch_contacts: Array[RefCounted] = [
+        MobileTouchContactScript.new(0, Vector2(10.0, 120.0), Vector2(46.0, 78.0))
+    ]
+
+    attachment_state.attach(HandSideScript.Value.LEFT, &"left_hold", Vector2(16.0, 24.0), NodePath("LeftHold"))
+
+    var input_frame := adapter.create_input_frame_from_contacts(viewport_size, touch_contacts, _default_touch_settings, attachment_state)
+    var aim_intent: Object = input_frame.aim_intent
+    var aim_vector: Vector2 = aim_intent.get("aim_vector")
+
+    assert_true(input_frame.has_aim_intent())
+    assert_eq(aim_vector, Vector2(36.0, -42.0))
+
+func test_small_drag_does_not_emit_pull_aim_intent() -> void:
+    var adapter := MobileTouchInputAdapterScript.new()
+    var viewport_size := Vector2(100.0, 200.0)
+    var attachment_state := HandAttachmentStateScript.new()
+    var touch_contacts: Array[RefCounted] = [
+        MobileTouchContactScript.new(0, Vector2(80.0, 120.0), Vector2(92.0, 124.0))
+    ]
+
+    attachment_state.attach(HandSideScript.Value.RIGHT, &"right_hold", Vector2(80.0, 24.0), NodePath("RightHold"))
+
+    var input_frame := adapter.create_input_frame_from_contacts(viewport_size, touch_contacts, _default_touch_settings, attachment_state)
+
+    assert_false(input_frame.has_aim_intent())
+
+func test_pull_aim_requires_touch_on_attached_hand_side() -> void:
+    var adapter := MobileTouchInputAdapterScript.new()
+    var viewport_size := Vector2(100.0, 200.0)
+    var attachment_state := HandAttachmentStateScript.new()
+    var touch_contacts: Array[RefCounted] = [
+        MobileTouchContactScript.new(0, Vector2(82.0, 120.0), Vector2(60.0, 80.0))
+    ]
+
+    attachment_state.attach(HandSideScript.Value.LEFT, &"left_hold", Vector2(16.0, 24.0), NodePath("LeftHold"))
+
+    var input_frame := adapter.create_input_frame_from_contacts(viewport_size, touch_contacts, _default_touch_settings, attachment_state)
 
     assert_false(input_frame.has_aim_intent())
 

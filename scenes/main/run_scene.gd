@@ -37,6 +37,7 @@ const HapticsAdapterScript = preload("res://src/platform/haptics/haptics_adapter
 const HapticsAdapterFactoryScript = preload("res://src/platform/haptics/haptics_adapter_factory.gd")
 const LethalHazardContactServiceScript = preload("res://src/gameplay/hazards/lethal_hazard_contact_service.gd")
 const MobileTouchInputAdapterScript = preload("res://src/gameplay/player/mobile_touch_input_adapter.gd")
+const MobileTouchContactScript = preload("res://src/gameplay/player/mobile_touch_contact.gd")
 const NormalCoinPickupServiceScript = preload("res://src/gameplay/pickups/normal_coin_pickup_service.gd")
 const PlayerCosmeticApplicatorScript = preload("res://src/cosmetics/player_cosmetic_applicator.gd")
 const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
@@ -132,7 +133,7 @@ var _rewarded_continue_feedback_message: String = ""
 var _wallet_transaction_service: WalletTransactionServiceScript = WalletTransactionServiceScript.new()
 var _persistent_transaction_ledger: CoinTransactionLedgerScript = CoinTransactionLedgerScript.new()
 var _run_pickup_transaction_ledger: CoinTransactionLedgerScript = CoinTransactionLedgerScript.new()
-var _active_touch_positions: PackedVector2Array = PackedVector2Array()
+var _active_touch_contacts: Array[RefCounted] = []
 var _left_aim_preview: Line2D = null
 var _right_aim_preview: Line2D = null
 var _aim_target_marker: Polygon2D = null
@@ -309,6 +310,10 @@ func _input(event: InputEvent) -> void:
 
 	if event is InputEventScreenTouch:
 		_update_touch_position(event as InputEventScreenTouch)
+		return
+
+	if event is InputEventScreenDrag:
+		_update_touch_drag(event as InputEventScreenDrag)
 
 func _notification(notification_id: int) -> void:
 	if _app_lifecycle_adapter is GodotAppLifecycleAdapterScript:
@@ -518,12 +523,13 @@ func _validate_required_state() -> void:
 	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "RunScene requires at least one handhold.")
 
 func _create_input_frame() -> PlayerInputFrameScript:
-	if _active_touch_positions.size() > 0:
+	if _active_touch_contacts.size() > 0:
 		Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before creating mobile input frames.")
-		return _mobile_input.create_input_frame(
+		return _mobile_input.create_input_frame_from_contacts(
 			get_viewport_rect().size,
-			_active_touch_positions,
-			_app_settings_snapshot.to_touch_input_settings()
+			_active_touch_contacts,
+			_app_settings_snapshot.to_touch_input_settings(),
+			_controller.get_attachment_state()
 		)
 
 	return _desktop_input.create_input_frame(
@@ -804,7 +810,7 @@ func _reset_playground() -> void:
 
 	_desktop_input.reset()
 	_mobile_input.reset()
-	_active_touch_positions = PackedVector2Array()
+	_active_touch_contacts = []
 	_post_run_coin_doubler_reward_id = ""
 	_rewarded_continue_feedback_message = ""
 	_run_pickup_transaction_ledger = CoinTransactionLedgerScript.new()
@@ -1400,12 +1406,39 @@ func _clear_aim_preview() -> void:
 
 func _update_touch_position(event: InputEventScreenTouch) -> void:
 	if event.pressed:
-		var _append_result: bool = _active_touch_positions.append(event.position)
+		_begin_touch_contact(event.index, event.position)
 		return
 
-	var updated_positions: PackedVector2Array = PackedVector2Array()
-	for touch_position in _active_touch_positions:
-		if not touch_position.is_equal_approx(event.position):
-			var _append_result: bool = updated_positions.append(touch_position)
+	_end_touch_contact(event.index)
 
-	_active_touch_positions = updated_positions
+func _update_touch_drag(event: InputEventScreenDrag) -> void:
+	var touch_contact: MobileTouchContactScript = _find_touch_contact(event.index)
+	if touch_contact == null:
+		return
+
+	touch_contact.update_current_position(event.position)
+
+func _begin_touch_contact(index: int, position: Vector2) -> void:
+	_end_touch_contact(index)
+	_active_touch_contacts.append(MobileTouchContactScript.new(index, position, position))
+
+func _end_touch_contact(index: int) -> void:
+	var remaining_touch_contacts: Array[RefCounted] = []
+	for raw_touch_contact in _active_touch_contacts:
+		var touch_contact: MobileTouchContactScript = _as_touch_contact(raw_touch_contact)
+		if touch_contact.index != index:
+			remaining_touch_contacts.append(touch_contact)
+
+	_active_touch_contacts = remaining_touch_contacts
+
+func _find_touch_contact(index: int) -> MobileTouchContactScript:
+	for raw_touch_contact in _active_touch_contacts:
+		var touch_contact: MobileTouchContactScript = _as_touch_contact(raw_touch_contact)
+		if touch_contact.index == index:
+			return touch_contact
+
+	return null
+
+func _as_touch_contact(raw_touch_contact: RefCounted) -> MobileTouchContactScript:
+	Validation.require_condition(raw_touch_contact is MobileTouchContactScript, "RunScene requires MobileTouchContact touch state.")
+	return raw_touch_contact as MobileTouchContactScript
