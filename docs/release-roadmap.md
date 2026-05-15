@@ -54,6 +54,36 @@ Acceptance gates:
 - Core falls, rescues, and camera beats read clearly on mobile.
 - Touch controls feel stable across supported aspect ratios and thumb positions.
 
+Code-guided execution sequence:
+
+1. Add an explicit typed onboarding progress model and persist
+   first-run completion in app settings instead of inferring it from
+   missing local data. Advance tutorial steps from successful
+   left-grip, right-grip, and release events so onboarding stays
+   correct as control tuning changes.
+2. Keep deterministic chunk 0, but add an onboarding-safe opener
+   profile plus an explicit Chaser grace gate. Choose one grace-end
+   trigger at the start of the phase; prefer a safe height milestone
+   because the current run session already tracks height and that seam
+   is easier to test than timer-only or gesture-sequence inference.
+3. Extend the existing run-loop coordinator and run scene camera
+   follow with separate climb and fall smoothing plus a
+   fall-resolution delay before rescue or result UI appears. Tune
+   stamina readability and rescue restoration in the same slice so
+   feel changes stay coupled to readable failure beats.
+4. Expand the current haptics and UI feedback pass to cover release,
+   rescue acceptance, Chaser or hazard failure, and low-stamina
+   warning states while keeping all platform behavior behind the
+   existing haptics adapter boundary.
+5. Grow touch comfort settings only where the current binary grip
+   model can honor them: split, center dead zone, optional grip-zone
+   width, and haptic intensity. Do not add analog-style sensitivity
+   settings until a mechanic actually consumes them.
+6. Validate the phase with focused tests for onboarding progression,
+   Chaser grace transitions, camera follow and fall timing,
+   app-settings round-trips, and haptic dispatch, then keep
+   `sh scripts/check_docs.sh` and `sh scripts/validate.sh` green.
+
 ## Phase 14: Content Balance And Daily Progression
 
 Purpose: deepen the climb so the game has enough daily replay value before monetization and release operations harden.
