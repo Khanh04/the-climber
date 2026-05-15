@@ -3,6 +3,8 @@ extends GutTest
 const RewardedAdPlacementScript = preload("res://src/platform/ads/rewarded_ad_placement.gd")
 const RewardedAdOutcomeScript = preload("res://src/platform/ads/rewarded_ad_outcome.gd")
 const RewardedAdResultScript = preload("res://src/platform/ads/rewarded_ad_result.gd")
+const DesktopPreviewRewardedAdsAdapterScript = preload("res://src/platform/ads/desktop_preview_rewarded_ads_adapter.gd")
+const RewardedAdsAdapterFactoryScript = preload("res://src/platform/ads/rewarded_ads_adapter_factory.gd")
 const UnavailableRewardedAdsAdapterScript = preload("res://src/platform/ads/unavailable_rewarded_ads_adapter.gd")
 const HapticFeedbackTypeScript = preload("res://src/platform/haptics/haptic_feedback_type.gd")
 const AppLifecycleEventScript = preload("res://src/platform/lifecycle/app_lifecycle_event.gd")
@@ -59,6 +61,28 @@ func test_unavailable_rewarded_ads_adapter_returns_unavailable_result() -> void:
     assert_eq(result.placement, RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER)
     assert_eq(result.outcome, RewardedAdOutcomeScript.Value.UNAVAILABLE)
     assert_false(result.reward_granted)
+
+func test_desktop_preview_rewarded_ads_adapter_returns_completed_rewards() -> void:
+    var adapter: DesktopPreviewRewardedAdsAdapterScript = DesktopPreviewRewardedAdsAdapterScript.new()
+    var raw_result: RefCounted = adapter.show(RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER)
+
+    assert_true(adapter.can_show(RewardedAdPlacementScript.Value.CONTINUE))
+    assert_true(adapter.can_show(RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER))
+    assert_true(adapter.can_show(RewardedAdPlacementScript.Value.PRE_RUN_VENDING_MACHINE))
+    assert_true(raw_result is RewardedAdResultScript)
+    var result: RewardedAdResultScript = raw_result as RewardedAdResultScript
+    assert_eq(result.placement, RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER)
+    assert_eq(result.outcome, RewardedAdOutcomeScript.Value.COMPLETED)
+    assert_true(result.reward_granted)
+
+func test_rewarded_ads_adapter_factory_uses_desktop_preview_only_for_desktop_runtime() -> void:
+    var desktop_adapter: RefCounted = RewardedAdsAdapterFactoryScript.create_for_runtime("x11", "Linux")
+    var headless_adapter: RefCounted = RewardedAdsAdapterFactoryScript.create_for_runtime("headless", "Linux")
+    var android_adapter: RefCounted = RewardedAdsAdapterFactoryScript.create_for_runtime("vulkan", "Android")
+
+    assert_true(desktop_adapter is DesktopPreviewRewardedAdsAdapterScript)
+    assert_true(headless_adapter is UnavailableRewardedAdsAdapterScript)
+    assert_true(android_adapter is UnavailableRewardedAdsAdapterScript)
 
 func test_haptics_and_lifecycle_contract_enums_cover_supported_values() -> void:
     assert_true(HapticFeedbackTypeScript.is_valid(HapticFeedbackTypeScript.Value.LIGHT_IMPACT))
