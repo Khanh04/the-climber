@@ -17,7 +17,7 @@ This roadmap continues after the MVP implementation sequence in [implementation-
 - Desktop remains a development and testing surface, not a release target.
 - The launch control model is the simple two-thumb split: left thumb controls the left hand, right thumb controls the right hand.
 - `Hold` and `release` are the only required gestures for v1.0. Hidden smart reach assist is allowed; visible joysticks and complex gesture sets are not.
-- Optional hold-drag nudge stays behind playtest validation and does not block release.
+- Optional post-attach hold-drag nudge may remain in the prototype as a playtest-gated comfort layer and does not block release.
 
 ## Phase 12: Release Scope And Control Lock
 
@@ -28,7 +28,7 @@ Implementation outcomes:
 - Define the Android-first v1.0 feature set and explicitly separate launch scope from post-launch scope.
 - Lock the mobile control baseline as split-screen two-thumb grip alternation.
 - Define hidden smart reach assist rules so auto-grab stays fair without adding UI complexity.
-- Keep hold-drag nudge as an optional follow-up path, not a release dependency.
+- Keep post-attach hold-drag nudge as an optional follow-up path, not a release dependency.
 - Record the placeholder policy for the release track: readable placeholders are acceptable until the final presentation phase.
 
 Acceptance gates:
@@ -47,6 +47,7 @@ Implementation outcomes:
 - Tune grip reliability, stamina readability, camera smoothing, fall timing, and rescue restoration around the locked control model.
 - Add basic but meaningful haptics and UI feedback for grip, release, warning, pickup, rescue, and fail states.
 - Add the first accessibility-oriented touch settings that improve comfort without adding new mechanics.
+- Validate whether the current post-attach drag-nudge prototype stays an optional comfort layer or graduates into the supported launch control set.
 
 Acceptance gates:
 

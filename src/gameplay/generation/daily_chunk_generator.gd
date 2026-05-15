@@ -22,9 +22,24 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
     var route_slot: int = get_route_slot_for_chunk(chunk_index, difficulty_band)
     var chunk_rng: RandomNumberGenerator = _build_chunk_rng(seed_key, chunk_index)
     var chunk_type: int = _select_chunk_type(route_slot, difficulty_band, chunk_rng)
+    var risky_lane_side_sign: float = _get_risky_lane_side_sign(seed_key, chunk_index, chunk_type)
     var handholds: Array[GeneratedHandholdSocket] = _build_handholds(chunk_index, chunk_type, difficulty_band, chunk_rng)
-    var pickup_sockets: Array[GeneratedPickupSocket] = _build_pickup_sockets(chunk_index, handholds, chunk_rng)
-    var hazard_sockets: Array[GeneratedHazardSocket] = _build_hazard_sockets(chunk_index, route_slot, difficulty_band, handholds, chunk_rng)
+    var pickup_sockets: Array[GeneratedPickupSocket] = _build_pickup_sockets(
+        chunk_index,
+        chunk_type,
+        risky_lane_side_sign,
+        handholds,
+        chunk_rng
+    )
+    var hazard_sockets: Array[GeneratedHazardSocket] = _build_hazard_sockets(
+        chunk_index,
+        chunk_type,
+        route_slot,
+        difficulty_band,
+        risky_lane_side_sign,
+        handholds,
+        chunk_rng
+    )
 
     return GeneratedChunkLayout.new(
         seed_key,
@@ -150,29 +165,43 @@ func _build_handholds(
 ) -> Array[GeneratedHandholdSocket]:
     ChunkType.assert_valid(chunk_type)
     ChunkDifficultyBand.assert_valid(difficulty_band)
+    Validation.require_condition(chunk_rng != null, "DailyChunkGenerator requires an RNG when building handholds.")
 
     if chunk_index == 0:
         return _build_opener_handholds(chunk_type, chunk_rng)
 
     var lane_positions: Array[float] = _get_lane_positions(chunk_rng)
-    var lane_pattern: Array[int] = _get_lane_pattern(chunk_type)
+    var hold_rows: Array[PackedInt32Array] = _get_hold_rows(chunk_type)
     var handholds: Array[GeneratedHandholdSocket] = []
+    Validation.require_condition(hold_rows.size() > 0, "DailyChunkGenerator requires at least one handhold row.")
     var vertical_span_meters: float = _tuning.segment_height_meters - 3.0
-    var step_height_meters: float = vertical_span_meters / float(lane_pattern.size() + 1)
+    var step_height_meters: float = vertical_span_meters / float(hold_rows.size() + 1)
     var jitter_scale: float = _get_vertical_jitter_scale(difficulty_band)
+    var handhold_sequence_index: int = 0
 
-    for handhold_index in range(lane_pattern.size()):
-        var lane_index: int = lane_pattern[handhold_index]
-        Validation.require_condition(lane_index >= 0 and lane_index < lane_positions.size(), "DailyChunkGenerator lane pattern index is out of bounds.")
+    for row_index in range(hold_rows.size()):
+        var row_lane_indices: PackedInt32Array = hold_rows[row_index]
+        Validation.require_condition(row_lane_indices.size() > 0, "DailyChunkGenerator handhold rows cannot be empty.")
 
-        var height_meters: float = 1.5 + (step_height_meters * float(handhold_index + 1))
-        var height_jitter: float = chunk_rng.randf_range(-jitter_scale, jitter_scale)
-        var local_position: Vector2 = Vector2(
-            lane_positions[lane_index] + chunk_rng.randf_range(-0.18, 0.18),
-            -(height_meters + height_jitter)
-        )
-        var handhold_id: StringName = StringName("chunk_%02d_hold_%02d" % [chunk_index, handhold_index])
-        handholds.append(GeneratedHandholdSocket.new(handhold_id, local_position, 1.0))
+        var row_height_meters: float = 1.5 + (step_height_meters * float(row_index + 1))
+        var row_height_jitter: float = chunk_rng.randf_range(-(jitter_scale * 0.65), jitter_scale * 0.65)
+        var horizontal_jitter_scale: float = _get_horizontal_jitter_scale(difficulty_band, row_lane_indices.size())
+
+        for lane_entry_index in range(row_lane_indices.size()):
+            var lane_index: int = row_lane_indices[lane_entry_index]
+            Validation.require_condition(lane_index >= 0 and lane_index < lane_positions.size(), "DailyChunkGenerator lane pattern index is out of bounds.")
+
+            var hold_height_jitter: float = 0.0
+            if row_lane_indices.size() > 1:
+                hold_height_jitter = chunk_rng.randf_range(-0.08, 0.08)
+
+            var local_position: Vector2 = Vector2(
+                _clamp_local_x(lane_positions[lane_index] + chunk_rng.randf_range(-horizontal_jitter_scale, horizontal_jitter_scale)),
+                -(row_height_meters + row_height_jitter + hold_height_jitter)
+            )
+            var handhold_id: StringName = StringName("chunk_%02d_hold_%02d" % [chunk_index, handhold_sequence_index])
+            handholds.append(GeneratedHandholdSocket.new(handhold_id, local_position, 1.0))
+            handhold_sequence_index += 1
 
     return handholds
 
@@ -233,19 +262,25 @@ func _get_opener_handhold_positions(chunk_type: int) -> Array[Vector2]:
 
 func _build_pickup_sockets(
     chunk_index: int,
+    chunk_type: int,
+    risky_lane_side_sign: float,
     handholds: Array[GeneratedHandholdSocket],
     chunk_rng: RandomNumberGenerator
 ) -> Array[GeneratedPickupSocket]:
     Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator requires handholds before generating pickup sockets.")
+    ChunkType.assert_valid(chunk_type)
+    Validation.require_condition(chunk_rng != null, "DailyChunkGenerator requires an RNG when generating pickup sockets.")
 
-    var pickup_socket_count: int = ceili(float(_tuning.socket_count_per_chunk) * 0.6)
+    var pickup_socket_count: int = _tuning.get_pickup_socket_count()
     var pickup_sockets: Array[GeneratedPickupSocket] = []
+    var pickup_anchor_pool: Array[GeneratedHandholdSocket] = _get_pickup_anchor_pool(chunk_type, risky_lane_side_sign, handholds)
 
     for socket_index in range(pickup_socket_count):
-        var anchor_index: int = (socket_index * 2) % handholds.size()
-        var anchor_socket: GeneratedHandholdSocket = handholds[anchor_index]
+        var anchor_index: int = socket_index % pickup_anchor_pool.size()
+        var anchor_socket: GeneratedHandholdSocket = pickup_anchor_pool[anchor_index]
+        var lateral_offset: float = chunk_rng.randf_range(-_tuning.pickup_lateral_offset_meters, _tuning.pickup_lateral_offset_meters)
         var local_position: Vector2 = Vector2(
-            _clamp_local_x(anchor_socket.local_position.x + chunk_rng.randf_range(-0.45, 0.45)),
+            _clamp_local_x(anchor_socket.local_position.x + lateral_offset),
             anchor_socket.local_position.y - 0.65
         )
         var socket_id: StringName = StringName("chunk_%02d_pickup_%02d" % [chunk_index, socket_index])
@@ -255,28 +290,32 @@ func _build_pickup_sockets(
 
 func _build_hazard_sockets(
     chunk_index: int,
+    chunk_type: int,
     route_slot: int,
     difficulty_band: int,
+    risky_lane_side_sign: float,
     handholds: Array[GeneratedHandholdSocket],
     chunk_rng: RandomNumberGenerator
 ) -> Array[GeneratedHazardSocket]:
     Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator requires handholds before generating hazard sockets.")
+    ChunkType.assert_valid(chunk_type)
     ChunkRouteSlot.assert_valid(route_slot)
     ChunkDifficultyBand.assert_valid(difficulty_band)
+    Validation.require_condition(chunk_rng != null, "DailyChunkGenerator requires an RNG when generating hazard sockets.")
 
-    var pickup_socket_count: int = ceili(float(_tuning.socket_count_per_chunk) * 0.6)
-    var hazard_socket_count: int = maxi(0, _tuning.socket_count_per_chunk - pickup_socket_count)
+    var hazard_socket_count: int = _tuning.get_hazard_socket_count()
     var hazard_sockets: Array[GeneratedHazardSocket] = []
+    var hazard_anchor_pool: Array[GeneratedHandholdSocket] = _get_hazard_anchor_pool(chunk_type, risky_lane_side_sign, handholds)
     var hazard_anchor_offset: int = 0
 
-    if chunk_index == 0 and handholds.size() > 3:
+    if chunk_index == 0 and hazard_anchor_pool.size() > 3:
         hazard_anchor_offset = 2
 
     for socket_index in range(hazard_socket_count):
-        var lower_handhold_index: int = mini(hazard_anchor_offset + (socket_index * 2), handholds.size() - 1)
-        var upper_handhold_index: int = mini(lower_handhold_index + 1, handholds.size() - 1)
-        var lower_handhold: GeneratedHandholdSocket = handholds[lower_handhold_index]
-        var upper_handhold: GeneratedHandholdSocket = handholds[upper_handhold_index]
+        var lower_handhold_index: int = mini(hazard_anchor_offset + socket_index, hazard_anchor_pool.size() - 1)
+        var upper_handhold_index: int = mini(lower_handhold_index + 1, hazard_anchor_pool.size() - 1)
+        var lower_handhold: GeneratedHandholdSocket = hazard_anchor_pool[lower_handhold_index]
+        var upper_handhold: GeneratedHandholdSocket = hazard_anchor_pool[upper_handhold_index]
         var midpoint: Vector2 = (lower_handhold.local_position + upper_handhold.local_position) * 0.5
         var hazard_kind: int = _select_hazard_kind(chunk_index, socket_index, route_slot, difficulty_band)
         var local_position: Vector2 = _build_hazard_local_position(hazard_kind, midpoint, chunk_rng)
@@ -340,10 +379,10 @@ func _build_hazard_local_position(hazard_kind: int, midpoint: Vector2, chunk_rng
 func _get_lane_positions(chunk_rng: RandomNumberGenerator) -> Array[float]:
     var half_width: float = _tuning.chunk_width_meters * 0.5
     var lane_positions: Array[float] = [
-        -(half_width * 0.78),
-        -(half_width * 0.26),
-        half_width * 0.26,
-        half_width * 0.78,
+        -(half_width * _tuning.outer_lane_position_ratio),
+        -(half_width * _tuning.inner_lane_position_ratio),
+        half_width * _tuning.inner_lane_position_ratio,
+        half_width * _tuning.outer_lane_position_ratio,
     ]
 
     if chunk_rng.randi_range(0, 1) == 1:
@@ -351,29 +390,28 @@ func _get_lane_positions(chunk_rng: RandomNumberGenerator) -> Array[float]:
 
     return lane_positions
 
-func _get_lane_pattern(chunk_type: int) -> Array[int]:
+func _get_hold_rows(chunk_type: int) -> Array[PackedInt32Array]:
     ChunkType.assert_valid(chunk_type)
+    return _tuning.get_hold_rows(chunk_type)
 
-    match chunk_type:
-        ChunkType.Value.LADDER:
-            return [1, 2, 1, 2, 1, 2, 1, 2]
-        ChunkType.Value.ZIGZAG:
-            return [0, 3, 0, 3, 1, 2, 1, 2]
-        ChunkType.Value.WIDE_TRAVERSE:
-            return [0, 1, 2, 3, 2, 1, 2, 3]
-        ChunkType.Value.SPARSE_REACH:
-            return [0, 3, 1, 2, 0, 3]
-        ChunkType.Value.DENSE_RECOVERY:
-            return [1, 0, 2, 1, 3, 2, 1, 0, 2, 1]
-        ChunkType.Value.FORK:
-            return [1, 0, 2, 1, 3, 2, 1, 0]
-        ChunkType.Value.RISK_LANE:
-            return [1, 1, 0, 2, 3, 2, 1, 3]
-        ChunkType.Value.SWING_GAP:
-            return [0, 0, 3, 3, 1, 2, 0]
+func _get_horizontal_jitter_scale(difficulty_band: int, hold_count_in_row: int) -> float:
+    ChunkDifficultyBand.assert_valid(difficulty_band)
+    Validation.require_condition(hold_count_in_row > 0, "DailyChunkGenerator handhold rows require at least one hold when calculating jitter.")
+
+    var base_scale: float = 0.08
+    if hold_count_in_row == 1:
+        base_scale = 0.12
+
+    match difficulty_band:
+        ChunkDifficultyBand.Value.EASY:
+            return base_scale
+        ChunkDifficultyBand.Value.BASELINE:
+            return base_scale + 0.02
+        ChunkDifficultyBand.Value.CHALLENGE:
+            return base_scale + 0.04
         _:
-            Validation.require_condition(false, "DailyChunkGenerator requires a supported chunk type for lane pattern generation.")
-            return []
+            Validation.require_condition(false, "DailyChunkGenerator requires a supported difficulty band for horizontal jitter scaling.")
+            return 0.0
 
 func _get_vertical_jitter_scale(difficulty_band: int) -> float:
     ChunkDifficultyBand.assert_valid(difficulty_band)
@@ -388,6 +426,84 @@ func _get_vertical_jitter_scale(difficulty_band: int) -> float:
         _:
             Validation.require_condition(false, "DailyChunkGenerator requires a supported difficulty band for jitter scaling.")
             return 0.0
+
+func _get_risky_lane_side_sign(seed_key: String, chunk_index: int, chunk_type: int) -> float:
+    ChunkType.assert_valid(chunk_type)
+    Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when selecting a risky lane side.")
+
+    if not _supports_lane_choice(chunk_type):
+        return 0.0
+
+    var side_seed_key: String = "%s:chunk:%d:type:%d:risky_lane" % [seed_key, chunk_index, chunk_type]
+    var side_hash: int = side_seed_key.hash()
+    if side_hash < 0:
+        side_hash = -side_hash
+
+    if (side_hash % 2) == 0:
+        return -1.0
+
+    return 1.0
+
+func _supports_lane_choice(chunk_type: int) -> bool:
+    ChunkType.assert_valid(chunk_type)
+
+    match chunk_type:
+        ChunkType.Value.ZIGZAG:
+            return true
+        ChunkType.Value.WIDE_TRAVERSE:
+            return true
+        ChunkType.Value.FORK:
+            return true
+        ChunkType.Value.RISK_LANE:
+            return true
+        _:
+            return false
+
+func _get_pickup_anchor_pool(
+    chunk_type: int,
+    risky_lane_side_sign: float,
+    handholds: Array[GeneratedHandholdSocket]
+) -> Array[GeneratedHandholdSocket]:
+    ChunkType.assert_valid(chunk_type)
+    Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator pickup anchor selection requires handholds.")
+
+    if not _supports_lane_choice(chunk_type) or risky_lane_side_sign == 0.0:
+        return handholds
+
+    return _filter_handholds_to_side(handholds, risky_lane_side_sign, _tuning.pickup_branch_side_alignment_meters)
+
+func _get_hazard_anchor_pool(
+    chunk_type: int,
+    risky_lane_side_sign: float,
+    handholds: Array[GeneratedHandholdSocket]
+) -> Array[GeneratedHandholdSocket]:
+    ChunkType.assert_valid(chunk_type)
+    Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator hazard anchor selection requires handholds.")
+
+    if not _supports_lane_choice(chunk_type) or risky_lane_side_sign == 0.0:
+        return handholds
+
+    return _filter_handholds_to_side(handholds, risky_lane_side_sign, _tuning.hazard_branch_side_alignment_meters)
+
+func _filter_handholds_to_side(
+    handholds: Array[GeneratedHandholdSocket],
+    side_sign: float,
+    minimum_alignment: float
+) -> Array[GeneratedHandholdSocket]:
+    Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator side filtering requires handholds.")
+    Validation.require_condition(side_sign == -1.0 or side_sign == 1.0, "DailyChunkGenerator side filtering requires a valid side sign.")
+    Validation.require_condition(minimum_alignment >= 0.0, "DailyChunkGenerator side filtering minimum alignment cannot be negative.")
+
+    var filtered_handholds: Array[GeneratedHandholdSocket] = []
+    for handhold in handholds:
+        if handhold.local_position.x * side_sign >= minimum_alignment:
+            filtered_handholds.append(handhold)
+
+    Validation.require_condition(
+        filtered_handholds.size() > 0,
+        "DailyChunkGenerator branchable chunk types require aligned handholds for lane-biased placement."
+    )
+    return filtered_handholds
 
 func _clamp_local_x(local_x: float) -> float:
     var half_width: float = _tuning.chunk_width_meters * 0.5

@@ -117,6 +117,93 @@ func test_generator_assigns_specific_hazard_kinds_by_route_pressure() -> void:
     assert_eq(challenge_skill_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.DOWNDRAFT)
     assert_eq(pressure_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.SPIKE_CLUSTER)
 
+func test_dense_recovery_chunks_offer_more_handhold_options_than_sparse_reach_chunks() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_keys: PackedStringArray = PackedStringArray([
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.from_utc_date(2026, 5, 15),
+    ])
+
+    var dense_layout: GeneratedChunkLayoutScript = _find_layout_by_chunk_type(generator, seed_keys, ChunkTypeScript.Value.DENSE_RECOVERY)
+    var sparse_layout: GeneratedChunkLayoutScript = _find_layout_by_chunk_type(generator, seed_keys, ChunkTypeScript.Value.SPARSE_REACH)
+
+    assert_gte(dense_layout.handholds.size(), 12)
+    assert_lte(sparse_layout.handholds.size(), 8)
+    assert_gt(dense_layout.handholds.size(), sparse_layout.handholds.size())
+
+func test_fork_chunks_preserve_left_and_right_paths_across_multiple_rows() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_keys: PackedStringArray = PackedStringArray([
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.from_utc_date(2026, 5, 15),
+    ])
+    var lane_choice_threshold: float = _get_lane_choice_threshold(tuning)
+
+    var fork_layout: GeneratedChunkLayoutScript = _find_layout_by_chunk_type(generator, seed_keys, ChunkTypeScript.Value.FORK)
+
+    assert_gte(_count_rows_with_dual_side_options(fork_layout.handholds, lane_choice_threshold), 4)
+
+func test_risk_lane_chunks_bias_hazards_and_pickups_to_shared_risky_side() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_keys: PackedStringArray = PackedStringArray([
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.from_utc_date(2026, 5, 15),
+    ])
+    var lane_choice_threshold: float = _get_lane_choice_threshold(tuning)
+
+    var risk_layout: GeneratedChunkLayoutScript = _find_layout_by_chunk_type(generator, seed_keys, ChunkTypeScript.Value.RISK_LANE)
+    var pickup_side_score: int = _pickup_side_score(risk_layout.pickup_sockets, lane_choice_threshold)
+    var hazard_side_score: int = _hazard_side_score(risk_layout.hazard_sockets, lane_choice_threshold)
+
+    assert_gte(_count_rows_with_dual_side_options(risk_layout.handholds, lane_choice_threshold), 3)
+    assert_true(pickup_side_score != 0)
+    assert_true(hazard_side_score != 0)
+    assert_gt(pickup_side_score * hazard_side_score, 0)
+    assert_gte(absi(pickup_side_score), 2)
+    assert_gte(absi(hazard_side_score), 2)
+
+func test_custom_tuning_changes_fork_branch_shape_and_socket_split() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    tuning.pickup_socket_ratio = 0.75
+    var custom_fork_hold_rows: Array[PackedInt32Array] = [
+        PackedInt32Array([1, 2]),
+        PackedInt32Array([0, 3]),
+        PackedInt32Array([0, 3]),
+    ]
+    tuning.fork_hold_rows = custom_fork_hold_rows
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_keys: PackedStringArray = PackedStringArray([
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.from_utc_date(2026, 5, 15),
+    ])
+
+    var fork_layout: GeneratedChunkLayoutScript = _find_layout_by_chunk_type(generator, seed_keys, ChunkTypeScript.Value.FORK)
+
+    assert_eq(fork_layout.handholds.size(), 6)
+    assert_eq(fork_layout.pickup_sockets.size(), tuning.get_pickup_socket_count())
+    assert_eq(fork_layout.hazard_sockets.size(), tuning.get_hazard_socket_count())
+
+func test_custom_branch_alignment_threshold_pushes_biased_sockets_to_outer_lanes() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    tuning.pickup_branch_side_alignment_meters = 0.8
+    tuning.hazard_branch_side_alignment_meters = 0.8
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_keys: PackedStringArray = PackedStringArray([
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.from_utc_date(2026, 5, 15),
+    ])
+
+    var risk_layout: GeneratedChunkLayoutScript = _find_layout_by_chunk_type(generator, seed_keys, ChunkTypeScript.Value.RISK_LANE)
+
+    for pickup_socket in risk_layout.pickup_sockets:
+        assert_gte(absf(pickup_socket.local_position.x), 0.5)
+
+    for hazard_socket in risk_layout.hazard_sockets:
+        assert_gte(absf(hazard_socket.local_position.x), 0.5)
+
 func _layout_signature(layout: RefCounted) -> String:
     var typed_layout: GeneratedChunkLayoutScript = _require_chunk_layout(layout)
     var signature_parts: PackedStringArray = PackedStringArray([
@@ -151,6 +238,71 @@ func _layout_signature(layout: RefCounted) -> String:
 func _require_chunk_layout(layout: RefCounted) -> GeneratedChunkLayoutScript:
     assert_true(layout is GeneratedChunkLayoutScript)
     return layout as GeneratedChunkLayoutScript
+
+func _find_layout_by_chunk_type(
+    generator: DailyChunkGeneratorScript,
+    seed_keys: PackedStringArray,
+    chunk_type: int
+) -> GeneratedChunkLayoutScript:
+    ChunkTypeScript.assert_valid(chunk_type)
+
+    for seed_key in seed_keys:
+        for chunk_index in range(1, 41):
+            var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, chunk_index))
+            if layout.chunk_type == chunk_type:
+                return layout
+
+    fail_test("Expected to find chunk type %s in the scanned layouts." % _chunk_type_name(chunk_type))
+    return _require_chunk_layout(generator.build_chunk(seed_keys[0], 1))
+
+func _count_rows_with_dual_side_options(handholds: Array[GeneratedHandholdSocket], lane_choice_threshold: float) -> int:
+    var row_keys: Array[int] = []
+    var left_counts: Array[int] = []
+    var right_counts: Array[int] = []
+
+    for handhold in handholds:
+        var row_key: int = roundi(handhold.local_position.y * 2.0)
+        var row_index: int = row_keys.find(row_key)
+        if row_index == -1:
+            row_index = row_keys.size()
+            row_keys.append(row_key)
+            left_counts.append(0)
+            right_counts.append(0)
+
+        if handhold.local_position.x <= -lane_choice_threshold:
+            left_counts[row_index] += 1
+        elif handhold.local_position.x >= lane_choice_threshold:
+            right_counts[row_index] += 1
+
+    var dual_side_row_count: int = 0
+    for row_index in range(row_keys.size()):
+        if left_counts[row_index] > 0 and right_counts[row_index] > 0:
+            dual_side_row_count += 1
+
+    return dual_side_row_count
+
+func _pickup_side_score(pickup_sockets: Array[GeneratedPickupSocket], lane_choice_threshold: float) -> int:
+    var side_score: int = 0
+    for pickup_socket in pickup_sockets:
+        if pickup_socket.local_position.x <= -lane_choice_threshold:
+            side_score -= 1
+        elif pickup_socket.local_position.x >= lane_choice_threshold:
+            side_score += 1
+
+    return side_score
+
+func _hazard_side_score(hazard_sockets: Array[GeneratedHazardSocket], lane_choice_threshold: float) -> int:
+    var side_score: int = 0
+    for hazard_socket in hazard_sockets:
+        if hazard_socket.local_position.x <= -lane_choice_threshold:
+            side_score -= 1
+        elif hazard_socket.local_position.x >= lane_choice_threshold:
+            side_score += 1
+
+    return side_score
+
+func _get_lane_choice_threshold(tuning: GenerationTuningScript) -> float:
+    return (tuning.chunk_width_meters * 0.5 * tuning.inner_lane_position_ratio) * 0.5
 
 func _has_handhold_within_distance(
     handholds: Array[GeneratedHandholdSocket],

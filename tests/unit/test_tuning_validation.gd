@@ -75,6 +75,31 @@ func test_generation_tuning_rejects_non_increasing_difficulty_band_heights() -> 
 
     assert_false(tuning.is_valid())
 
+func test_generation_tuning_rejects_invalid_lane_position_ratios() -> void:
+    var tuning = GenerationTuningScript.new()
+    tuning.inner_lane_position_ratio = tuning.outer_lane_position_ratio
+
+    assert_false(tuning.is_valid())
+
+func test_generation_tuning_rejects_invalid_pickup_socket_ratio() -> void:
+    var tuning = GenerationTuningScript.new()
+    tuning.pickup_socket_ratio = 1.0
+
+    assert_false(tuning.is_valid())
+
+func test_generation_tuning_rejects_invalid_branch_side_alignment() -> void:
+    var tuning = GenerationTuningScript.new()
+    tuning.pickup_branch_side_alignment_meters = 2.0
+
+    assert_false(tuning.is_valid())
+
+func test_generation_tuning_rejects_out_of_range_hold_rows() -> void:
+    var tuning = GenerationTuningScript.new()
+    var invalid_fork_hold_rows: Array[PackedInt32Array] = [PackedInt32Array([4])]
+    tuning.fork_hold_rows = invalid_fork_hold_rows
+
+    assert_false(tuning.is_valid())
+
 func test_default_chaser_tuning_is_valid() -> void:
     var tuning = ChaserTuningScript.new()
 

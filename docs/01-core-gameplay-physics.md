@@ -13,7 +13,7 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 - Two grip inputs mapped to the left and right screen halves, ragdoll gripping, one-hand stamina drain, fall camera, recoverable run-end state, and first-run onboarding.
 - The launch touch baseline is simple two-thumb grip alternation. No visible joystick, tap-to-target mode, or multi-step gesture grammar is required.
 - Desktop controls exist only as a development/testing fallback.
-- Hidden smart reach assist is allowed if it preserves fairness. Hold-drag nudge and accelerometer tilt assist stay optional until the pure hold and release baseline is validated.
+- Hidden smart reach assist is allowed if it preserves fairness. The current mobile prototype also allows a post-attach same-thumb drag nudge as an optional comfort layer, while accelerometer tilt assist stays deferred until the baseline validates.
 
 ## Core Requirements
 
@@ -24,6 +24,7 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 - While a grip input is held, the game casts a check for a valid reachable handhold.
 - If multiple holds are valid, hidden smart reach assist may bias toward the fairest reachable upward-progressing hold without changing the player's intent.
 - If the check intersects a valid handhold, the corresponding hand locks to that point using a physics joint.
+- After a successful one-hand attachment, the current mobile prototype also allows a short same-thumb drag nudge that biases pull direction for the free hand without replacing grip and release as the primary controls.
 - Releasing one hand shifts the character into pendulum-style swinging.
 - The launch baseline derives swing from grip timing, body motion, and route geometry rather than a separate momentum gesture layer.
 - Hanging by a single hand drains stamina.
@@ -73,6 +74,7 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 - Store the currently attached hold and joint reference per hand to simplify release and forced-break logic.
 - Normalize mobile touch and desktop debug controls into the same typed gameplay intent layer before player systems consume them.
 - Treat smart reach assist as a hidden comfort rule only. It may prefer fair reachable holds, but it must never grab through hazards, across unreasonable gaps, or onto misleading off-route geometry.
+- The current drag-nudge prototype should stay local to the active thumb and only activate after attachment, so the game still reads as a grip-first control scheme rather than a virtual joystick.
 
 ### Onboarding Flow
 
@@ -101,7 +103,7 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 
 ## Post-MVP
 
-- Hold-drag nudge if mobile playtests prove the pure hold and release baseline needs a comfort layer.
+- Expanded pull variants or tap-to-latch alternatives if the current post-attach drag nudge still leaves the mobile baseline too indirect.
 - Accelerometer tilt assist if the simpler touch baseline validates first.
 - Accessibility presets for grip zones, control size, haptic intensity, and input sensitivity.
 - Additional rescue categories for non-lethal slapstick hazards if playtests show they improve retention.
