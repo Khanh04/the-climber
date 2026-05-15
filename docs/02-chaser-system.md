@@ -11,6 +11,7 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 ## MVP Scope
 
 - A single full-width rising `Area2D` kill-zone with one default visual theme and one audio profile.
+- First-run onboarding may delay or temporarily disable the Chaser until the player clears the basic grip tutorial or reaches a safe opening height.
 - Chaser contact is final and not eligible for Rewarded Continue or Mulligan Drone rescue.
 - Rubber-banding uses simple, inspectable thresholds before adding more advanced pacing curves.
 
@@ -18,12 +19,14 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 
 ### Chaser Behavior
 
-- The Chaser constantly rises from the bottom of the screen.
+- The Chaser constantly rises from the bottom of the screen once normal run pressure begins.
+- On onboarding runs, the Chaser may start late or remain disabled until the safe opener is complete.
 - It is implemented as an `Area2D` spanning the full level width.
 - Any player contact with the Chaser immediately ends the run.
 
 ### Rubber-Banding
 
+- Activate rubber-banding only after any onboarding grace period ends.
 - If the player remains at roughly the same Y position for more than 5 seconds, the Chaser speeds up.
 - If the player is climbing rapidly, the Chaser slows down.
 - The goal is tension maintenance, not forcing a pure speedrun.
@@ -47,6 +50,7 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 - Track recent player vertical progress over time rather than relying on instantaneous velocity only.
 - Use a bounded speed range for the Chaser so rubber-banding remains predictable.
 - Separate base speed from temporary pressure modifiers so balancing remains data-driven.
+- Model onboarding grace as explicit config or run state so tutorial exceptions do not leak into normal runs.
 - The initial implementation uses typed Chaser tuning data for base rise speed, camping bonus speed, rapid-climb slowdown, and spawn offset.
 - The current implementation also exposes a typed feedback snapshot containing pace state, recent vertical progress, rise speed, and normalized speed intensity for presentation and playtest tooling.
 
@@ -54,6 +58,7 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 
 - Keep the Chaser collision behavior simple and authoritative.
 - Death on contact should bypass partial damage logic and immediately resolve the run state.
+- Once the Chaser becomes active, onboarding should not grant partial immunity or rescue exceptions.
 - Chaser death should still allow the fall/death camera beat if visually useful, but it should not offer rescue.
 - The current run-scene integration resolves Chaser contact as `CHASER_CONTACT`, releases active grips, forces falling physics, and ends the run without rescue eligibility.
 
@@ -75,6 +80,7 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 ## Open Questions
 
 - What should the initial Chaser spawn distance be below the player?
+- Should onboarding grace end on a timer, on the first clean left-right alternation, or on a height milestone?
 
 ## Risks
 
@@ -88,4 +94,4 @@ Introduce a rising environmental kill-zone that prevents stalling while preservi
 2. Choose and tune the initial spawn distance now that it is exposed through validated config.
 3. Refine or replace the current default Chaser loop asset once audio direction is locked.
 4. Use the run-scene pacing snapshot and feedback intensity hooks to capture playtest notes for camping and near-contact pressure.
-5. Evaluate whether first-run onboarding needs a delayed Chaser start in a later phase.
+5. Prototype and playtest the onboarding Chaser gate, then choose whether it ends on time or on a first-height milestone.

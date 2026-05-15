@@ -10,6 +10,7 @@ This repository is currently initialized as a docs-first scaffold based on the p
 - [04-economy-monetization.md](./04-economy-monetization.md): Coins, rewarded ads, store structure, and consumables.
 - [05-meta-viral-features.md](./05-meta-viral-features.md): Replay capture, facecam overlay, friend ghosts, and fall sprays.
 - [implementation-roadmap.md](./implementation-roadmap.md): Dependency-managed MVP implementation sequence, architecture gates, and recommended next sprint.
+- [release-roadmap.md](./release-roadmap.md): Android-first post-MVP release phases, launch assumptions, and the final presentation pass.
 
 ## Shared Project Assumptions
 
@@ -38,6 +39,10 @@ The detailed implementation sequence lives in [implementation-roadmap.md](./impl
 5. Add normal coin pickup, special coin stacks, and a minimal wallet.
 6. Add Rewarded Continue, Post-run Coin Doubler, and Pre-run Vending Machine.
 7. Add cosmetic loadout plumbing without gameplay-affecting stats.
+
+## Release Track
+
+Once the MVP loop is stable, the post-MVP path to Android v1.0 lives in [release-roadmap.md](./release-roadmap.md).
 
 ## Pending Clarifications
 

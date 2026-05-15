@@ -11,24 +11,25 @@ Build replayable, shareable, and community-visible systems that amplify memorabl
 ## MVP Scope
 
 - Detect major falls and expose a lightweight share prompt after the fall resolves.
-- Save enough local event context to support future replay work, but do not require native video capture for MVP.
-- Defer facecam, full rolling video export, friend ghosts, and persistent fall sprays until the core loop proves retention.
+- Android v1.0 share baseline is a screenshot or engine-composed share card, not native rolling video capture.
+- Save enough local fall context to support future replay and ghost work without backend, account, or always-on recording requirements.
+- Defer facecam, full rolling video export, friend ghosts, persistent fall sprays, and other backend-heavy comparison features until after launch.
 
 ## Core Requirements
 
 ### Social Capture
 
 - Monitor `linear_velocity` and altitude loss.
-- If a major fall is detected, automatically preserve the last 10 seconds of gameplay.
-- After the fall, prompt the player with a share action for TikTok or Reels.
-- MVP can start with a shareable screenshot or lightweight clip stub if full native recording is not ready.
+- If a major fall is detected, preserve lightweight local context for a screenshot or share-card payload.
+- After the fall and any rescue or result beats resolve, prompt the player with a native share action.
+- The launch share should target a screenshot or engine-composed card sized for short-form social posting.
 
 ### Facecam Overlay
 
 - Provide a toggleable UI element.
 - The overlay activates the device front-facing camera.
 - The camera feed appears in a screen corner while the player records.
-- Facecam is post-MVP unless platform integration cost is proven low.
+- Facecam is post-launch unless platform integration cost, privacy posture, and device performance all remain low-risk.
 
 ### Asynchronous Multiplayer
 
@@ -36,13 +37,13 @@ Build replayable, shareable, and community-visible systems that amplify memorabl
 
 - Download friend death coordinates for the current daily seed.
 - Display them as chalk outlines or tombstones.
-- Friend ghosts are post-MVP unless the backend and account system already exist.
+- Friend ghosts are post-launch unless the backend and account system already exist.
 
 #### Fall Sprays
 
 - If equipped, the player leaves a spray-paint decal at the exact death coordinates.
 - Sprays accumulate over time to build a visible history of failures near the tower base.
-- Persistent fall sprays are post-MVP and require moderation and retention rules.
+- Persistent fall sprays are post-launch and require moderation and retention rules.
 
 #### Deferred Global Features
 
@@ -51,12 +52,13 @@ Build replayable, shareable, and community-visible systems that amplify memorabl
 
 ## Implementation Notes
 
-### Replay Buffering
+### Highlight Capture
 
-- Capture a rolling gameplay buffer rather than writing full-session video by default.
+- Capture a still image or share-card payload by default rather than writing full-session video.
 - Define a fall threshold using a combination of downward velocity, lost altitude, and outcome severity.
 - Keep the share prompt post-event so it does not interrupt the fall itself.
-- MVP should log the fall trigger event even if the first release only shares a screenshot.
+- Log the fall trigger event even if the first release only shares a screenshot.
+- Do not make the launch share flow depend on account login, backend storage, or camera permissions.
 
 ### Camera and Privacy
 
@@ -78,7 +80,7 @@ Build replayable, shareable, and community-visible systems that amplify memorabl
 
 ## Open Questions
 
-- Is the first share feature a screenshot, an engine-rendered clip, or native OS recording?
+- Should the first share feature use a raw screenshot, a branded share card, or a hybrid overlay?
 - What account/friends system will provide friend death coordinates?
 - How long should fall sprays persist, and are custom player-created spray images allowed?
 
@@ -92,7 +94,7 @@ Build replayable, shareable, and community-visible systems that amplify memorabl
 ## Suggested First Tasks
 
 1. Define the event trigger for a highlight-worthy fall.
-2. Prototype a 10-second rolling replay buffer.
-3. Design the per-seed data schema for ghosts and sprays.
-4. Scope platform requirements for front-camera overlay support.
-5. Define moderation and retention rules for persistent user-generated decals.
+2. Prototype a screenshot and share-card composition flow for the Android launch slice.
+3. Define the lightweight local fall context needed for future replay and ghost expansion.
+4. Scope native OS share requirements for Android before exploring facecam or video capture.
+5. Define moderation and retention rules for post-launch user-generated social features.

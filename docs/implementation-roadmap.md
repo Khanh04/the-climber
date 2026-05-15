@@ -2,6 +2,8 @@
 
 This roadmap turns the MVP docs into a dependency-managed implementation sequence. The guiding priority is to prove the playable climb loop early while keeping strict typed systems, thin scenes, validated Resources, platform adapters, tests, and docs aligned.
 
+For the Android-first post-MVP path to release, continue with [release-roadmap.md](./release-roadmap.md).
+
 ## Roadmap Principles
 
 - Build vertical slices before broad subsystems.
@@ -241,3 +243,5 @@ Sprint outcomes:
 - Add pause, resume, lifecycle, haptics, audio settings, and menu/store navigation polish behind typed boundaries.
 - Run a performance and UX pass across generated chunks, Chaser, pickups, player physics, ads, save/load, and the store shell.
 - Keep `sh scripts/validate.sh` green while auditing docs against implemented MVP behavior.
+
+After the MVP loop and Phase 11 polish are stable, move into the phased post-MVP release plan in [release-roadmap.md](./release-roadmap.md).

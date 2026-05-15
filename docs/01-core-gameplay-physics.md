@@ -10,22 +10,31 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 
 ## MVP Scope
 
-- Two grip inputs, virtual momentum control, ragdoll gripping, one-hand stamina drain, fall camera, and recoverable run-end state.
+- Two grip inputs mapped to the left and right screen halves, ragdoll gripping, one-hand stamina drain, fall camera, recoverable run-end state, and first-run onboarding.
+- The launch touch baseline is simple two-thumb grip alternation. No visible joystick, tap-to-target mode, or multi-step gesture grammar is required.
 - Desktop controls exist only as a development/testing fallback.
-- Accelerometer tilt assist is optional until the virtual control baseline feels reliable.
+- Hidden smart reach assist is allowed if it preserves fairness. Hold-drag nudge and accelerometer tilt assist stay optional until the pure hold and release baseline is validated.
 
 ## Core Requirements
 
 ### Movement and Controls
 
 - Inputs are limited to `Left Grip` and `Right Grip`.
-- Each grip input maps to either a screen half or a dedicated virtual button.
-- While a grip input is held, the game casts a check for a valid handhold.
+- On mobile, each grip input maps to its screen half. Do not require a separate visible joystick or momentum pad.
+- While a grip input is held, the game casts a check for a valid reachable handhold.
+- If multiple holds are valid, hidden smart reach assist may bias toward the fairest reachable upward-progressing hold without changing the player's intent.
 - If the check intersects a valid handhold, the corresponding hand locks to that point using a physics joint.
 - Releasing one hand shifts the character into pendulum-style swinging.
-- Mobile-first swing momentum uses virtual controls as the baseline, with accelerometer tilt assist as an optional enhancement.
+- The launch baseline derives swing from grip timing, body motion, and route geometry rather than a separate momentum gesture layer.
 - Hanging by a single hand drains stamina.
 - If stamina reaches zero while only one hand is attached, that grip breaks automatically.
+
+### First-Run Onboarding
+
+- The first run should open in a low-pressure route slice with obvious reachable holds and no early demand for advanced timing.
+- Teach only left grip, right grip, and release before surfacing optional settings or deeper economy systems.
+- Delay or disable early Chaser pressure until the player clears the first grip prompts or reaches a safe height milestone.
+- Tutorial prompts must remain readable with placeholder presentation and should not require text-heavy explanations during active physics.
 
 ### Player Character
 
@@ -63,6 +72,12 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 - Keep left-hand and right-hand attachment state independent.
 - Store the currently attached hold and joint reference per hand to simplify release and forced-break logic.
 - Normalize mobile touch and desktop debug controls into the same typed gameplay intent layer before player systems consume them.
+- Treat smart reach assist as a hidden comfort rule only. It may prefer fair reachable holds, but it must never grab through hazards, across unreasonable gaps, or onto misleading off-route geometry.
+
+### Onboarding Flow
+
+- Gate tutorial prompts, Chaser start, and other first-run-only affordances through explicit typed run state rather than scattered scene flags.
+- Drive onboarding prompts from actual successful grip and release events so the tutorial stays correct as control tuning changes.
 
 ### Stamina Rules
 
@@ -86,20 +101,22 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 
 ## Post-MVP
 
-- Accelerometer tilt assist if virtual controls validate the core loop first.
-- Accessibility presets for grip buttons, control size, and input sensitivity.
+- Hold-drag nudge if mobile playtests prove the pure hold and release baseline needs a comfort layer.
+- Accelerometer tilt assist if the simpler touch baseline validates first.
+- Accessibility presets for grip zones, control size, haptic intensity, and input sensitivity.
 - Additional rescue categories for non-lethal slapstick hazards if playtests show they improve retention.
 
 ## Open Questions
 
 - What is the target average stamina duration for a one-hand hang in the first 100 meters?
+- Should first-run Chaser pressure be fully disabled for the tutorial opener or simply delayed until a first height milestone?
 - If passive stamina regeneration is added later, should it happen only while both hands are attached or also while fully detached during a fall beat?
 - What minimum fall distance qualifies for the comedic camera follow before the result UI can appear?
 
 ## Risks
 
 - Two-hand physics can become unstable if joint creation and cleanup are not tightly managed.
-- Accelerometer-driven momentum may need fallback tuning for desktop testing and accessibility.
+- Adding extra gestures too early can obscure whether the base two-thumb loop is actually fun.
 - Heavy camera smoothing can fight with responsiveness if not damped differently during climb versus fall states.
 
 ## Suggested First Tasks
@@ -107,5 +124,5 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 1. Define the ragdoll scene structure and skeleton collision ownership.
 2. Implement per-hand grip acquisition and release.
 3. Add one-hand stamina drain and forced release.
-4. Tune pendulum movement and momentum input.
-5. Implement camera follow behavior for climb and fall states.
+4. Prototype first-run onboarding prompts and Chaser grace behavior around the two-thumb baseline.
+5. Implement camera follow behavior for climb and fall states, then tune pendulum movement around real touch playtests.

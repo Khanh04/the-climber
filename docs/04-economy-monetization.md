@@ -11,9 +11,11 @@ Create a progression and monetization layer that rewards risk, preserves fairnes
 ## MVP Scope
 
 - Normal coins bank immediately on pickup.
-- Special bonus coin stacks provide risk/reward physics chaos without threatening already-banked coins.
-- Rewarded Continue, Post-run Coin Doubler, and Pre-run Vending Machine are the only MVP ad placements.
-- Supporter subscription grants daily coins and removes future ad friction, but does not grant unlimited free rescues or boosters.
+- Rewarded Continue, Post-run Coin Doubler, and Pre-run Vending Machine are the launch rewarded-ad placements.
+- The launch store includes permanent cosmetics plus a small consumable set built around Mulligan Drone, Chalk Bag, and Cannonball Start if pacing tests justify it.
+- Coin bundles are the baseline Android v1.0 real-money offer.
+- Supporter subscription remains optional launch scope and should ship only if restore, receipt, expiry, refund, and daily-claim behavior are production-ready.
+- Special bonus coin stacks stay balance-optional and should be cut rather than force a noisy or unreadable launch economy.
 
 ## Core Requirements
 
@@ -23,9 +25,9 @@ Create a progression and monetization layer that rewards risk, preserves fairnes
 - They should appear in high-risk spaces such as near crumbling ledges or close to the Chaser.
 - Coins are physical objects.
 - Normal coins are banked immediately on pickup.
-- Special bonus coin stacks can be carried as high-risk objects.
+- Optional special bonus coin stacks can be carried as high-risk objects if they remain readable and mobile-safe.
 - If the player collides with a ledge while carrying a special coin stack, the stack scatters.
-- Scattered special-stack coins must be recoverable mid-air.
+- Scattered special-stack coins must be recoverable mid-air if the feature remains in launch scope.
 
 ### Ads
 
@@ -41,7 +43,8 @@ Create a progression and monetization layer that rewards risk, preserves fairnes
 #### Real Money Offers
 
 - Coin bundles.
-- Supporter Pack subscription that grants players a free daily coin reward and removes any future non-reward ad friction.
+- Supporter Pack subscription that grants players a free daily coin reward and removes any future non-reward ad friction only if the full purchase, restore, and subscription lifecycle is production-ready before launch.
+- If Supporter misses those gates, move it to post-launch instead of shipping a partial subscription flow.
 - The subscription can also include premium cosmetics such as a VIP Crown.
 - Supporter does not automatically convert every rewarded-ad placement into a free claim unless a specific reward is explicitly included in the subscription benefit table.
 
@@ -55,9 +58,10 @@ Create a progression and monetization layer that rewards risk, preserves fairnes
 
 #### Single-Run Consumables
 
-- Cannonball Start: skip the first 50 meters.
+- Cannonball Start: skip the first 50 meters if playtests show it improves pacing without trivializing the opener.
 - Chalk Bag: grant +20% stamina for the current run.
 - Mulligan Drone: inventory version of the shared rescue mechanic; saves the player from one eligible fall per run.
+- Keep the launch consumable set intentionally small so boosts do not crowd the core climb loop.
 
 ## Implementation Notes
 
@@ -67,6 +71,7 @@ Create a progression and monetization layer that rewards risk, preserves fairnes
 - Consumables affect convenience or survivability but should be balanced carefully to avoid pay-to-win perception.
 - Rewarded ads should always be optional and clearly explained before activation.
 - Subscription benefits must not provide gameplay stat advantages beyond economy acceleration.
+- Launch economy should stay legible: one core currency, a narrow consumable set, and a clear separation between permanent unlocks, run consumables, rewarded ads, and any subscription offer.
 - Ad rewards should convert frustration into optional recovery or bonuses, not block the core retry loop.
 - There are no global leaderboards in MVP, so monetized boosts are balanced around fun, retention, and perceived fairness rather than competitive ranking.
 
@@ -82,6 +87,7 @@ Create a progression and monetization layer that rewards risk, preserves fairnes
 - Group catalog items by theme and function rather than only by price.
 - Surface run-scoped consumables separately from permanent unlocks.
 - Keep the Supporter Pack clearly distinct from consumables to avoid confusion.
+- Keep the launch catalog intentionally narrow; expand categories only after the base store flow is validated.
 - Define the Supporter Pack as a recurring subscription product, not a one-time unlock.
 - The current Phase 10 store shell uses a typed `CosmeticItemCatalog` for permanent player body, hand, and Chaser theme unlocks.
 - Coin cosmetic unlocks spend wallet coins through persistent purchase transactions, then persist owned cosmetic ids and equipped loadout fields in save schema v4.
@@ -94,6 +100,7 @@ Create a progression and monetization layer that rewards risk, preserves fairnes
 - Pre-run Vending Machine: maximum once before a run starts.
 - Special coin stack scatter: cap active scattered coin bodies and despawn or magnetize leftovers quickly on mobile.
 - Supporter daily coin reward: exact amount is still open, but should feel useful without replacing normal play.
+- If special coin stacks create too much visual noise or mobile overhead, remove them from the launch scope instead of compromising the core economy.
 
 ### Rewarded Ad Placements
 
@@ -110,20 +117,23 @@ Create a progression and monetization layer that rewards risk, preserves fairnes
 ### Mobile Purchase Requirements
 
 - Support restore purchases, receipt validation, subscription expiry, refund handling, and offline grace behavior before launch.
+- Do not ship coin bundles or Supporter as live products until sandbox purchases, restores, refunds, and expiry paths are exercised end-to-end.
 - Daily Supporter coin claims should reset on a defined server or UTC cadence, not local device clock alone.
 
 ## Post-MVP
 
 - More consumables after the core climb remains fun without boosts.
 - Additional cosmetic categories such as premium fall sprays and impact packs.
+- Supporter subscription if it is deferred to protect launch readiness.
 - More advanced subscription perks that stay cosmetic or economy-only.
 
 ## Open Questions
 
 - What is the first-pass coin reward target per minute of play?
-- What should the Supporter daily coin amount be?
-- Should Cannonball Start ship in MVP, or wait until the first 50 meters become repetitive?
-- Should special coin stacks bank only when collected, at run end, or after surviving a short carry timer?
+- What should the Supporter daily coin amount be if the subscription remains in launch scope?
+- Does Cannonball Start improve early-session pacing enough to earn v1.0 scope?
+- Do special coin stacks add enough readable risk/reward to justify launch complexity?
+- If special coin stacks stay, should they bank only when collected, at run end, or after surviving a short carry timer?
 
 ## Risks
 
@@ -135,7 +145,7 @@ Create a progression and monetization layer that rewards risk, preserves fairnes
 ## Suggested First Tasks
 
 1. Define economy data models for currency, cosmetics, and consumables.
-2. Prototype seeded coin spawning and coin scatter behavior.
+2. Prototype seeded coin spawning and decide whether special coin stacks survive launch scope.
 3. Design rewarded-ad entry points for Continue, Coin Doubler, and Pre-run Vending Machine.
 4. Define the shared rescue mechanic used by Rewarded Continue and Mulligan Drone.
-5. Draft the first store taxonomy and pricing framework.
+5. Draft the narrow launch store taxonomy and pricing framework.
