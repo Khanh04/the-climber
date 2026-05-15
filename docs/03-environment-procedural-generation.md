@@ -97,23 +97,25 @@ object budgets.
 
 #### Wind Gusts
 
-- Spawn as force hazards that release attachments, start a fall when
-  needed, and apply a lateral or upward impulse through the existing
-  physics flow.
+- Spawn as force hazards that release attachments, clear active grip
+  joints, and apply a lateral or upward impulse without forcing the
+  run into the falling state.
 - Use them as the default non-lethal disruption in baseline or easy
   skill chunks.
 
 #### Downdrafts
 
-- Spawn as force hazards that push the player downward through the same
-  falling physics path.
+- Spawn as force hazards that release attachments, clear active grip
+  joints, and push the player downward while keeping re-grabs
+  available.
 - Reserve them for challenge-band skill slots where timing pressure
   should increase without making the hazard instantly lethal.
 
 #### Updrafts
 
-- Spawn as force hazards that launch the player upward and can disrupt
-  approach timing or recovery.
+- Spawn as force hazards that release attachments, clear active grip
+  joints, and launch the player upward while preserving recovery
+  inputs.
 - Use them in opener and recovery slots so early chunks feel dynamic
   without requiring an authored handoff.
 

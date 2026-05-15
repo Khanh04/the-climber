@@ -3,7 +3,6 @@ extends RefCounted
 
 const ClimbPrototypeControllerScript = preload("res://src/gameplay/player/climb_prototype_controller.gd")
 const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
-const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
 const RunSessionScript = preload("res://src/gameplay/run/run_session.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 
@@ -30,7 +29,7 @@ func resolve(controller: RefCounted, player: Node, run_session: RefCounted, impu
 
 	if run_state == RunStateScript.Value.CLIMBING:
 		typed_controller.get_attachment_state().release_all()
-		typed_player.enter_falling(PlayerPhysicsModeTransitionsScript.Reason.FALL_DETECTED)
-		typed_run_session.begin_fall()
+		typed_player.clear_runtime_grip_joints()
+		typed_player.clear_runtime_grip_links()
 
 	typed_player.set_body_linear_velocity(typed_player.get_body_linear_velocity() + impulse_vector_pixels)

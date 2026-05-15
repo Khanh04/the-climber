@@ -737,6 +737,69 @@ func test_run_scene_run_end_screen_requests_rewarded_continue_through_rewarded_a
 
     assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
 
+func test_run_scene_restart_resets_run_while_rewarded_continue_is_offered() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var rewarded_ad_result: RewardedAdResultScript = RewardedAdResultScript.new(
+        RewardedAdPlacementScript.Value.CONTINUE,
+        RewardedAdOutcomeScript.Value.COMPLETED,
+        true
+    )
+    var rewarded_ads_adapter: StubRewardedAdsAdapter = StubRewardedAdsAdapter.new(true, rewarded_ad_result)
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    playground.set_rewarded_ads_adapter(rewarded_ads_adapter)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+    var reset_anchor: Marker2D = playground.get_node("ResetAnchor") as Marker2D
+    var rewarded_continue_button: Button = playground.get_node(
+        "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton"
+    ) as Button
+    var restart_button: Button = playground.get_node(
+        "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/RestartButton"
+    ) as Button
+    var run_end_screen: Control = playground.get_node("UiLayer/RunEndScreen") as Control
+    var starting_rotation: float = 0.0
+
+    assert_not_null(player_body)
+    assert_not_null(camera)
+    assert_not_null(reset_anchor)
+    assert_not_null(rewarded_continue_button)
+    assert_not_null(restart_button)
+    assert_not_null(run_end_screen)
+    starting_rotation = player_body.global_rotation
+
+    var viewport_size: Vector2 = playground.get_viewport_rect().size
+    player_body.global_position = Vector2(
+        player_body.global_position.x,
+        camera.global_position.y + (viewport_size.y * 0.5) + playground.get_bottom_fall_margin_for_test() + 24.0
+    )
+    playground._physics_process(0.0)
+
+    assert_true(run_end_screen.visible)
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.RESCUE_OFFERED)
+    assert_true(rewarded_continue_button.visible)
+
+    player_body.global_position = Vector2(100.0, 100.0)
+    player_body.global_rotation = 0.65
+    player_body.linear_velocity = Vector2(200.0, 50.0)
+    player_body.angular_velocity = 4.0
+
+    var _emit_result: int = restart_button.emit_signal("pressed")
+
+    assert_eq(rewarded_ads_adapter.show_call_count, 0)
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_eq(player_body.global_position, reset_anchor.global_position)
+    assert_eq(player_body.global_rotation, starting_rotation)
+    assert_eq(player_body.linear_velocity, Vector2.ZERO)
+    assert_eq(player_body.angular_velocity, 0.0)
+    assert_eq(camera.global_position.y, reset_anchor.global_position.y - playground.get_camera_player_lower_screen_offset_for_test())
+    assert_false(run_end_screen.visible)
+
 func test_run_scene_rewarded_continue_stays_available_after_cancelled_ad_attempt() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var rewarded_ad_result: RewardedAdResultScript = RewardedAdResultScript.new(
@@ -868,6 +931,61 @@ func test_run_scene_hides_rewarded_continue_when_ads_are_unavailable() -> void:
     assert_false(rewarded_continue_button.visible)
     assert_string_contains(summary_label.text, "Rewarded continue is unavailable")
 
+func test_run_scene_restart_resets_run_when_rewarded_continue_is_unavailable() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+    var reset_anchor: Marker2D = playground.get_node("ResetAnchor") as Marker2D
+    var rewarded_continue_button: Button = playground.get_node(
+        "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton"
+    ) as Button
+    var restart_button: Button = playground.get_node(
+        "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/RestartButton"
+    ) as Button
+    var run_end_screen: Control = playground.get_node("UiLayer/RunEndScreen") as Control
+    var starting_rotation: float = 0.0
+
+    assert_not_null(player_body)
+    assert_not_null(camera)
+    assert_not_null(reset_anchor)
+    assert_not_null(rewarded_continue_button)
+    assert_not_null(restart_button)
+    assert_not_null(run_end_screen)
+    starting_rotation = player_body.global_rotation
+
+    var viewport_size: Vector2 = playground.get_viewport_rect().size
+    player_body.global_position = Vector2(
+        player_body.global_position.x,
+        camera.global_position.y + (viewport_size.y * 0.5) + playground.get_bottom_fall_margin_for_test() + 24.0
+    )
+    playground._physics_process(0.0)
+
+    assert_true(run_end_screen.visible)
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.RESCUE_OFFERED)
+    assert_false(rewarded_continue_button.visible)
+
+    player_body.global_position = Vector2(100.0, 100.0)
+    player_body.global_rotation = 0.65
+    player_body.linear_velocity = Vector2(200.0, 50.0)
+    player_body.angular_velocity = 4.0
+
+    var _emit_result: int = restart_button.emit_signal("pressed")
+
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_eq(player_body.global_position, reset_anchor.global_position)
+    assert_eq(player_body.global_rotation, starting_rotation)
+    assert_eq(player_body.linear_velocity, Vector2.ZERO)
+    assert_eq(player_body.angular_velocity, 0.0)
+    assert_eq(camera.global_position.y, reset_anchor.global_position.y - playground.get_camera_player_lower_screen_offset_for_test())
+    assert_false(run_end_screen.visible)
+
 func test_run_scene_second_eligible_fall_after_rewarded_continue_does_not_offer_another_continue() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var rewarded_ad_result: RewardedAdResultScript = RewardedAdResultScript.new(
@@ -945,7 +1063,7 @@ func test_run_scene_generated_spike_cluster_hazards_end_run() -> void:
     assert_eq(playground.get_run_session_for_test().get_end_reason(), RunEndReasonScript.Value.LETHAL_HAZARD)
     assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
 
-func test_run_scene_generated_wind_gust_hazards_begin_nonterminal_fall() -> void:
+func test_run_scene_generated_wind_gust_hazards_preserve_climb_state() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
@@ -971,12 +1089,12 @@ func test_run_scene_generated_wind_gust_hazards_begin_nonterminal_fall() -> void
 
     hazard_spawn.triggered.emit(player_body)
 
-    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.FALLING)
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
     assert_false(playground.get_run_session_for_test().has_end_reason())
-    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
+    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
     assert_true(player_body.linear_velocity.is_equal_approx(impulse_vector_pixels))
 
-func test_run_scene_generated_downdraft_hazards_begin_nonterminal_fall() -> void:
+func test_run_scene_generated_downdraft_hazards_preserve_climb_state() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
@@ -1002,12 +1120,12 @@ func test_run_scene_generated_downdraft_hazards_begin_nonterminal_fall() -> void
 
     hazard_spawn.triggered.emit(player_body)
 
-    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.FALLING)
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
     assert_false(playground.get_run_session_for_test().has_end_reason())
-    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
+    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
     assert_true(player_body.linear_velocity.is_equal_approx(impulse_vector_pixels))
 
-func test_run_scene_generated_updraft_hazards_begin_nonterminal_fall() -> void:
+func test_run_scene_generated_updraft_hazards_preserve_climb_state() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
@@ -1033,9 +1151,9 @@ func test_run_scene_generated_updraft_hazards_begin_nonterminal_fall() -> void:
 
     hazard_spawn.triggered.emit(player_body)
 
-    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.FALLING)
+    assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
     assert_false(playground.get_run_session_for_test().has_end_reason())
-    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
+    assert_eq(playground.get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
     assert_true(player_body.linear_velocity.is_equal_approx(impulse_vector_pixels))
 
 func test_run_scene_camera_follows_player_upward() -> void:
