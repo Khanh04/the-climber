@@ -16,8 +16,12 @@ func test_player_character_scene_wires_required_nodes() -> void:
     assert_not_null(player.get_node_or_null("BaseSkeleton/TorsoBone"))
     assert_not_null(player.get_player_body())
     assert_not_null(player.get_body_collision_shape())
+    assert_not_null(player.get_left_shoulder_socket())
+    assert_not_null(player.get_right_shoulder_socket())
     assert_not_null(player.get_left_hand_anchor())
     assert_not_null(player.get_right_hand_anchor())
+    assert_not_null(player.get_left_hand_visual_anchor())
+    assert_not_null(player.get_right_hand_visual_anchor())
     assert_not_null(player.get_left_hand_cosmetic_root())
     assert_not_null(player.get_right_hand_cosmetic_root())
     assert_not_null(player.get_left_grip_joint_anchor())
@@ -34,6 +38,7 @@ func test_player_character_owns_gameplay_collision_under_base_skeleton_body() ->
     assert_true(body.get_parent() is Skeleton2D)
     assert_eq(collision_shape.get_parent(), body)
     assert_not_null(collision_shape.shape)
+    assert_true(collision_shape.shape is CapsuleShape2D)
 
 func test_player_character_visual_roots_are_physics_neutral() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
@@ -55,17 +60,23 @@ func test_player_character_visual_roots_are_physics_neutral() -> void:
     assert_eq(body.collision_mask, starting_collision_mask)
     assert_eq(player.get_body_collision_shape().shape, starting_collision_shape)
 
-func test_player_character_hand_cosmetic_roots_follow_hand_anchors() -> void:
+func test_player_character_hand_geometry_separates_reach_and_visual_anchors() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
-    var left_placeholder: Node2D = player.get_node("BaseSkeleton/PlayerBody/LeftHandAnchor/LeftHandCosmeticRoot/LeftHandVisual") as Node2D
-    var right_placeholder: Node2D = player.get_node("BaseSkeleton/PlayerBody/RightHandAnchor/RightHandCosmeticRoot/RightHandVisual") as Node2D
+    var left_placeholder: Node2D = player.get_node("BaseSkeleton/PlayerBody/LeftShoulderSocket/LeftHandVisualAnchor/LeftHandCosmeticRoot/LeftHandVisual") as Node2D
+    var right_placeholder: Node2D = player.get_node("BaseSkeleton/PlayerBody/RightShoulderSocket/RightHandVisualAnchor/RightHandCosmeticRoot/RightHandVisual") as Node2D
 
-    assert_eq(player.get_left_hand_cosmetic_root().get_parent(), player.get_left_hand_anchor())
-    assert_eq(player.get_right_hand_cosmetic_root().get_parent(), player.get_right_hand_anchor())
+    assert_eq(player.get_left_hand_anchor().get_parent(), player.get_left_shoulder_socket())
+    assert_eq(player.get_right_hand_anchor().get_parent(), player.get_right_shoulder_socket())
+    assert_eq(player.get_left_hand_visual_anchor().get_parent(), player.get_left_shoulder_socket())
+    assert_eq(player.get_right_hand_visual_anchor().get_parent(), player.get_right_shoulder_socket())
+    assert_eq(player.get_left_hand_cosmetic_root().get_parent(), player.get_left_hand_visual_anchor())
+    assert_eq(player.get_right_hand_cosmetic_root().get_parent(), player.get_right_hand_visual_anchor())
     assert_not_null(left_placeholder)
     assert_not_null(right_placeholder)
     assert_eq(left_placeholder.get_parent(), player.get_left_hand_cosmetic_root())
     assert_eq(right_placeholder.get_parent(), player.get_right_hand_cosmetic_root())
+    assert_ne(player.get_left_hand_anchor().position, player.get_left_hand_visual_anchor().position)
+    assert_ne(player.get_right_hand_anchor().position, player.get_right_hand_visual_anchor().position)
 
     var left_visual := Polygon2D.new()
     left_visual.name = &"LeftHandCosmeticTest"
@@ -78,6 +89,24 @@ func test_player_character_hand_cosmetic_roots_follow_hand_anchors() -> void:
     player.get_right_hand_cosmetic_root().add_child(right_visual)
 
     player.assert_visual_roots_physics_neutral()
+
+func test_player_character_visual_hand_anchors_lag_behind_body_velocity() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var left_visual_anchor: Marker2D = player.get_left_hand_visual_anchor()
+    var starting_position: Vector2 = left_visual_anchor.position
+
+    player.set_body_linear_velocity(Vector2(300.0, 0.0))
+    player._physics_process(1.0 / 60.0)
+
+    var lagged_position: Vector2 = left_visual_anchor.position
+
+    assert_lt(lagged_position.x, starting_position.x)
+    assert_eq(lagged_position.y, starting_position.y)
+
+    player.set_body_linear_velocity(Vector2.ZERO)
+    player._physics_process(1.0 / 60.0)
+
+    assert_gt(left_visual_anchor.position.x, lagged_position.x)
 
 func test_player_cosmetic_applicator_adds_visuals_without_changing_physics() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()

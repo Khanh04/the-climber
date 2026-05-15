@@ -22,6 +22,15 @@ extends Resource
 # Upward force that offsets gravity while attached.
 # Higher values reduce sag and falling; lower values make hanging heavier.
 @export var attached_gravity_compensation_force: float = 980.0
+# Speed at which hand visuals catch up to their visual target positions.
+# Higher values reduce visible lag; lower values make hands feel sloppier.
+@export var hand_visual_follow_speed_pixels_per_second: float = 240.0
+# Seconds of body velocity used to trail hand visuals behind the gameplay reach anchors.
+# Higher values exaggerate visual drag opposite the body's motion.
+@export var hand_visual_velocity_lag_seconds: float = 0.03
+# Maximum distance that body-velocity drag can pull a hand visual away from its visual rest offset.
+# Higher values allow more exaggerated trailing before the follow catches up.
+@export var hand_visual_max_lag_pixels: float = 18.0
 # Extra per-frame damping applied when both hands are attached.
 # Lower values lock the player down more; higher values keep two-hand movement livelier.
 @export var two_hand_velocity_damping: float = 0.90
@@ -49,6 +58,9 @@ func is_valid() -> bool:
         and grip_velocity_damping >= 0.0 \
         and grip_velocity_damping <= 1.0 \
         and attached_gravity_compensation_force >= 0.0 \
+        and hand_visual_follow_speed_pixels_per_second > 0.0 \
+        and hand_visual_velocity_lag_seconds >= 0.0 \
+        and hand_visual_max_lag_pixels >= 0.0 \
         and two_hand_velocity_damping >= 0.0 \
         and two_hand_velocity_damping <= 1.0 \
         and max_player_speed_pixels_per_second > 0.0 \
@@ -74,6 +86,9 @@ func assert_valid() -> void:
     Validation.require_condition(grip_pull_stiffness > 0.0, "Grip pull stiffness must be positive.")
     Validation.require_condition(grip_velocity_damping >= 0.0 and grip_velocity_damping <= 1.0, "Grip velocity damping must be between 0 and 1.")
     Validation.require_condition(attached_gravity_compensation_force >= 0.0, "Attached gravity compensation force cannot be negative.")
+    Validation.require_condition(hand_visual_follow_speed_pixels_per_second > 0.0, "Hand visual follow speed must be positive.")
+    Validation.require_condition(hand_visual_velocity_lag_seconds >= 0.0, "Hand visual velocity lag seconds cannot be negative.")
+    Validation.require_condition(hand_visual_max_lag_pixels >= 0.0, "Hand visual max lag pixels cannot be negative.")
     Validation.require_condition(two_hand_velocity_damping >= 0.0 and two_hand_velocity_damping <= 1.0, "Two-hand velocity damping must be between 0 and 1.")
     Validation.require_condition(max_player_speed_pixels_per_second > 0.0, "Max player speed must be positive.")
     Validation.require_condition(camera_player_lower_screen_offset_pixels >= 0.0, "Camera player lower-screen offset cannot be negative.")

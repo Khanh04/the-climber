@@ -2,13 +2,13 @@
 
 [ext_resource type="Script" uid="uid://c4vbg2rpjp3c" path="res://scenes/player/player_character.gd" id="1_player"]
 [ext_resource type="Script" uid="uid://co0omgi88wjup" path="res://resources/config/climb_prototype_tuning.gd" id="2_climb"]
-[ext_resource type="Texture2D" uid="uid://r4pmwf8jo1f5" path="res://assets/art/hand.png" id="3_e1j0t"]
 
 [sub_resource type="Resource" id="Resource_climb"]
 script = ExtResource("2_climb")
 
-[sub_resource type="CircleShape2D" id="CircleShape2D_body"]
-radius = 36.0
+[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_body"]
+radius = 26.0
+height = 52.0
 
 [node name="PlayerCharacter" type="Node2D" unique_id=48877475]
 script = ExtResource("1_player")
@@ -36,27 +36,41 @@ unique_name_in_owner = true
 
 [node name="BodyCollisionShape" type="CollisionShape2D" parent="BaseSkeleton/PlayerBody" unique_id=1186239048]
 unique_name_in_owner = true
-shape = SubResource("CircleShape2D_body")
+shape = SubResource("CapsuleShape2D_body")
 
-[node name="LeftHandAnchor" type="Marker2D" parent="BaseSkeleton/PlayerBody" unique_id=1925185113]
+[node name="LeftShoulderSocket" type="Marker2D" parent="BaseSkeleton/PlayerBody" unique_id=1925185113]
 unique_name_in_owner = true
-position = Vector2(-42, -24)
+position = Vector2(-18, -34)
 
-[node name="LeftHandCosmeticRoot" type="Node2D" parent="BaseSkeleton/PlayerBody/LeftHandAnchor" unique_id=862418928]
+[node name="LeftHandAnchor" type="Marker2D" parent="BaseSkeleton/PlayerBody/LeftShoulderSocket" unique_id=998621111]
 unique_name_in_owner = true
+position = Vector2(-24, 10)
 
-[node name="LeftHandVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/LeftHandAnchor/LeftHandCosmeticRoot" unique_id=1625410914]
-texture = ExtResource("3_e1j0t")
-
-[node name="RightHandAnchor" type="Marker2D" parent="BaseSkeleton/PlayerBody" unique_id=1904973315]
+[node name="LeftHandVisualAnchor" type="Marker2D" parent="BaseSkeleton/PlayerBody/LeftShoulderSocket" unique_id=998621112]
 unique_name_in_owner = true
-position = Vector2(42, -24)
+position = Vector2(-30, 14)
 
-[node name="RightHandCosmeticRoot" type="Node2D" parent="BaseSkeleton/PlayerBody/RightHandAnchor" unique_id=901338481]
+[node name="LeftHandCosmeticRoot" type="Node2D" parent="BaseSkeleton/PlayerBody/LeftShoulderSocket/LeftHandVisualAnchor" unique_id=862418928]
 unique_name_in_owner = true
 
-[node name="RightHandVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/RightHandAnchor/RightHandCosmeticRoot" unique_id=2123890837]
-texture = ExtResource("3_e1j0t")
+[node name="LeftHandVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/LeftShoulderSocket/LeftHandVisualAnchor/LeftHandCosmeticRoot" unique_id=1625410914]
+
+[node name="RightShoulderSocket" type="Marker2D" parent="BaseSkeleton/PlayerBody" unique_id=1904973315]
+unique_name_in_owner = true
+position = Vector2(18, -34)
+
+[node name="RightHandAnchor" type="Marker2D" parent="BaseSkeleton/PlayerBody/RightShoulderSocket" unique_id=998621113]
+unique_name_in_owner = true
+position = Vector2(24, 10)
+
+[node name="RightHandVisualAnchor" type="Marker2D" parent="BaseSkeleton/PlayerBody/RightShoulderSocket" unique_id=998621114]
+unique_name_in_owner = true
+position = Vector2(30, 14)
+
+[node name="RightHandCosmeticRoot" type="Node2D" parent="BaseSkeleton/PlayerBody/RightShoulderSocket/RightHandVisualAnchor" unique_id=901338481]
+unique_name_in_owner = true
+
+[node name="RightHandVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/RightShoulderSocket/RightHandVisualAnchor/RightHandCosmeticRoot" unique_id=2123890837]
 
 [node name="VisualRoot" type="Node2D" parent="BaseSkeleton/PlayerBody" unique_id=1112647151]
 unique_name_in_owner = true
