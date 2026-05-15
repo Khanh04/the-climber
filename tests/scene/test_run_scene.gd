@@ -1186,20 +1186,30 @@ func test_run_scene_chaser_contact_ends_run_without_rescue_and_restart_resets_ch
     await get_tree().process_frame
 
     var chaser: ChaserKillZoneScript = playground.get_chaser_for_test()
+    var player := playground.get_player_for_test()
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
     var reset_anchor: Marker2D = playground.get_node("ResetAnchor") as Marker2D
     var run_end_screen: Control = playground.get_node("UiLayer/RunEndScreen") as Control
     var title_label: Label = playground.get_node("UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
     var reason_label: Label = playground.get_node("UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/ReasonLabel") as Label
     var restart_button: Button = playground.get_node("UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
+    var starting_rotation: float = 0.0
 
     assert_not_null(chaser)
+    assert_not_null(player)
+    assert_not_null(player_body)
     assert_not_null(reset_anchor)
     assert_not_null(run_end_screen)
     assert_not_null(title_label)
     assert_not_null(reason_label)
     assert_not_null(restart_button)
+    starting_rotation = player_body.global_rotation
 
     _attach_to_generated_opener_holds(playground, true, false)
+    playground._physics_process(0.0)
+
+    assert_not_null(player.get_left_runtime_grip_joint())
+    assert_not_null(player.get_left_runtime_grip_link())
 
     chaser.global_position.y = 100.0
     playground.resolve_chaser_contact_for_test()
@@ -1213,13 +1223,32 @@ func test_run_scene_chaser_contact_ends_run_without_rescue_and_restart_resets_ch
     assert_eq(title_label.text, "Run Ended")
     assert_eq(reason_label.text, "Reason: Chaser contact")
 
+    player_body.global_position = Vector2(100.0, 100.0)
+    player_body.global_rotation = 0.65
+    player_body.linear_velocity = Vector2(200.0, 50.0)
+    player_body.angular_velocity = 4.0
+
     var _emit_result: int = restart_button.emit_signal("pressed")
 
     var expected_reset_chaser_y: float = reset_anchor.global_position.y + (chaser.chaser_tuning.initial_spawn_offset_meters * playground.climb_tuning.pixels_per_meter) + (chaser.kill_zone_height_pixels * 0.5)
 
     assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
     assert_false(run_end_screen.visible)
+    assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
+    assert_eq(player_body.global_position, reset_anchor.global_position)
+    assert_eq(player_body.global_rotation, starting_rotation)
+    assert_eq(player_body.linear_velocity, Vector2.ZERO)
+    assert_eq(player_body.angular_velocity, 0.0)
     assert_eq(chaser.global_position.y, expected_reset_chaser_y)
+
+    await get_tree().process_frame
+
+    assert_eq(player_body.global_position, reset_anchor.global_position)
+    assert_eq(player_body.global_rotation, starting_rotation)
+    assert_null(player.get_node_or_null("GripJoints/LeftGripJointAnchor/LeftRuntimeGripJoint"))
+    assert_null(player.get_node_or_null("GripJoints/RightGripJointAnchor/RightRuntimeGripJoint"))
+    assert_null(player.get_node_or_null("LeftGripLink"))
+    assert_null(player.get_node_or_null("RightGripLink"))
 
 func test_run_scene_exposes_chaser_feedback_hooks_for_playtesting() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -1292,10 +1321,12 @@ func test_run_scene_run_end_restart_button_resets_run() -> void:
     var player_body: RigidBody2D = playground.get_player_body_for_test()
     var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
     var reset_anchor: Marker2D = playground.get_node("ResetAnchor") as Marker2D
+    var starting_rotation: float = 0.0
 
     assert_not_null(player_body)
     assert_not_null(camera)
     assert_not_null(reset_anchor)
+    starting_rotation = player_body.global_rotation
 
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
@@ -1311,11 +1342,16 @@ func test_run_scene_run_end_restart_button_resets_run() -> void:
     assert_not_null(run_end_screen)
     assert_true(run_end_screen.visible)
 
+    player_body.global_rotation = 0.65
+    player_body.angular_velocity = 4.0
+
     var _emit_result: int = restart_button.emit_signal("pressed")
 
     assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
     assert_eq(player_body.global_position, reset_anchor.global_position)
+    assert_eq(player_body.global_rotation, starting_rotation)
     assert_eq(player_body.linear_velocity, Vector2.ZERO)
+    assert_eq(player_body.angular_velocity, 0.0)
     assert_eq(camera.global_position.y, reset_anchor.global_position.y - playground.get_camera_player_lower_screen_offset_for_test())
     assert_false(run_end_screen.visible)
 

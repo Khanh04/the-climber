@@ -17,6 +17,22 @@ func test_follow_controller_calculates_velocity_trailed_target_local_position() 
 
     assert_eq(target_local_position, Vector2(-42.0, 14.0))
 
+func test_follow_controller_biases_attached_hand_target_toward_hold() -> void:
+    var tuning := ClimbPrototypeTuningScript.new()
+    tuning.hand_visual_attached_hold_pull_ratio = 0.2
+    tuning.hand_visual_attached_hold_max_pull_pixels = 8.0
+    var controller := HandVisualFollowControllerScript.new(tuning)
+
+    var target_local_position: Vector2 = controller.calculate_target_local_position(
+        Vector2(-24.0, 10.0),
+        Vector2(-8.0, 4.0),
+        Vector2.ZERO,
+        Vector2(120.0, 54.0),
+        true
+    )
+
+    assert_lt(target_local_position.distance_to(Vector2(-24.2634, 16.03595)), 0.001)
+
 func test_follow_controller_moves_visual_anchor_toward_trailed_target() -> void:
     var tuning := ClimbPrototypeTuningScript.new()
     tuning.hand_visual_follow_speed_pixels_per_second = 20.0

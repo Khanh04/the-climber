@@ -108,6 +108,19 @@ func test_player_character_visual_hand_anchors_lag_behind_body_velocity() -> voi
 
     assert_gt(left_visual_anchor.position.x, lagged_position.x)
 
+func test_player_character_attached_visual_hand_biases_toward_hold() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var hold: StaticBody2D = _create_hold(&"LeftHold", Vector2(180.0, 260.0))
+    var attachment_state := HandAttachmentStateScript.new()
+    var left_visual_anchor: Marker2D = player.get_left_hand_visual_anchor()
+    var starting_distance_to_hold: float = left_visual_anchor.global_position.distance_to(hold.global_position)
+
+    attachment_state.attach(HandSideScript.Value.LEFT, &"left_hold", hold.global_position, hold.get_path())
+    player.apply_frame_motion(ClimbPrototypeFrameResultScript.new(Vector2.ZERO, false, 1), attachment_state)
+    player._physics_process(1.0 / 60.0)
+
+    assert_lt(left_visual_anchor.global_position.distance_to(hold.global_position), starting_distance_to_hold)
+
 func test_player_cosmetic_applicator_adds_visuals_without_changing_physics() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
     var catalog: CosmeticItemCatalogScript = load("res://resources/config/cosmetic_item_catalog.tres") as CosmeticItemCatalogScript
@@ -208,16 +221,23 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
     var player: PlayerCharacterScript = await _instantiate_player()
     var frame_result := ClimbPrototypeFrameResultScript.new(Vector2.ZERO, true, 0)
     var attachment_state := HandAttachmentStateScript.new()
+    var player_body: RigidBody2D = player.get_player_body()
+    var starting_rotation: float = player_body.global_rotation
 
     player.apply_frame_motion(frame_result, attachment_state)
 
     assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
 
+    player_body.global_rotation = 0.65
+    player_body.angular_velocity = 4.0
+
     player.reset_physics(Vector2(25.0, 50.0))
 
     assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
     assert_eq(player.get_body_global_position(), Vector2(25.0, 50.0))
+    assert_eq(player_body.global_rotation, starting_rotation)
     assert_eq(player.get_body_linear_velocity(), Vector2.ZERO)
+    assert_eq(player_body.angular_velocity, 0.0)
 
 func _instantiate_player() -> PlayerCharacterScript:
     var scene: PackedScene = load("res://scenes/player/player_character.tscn")

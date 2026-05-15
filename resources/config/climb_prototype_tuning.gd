@@ -31,6 +31,12 @@ extends Resource
 # Maximum distance that body-velocity drag can pull a hand visual away from its visual rest offset.
 # Higher values allow more exaggerated trailing before the follow catches up.
 @export var hand_visual_max_lag_pixels: float = 18.0
+# Fraction of the distance from the visual rest target toward an attached hold that the hand visual should borrow.
+# Higher values make attached hands visibly reach toward their hold more aggressively.
+@export var hand_visual_attached_hold_pull_ratio: float = 0.16
+# Maximum extra distance an attached hold can pull a hand visual away from its visual rest target.
+# Higher values allow a more exaggerated attached-hand stretch toward the active hold.
+@export var hand_visual_attached_hold_max_pull_pixels: float = 12.0
 # Extra per-frame damping applied when both hands are attached.
 # Lower values lock the player down more; higher values keep two-hand movement livelier.
 @export var two_hand_velocity_damping: float = 0.90
@@ -61,6 +67,9 @@ func is_valid() -> bool:
         and hand_visual_follow_speed_pixels_per_second > 0.0 \
         and hand_visual_velocity_lag_seconds >= 0.0 \
         and hand_visual_max_lag_pixels >= 0.0 \
+        and hand_visual_attached_hold_pull_ratio >= 0.0 \
+        and hand_visual_attached_hold_pull_ratio <= 1.0 \
+        and hand_visual_attached_hold_max_pull_pixels >= 0.0 \
         and two_hand_velocity_damping >= 0.0 \
         and two_hand_velocity_damping <= 1.0 \
         and max_player_speed_pixels_per_second > 0.0 \
@@ -89,6 +98,8 @@ func assert_valid() -> void:
     Validation.require_condition(hand_visual_follow_speed_pixels_per_second > 0.0, "Hand visual follow speed must be positive.")
     Validation.require_condition(hand_visual_velocity_lag_seconds >= 0.0, "Hand visual velocity lag seconds cannot be negative.")
     Validation.require_condition(hand_visual_max_lag_pixels >= 0.0, "Hand visual max lag pixels cannot be negative.")
+    Validation.require_condition(hand_visual_attached_hold_pull_ratio >= 0.0 and hand_visual_attached_hold_pull_ratio <= 1.0, "Hand visual attached hold pull ratio must be between 0 and 1.")
+    Validation.require_condition(hand_visual_attached_hold_max_pull_pixels >= 0.0, "Hand visual attached hold max pull pixels cannot be negative.")
     Validation.require_condition(two_hand_velocity_damping >= 0.0 and two_hand_velocity_damping <= 1.0, "Two-hand velocity damping must be between 0 and 1.")
     Validation.require_condition(max_player_speed_pixels_per_second > 0.0, "Max player speed must be positive.")
     Validation.require_condition(camera_player_lower_screen_offset_pixels >= 0.0, "Camera player lower-screen offset cannot be negative.")

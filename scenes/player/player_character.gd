@@ -38,10 +38,12 @@ var _motion_controller: PlayerMotionControllerScript
 var _left_hand_visual_offset_from_reach: Vector2 = Vector2.ZERO
 var _right_hand_visual_offset_from_reach: Vector2 = Vector2.ZERO
 var _physics_mode: int = 0
+var _reset_body_rotation: float = 0.0
 
 func _ready() -> void:
 	_validate_required_state()
 	set_physics_process(true)
+	_reset_body_rotation = _player_body.rotation
 	_hand_visual_follow_controller = HandVisualFollowControllerScript.new(climb_tuning)
 	_motion_controller = PlayerMotionControllerScript.new(climb_tuning)
 	_capture_hand_visual_offsets()
@@ -141,6 +143,7 @@ func reset_physics(global_position_value: Vector2) -> void:
 	clear_runtime_grip_joints()
 	clear_runtime_grip_links()
 	_player_body.global_position = global_position_value
+	_player_body.rotation = _reset_body_rotation
 	_player_body.linear_velocity = Vector2.ZERO
 	_player_body.angular_velocity = 0.0
 	_reset_hand_visual_anchors()
@@ -272,19 +275,32 @@ func _reset_hand_visual_anchors() -> void:
 
 func _sync_hand_visual_anchors(delta: float) -> void:
 	var body_local_velocity: Vector2 = _player_body.to_local(_player_body.global_position + _player_body.linear_velocity)
+	var left_attached_to_hold: bool = _left_runtime_grip_joint != null
+	var right_attached_to_hold: bool = _right_runtime_grip_joint != null
+	var left_attached_hold_local_position: Vector2 = Vector2.ZERO
+	var right_attached_hold_local_position: Vector2 = Vector2.ZERO
+	if left_attached_to_hold:
+		left_attached_hold_local_position = _left_shoulder_socket.to_local(_left_runtime_grip_joint.global_position)
+	if right_attached_to_hold:
+		right_attached_hold_local_position = _right_shoulder_socket.to_local(_right_runtime_grip_joint.global_position)
+
 	_left_hand_visual_anchor.position = _hand_visual_follow_controller.calculate_next_local_position(
 		_left_hand_visual_anchor.position,
 		_left_hand_anchor.position,
 		_left_hand_visual_offset_from_reach,
 		body_local_velocity,
-		delta
+		delta,
+		left_attached_hold_local_position,
+		left_attached_to_hold
 	)
 	_right_hand_visual_anchor.position = _hand_visual_follow_controller.calculate_next_local_position(
 		_right_hand_visual_anchor.position,
 		_right_hand_anchor.position,
 		_right_hand_visual_offset_from_reach,
 		body_local_velocity,
-		delta
+		delta,
+		right_attached_hold_local_position,
+		right_attached_to_hold
 	)
 
 func _require_skeleton_2d(node_path: NodePath, message: String) -> Skeleton2D:
