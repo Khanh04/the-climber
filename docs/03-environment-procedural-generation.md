@@ -47,7 +47,7 @@ for mobile object budgets.
 - All players share the same global layout for each 24-hour period.
 - Seed generation is based on the full UTC date rather than
   day-of-month only.
-- Recommended key format: `generator_v1:YYYY-MM-DD` using UTC.
+- Recommended key format: `generator_v2:YYYY-MM-DD` using UTC.
 - Use a dedicated `RandomNumberGenerator` instance for daily generation
   rather than relying on global RNG state.
 - Include a generator version in the seed key so future layout changes
@@ -79,6 +79,11 @@ for mobile object budgets.
   selection should be weighted by altitude, recent profile history,
   and recovery needs rather than picked uniformly from a flat allowed
   list.
+- Within each selected route profile, chunk archetypes should also be
+  chosen by deterministic slot-aware weighting so recovery chunks bias
+  toward denser central lines, risk chunks bias toward forked or
+  hazard-denial branches, and pressure chunks bias toward sparse or
+  commitment-heavy shapes without collapsing to one archetype.
 - Chunk spawn and despawn windows around the camera must never change
   layout content or chunk metadata.
 
@@ -112,9 +117,15 @@ for mobile object budgets.
 - Coins should reward route expression by sitting near optional beta,
   crux exits, or Chaser-pressure lines rather than being sprinkled
   evenly across all anchors.
+- Pickup anchoring should prioritize reward, optional-beta, and
+  hazard-denial route roles before falling back to generic side-biased
+  anchors.
 - Hazards should shape choices: deny a risky line, pressure a crux, or
   create a recovery moment. They should not obscure the intended safe
   path or make a generated layout technically valid but unreadable.
+- Hazard anchoring should prioritize hazard-denial, crux, and recovery
+  roles so the dangerous line reads as intentional route pressure
+  rather than background noise.
 
 ### Daily Progression Goals
 
@@ -313,6 +324,12 @@ aliases over a smaller ruleset.
   novelty, optional beta quality, recovery availability, object count,
   and hazard fairness. Keep the score deterministic so identical seeds
   choose identical layouts.
+- Candidate scoring should include route-role coverage, route-intent
+  socket alignment, and hazard fairness so the accepted chunk is not
+  merely valid, but also readable as a compact bouldering problem.
+- Weighted chunk-type selection should use authored lane-row shape
+  metrics, not only flat membership in an allowed list, so profile
+  pacing and geometry reinforce one another.
 - Add distribution tests across multiple dates and chunk ranges so
   weighted profile changes do not accidentally remove recovery chunks,
   overproduce hazards, or create repeated crux styles.

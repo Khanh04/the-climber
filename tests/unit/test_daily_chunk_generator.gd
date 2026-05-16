@@ -91,6 +91,21 @@ func test_weighted_profile_scheduler_keeps_easy_band_free_of_pressure_slots() ->
         var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, chunk_index))
         assert_ne(layout.route_slot, ChunkRouteSlotScript.Value.PRESSURE)
 
+func test_weighted_profile_scheduler_keeps_baseline_band_free_of_pressure_slots() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_keys: PackedStringArray = PackedStringArray([
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.from_utc_date(2026, 5, 15),
+        DailySeedKey.from_utc_date(2026, 5, 16),
+    ])
+
+    for seed_key in seed_keys:
+        for chunk_index in range(5, 10):
+            var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, chunk_index))
+            if layout.difficulty_band == ChunkDifficultyBandScript.Value.BASELINE:
+                assert_ne(layout.route_slot, ChunkRouteSlotScript.Value.PRESSURE)
+
 func test_weighted_profile_scheduler_inserts_recovery_after_pressure() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
@@ -314,6 +329,174 @@ func test_generated_chunks_include_candidate_selection_metadata() -> void:
     assert_lt(layout.selected_candidate_attempt_index, tuning.route_validation_candidate_attempt_count)
     assert_false(is_nan(layout.candidate_score))
 
+func test_pickup_intent_alignment_score_prefers_recovery_reward_holds() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var handholds: Array[GeneratedHandholdSocket] = [
+        _build_scoring_handhold(generator, &"reward_hold", Vector2(0.92, -5.0), RouteRoleScript.Value.REWARD),
+        _build_scoring_handhold(generator, &"setup_hold", Vector2(-0.18, -5.0), RouteRoleScript.Value.SETUP),
+    ]
+    var aligned_pickups: Array[GeneratedPickupSocket] = [
+        GeneratedPickupSocket.new(&"pickup_00", Vector2(0.9, -5.65)),
+    ]
+    var misaligned_pickups: Array[GeneratedPickupSocket] = [
+        GeneratedPickupSocket.new(&"pickup_00", Vector2(-0.18, -5.65)),
+    ]
+
+    var aligned_score_variant: Variant = generator.call(
+        "_score_pickup_intent_alignment",
+        aligned_pickups,
+        handholds,
+        ChunkRouteSlotScript.Value.RECOVERY
+    )
+    var misaligned_score_variant: Variant = generator.call(
+        "_score_pickup_intent_alignment",
+        misaligned_pickups,
+        handholds,
+        ChunkRouteSlotScript.Value.RECOVERY
+    )
+
+    assert_true(aligned_score_variant is float)
+    assert_true(misaligned_score_variant is float)
+    var aligned_score: float = aligned_score_variant
+    var misaligned_score: float = misaligned_score_variant
+    assert_gt(aligned_score, misaligned_score)
+
+func test_hazard_intent_alignment_score_prefers_risk_hazard_denial_holds() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var handholds: Array[GeneratedHandholdSocket] = [
+        _build_scoring_handhold(generator, &"hazard_denial_hold", Vector2(1.0, -6.0), RouteRoleScript.Value.HAZARD_DENIAL),
+        _build_scoring_handhold(generator, &"setup_hold", Vector2(-0.2, -6.0), RouteRoleScript.Value.SETUP),
+    ]
+    var aligned_hazards: Array[GeneratedHazardSocket] = [
+        GeneratedHazardSocket.new(&"hazard_00", GeneratedHazardKindScript.Value.SPIKE_CLUSTER, Vector2(0.96, -5.6)),
+    ]
+    var misaligned_hazards: Array[GeneratedHazardSocket] = [
+        GeneratedHazardSocket.new(&"hazard_00", GeneratedHazardKindScript.Value.SPIKE_CLUSTER, Vector2(-0.2, -5.6)),
+    ]
+
+    var aligned_score_variant: Variant = generator.call(
+        "_score_hazard_intent_alignment",
+        aligned_hazards,
+        handholds,
+        ChunkRouteSlotScript.Value.RISK
+    )
+    var misaligned_score_variant: Variant = generator.call(
+        "_score_hazard_intent_alignment",
+        misaligned_hazards,
+        handholds,
+        ChunkRouteSlotScript.Value.RISK
+    )
+
+    assert_true(aligned_score_variant is float)
+    assert_true(misaligned_score_variant is float)
+    var aligned_score: float = aligned_score_variant
+    var misaligned_score: float = misaligned_score_variant
+    assert_gt(aligned_score, misaligned_score)
+
+func test_chunk_type_selection_weights_favor_dense_recovery_for_recovery_slots() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+
+    var dense_recovery_weight_variant: Variant = generator.call(
+        "_get_chunk_type_selection_weight",
+        ChunkRouteSlotScript.Value.RECOVERY,
+        ChunkDifficultyBandScript.Value.BASELINE,
+        ChunkTypeScript.Value.DENSE_RECOVERY
+    )
+    var ladder_weight_variant: Variant = generator.call(
+        "_get_chunk_type_selection_weight",
+        ChunkRouteSlotScript.Value.RECOVERY,
+        ChunkDifficultyBandScript.Value.BASELINE,
+        ChunkTypeScript.Value.LADDER
+    )
+
+    assert_true(dense_recovery_weight_variant is float)
+    assert_true(ladder_weight_variant is float)
+    var dense_recovery_weight: float = dense_recovery_weight_variant
+    var ladder_weight: float = ladder_weight_variant
+    assert_gt(dense_recovery_weight, ladder_weight)
+
+func test_chunk_type_selection_weights_favor_swing_gap_for_pressure_slots() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+
+    var swing_gap_weight_variant: Variant = generator.call(
+        "_get_chunk_type_selection_weight",
+        ChunkRouteSlotScript.Value.PRESSURE,
+        ChunkDifficultyBandScript.Value.CHALLENGE,
+        ChunkTypeScript.Value.SWING_GAP
+    )
+    var risk_lane_weight_variant: Variant = generator.call(
+        "_get_chunk_type_selection_weight",
+        ChunkRouteSlotScript.Value.PRESSURE,
+        ChunkDifficultyBandScript.Value.CHALLENGE,
+        ChunkTypeScript.Value.RISK_LANE
+    )
+
+    assert_true(swing_gap_weight_variant is float)
+    assert_true(risk_lane_weight_variant is float)
+    var swing_gap_weight: float = swing_gap_weight_variant
+    var risk_lane_weight: float = risk_lane_weight_variant
+    assert_gt(swing_gap_weight, risk_lane_weight)
+
+func test_sampled_daily_generation_distribution_preserves_recovery_bias_and_pressure_shape() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_keys: PackedStringArray = PackedStringArray([
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.from_utc_date(2026, 5, 15),
+        DailySeedKey.from_utc_date(2026, 5, 16),
+        DailySeedKey.from_utc_date(2026, 5, 17),
+        DailySeedKey.from_utc_date(2026, 5, 18),
+        DailySeedKey.from_utc_date(2026, 5, 19),
+    ])
+    var baseline_count: int = 0
+    var skill_count: int = 0
+    var recovery_count: int = 0
+    var risk_count: int = 0
+    var pressure_count: int = 0
+    var recovery_dense_count: int = 0
+    var recovery_ladder_count: int = 0
+    var pressure_commitment_count: int = 0
+    var pressure_risk_lane_count: int = 0
+
+    for seed_key in seed_keys:
+        for chunk_index in range(4, 37):
+            var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, chunk_index))
+            match layout.route_slot:
+                ChunkRouteSlotScript.Value.BASELINE:
+                    baseline_count += 1
+                ChunkRouteSlotScript.Value.SKILL:
+                    skill_count += 1
+                ChunkRouteSlotScript.Value.RECOVERY:
+                    recovery_count += 1
+                    if layout.chunk_type == ChunkTypeScript.Value.DENSE_RECOVERY:
+                        recovery_dense_count += 1
+                    elif layout.chunk_type == ChunkTypeScript.Value.LADDER:
+                        recovery_ladder_count += 1
+                ChunkRouteSlotScript.Value.RISK:
+                    risk_count += 1
+                ChunkRouteSlotScript.Value.PRESSURE:
+                    pressure_count += 1
+                    if layout.chunk_type == ChunkTypeScript.Value.SWING_GAP \
+                        or layout.chunk_type == ChunkTypeScript.Value.SPARSE_REACH:
+                        pressure_commitment_count += 1
+                    elif layout.chunk_type == ChunkTypeScript.Value.RISK_LANE:
+                        pressure_risk_lane_count += 1
+                _:
+                    fail_test("Unexpected route slot in sampled distribution test.")
+
+    assert_gt(baseline_count, 0)
+    assert_gt(skill_count, 0)
+    assert_gt(recovery_count, 0)
+    assert_gt(risk_count, 0)
+    assert_gt(pressure_count, 0)
+    assert_gt(recovery_count, pressure_count)
+    assert_gt(recovery_dense_count, recovery_ladder_count)
+    assert_gt(pressure_commitment_count, pressure_risk_lane_count)
+
 func test_generated_chunk_respects_total_placeholder_socket_budget() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
@@ -413,6 +596,30 @@ func test_risk_lane_chunks_bias_hazards_and_pickups_to_shared_risky_side() -> vo
     assert_gt(pickup_side_score * hazard_side_score, 0)
     assert_gte(absi(pickup_side_score), 2)
     assert_gte(absi(hazard_side_score), 2)
+
+func test_risk_lane_chunks_anchor_pickups_and_hazards_to_hazard_denial_branch() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_keys: PackedStringArray = PackedStringArray([
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.from_utc_date(2026, 5, 15),
+    ])
+    var lane_choice_threshold: float = _get_lane_choice_threshold(tuning)
+
+    var risk_layout: GeneratedChunkLayoutScript = _find_layout_by_chunk_type(generator, seed_keys, ChunkTypeScript.Value.RISK_LANE)
+    var hazard_denial_side_score: int = _route_role_side_score(
+        risk_layout.handholds,
+        RouteRoleScript.Value.HAZARD_DENIAL,
+        lane_choice_threshold
+    )
+    var pickup_side_score: int = _pickup_side_score(risk_layout.pickup_sockets, lane_choice_threshold)
+    var hazard_side_score: int = _hazard_side_score(risk_layout.hazard_sockets, lane_choice_threshold)
+
+    assert_true(hazard_denial_side_score != 0)
+    assert_true(pickup_side_score != 0)
+    assert_true(hazard_side_score != 0)
+    assert_gt(pickup_side_score * hazard_denial_side_score, 0)
+    assert_gt(hazard_side_score * hazard_denial_side_score, 0)
 
 func test_challenge_pressure_chunks_assign_break_or_boost_handholds() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -742,6 +949,22 @@ func _build_assignment_rule(
     assignment_rule.row_zone = row_zone
     assignment_rule.allowed_handhold_types = allowed_handhold_types
     return assignment_rule
+
+func _build_scoring_handhold(
+    generator: DailyChunkGeneratorScript,
+    hold_id: StringName,
+    local_position: Vector2,
+    route_role: int,
+    handhold_type: int = HandholdTypeScript.Value.NORMAL
+) -> GeneratedHandholdSocket:
+    RouteRoleScript.assert_valid(route_role)
+    var base_handhold_variant: Variant = generator.call("_build_handhold_socket", hold_id, local_position, handhold_type)
+    assert_true(base_handhold_variant is GeneratedHandholdSocket)
+    var base_handhold: GeneratedHandholdSocket = base_handhold_variant
+    var role_handhold_variant: Variant = generator.call("_copy_handhold_with_route_role", base_handhold, route_role)
+    assert_true(role_handhold_variant is GeneratedHandholdSocket)
+    var role_handhold: GeneratedHandholdSocket = role_handhold_variant
+    return role_handhold
 
 func _get_lane_choice_threshold(tuning: GenerationTuningScript) -> float:
     return (tuning.chunk_width_meters * 0.5 * tuning.inner_lane_position_ratio) * 0.5

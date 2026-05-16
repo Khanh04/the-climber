@@ -30,7 +30,7 @@ func test_scene_builder_creates_chunk_root_with_metadata_and_scaled_position() -
 
     assert_eq(chunk_node.name, &"GeneratedChunk_02_ZIGZAG")
     assert_eq(chunk_node.position, Vector2(0.0, -4800.0))
-    assert_eq(seed_key, "generator_v1:2026-05-14")
+    assert_eq(seed_key, "generator_v2:2026-05-14")
     assert_eq(chunk_type_label, "ZIGZAG")
     var route_entry_hold_ids_meta: Variant = chunk_node.get_meta(&"route_entry_hold_ids")
     var route_exit_hold_ids_meta: Variant = chunk_node.get_meta(&"route_exit_hold_ids")
@@ -212,8 +212,8 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
     var route_validation_result: RefCounted = route_validation_result_variant
 
     return GeneratedChunkLayoutScript.new(
-        "generator_v1:2026-05-14",
-        "generator_v1",
+        "generator_v2:2026-05-14",
+        "generator_v2",
         2,
         ChunkTypeScript.Value.ZIGZAG,
         ChunkRouteSlotScript.Value.SKILL,

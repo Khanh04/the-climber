@@ -139,7 +139,7 @@ Implementation outcomes:
 - Add a typed route graph model for generated handholds, movement edges, route roles, difficulty costs, and chunk connection ports.
 - Build the primary safe path before reward and hazard placement.
 - Validate chunk interiors and chunk-to-chunk seams against the runtime grip envelope before accepting a generated layout.
-- Replace flat uniform chunk-type selection with deterministic weighted route profiles that account for altitude, recent profile history, recovery needs, and optional risky beta.
+- Replace flat uniform chunk-type selection with deterministic weighted route profiles and slot-aware chunk-type weighting that account for altitude, recent profile history, recovery needs, optional risky beta, and authored lane shape.
 - Add chunk spawn and despawn windows around the camera.
 - Keep deterministic content independent of spawn timing.
 - Add hazard and pickup sockets for later phases.

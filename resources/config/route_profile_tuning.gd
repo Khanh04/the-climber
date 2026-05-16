@@ -20,7 +20,7 @@ extends Resource
 ## Baseline-band risk profile weight.
 @export var baseline_risk_weight: float = 2.0
 ## Baseline-band pressure profile weight.
-@export var baseline_pressure_weight: float = 1.0
+@export var baseline_pressure_weight: float = 0.0
 ## Challenge-band baseline profile weight.
 @export var challenge_baseline_weight: float = 1.0
 ## Challenge-band skill profile weight.
@@ -76,6 +76,8 @@ func assert_valid() -> void:
 	Validation.require_condition(baseline_recovery_weight >= 0.0, "Route profile baseline recovery weight cannot be negative.")
 	Validation.require_condition(baseline_risk_weight >= 0.0, "Route profile baseline risk weight cannot be negative.")
 	Validation.require_condition(baseline_pressure_weight >= 0.0, "Route profile baseline pressure weight cannot be negative.")
+	Validation.require_condition(is_zero_approx(easy_pressure_weight), "Route profile easy pressure weight must remain zero because pressure is challenge-only.")
+	Validation.require_condition(is_zero_approx(baseline_pressure_weight), "Route profile baseline pressure weight must remain zero because pressure is challenge-only.")
 	Validation.require_condition(challenge_baseline_weight >= 0.0, "Route profile challenge baseline weight cannot be negative.")
 	Validation.require_condition(challenge_skill_weight >= 0.0, "Route profile challenge skill weight cannot be negative.")
 	Validation.require_condition(challenge_recovery_weight >= 0.0, "Route profile challenge recovery weight cannot be negative.")

@@ -97,6 +97,7 @@ func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attemp
 	var pickup_sockets: Array[GeneratedPickupSocket] = _build_pickup_sockets(
 		chunk_index,
 		chunk_type,
+		route_slot,
 		risky_lane_side_sign,
 		handholds,
 		chunk_rng
@@ -178,6 +179,8 @@ func _score_candidate_layout(
 	score += float(_get_route_validation_path_length(route_validation_result)) * 25.0
 	score += _score_route_role_coverage(layout.handholds, layout.route_slot)
 	score += _score_route_slot_bonus(layout.handholds, layout.route_slot)
+	score += _score_pickup_intent_alignment(layout.pickup_sockets, layout.handholds, layout.route_slot)
+	score += _score_hazard_intent_alignment(layout.hazard_sockets, layout.handholds, layout.route_slot)
 	score += _score_hazard_fairness(layout.hazard_sockets, layout.route_slot, layout.difficulty_band)
 	score -= float(candidate_attempt_index) * 0.01
 	return score
@@ -263,6 +266,61 @@ func _score_hazard_fairness(
 	for hazard_socket in hazard_sockets:
 		if hazard_socket.hazard_kind == expected_hazard_kind:
 			score += 5.0
+	return score
+
+func _score_pickup_intent_alignment(
+	pickup_sockets: Array[GeneratedPickupSocket],
+	handholds: Array[GeneratedHandholdSocket],
+	route_slot: int
+) -> float:
+	ChunkRouteSlot.assert_valid(route_slot)
+	if pickup_sockets.is_empty() or handholds.is_empty():
+		return 0.0
+
+	var pickup_anchor_pool: Array[GeneratedHandholdSocket] = _get_pickup_intent_anchor_pool(route_slot, handholds)
+	if pickup_anchor_pool.is_empty():
+		return 0.0
+
+	return _score_socket_alignment_to_handholds(pickup_sockets, pickup_anchor_pool, 18.0)
+
+func _score_hazard_intent_alignment(
+	hazard_sockets: Array[GeneratedHazardSocket],
+	handholds: Array[GeneratedHandholdSocket],
+	route_slot: int
+) -> float:
+	ChunkRouteSlot.assert_valid(route_slot)
+	if hazard_sockets.is_empty() or handholds.is_empty():
+		return 0.0
+
+	var hazard_anchor_pool: Array[GeneratedHandholdSocket] = _get_hazard_intent_anchor_pool(route_slot, handholds)
+	if hazard_anchor_pool.is_empty():
+		return 0.0
+
+	return _score_socket_alignment_to_handholds(hazard_sockets, hazard_anchor_pool, 14.0)
+
+func _score_socket_alignment_to_handholds(
+	sockets: Array,
+	handholds: Array[GeneratedHandholdSocket],
+	weight: float
+) -> float:
+	Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator socket alignment scoring requires handholds.")
+	Validation.require_condition(weight > 0.0, "DailyChunkGenerator socket alignment scoring weight must be positive.")
+	if sockets.is_empty():
+		return 0.0
+
+	var score: float = 0.0
+	for socket_value in sockets:
+		Validation.require_condition(socket_value is Object, "DailyChunkGenerator socket alignment scoring requires Object-derived sockets.")
+		var socket_object: Object = socket_value
+		var raw_local_position: Variant = socket_object.get("local_position")
+		Validation.require_condition(raw_local_position is Vector2, "DailyChunkGenerator socket alignment scoring requires Vector2 local positions.")
+		var socket_position: Vector2 = raw_local_position
+		var nearest_distance: float = socket_position.distance_to(handholds[0].local_position)
+		for handhold in handholds:
+			nearest_distance = minf(nearest_distance, socket_position.distance_to(handhold.local_position))
+
+		score += weight / (0.35 + nearest_distance)
+
 	return score
 
 func _route_validation_result_is_valid(route_validation_result: RefCounted) -> bool:
@@ -599,13 +657,11 @@ func _append_route_profile_candidates(
 			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.SKILL, route_profile_tuning.easy_skill_weight)
 			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RECOVERY, route_profile_tuning.easy_recovery_weight)
 			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, route_profile_tuning.easy_risk_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.PRESSURE, route_profile_tuning.easy_pressure_weight)
 		ChunkDifficultyBand.Value.BASELINE:
 			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.BASELINE, route_profile_tuning.baseline_baseline_weight)
 			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.SKILL, route_profile_tuning.baseline_skill_weight)
 			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RECOVERY, route_profile_tuning.baseline_recovery_weight)
 			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, route_profile_tuning.baseline_risk_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.PRESSURE, route_profile_tuning.baseline_pressure_weight)
 		ChunkDifficultyBand.Value.CHALLENGE:
 			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.BASELINE, route_profile_tuning.challenge_baseline_weight)
 			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.SKILL, route_profile_tuning.challenge_skill_weight)
@@ -770,11 +826,210 @@ func _select_chunk_type(route_slot: int, difficulty_band: int, chunk_rng: Random
 
 	var allowed_chunk_types: Array[int] = _get_allowed_chunk_types(route_slot, difficulty_band)
 	Validation.require_condition(allowed_chunk_types.size() > 0, "DailyChunkGenerator requires at least one allowed chunk type.")
+	if allowed_chunk_types.size() == 1:
+		var only_chunk_type: int = allowed_chunk_types[0]
+		ChunkType.assert_valid(only_chunk_type)
+		return only_chunk_type
 
-	var selected_index: int = chunk_rng.randi_range(0, allowed_chunk_types.size() - 1)
-	var selected_chunk_type: int = allowed_chunk_types[selected_index]
+	var chunk_type_weights: Array[float] = []
+	for chunk_type in allowed_chunk_types:
+		chunk_type_weights.append(_get_chunk_type_selection_weight(route_slot, difficulty_band, chunk_type))
+
+	var selected_chunk_type: int = _select_weighted_chunk_type(allowed_chunk_types, chunk_type_weights, chunk_rng)
 	ChunkType.assert_valid(selected_chunk_type)
 	return selected_chunk_type
+
+func _get_chunk_type_selection_weight(route_slot: int, difficulty_band: int, chunk_type: int) -> float:
+	ChunkRouteSlot.assert_valid(route_slot)
+	ChunkDifficultyBand.assert_valid(difficulty_band)
+	ChunkType.assert_valid(chunk_type)
+
+	var hold_rows: Array[PackedInt32Array] = _get_hold_rows(chunk_type)
+	Validation.require_condition(hold_rows.size() > 0, "DailyChunkGenerator chunk-type weighting requires authored hold rows.")
+	var total_hold_count: int = _count_total_holds_in_rows(hold_rows)
+	var center_row_count: int = _count_center_rows(hold_rows)
+	var dual_side_row_count: int = _count_dual_side_rows(hold_rows)
+	var outer_lane_row_count: int = _count_outer_lane_rows(hold_rows)
+	var single_hold_row_count: int = _count_single_hold_rows(hold_rows)
+
+	var weight: float = _get_chunk_type_route_slot_base_weight(route_slot, difficulty_band, chunk_type)
+	match route_slot:
+		ChunkRouteSlot.Value.OPENER:
+			weight += float(center_row_count) * 0.35
+			weight += float(total_hold_count) * 0.02
+		ChunkRouteSlot.Value.BASELINE:
+			weight += float(center_row_count) * 0.25
+			weight += float(dual_side_row_count) * 0.18
+			weight += float(total_hold_count) * 0.03
+		ChunkRouteSlot.Value.SKILL:
+			weight += float(dual_side_row_count) * 0.4
+			weight += float(outer_lane_row_count) * 0.14
+			weight -= float(single_hold_row_count) * 0.08
+		ChunkRouteSlot.Value.RECOVERY:
+			weight += float(total_hold_count) * 0.05
+			weight += float(center_row_count) * 0.28
+			weight -= float(single_hold_row_count) * 0.12
+			weight -= float(outer_lane_row_count) * 0.06
+		ChunkRouteSlot.Value.RISK:
+			weight += float(dual_side_row_count) * 0.34
+			weight += float(outer_lane_row_count) * 0.28
+			weight -= float(center_row_count) * 0.05
+		ChunkRouteSlot.Value.PRESSURE:
+			weight += float(single_hold_row_count) * 0.42
+			weight += float(outer_lane_row_count) * 0.24
+			weight -= float(total_hold_count) * 0.04
+			weight -= float(center_row_count) * 0.08
+		_:
+			Validation.require_condition(false, "DailyChunkGenerator chunk-type weighting requires a supported route slot.")
+
+	return maxf(weight, 0.1)
+
+func _get_chunk_type_route_slot_base_weight(route_slot: int, difficulty_band: int, chunk_type: int) -> float:
+	ChunkRouteSlot.assert_valid(route_slot)
+	ChunkDifficultyBand.assert_valid(difficulty_band)
+	ChunkType.assert_valid(chunk_type)
+	match route_slot:
+		ChunkRouteSlot.Value.OPENER:
+			match chunk_type:
+				ChunkType.Value.LADDER:
+					return 4.4
+				ChunkType.Value.ZIGZAG:
+					return 3.9
+				_:
+					return 1.0
+		ChunkRouteSlot.Value.BASELINE:
+			match chunk_type:
+				ChunkType.Value.ZIGZAG:
+					return 4.2
+				ChunkType.Value.LADDER:
+					return 3.8
+				ChunkType.Value.WIDE_TRAVERSE:
+					return 3.7
+				ChunkType.Value.DENSE_RECOVERY:
+					return 3.5
+				ChunkType.Value.FORK:
+					return 3.6 if difficulty_band == ChunkDifficultyBand.Value.CHALLENGE else 2.8
+				_:
+					return 1.0
+		ChunkRouteSlot.Value.SKILL:
+			match chunk_type:
+				ChunkType.Value.ZIGZAG:
+					return 4.2
+				ChunkType.Value.WIDE_TRAVERSE:
+					return 4.0
+				ChunkType.Value.FORK:
+					return 4.3
+				ChunkType.Value.SWING_GAP:
+					return 4.1
+				_:
+					return 1.0
+		ChunkRouteSlot.Value.RECOVERY:
+			match chunk_type:
+				ChunkType.Value.DENSE_RECOVERY:
+					return 4.6
+				ChunkType.Value.LADDER:
+					return 4.0
+				ChunkType.Value.ZIGZAG:
+					return 3.5
+				_:
+					return 1.0
+		ChunkRouteSlot.Value.RISK:
+			match chunk_type:
+				ChunkType.Value.RISK_LANE:
+					return 4.6
+				ChunkType.Value.FORK:
+					return 4.2
+				ChunkType.Value.WIDE_TRAVERSE:
+					return 3.8
+				ChunkType.Value.SPARSE_REACH:
+					return 3.9
+				ChunkType.Value.ZIGZAG:
+					return 3.3
+				_:
+					return 1.0
+		ChunkRouteSlot.Value.PRESSURE:
+			match chunk_type:
+				ChunkType.Value.SWING_GAP:
+					return 4.7
+				ChunkType.Value.SPARSE_REACH:
+					return 4.3
+				ChunkType.Value.RISK_LANE:
+					return 4.0
+				_:
+					return 1.0
+		_:
+			Validation.require_condition(false, "DailyChunkGenerator chunk-type base weighting requires a supported route slot.")
+			return 1.0
+
+func _select_weighted_chunk_type(
+	chunk_types: Array[int],
+	chunk_type_weights: Array[float],
+	chunk_rng: RandomNumberGenerator
+) -> int:
+	Validation.require_condition(chunk_types.size() > 0, "DailyChunkGenerator weighted chunk-type selection requires candidates.")
+	Validation.require_condition(chunk_types.size() == chunk_type_weights.size(), "DailyChunkGenerator weighted chunk-type candidates must align with weights.")
+	Validation.require_condition(chunk_rng != null, "DailyChunkGenerator weighted chunk-type selection requires an RNG.")
+
+	var total_weight: float = 0.0
+	for weight in chunk_type_weights:
+		Validation.require_condition(weight > 0.0, "DailyChunkGenerator weighted chunk-type selection requires positive weights.")
+		total_weight += weight
+
+	Validation.require_condition(total_weight > 0.0, "DailyChunkGenerator weighted chunk-type selection requires positive total weight.")
+	var selection_value: float = chunk_rng.randf_range(0.0, total_weight)
+	var accumulated_weight: float = 0.0
+	for chunk_type_index in range(chunk_types.size()):
+		accumulated_weight += chunk_type_weights[chunk_type_index]
+		if selection_value <= accumulated_weight:
+			return chunk_types[chunk_type_index]
+
+	return chunk_types[chunk_types.size() - 1]
+
+func _count_total_holds_in_rows(hold_rows: Array[PackedInt32Array]) -> int:
+	Validation.require_condition(hold_rows.size() > 0, "DailyChunkGenerator row hold counting requires authored hold rows.")
+	var total_holds: int = 0
+	for row_lane_indices in hold_rows:
+		total_holds += row_lane_indices.size()
+	return total_holds
+
+func _count_center_rows(hold_rows: Array[PackedInt32Array]) -> int:
+	Validation.require_condition(hold_rows.size() > 0, "DailyChunkGenerator center-row counting requires authored hold rows.")
+	var center_row_count: int = 0
+	for row_lane_indices in hold_rows:
+		if row_lane_indices.has(1) and row_lane_indices.has(2):
+			center_row_count += 1
+	return center_row_count
+
+func _count_dual_side_rows(hold_rows: Array[PackedInt32Array]) -> int:
+	Validation.require_condition(hold_rows.size() > 0, "DailyChunkGenerator dual-side row counting requires authored hold rows.")
+	var dual_side_row_count: int = 0
+	for row_lane_indices in hold_rows:
+		var has_left_lane: bool = false
+		var has_right_lane: bool = false
+		for lane_index in row_lane_indices:
+			if lane_index <= 1:
+				has_left_lane = true
+			if lane_index >= 2:
+				has_right_lane = true
+		if has_left_lane and has_right_lane:
+			dual_side_row_count += 1
+	return dual_side_row_count
+
+func _count_outer_lane_rows(hold_rows: Array[PackedInt32Array]) -> int:
+	Validation.require_condition(hold_rows.size() > 0, "DailyChunkGenerator outer-lane row counting requires authored hold rows.")
+	var outer_lane_row_count: int = 0
+	for row_lane_indices in hold_rows:
+		if row_lane_indices.has(0) or row_lane_indices.has(3):
+			outer_lane_row_count += 1
+	return outer_lane_row_count
+
+func _count_single_hold_rows(hold_rows: Array[PackedInt32Array]) -> int:
+	Validation.require_condition(hold_rows.size() > 0, "DailyChunkGenerator single-hold row counting requires authored hold rows.")
+	var single_hold_row_count: int = 0
+	for row_lane_indices in hold_rows:
+		if row_lane_indices.size() == 1:
+			single_hold_row_count += 1
+	return single_hold_row_count
 
 func _get_allowed_chunk_types(route_slot: int, difficulty_band: int) -> Array[int]:
 	ChunkRouteSlot.assert_valid(route_slot)
@@ -1035,17 +1290,19 @@ func _get_opener_lane_positions() -> Array[float]:
 func _build_pickup_sockets(
 	chunk_index: int,
 	chunk_type: int,
+	route_slot: int,
 	risky_lane_side_sign: float,
 	handholds: Array[GeneratedHandholdSocket],
 	chunk_rng: RandomNumberGenerator
 ) -> Array[GeneratedPickupSocket]:
 	Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator requires handholds before generating pickup sockets.")
 	ChunkType.assert_valid(chunk_type)
+	ChunkRouteSlot.assert_valid(route_slot)
 	Validation.require_condition(chunk_rng != null, "DailyChunkGenerator requires an RNG when generating pickup sockets.")
 
 	var pickup_socket_count: int = _tuning.get_pickup_socket_count()
 	var pickup_sockets: Array[GeneratedPickupSocket] = []
-	var pickup_anchor_pool: Array[GeneratedHandholdSocket] = _get_pickup_anchor_pool(chunk_type, risky_lane_side_sign, handholds)
+	var pickup_anchor_pool: Array[GeneratedHandholdSocket] = _get_pickup_anchor_pool(route_slot, chunk_type, risky_lane_side_sign, handholds)
 
 	for socket_index in range(pickup_socket_count):
 		var anchor_index: int = socket_index % pickup_anchor_pool.size()
@@ -1077,7 +1334,7 @@ func _build_hazard_sockets(
 
 	var hazard_socket_count: int = _tuning.get_hazard_socket_count()
 	var hazard_sockets: Array[GeneratedHazardSocket] = []
-	var hazard_anchor_pool: Array[GeneratedHandholdSocket] = _get_hazard_anchor_pool(chunk_type, risky_lane_side_sign, handholds)
+	var hazard_anchor_pool: Array[GeneratedHandholdSocket] = _get_hazard_anchor_pool(route_slot, chunk_type, risky_lane_side_sign, handholds)
 	var hazard_anchor_offset: int = 0
 
 	if chunk_index == 0 and hazard_anchor_pool.size() > 3:
@@ -1297,12 +1554,25 @@ func _supports_lane_choice(chunk_type: int) -> bool:
 			return false
 
 func _get_pickup_anchor_pool(
+	route_slot: int,
 	chunk_type: int,
 	risky_lane_side_sign: float,
 	handholds: Array[GeneratedHandholdSocket]
 ) -> Array[GeneratedHandholdSocket]:
+	ChunkRouteSlot.assert_valid(route_slot)
 	ChunkType.assert_valid(chunk_type)
 	Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator pickup anchor selection requires handholds.")
+
+	var role_priority_pool: Array[GeneratedHandholdSocket] = _get_pickup_intent_anchor_pool(route_slot, handholds)
+	var side_biased_role_pool: Array[GeneratedHandholdSocket] = _filter_handholds_to_side_or_empty(
+		role_priority_pool,
+		risky_lane_side_sign,
+		_tuning.pickup_branch_side_alignment_meters
+	)
+	if side_biased_role_pool.size() > 0:
+		return side_biased_role_pool
+	if role_priority_pool.size() > 0:
+		return role_priority_pool
 
 	if not _supports_lane_choice(chunk_type) or risky_lane_side_sign == 0.0:
 		return handholds
@@ -1310,17 +1580,118 @@ func _get_pickup_anchor_pool(
 	return _filter_handholds_to_side(handholds, risky_lane_side_sign, _tuning.pickup_branch_side_alignment_meters)
 
 func _get_hazard_anchor_pool(
+	route_slot: int,
 	chunk_type: int,
 	risky_lane_side_sign: float,
 	handholds: Array[GeneratedHandholdSocket]
 ) -> Array[GeneratedHandholdSocket]:
+	ChunkRouteSlot.assert_valid(route_slot)
 	ChunkType.assert_valid(chunk_type)
 	Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator hazard anchor selection requires handholds.")
+
+	var role_priority_pool: Array[GeneratedHandholdSocket] = _get_hazard_intent_anchor_pool(route_slot, handholds)
+	var side_biased_role_pool: Array[GeneratedHandholdSocket] = _filter_handholds_to_side_or_empty(
+		role_priority_pool,
+		risky_lane_side_sign,
+		_tuning.hazard_branch_side_alignment_meters
+	)
+	if side_biased_role_pool.size() > 0:
+		return side_biased_role_pool
+	if role_priority_pool.size() > 0:
+		return role_priority_pool
 
 	if not _supports_lane_choice(chunk_type) or risky_lane_side_sign == 0.0:
 		return handholds
 
 	return _filter_handholds_to_side(handholds, risky_lane_side_sign, _tuning.hazard_branch_side_alignment_meters)
+
+func _get_pickup_intent_anchor_pool(route_slot: int, handholds: Array[GeneratedHandholdSocket]) -> Array[GeneratedHandholdSocket]:
+	ChunkRouteSlot.assert_valid(route_slot)
+	Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator pickup intent anchor selection requires handholds.")
+	match route_slot:
+		ChunkRouteSlot.Value.RECOVERY:
+			return _get_handholds_with_route_role_priority(
+				handholds,
+				[RouteRoleScript.Value.REWARD, RouteRoleScript.Value.RECOVERY, RouteRoleScript.Value.TOP_OUT]
+			)
+		ChunkRouteSlot.Value.RISK, ChunkRouteSlot.Value.PRESSURE:
+			return _get_handholds_with_route_role_priority(
+				handholds,
+				[RouteRoleScript.Value.HAZARD_DENIAL, RouteRoleScript.Value.CRUX, RouteRoleScript.Value.RECOVERY]
+			)
+		ChunkRouteSlot.Value.SKILL, ChunkRouteSlot.Value.BASELINE:
+			return _get_handholds_with_route_role_priority(
+				handholds,
+				[RouteRoleScript.Value.OPTIONAL_BETA, RouteRoleScript.Value.CRUX, RouteRoleScript.Value.RECOVERY]
+			)
+		ChunkRouteSlot.Value.OPENER:
+			return _get_handholds_with_route_role_priority(
+				handholds,
+				[RouteRoleScript.Value.ENTRY, RouteRoleScript.Value.SETUP]
+			)
+		_:
+			Validation.require_condition(false, "DailyChunkGenerator pickup intent anchor selection requires a supported route slot.")
+			return []
+
+func _get_hazard_intent_anchor_pool(route_slot: int, handholds: Array[GeneratedHandholdSocket]) -> Array[GeneratedHandholdSocket]:
+	ChunkRouteSlot.assert_valid(route_slot)
+	Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator hazard intent anchor selection requires handholds.")
+	match route_slot:
+		ChunkRouteSlot.Value.RECOVERY:
+			return _get_handholds_with_route_role_priority(
+				handholds,
+				[RouteRoleScript.Value.RECOVERY, RouteRoleScript.Value.TOP_OUT, RouteRoleScript.Value.SETUP]
+			)
+		ChunkRouteSlot.Value.RISK, ChunkRouteSlot.Value.PRESSURE:
+			return _get_handholds_with_route_role_priority(
+				handholds,
+				[RouteRoleScript.Value.HAZARD_DENIAL, RouteRoleScript.Value.CRUX, RouteRoleScript.Value.RECOVERY]
+			)
+		ChunkRouteSlot.Value.SKILL, ChunkRouteSlot.Value.BASELINE:
+			return _get_handholds_with_route_role_priority(
+				handholds,
+				[RouteRoleScript.Value.OPTIONAL_BETA, RouteRoleScript.Value.CRUX, RouteRoleScript.Value.RECOVERY]
+			)
+		ChunkRouteSlot.Value.OPENER:
+			return _get_handholds_with_route_role_priority(
+				handholds,
+				[RouteRoleScript.Value.SETUP, RouteRoleScript.Value.ENTRY]
+			)
+		_:
+			Validation.require_condition(false, "DailyChunkGenerator hazard intent anchor selection requires a supported route slot.")
+			return []
+
+func _get_handholds_with_route_role_priority(
+	handholds: Array[GeneratedHandholdSocket],
+	role_priority: Array[int]
+) -> Array[GeneratedHandholdSocket]:
+	Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator route-role priority selection requires handholds.")
+	Validation.require_condition(role_priority.size() > 0, "DailyChunkGenerator route-role priority selection requires at least one route role.")
+	var prioritized_handholds: Array[GeneratedHandholdSocket] = []
+	for route_role in role_priority:
+		RouteRoleScript.assert_valid(route_role)
+		for handhold in handholds:
+			if handhold.route_role == route_role:
+				prioritized_handholds.append(handhold)
+	return prioritized_handholds
+
+func _filter_handholds_to_side_or_empty(
+	handholds: Array[GeneratedHandholdSocket],
+	side_sign: float,
+	minimum_alignment: float
+) -> Array[GeneratedHandholdSocket]:
+	Validation.require_condition(minimum_alignment >= 0.0, "DailyChunkGenerator optional side filtering minimum alignment cannot be negative.")
+	if handholds.is_empty():
+		return []
+	if side_sign == 0.0:
+		return handholds
+
+	Validation.require_condition(side_sign == -1.0 or side_sign == 1.0, "DailyChunkGenerator optional side filtering requires a valid side sign.")
+	var filtered_handholds: Array[GeneratedHandholdSocket] = []
+	for handhold in handholds:
+		if handhold.local_position.x * side_sign >= minimum_alignment:
+			filtered_handholds.append(handhold)
+	return filtered_handholds
 
 func _filter_handholds_to_side(
 	handholds: Array[GeneratedHandholdSocket],

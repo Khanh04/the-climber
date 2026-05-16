@@ -4,7 +4,7 @@ extends RefCounted
 const UtcDateScript = preload("res://src/platform/clock/utc_date.gd")
 const UtcDateProviderScript = preload("res://src/platform/clock/utc_date_provider.gd")
 
-const GENERATOR_VERSION: String = "generator_v1"
+const GENERATOR_VERSION: String = "generator_v2"
 
 static func from_utc_date(year: int, month: int, day: int) -> String:
     Validation.require_condition(year >= 2000, "Daily seed year must be explicit and modern.")

@@ -341,8 +341,8 @@ func test_run_scene_generated_seed_key_tracks_injected_utc_rollover() -> void:
     var first_generator_version: String = _get_required_string_meta(first_generated_chunk, &"generator_version")
     var second_generator_version: String = _get_required_string_meta(second_generated_chunk, &"generator_version")
 
-    assert_eq(first_seed_key, "generator_v1:2026-05-14")
-    assert_eq(second_seed_key, "generator_v1:2026-05-15")
+    assert_eq(first_seed_key, "generator_v2:2026-05-14")
+    assert_eq(second_seed_key, "generator_v2:2026-05-15")
     assert_ne(first_seed_key, second_seed_key)
     assert_eq(first_generator_version, first_playground.generation_tuning.generator_version)
     assert_eq(second_generator_version, second_playground.generation_tuning.generator_version)
