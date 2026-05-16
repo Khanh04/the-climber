@@ -5,9 +5,13 @@ const HandholdAssignmentRuleCatalogScript = preload("res://resources/config/hand
 const HandholdAssignmentRuleScript = preload("res://resources/config/handhold_assignment_rule.gd")
 const HandholdTypeDefinitionCatalogScript = preload("res://resources/config/handhold_type_definition_catalog.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
+const RouteProfileTuningScript = preload("res://resources/config/route_profile_tuning.gd")
+const RouteValidationTuningScript = preload("res://resources/config/route_validation_tuning.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const DefaultHandholdTypeDefinitionCatalogResource = preload("res://resources/config/handhold_type_definition_catalog.tres")
 const DefaultHandholdAssignmentRuleCatalogResource = preload("res://resources/config/handhold_assignment_rule_catalog.tres")
+const DefaultRouteValidationTuningResource = preload("res://resources/config/route_validation_tuning.tres")
+const DefaultRouteProfileTuningResource = preload("res://resources/config/route_profile_tuning.tres")
 
 ## Generator version prefix embedded into daily seed keys and chunk metadata.
 @export var generator_version: String = DailySeedKey.GENERATOR_VERSION
@@ -27,8 +31,6 @@ const DefaultHandholdAssignmentRuleCatalogResource = preload("res://resources/co
 @export var opener_horizontal_jitter_meters: float = 0.08
 ## Maximum vertical jitter applied to opener handholds after row placement.
 @export var opener_vertical_jitter_meters: float = 0.08
-## Vertical tolerance used when grouping handholds into generated route entry and exit ports.
-@export var route_port_row_tolerance_meters: float = 0.3
 ## Portion of each chunk's placeholder sockets reserved for pickups before hazards take the remainder.
 @export var pickup_socket_ratio: float = 0.6
 ## Maximum lateral meters a generated pickup can drift from its anchor handhold.
@@ -47,8 +49,10 @@ const DefaultHandholdAssignmentRuleCatalogResource = preload("res://resources/co
 @export var chunk_keep_behind_count: int = 1
 ## Total placeholder sockets per chunk before pickup and hazard splits are applied.
 @export var socket_count_per_chunk: int = 12
-## Number of deterministic candidate attempts allowed before the generator accepts the first invalid route layout.
-@export var route_validation_candidate_attempt_count: int = 1
+## Conservative route validation envelope, role-zone boundaries, and retry budget.
+@export var route_validation_tuning: Resource = _duplicate_default_route_validation_tuning()
+## Weighted profile scheduling knobs for future bouldering-aware chunk selection.
+@export var route_profile_tuning: Resource = _duplicate_default_route_profile_tuning()
 ## Typed handhold definitions keyed by HandholdType for generation and runtime setup.
 @export var handhold_definitions: Array[Resource] = _duplicate_default_handhold_definitions()
 ## Ordered handhold assignment rules matched by route slot, difficulty band, and row zone.
@@ -153,6 +157,18 @@ const DefaultHandholdAssignmentRuleCatalogResource = preload("res://resources/co
     PackedInt32Array([1, 2]),
 ]
 
+var route_port_row_tolerance_meters: float:
+    get:
+        return _get_required_route_validation_tuning().route_port_row_tolerance_meters
+    set(value):
+        _get_required_route_validation_tuning().route_port_row_tolerance_meters = value
+
+var route_validation_candidate_attempt_count: int:
+    get:
+        return _get_required_route_validation_tuning().candidate_attempt_count
+    set(value):
+        _get_required_route_validation_tuning().candidate_attempt_count = value
+
 func is_valid() -> bool:
     return generator_version != "" \
         and segment_height_meters > 0.0 \
@@ -165,7 +181,6 @@ func is_valid() -> bool:
         and opener_first_row_height_meters + opener_top_padding_meters < segment_height_meters \
         and opener_horizontal_jitter_meters >= 0.0 \
         and opener_vertical_jitter_meters >= 0.0 \
-        and route_port_row_tolerance_meters >= 0.0 \
         and pickup_socket_ratio > 0.0 \
         and pickup_socket_ratio < 1.0 \
         and pickup_lateral_offset_meters >= 0.0 \
@@ -177,7 +192,8 @@ func is_valid() -> bool:
         and baseline_band_max_height_meters > easy_band_max_height_meters \
         and chunk_spawn_ahead_count >= 1 \
         and chunk_keep_behind_count >= 0 \
-        and route_validation_candidate_attempt_count >= 1 \
+        and _route_validation_tuning_is_valid() \
+        and _route_profile_tuning_is_valid() \
         and _handhold_definitions_are_valid() \
         and _handhold_assignment_rules_are_valid() \
         and socket_count_per_chunk > 0 \
@@ -213,7 +229,6 @@ func assert_valid() -> void:
     )
     Validation.require_condition(opener_horizontal_jitter_meters >= 0.0, "Generation opener horizontal jitter cannot be negative.")
     Validation.require_condition(opener_vertical_jitter_meters >= 0.0, "Generation opener vertical jitter cannot be negative.")
-    Validation.require_condition(route_port_row_tolerance_meters >= 0.0, "Generation route port row tolerance cannot be negative.")
     Validation.require_condition(pickup_socket_ratio > 0.0, "Generation pickup socket ratio must be positive.")
     Validation.require_condition(pickup_socket_ratio < 1.0, "Generation pickup socket ratio must leave room for hazards.")
     Validation.require_condition(pickup_lateral_offset_meters >= 0.0, "Generation pickup lateral offset cannot be negative.")
@@ -240,7 +255,8 @@ func assert_valid() -> void:
     )
     Validation.require_condition(chunk_spawn_ahead_count >= 1, "Generation config must keep at least one chunk ahead of the camera.")
     Validation.require_condition(chunk_keep_behind_count >= 0, "Generation config cannot keep a negative number of chunks behind the camera.")
-    Validation.require_condition(route_validation_candidate_attempt_count >= 1, "Generation config must allow at least one route validation candidate attempt.")
+    _assert_valid_route_validation_tuning()
+    _assert_valid_route_profile_tuning()
     _assert_valid_handhold_definitions()
     _assert_valid_handhold_assignment_rules()
     Validation.require_condition(socket_count_per_chunk > 0, "Generation config must provide at least one socket per chunk.")
@@ -377,6 +393,20 @@ func _handhold_definitions_are_valid() -> bool:
 
     return true
 
+func _route_validation_tuning_is_valid() -> bool:
+    if route_validation_tuning == null or not route_validation_tuning is RouteValidationTuningScript:
+        return false
+
+    var typed_tuning: RouteValidationTuningScript = route_validation_tuning as RouteValidationTuningScript
+    return typed_tuning.is_valid()
+
+func _route_profile_tuning_is_valid() -> bool:
+    if route_profile_tuning == null or not route_profile_tuning is RouteProfileTuningScript:
+        return false
+
+    var typed_tuning: RouteProfileTuningScript = route_profile_tuning as RouteProfileTuningScript
+    return typed_tuning.is_valid()
+
 func _handhold_assignment_rules_are_valid() -> bool:
     if handhold_assignment_rules.is_empty():
         return false
@@ -420,6 +450,24 @@ func _assert_valid_handhold_definitions() -> void:
             seen_handhold_types.has(handhold_type),
             "Generation config requires a handhold definition for %s." % HandholdTypeScript.to_label(handhold_type)
         )
+
+func _assert_valid_route_validation_tuning() -> void:
+    Validation.require_condition(route_validation_tuning != null, "Generation config requires route validation tuning.")
+    Validation.require_condition(
+        route_validation_tuning is RouteValidationTuningScript,
+        "Generation config route validation tuning must use RouteValidationTuning resources."
+    )
+    var typed_tuning: RouteValidationTuningScript = route_validation_tuning as RouteValidationTuningScript
+    typed_tuning.assert_valid()
+
+func _assert_valid_route_profile_tuning() -> void:
+    Validation.require_condition(route_profile_tuning != null, "Generation config requires route profile tuning.")
+    Validation.require_condition(
+        route_profile_tuning is RouteProfileTuningScript,
+        "Generation config route profile tuning must use RouteProfileTuning resources."
+    )
+    var typed_tuning: RouteProfileTuningScript = route_profile_tuning as RouteProfileTuningScript
+    typed_tuning.assert_valid()
 
 func _assert_valid_handhold_assignment_rules() -> void:
     Validation.require_condition(
@@ -483,3 +531,46 @@ static func _duplicate_default_handhold_assignment_rules() -> Array[Resource]:
     var typed_catalog: HandholdAssignmentRuleCatalogScript = DefaultHandholdAssignmentRuleCatalogResource as HandholdAssignmentRuleCatalogScript
     typed_catalog.assert_valid()
     return typed_catalog.duplicate_rules()
+
+static func _duplicate_default_route_validation_tuning() -> Resource:
+    Validation.require_condition(
+        DefaultRouteValidationTuningResource != null,
+        "Generation config requires an authored default route validation tuning resource."
+    )
+    Validation.require_condition(
+        DefaultRouteValidationTuningResource is RouteValidationTuningScript,
+        "Generation config default route validation tuning must use RouteValidationTuning resources."
+    )
+
+    var duplicated_resource: Resource = DefaultRouteValidationTuningResource.duplicate(true)
+    Validation.require_condition(
+        duplicated_resource is RouteValidationTuningScript,
+        "Generation config duplicated route validation tuning must remain a RouteValidationTuning resource."
+    )
+    return duplicated_resource
+
+static func _duplicate_default_route_profile_tuning() -> Resource:
+    Validation.require_condition(
+        DefaultRouteProfileTuningResource != null,
+        "Generation config requires an authored default route profile tuning resource."
+    )
+    Validation.require_condition(
+        DefaultRouteProfileTuningResource is RouteProfileTuningScript,
+        "Generation config default route profile tuning must use RouteProfileTuning resources."
+    )
+
+    var duplicated_resource: Resource = DefaultRouteProfileTuningResource.duplicate(true)
+    Validation.require_condition(
+        duplicated_resource is RouteProfileTuningScript,
+        "Generation config duplicated route profile tuning must remain a RouteProfileTuning resource."
+    )
+    return duplicated_resource
+
+func _get_required_route_validation_tuning() -> RouteValidationTuningScript:
+    Validation.require_condition(route_validation_tuning != null, "Generation config requires route validation tuning before access.")
+    Validation.require_condition(
+        route_validation_tuning is RouteValidationTuningScript,
+        "Generation config route validation tuning must use RouteValidationTuning resources before access."
+    )
+    var typed_tuning: RouteValidationTuningScript = route_validation_tuning as RouteValidationTuningScript
+    return typed_tuning

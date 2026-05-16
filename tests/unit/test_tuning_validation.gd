@@ -9,6 +9,8 @@ const HandholdAssignmentRuleScript = preload("res://resources/config/handhold_as
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 const HandholdTypeDefinitionCatalogScript = preload("res://resources/config/handhold_type_definition_catalog.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
+const RouteProfileTuningScript = preload("res://resources/config/route_profile_tuning.gd")
+const RouteValidationTuningScript = preload("res://resources/config/route_validation_tuning.gd")
 const ChaserThemeScript = preload("res://resources/config/chaser_theme.gd")
 const ChaserTuningScript = preload("res://resources/config/chaser_tuning.gd")
 const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_catalog.gd")
@@ -65,6 +67,18 @@ func test_default_generation_tuning_is_valid() -> void:
 
     assert_true(tuning.is_valid())
 
+func test_default_route_validation_tuning_is_valid() -> void:
+    var tuning: RouteValidationTuningScript = load("res://resources/config/route_validation_tuning.tres") as RouteValidationTuningScript
+
+    assert_not_null(tuning)
+    assert_true(tuning.is_valid())
+
+func test_default_route_profile_tuning_is_valid() -> void:
+    var tuning: RouteProfileTuningScript = load("res://resources/config/route_profile_tuning.tres") as RouteProfileTuningScript
+
+    assert_not_null(tuning)
+    assert_true(tuning.is_valid())
+
 func test_default_handhold_type_definition_catalog_is_valid() -> void:
     var catalog: HandholdTypeDefinitionCatalogScript = load("res://resources/config/handhold_type_definition_catalog.tres") as HandholdTypeDefinitionCatalogScript
 
@@ -84,16 +98,26 @@ func test_generation_tuning_duplicates_authored_default_handhold_resources() -> 
     var second_definition: HandholdTypeDefinitionScript = second_tuning.handhold_definitions[0] as HandholdTypeDefinitionScript
     var first_rule: HandholdAssignmentRuleScript = first_tuning.handhold_assignment_rules[0] as HandholdAssignmentRuleScript
     var second_rule: HandholdAssignmentRuleScript = second_tuning.handhold_assignment_rules[0] as HandholdAssignmentRuleScript
+    var first_route_validation_tuning: RouteValidationTuningScript = first_tuning.route_validation_tuning as RouteValidationTuningScript
+    var second_route_validation_tuning: RouteValidationTuningScript = second_tuning.route_validation_tuning as RouteValidationTuningScript
+    var first_route_profile_tuning: RouteProfileTuningScript = first_tuning.route_profile_tuning as RouteProfileTuningScript
+    var second_route_profile_tuning: RouteProfileTuningScript = second_tuning.route_profile_tuning as RouteProfileTuningScript
 
     assert_not_null(first_definition)
     assert_not_null(second_definition)
     assert_not_null(first_rule)
     assert_not_null(second_rule)
+    assert_not_null(first_route_validation_tuning)
+    assert_not_null(second_route_validation_tuning)
+    assert_not_null(first_route_profile_tuning)
+    assert_not_null(second_route_profile_tuning)
     assert_ne(first_definition, second_definition)
     assert_ne(first_definition.surface_profile, second_definition.surface_profile)
     assert_ne(first_definition.lifecycle_rule, second_definition.lifecycle_rule)
     assert_ne(first_definition.movement_rule, second_definition.movement_rule)
     assert_ne(first_rule, second_rule)
+    assert_ne(first_route_validation_tuning, second_route_validation_tuning)
+    assert_ne(first_route_profile_tuning, second_route_profile_tuning)
 
 func test_invalid_generation_tuning_is_detected() -> void:
     var tuning = GenerationTuningScript.new()
@@ -172,6 +196,28 @@ func test_generation_tuning_rejects_opener_spacing_that_exceeds_chunk_height() -
 func test_generation_tuning_rejects_invalid_pickup_socket_ratio() -> void:
     var tuning = GenerationTuningScript.new()
     tuning.pickup_socket_ratio = 1.0
+
+    assert_false(tuning.is_valid())
+
+func test_generation_tuning_rejects_invalid_route_validation_tuning() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var route_validation_tuning: RouteValidationTuningScript = tuning.route_validation_tuning as RouteValidationTuningScript
+
+    assert_not_null(route_validation_tuning)
+    route_validation_tuning.candidate_attempt_count = 0
+
+    assert_false(tuning.is_valid())
+
+func test_generation_tuning_rejects_invalid_route_profile_tuning() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var route_profile_tuning: RouteProfileTuningScript = tuning.route_profile_tuning as RouteProfileTuningScript
+
+    assert_not_null(route_profile_tuning)
+    route_profile_tuning.easy_baseline_weight = 0.0
+    route_profile_tuning.easy_skill_weight = 0.0
+    route_profile_tuning.easy_recovery_weight = 0.0
+    route_profile_tuning.easy_risk_weight = 0.0
+    route_profile_tuning.easy_pressure_weight = 0.0
 
     assert_false(tuning.is_valid())
 

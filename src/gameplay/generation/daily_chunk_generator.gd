@@ -5,11 +5,10 @@ const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generat
 const HandholdLifecycleRuleScript = preload("res://resources/config/handhold_lifecycle_rule.gd")
 const HandholdMovementRuleScript = preload("res://resources/config/handhold_movement_rule.gd")
 const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_surface_profile.gd")
+const RouteValidationTuningScript = preload("res://resources/config/route_validation_tuning.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
 const RoutePathValidatorScript: GDScript = preload("res://src/gameplay/generation/route_path_validator.gd")
-
-const ROUTE_VALIDATION_MAX_MOVE_DISTANCE_METERS: float = 1.2
 
 var _tuning: GenerationTuning
 var _route_path_validator: RefCounted
@@ -21,8 +20,12 @@ func _init(tuning_value: GenerationTuning) -> void:
 	Validation.require_condition(tuning_value != null, "DailyChunkGenerator requires generation tuning.")
 	_tuning = tuning_value
 	_tuning.assert_valid()
-	_route_path_validator = _build_route_path_validator(ROUTE_VALIDATION_MAX_MOVE_DISTANCE_METERS)
-	_route_entry_anchor_positions = [Vector2(-0.42, -0.24), Vector2(0.42, -0.24)]
+	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
+	_route_path_validator = _build_route_path_validator(
+		route_validation_tuning.max_move_distance_meters,
+		route_validation_tuning.max_downward_move_meters
+	)
+	_route_entry_anchor_positions = route_validation_tuning.duplicate_entry_anchor_positions()
 	_chunk_layout_cache = {}
 	_chunk_seam_cache = {}
 
@@ -138,8 +141,8 @@ func _build_route_port_hold_ids(handholds: Array[GeneratedHandholdSocket], selec
 	Validation.require_condition(route_port_hold_ids.size() > 0, "DailyChunkGenerator route ports cannot be empty.")
 	return route_port_hold_ids
 
-func _build_route_path_validator(max_move_distance_meters: float) -> RefCounted:
-	var validator_variant: Variant = RoutePathValidatorScript.new(max_move_distance_meters)
+func _build_route_path_validator(max_move_distance_meters: float, max_downward_move_meters: float) -> RefCounted:
+	var validator_variant: Variant = RoutePathValidatorScript.new(max_move_distance_meters, max_downward_move_meters)
 	Validation.require_condition(validator_variant is RefCounted, "DailyChunkGenerator route path validator must be RefCounted.")
 	var validator: RefCounted = validator_variant
 	return validator
@@ -180,6 +183,15 @@ func _get_chunk_cache_key(seed_key: String, chunk_index: int) -> String:
 
 func _get_chunk_seam_cache_key(current_layout: GeneratedChunkLayout, next_layout: GeneratedChunkLayout) -> String:
 	return "%s|%d|%d" % [current_layout.seed_key, current_layout.chunk_index, next_layout.chunk_index]
+
+func _get_route_validation_tuning() -> RouteValidationTuningScript:
+	Validation.require_condition(_tuning.route_validation_tuning != null, "DailyChunkGenerator requires route validation tuning.")
+	Validation.require_condition(
+		_tuning.route_validation_tuning is RouteValidationTuningScript,
+		"DailyChunkGenerator route validation tuning must use RouteValidationTuning resources."
+	)
+	var typed_tuning: RouteValidationTuningScript = _tuning.route_validation_tuning as RouteValidationTuningScript
+	return typed_tuning
 
 func get_difficulty_band_for_chunk(chunk_index: int) -> int:
 	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when calculating a difficulty band.")

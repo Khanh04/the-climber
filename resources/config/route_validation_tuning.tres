@@ -1,0 +1,6 @@
+[gd_resource type="Resource" script_class="RouteValidationTuning" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/config/route_validation_tuning.gd" id="1_y3n2h"]
+
+[resource]
+script = ExtResource("1_y3n2h")
