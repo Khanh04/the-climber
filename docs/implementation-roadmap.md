@@ -129,13 +129,17 @@ Acceptance gates:
 
 ## Phase 7: Deterministic Daily Generation
 
-Purpose: make the climb layout repeatable and shareable without server-authoritative MVP assumptions.
+Purpose: make the climb layout repeatable, shareable, and route-set like a chain of compact bouldering problems without server-authoritative MVP assumptions.
 
 Implementation outcomes:
 
 - Generate handholds and sockets from the UTC daily seed key and generator version.
 - Use a dedicated `RandomNumberGenerator`.
 - Add typed segment and chunk models.
+- Add a typed route graph model for generated handholds, movement edges, route roles, difficulty costs, and chunk connection ports.
+- Build the primary safe path before reward and hazard placement.
+- Validate chunk interiors and chunk-to-chunk seams against the runtime grip envelope before accepting a generated layout.
+- Replace flat uniform chunk-type selection with deterministic weighted route profiles that account for altitude, recent profile history, recovery needs, and optional risky beta.
 - Add chunk spawn and despawn windows around the camera.
 - Keep deterministic content independent of spawn timing.
 - Add hazard and pickup sockets for later phases.
@@ -145,6 +149,9 @@ Acceptance gates:
 - Same seed and segment index produce the same content.
 - Different valid dates produce different layout sequences.
 - Invalid generator config fails fast.
+- Every accepted non-opener chunk exposes at least one validated safe route from entry to exit.
+- Adjacent generated chunks connect through validated handhold reach, an explicit launch connector, or another documented connector rule.
+- Distribution tests across multiple dates confirm that recovery, baseline, risk, and pressure profiles appear at intended rates without abrupt difficulty cliffs.
 - Runtime chunk cleanup does not affect deterministic generation results.
 
 ## Phase 8: Coins, Save, And Transactions

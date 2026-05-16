@@ -6,11 +6,13 @@ Level Designer / Systems Programmer
 
 ## Goal
 
-Generate a daily-shared tower layout with enough variation and hazard
-interaction to support replayability, friend ghosts, and social
-comparison without requiring MVP leaderboards, while keeping the
-opening route readable for onboarding and the runtime safe for mobile
-object budgets.
+Generate a daily-shared tower layout that feels like a chain of
+short, readable bouldering problems: clear starts, intentional movement
+sequences, a fair crux, recoverable top-outs, optional risky beta, and
+enough hazard interaction to support replayability, friend ghosts, and
+social comparison without requiring MVP leaderboards. The opening
+route must stay readable for onboarding and the runtime must stay safe
+for mobile object budgets.
 
 ## MVP Scope
 
@@ -18,6 +20,10 @@ object budgets.
   layouts.
 - Layouts include a generated opener at the reset anchor, generated
   handholds, normal coin sockets, and hazard sockets.
+- Generated chunks should be evaluated as climbable route problems,
+  not only as lane patterns. Each non-opener problem needs a validated
+  entry, setup, crux or pressure beat, recovery/top-out, and connector
+  into the next chunk window.
 - The opener must support first-run onboarding with obvious reachable
   hold pairs, low early punishment, and no misleading cross-screen
   route asks before the player learns the left and right grip loop.
@@ -27,7 +33,7 @@ object budgets.
 - Use daily layouts for shared challenge and future friend ghosts, not
   for server-authoritative score validation.
 - Keep the first generator simple enough to debug by altitude segment,
-  difficulty band, and route slot.
+  difficulty band, route profile, route role, and validation result.
 - Keep generated chunk lifetimes, spawned pickups, and hazard counts
   within Android-friendly object budgets.
 - Daily progression should stay local-first: daily best, personal
@@ -66,10 +72,49 @@ object budgets.
 - Before the player reaches the normal route cadence, generated chunks
   should prefer recovery and baseline patterns over challenge-only
   pressure.
-- Later chunks follow a deterministic route-slot cadence: baseline,
-  skill, recovery, risk, and challenge-only pressure repeating upward.
+- Later chunks should follow a deterministic profile schedule that can
+  be reproduced from the daily seed while still avoiding abrupt
+  difficulty cliffs. Baseline, skill, recovery, risk, and
+  challenge-only pressure profiles may remain as coarse labels, but
+  selection should be weighted by altitude, recent profile history,
+  and recovery needs rather than picked uniformly from a flat allowed
+  list.
 - Chunk spawn and despawn windows around the camera must never change
   layout content or chunk metadata.
+
+### Bouldering-Style Route Model
+
+- Treat each generated non-opener chunk as a compact climbing problem
+  with route roles: entry, setup, crux, recovery, top-out, optional
+  beta, reward, and hazard-denial positions.
+- Generate or derive a typed route graph where handholds are nodes and
+  possible moves are directed edges with movement costs. Costs should
+  consider vertical distance, lateral distance, hand alternation,
+  hold type, stamina pressure, hazards, and whether the move is static
+  or dynamic.
+- Validate at least one safe path from the chunk entry to the chunk
+  exit before accepting a layout. Optional harder or riskier beta can
+  exist, but it must not be the only path through an onboarding or
+  baseline problem.
+- Grade-like difficulty should be based primarily on the hardest move
+  and the hardest short sequence, not only on average handhold density
+  or hazard count. Game danger remains a separate tuning dimension
+  driven by Chaser pressure, lethal hazards, force hazards, stamina,
+  and fall exposure.
+- Seam continuity is part of the route problem. The top-out or exit
+  holds of one chunk must connect to the entry holds of the next chunk
+  through validated reach, a deliberate force-hazard launch, or another
+  explicit connector rule.
+- Preserve readable left-right grip alternation in easy and baseline
+  paths. Wide reaches, dyno-like launches, cross-throughs, and sparse
+  recovery should be reserved for profiles that clearly signal higher
+  difficulty or optional beta.
+- Coins should reward route expression by sitting near optional beta,
+  crux exits, or Chaser-pressure lines rather than being sprinkled
+  evenly across all anchors.
+- Hazards should shape choices: deny a risky line, pressure a crux, or
+  create a recovery moment. They should not obscure the intended safe
+  path or make a generated layout technically valid but unreadable.
 
 ### Daily Progression Goals
 
@@ -80,6 +125,9 @@ object budgets.
   multiple attempts.
 - Difficulty should ramp from onboarding-safe opener routes into the
   normal baseline and challenge cadence without a sudden fairness cliff.
+- Distribution should include recovery after high-pressure or high-crux
+  chunks so the daily route feels set by a designer rather than sampled
+  independently one chunk at a time.
 - If streaks or simple achievement-style goals ship, they should align
   with behaviors the generator can support consistently, such as
   height milestones, clean fall recovery, or hazard-survival goals.
@@ -245,6 +293,30 @@ aliases over a smaller ruleset.
 - Keep the opener handhold pattern explicit and testable so initial
   reachability regressions fail fast.
 
+### Route Graph And Validation
+
+- Build the primary handhold path before placing rewards and hazards.
+  Handhold placement should own route readability; pickup and hazard
+  passes should react to route roles rather than redefine the path.
+- Use the runtime grip envelope as a validation input. The first
+  implementation can use a conservative static reach threshold, then
+  expand to dynamic movement allowances only when those allowances are
+  explicit and tested.
+- Validate chunk interiors and chunk seams. A layout is not acceptable
+  if rows are locally reachable but the exit-to-entry gap between
+  adjacent chunks is not supported by a connector rule.
+- Use a small deterministic generate-and-test budget per chunk. If the
+  generator cannot produce a valid candidate within that budget, fail
+  fast with seed, chunk index, profile, and validation reason rather
+  than silently falling back to unrelated content.
+- Score accepted candidates for target difficulty, route readability,
+  novelty, optional beta quality, recovery availability, object count,
+  and hazard fairness. Keep the score deterministic so identical seeds
+  choose identical layouts.
+- Add distribution tests across multiple dates and chunk ranges so
+  weighted profile changes do not accidentally remove recovery chunks,
+  overproduce hazards, or create repeated crux styles.
+
 ### Handhold Type Model
 
 - Keep `ChunkType` responsible for route geometry and add a second
@@ -303,11 +375,21 @@ aliases over a smaller ruleset.
   rules change.
 - More advanced daily challenge goal variants can follow once the
   local-first progression layer is stable.
+- More expressive route-setting models such as richer graph grammars,
+  competition-style boulder profile packs, or player-skill-adaptive
+  weighting can follow once the deterministic graph validation layer is
+  stable.
 
 ## Open Questions
 
 - What final easy, baseline, and challenge altitude thresholds should
   ship after balancing opener consistency and hazard cadence?
+- What static and dynamic reach envelopes should define valid moves for
+  easy, baseline, and challenge route graphs?
+- What grade-like labels or internal movement-cost thresholds should be
+  used for bouldering-style problems?
+- How many deterministic candidate retries per chunk are acceptable on
+  target Android hardware before generation should fail fast?
 - How should the active daily seed and UTC reset timing be surfaced in
   debug tools and player-facing UI?
 - How many generated objects can remain active on mobile before
@@ -330,6 +412,12 @@ aliases over a smaller ruleset.
   a generator version.
 - Generated opener regressions can create unreachable starts if player
   spawn, grip radius, or opener spacing changes.
+- Chunk seams can create unreachable daily layouts if each chunk is
+  validated in isolation rather than as part of a connected route.
+- Uniform chunk-type selection can create repetitive or unfair routes
+  even when every individual archetype is valid.
+- Fixed altitude bands can create difficulty cliffs if they do not
+  cover a full profile cycle or do not schedule recovery after pressure.
 - Overly dense early chunks can undermine onboarding even if they are
   technically reachable.
 - UTC rollover can confuse players if the UI does not clearly show
@@ -347,18 +435,27 @@ aliases over a smaller ruleset.
 1. Define the daily seed key, generator version, and chunk models
    before any runtime spawning.
 2. Implement chunk 0 as a generated opener at the reset anchor and
-  prove the initial hold pair is reachable and onboarding-safe.
-3. Generate handholds, pickups, and hazards in separate deterministic
-   passes keyed by chunk index.
-4. Set and validate Android object budgets for chunk windows, hazards,
-  pickups, and transient scatter bodies before widening content
-  variety.
-5. Add chunk metadata, UTC rollover coverage, and local daily
-  progression hooks so the daily layout stays debuggable and
-  replay-worthy.
-6. Land the typed handhold model and deterministic handhold-type
-  assignment pass described in
-  [ADR 0004](adr/0004-generated-hold-type-model.md).
-7. Implement `NORMAL`, `REST`, `BURN`, `BREAK`, and `BOOST` through a
-  dedicated handhold runtime adapter before adding reward, defense,
-  moving, or linked-route holds.
+   prove the initial hold pair is reachable and onboarding-safe.
+3. Define a typed route graph model for generated handholds, movement
+   edges, route roles, difficulty costs, and chunk connection ports.
+4. Generate the primary safe path before pickups and hazards, then
+   validate chunk interiors and chunk seams against the runtime grip
+   envelope.
+5. Replace flat uniform archetype selection with deterministic weighted
+   route profiles that account for altitude, recent profile history,
+   recovery needs, and optional risky beta.
+6. Generate handholds, pickups, and hazards in separate deterministic
+   passes keyed by chunk index, with pickups and hazards anchored to
+   route roles rather than raw handhold order.
+7. Set and validate Android object budgets for chunk windows, hazards,
+   pickups, and transient scatter bodies before widening content
+   variety.
+8. Add chunk metadata, route validation metadata, UTC rollover
+   coverage, and local daily progression hooks so the daily layout
+   stays debuggable and replay-worthy.
+9. Land the typed handhold model and deterministic handhold-type
+   assignment pass described in
+   [ADR 0004](adr/0004-generated-hold-type-model.md).
+10. Implement `NORMAL`, `REST`, `BURN`, `BREAK`, and `BOOST` through a
+    dedicated handhold runtime adapter before adding reward, defense,
+    moving, or linked-route holds.
