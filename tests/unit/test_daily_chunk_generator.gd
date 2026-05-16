@@ -263,6 +263,34 @@ func test_risk_lane_chunks_assign_branch_route_roles() -> void:
 
     assert_true(has_branch_role)
 
+func test_risk_lane_chunks_align_hazard_denial_holds_to_one_outer_side() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_keys: PackedStringArray = PackedStringArray([
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.from_utc_date(2026, 5, 15),
+    ])
+    var lane_choice_threshold: float = _get_lane_choice_threshold(tuning)
+
+    var risk_layout: GeneratedChunkLayoutScript = _find_layout_by_chunk_type(generator, seed_keys, ChunkTypeScript.Value.RISK_LANE)
+    var hazard_denial_side_score: int = _route_role_side_score(
+        risk_layout.handholds,
+        RouteRoleScript.Value.HAZARD_DENIAL,
+        lane_choice_threshold
+    )
+    var hazard_denial_average_abs_x: float = _average_abs_x_for_route_role(
+        risk_layout.handholds,
+        RouteRoleScript.Value.HAZARD_DENIAL
+    )
+    var setup_average_abs_x: float = _average_abs_x_for_route_role(
+        risk_layout.handholds,
+        RouteRoleScript.Value.SETUP
+    )
+
+    assert_true(hazard_denial_side_score != 0)
+    assert_eq(absi(hazard_denial_side_score), _count_handholds_with_route_role(risk_layout.handholds, RouteRoleScript.Value.HAZARD_DENIAL))
+    assert_gt(hazard_denial_average_abs_x, setup_average_abs_x)
+
 func test_custom_route_validation_candidate_attempt_count_stays_deterministic() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     tuning.route_validation_candidate_attempt_count = 3
@@ -273,6 +301,18 @@ func test_custom_route_validation_candidate_attempt_count_stays_deterministic() 
     var second_layout: RefCounted = generator.build_chunk(seed_key, 4)
 
     assert_eq(_layout_signature(first_layout), _layout_signature(second_layout))
+
+func test_generated_chunks_include_candidate_selection_metadata() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    tuning.route_validation_candidate_attempt_count = 3
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 4))
+
+    assert_gte(layout.selected_candidate_attempt_index, 0)
+    assert_lt(layout.selected_candidate_attempt_index, tuning.route_validation_candidate_attempt_count)
+    assert_false(is_nan(layout.candidate_score))
 
 func test_generated_chunk_respects_total_placeholder_socket_budget() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -476,6 +516,8 @@ func _layout_signature(layout: RefCounted) -> String:
 
     var _append_entry_ports_result: bool = signature_parts.append("entry_ports:%s" % ",".join(typed_layout.route_entry_hold_ids))
     var _append_exit_ports_result: bool = signature_parts.append("exit_ports:%s" % ",".join(typed_layout.route_exit_hold_ids))
+    var _append_candidate_attempt_result: bool = signature_parts.append("candidate_attempt:%d" % typed_layout.selected_candidate_attempt_index)
+    var _append_candidate_score_result: bool = signature_parts.append("candidate_score:%.3f" % typed_layout.candidate_score)
 
     for handhold in typed_layout.handholds:
         var _append_handhold_result: bool = signature_parts.append(
@@ -646,6 +688,45 @@ func _hazard_side_score(hazard_sockets: Array[GeneratedHazardSocket], lane_choic
             side_score += 1
 
     return side_score
+
+func _route_role_side_score(
+    handholds: Array[GeneratedHandholdSocket],
+    route_role: int,
+    lane_choice_threshold: float
+) -> int:
+    RouteRoleScript.assert_valid(route_role)
+    var side_score: int = 0
+    for handhold in handholds:
+        if handhold.route_role != route_role:
+            continue
+        if handhold.local_position.x <= -lane_choice_threshold:
+            side_score -= 1
+        elif handhold.local_position.x >= lane_choice_threshold:
+            side_score += 1
+
+    return side_score
+
+func _count_handholds_with_route_role(handholds: Array[GeneratedHandholdSocket], route_role: int) -> int:
+    RouteRoleScript.assert_valid(route_role)
+    var count: int = 0
+    for handhold in handholds:
+        if handhold.route_role == route_role:
+            count += 1
+
+    return count
+
+func _average_abs_x_for_route_role(handholds: Array[GeneratedHandholdSocket], route_role: int) -> float:
+    RouteRoleScript.assert_valid(route_role)
+    var total_abs_x: float = 0.0
+    var count: int = 0
+    for handhold in handholds:
+        if handhold.route_role != route_role:
+            continue
+        total_abs_x += absf(handhold.local_position.x)
+        count += 1
+
+    assert_gt(count, 0)
+    return total_abs_x / float(count)
 
 func _build_assignment_rule(
     route_slot: int,

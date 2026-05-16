@@ -40,12 +40,16 @@ func test_scene_builder_creates_chunk_root_with_metadata_and_scaled_position() -
     var typed_route_exit_hold_ids: PackedStringArray = route_exit_hold_ids_meta
     var route_validation_is_valid: bool = _get_bool_meta(chunk_node, &"route_validation_is_valid")
     var route_validation_path_length: int = _get_int_meta(chunk_node, &"route_validation_path_length")
+    var selected_candidate_attempt_index: int = _get_int_meta(chunk_node, &"selected_candidate_attempt_index")
+    var candidate_score: float = _get_float_meta(chunk_node, &"candidate_score")
     assert_eq(typed_route_entry_hold_ids, PackedStringArray(["chunk_02_hold_00"]))
     assert_eq(typed_route_exit_hold_ids, PackedStringArray(["chunk_02_hold_01"]))
     assert_eq(route_validation_is_valid, true)
     assert_eq(_get_string_meta(chunk_node, &"route_validation_target_hold_id"), "chunk_02_hold_01")
     assert_eq(_get_string_meta(chunk_node, &"route_validation_failure_reason"), "")
     assert_eq(route_validation_path_length, 2)
+    assert_eq(selected_candidate_attempt_index, 1)
+    assert_eq(candidate_score, 1234.5)
     assert_not_null(chunk_node.get_node_or_null("Handholds"))
     assert_not_null(chunk_node.get_node_or_null("Pickups"))
     assert_not_null(chunk_node.get_node_or_null("Hazards"))
@@ -220,7 +224,9 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
         hazard_sockets,
         PackedStringArray(["chunk_02_hold_00"]),
         PackedStringArray(["chunk_02_hold_01"]),
-        route_validation_result
+        route_validation_result,
+        1,
+        1234.5
     )
 
 func _get_string_meta(node: Node, key: StringName) -> String:
@@ -253,4 +259,13 @@ func _get_int_meta(node: Node, key: StringName) -> int:
         return 0
 
     var typed_value: int = raw_value
+    return typed_value
+
+func _get_float_meta(node: Node, key: StringName) -> float:
+    var raw_value: Variant = node.get_meta(key)
+    if not raw_value is float:
+        fail_test("Expected float metadata for %s." % String(key))
+        return 0.0
+
+    var typed_value: float = raw_value
     return typed_value
