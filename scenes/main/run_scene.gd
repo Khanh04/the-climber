@@ -523,7 +523,7 @@ func _validate_required_state() -> void:
 	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "RunScene requires at least one handhold.")
 
 func _create_input_frame() -> PlayerInputFrameScript:
-	if _active_touch_contacts.size() > 0:
+	if _active_touch_contacts.size() > 0 or _mobile_input.has_held_grip_state():
 		Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before creating mobile input frames.")
 		return _mobile_input.create_input_frame_from_contacts(
 			get_viewport_rect().size,

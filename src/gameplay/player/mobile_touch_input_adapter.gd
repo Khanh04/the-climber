@@ -62,6 +62,9 @@ func reset() -> void:
     _left_grip_pressed = false
     _right_grip_pressed = false
 
+func has_held_grip_state() -> bool:
+    return _left_grip_pressed or _right_grip_pressed
+
 func _has_touch_in_left_zone(viewport_size: Vector2, active_touch_contacts: Array[RefCounted], touch_settings: TouchInputSettingsScript) -> bool:
     for raw_touch_contact in active_touch_contacts:
         var touch_contact: MobileTouchContactScript = _as_touch_contact(raw_touch_contact)

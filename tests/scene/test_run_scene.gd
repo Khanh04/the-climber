@@ -1577,6 +1577,7 @@ func test_run_scene_mobile_drag_updates_pull_preview_and_release_clears_it() -> 
 
     playground._physics_process(1.0 / 60.0)
 
+    assert_eq(playground.get_controller_for_test().get_attachment_state().get_attached_hand_count(), 1)
     assert_null(playground.get_node_or_null("LeftAimPreview"))
     assert_not_null(playground.get_node_or_null("RightAimPreview"))
     assert_not_null(playground.get_node_or_null("AimTargetMarker"))
@@ -1590,6 +1591,7 @@ func test_run_scene_mobile_drag_updates_pull_preview_and_release_clears_it() -> 
     playground._physics_process(1.0 / 60.0)
     await get_tree().process_frame
 
+    assert_eq(playground.get_controller_for_test().get_attachment_state().get_attached_hand_count(), 0)
     assert_null(playground.get_node_or_null("LeftAimPreview"))
     assert_null(playground.get_node_or_null("RightAimPreview"))
     assert_null(playground.get_node_or_null("AimTargetMarker"))
