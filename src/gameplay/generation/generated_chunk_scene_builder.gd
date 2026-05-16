@@ -5,6 +5,7 @@ const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickup
 const GeneratedHandholdAdapterScript = preload("res://src/gameplay/generation/generated_handhold_adapter.gd")
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/generated_hazard_spawn_adapter.gd")
+const RouteRoleScript = preload("res://src/gameplay/generation/route_role.gd")
 
 const PICKUP_GROUP_NAME: StringName = GeneratedCoinPickupSpawnAdapterScript.GROUP_NAME
 const HAZARD_GROUP_NAME: StringName = GeneratedHazardSpawnAdapterScript.GROUP_NAME
@@ -135,6 +136,7 @@ func _build_handhold_body(handhold_socket: GeneratedHandholdSocket) -> Generated
         _hold_collision_layer,
         _hold_collision_mask
     )
+    handhold_body.set_meta(&"route_role", RouteRoleScript.to_label(handhold_socket.route_role))
     return handhold_body
 
 func _build_pickup_spawn(pickup_socket: GeneratedPickupSocket) -> GeneratedCoinPickupSpawnAdapterScript:

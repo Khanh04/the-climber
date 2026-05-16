@@ -13,6 +13,7 @@ const GeneratedHandholdSocketScript = preload("res://src/gameplay/generation/gen
 const GeneratedHazardSocketScript = preload("res://src/gameplay/generation/generated_hazard_socket.gd")
 const GeneratedRouteValidationResultScript: GDScript = preload("res://src/gameplay/generation/generated_route_validation_result.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
+const RouteRoleScript = preload("res://src/gameplay/generation/route_role.gd")
 const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_surface_profile.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
@@ -94,9 +95,13 @@ func test_scene_builder_creates_non_blocking_handholds_and_runtime_spawn_adapter
     assert_not_null(rectangle_shape)
     assert_true(rectangle_shape.size.is_equal_approx(Vector2(124.0, 30.0)))
     var handhold_type_meta: Variant = handhold.get_meta(&"handhold_type")
+    var handhold_route_role_meta: Variant = handhold.get_meta(&"route_role")
     assert_true(handhold_type_meta is String)
+    assert_true(handhold_route_role_meta is String)
     var typed_handhold_type_meta: String = handhold_type_meta
+    var typed_handhold_route_role_meta: String = handhold_route_role_meta
     assert_eq(typed_handhold_type_meta, "REST")
+    assert_eq(typed_handhold_route_role_meta, "ENTRY")
     assert_not_null(handhold_visual)
 
     assert_not_null(pickup_spawn)
@@ -167,7 +172,8 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
             rest_definition.visual_color,
             0.0,
             false,
-            Vector2.ZERO
+            Vector2.ZERO,
+            RouteRoleScript.Value.ENTRY
         ),
         GeneratedHandholdSocketScript.new(
             &"chunk_02_hold_01",
@@ -179,7 +185,8 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
             burn_definition.visual_color,
             0.0,
             false,
-            Vector2.ZERO
+            Vector2.ZERO,
+            RouteRoleScript.Value.TOP_OUT
         ),
     ]
     var pickup_sockets: Array[GeneratedPickupSocketScript] = [

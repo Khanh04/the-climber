@@ -5,14 +5,17 @@ const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generat
 const HandholdLifecycleRuleScript = preload("res://resources/config/handhold_lifecycle_rule.gd")
 const HandholdMovementRuleScript = preload("res://resources/config/handhold_movement_rule.gd")
 const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_surface_profile.gd")
+const RouteProfileTuningScript = preload("res://resources/config/route_profile_tuning.gd")
 const RouteValidationTuningScript = preload("res://resources/config/route_validation_tuning.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
+const RouteRoleScript = preload("res://src/gameplay/generation/route_role.gd")
 const RoutePathValidatorScript: GDScript = preload("res://src/gameplay/generation/route_path_validator.gd")
 
 var _tuning: GenerationTuning
 var _route_path_validator: RefCounted
 var _route_entry_anchor_positions: Array[Vector2]
+var _route_slot_cache: Dictionary
 var _chunk_layout_cache: Dictionary
 var _chunk_seam_cache: Dictionary
 
@@ -26,6 +29,7 @@ func _init(tuning_value: GenerationTuning) -> void:
 		route_validation_tuning.max_downward_move_meters
 	)
 	_route_entry_anchor_positions = route_validation_tuning.duplicate_entry_anchor_positions()
+	_route_slot_cache = {}
 	_chunk_layout_cache = {}
 	_chunk_seam_cache = {}
 
@@ -62,11 +66,21 @@ func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attemp
 
 	var start_height_meters: float = float(chunk_index) * _tuning.segment_height_meters
 	var difficulty_band: int = get_difficulty_band_for_height(start_height_meters)
-	var route_slot: int = get_route_slot_for_chunk(chunk_index, difficulty_band)
+	var route_slot: int = _get_route_slot_for_chunk_seeded(seed_key, chunk_index, difficulty_band)
 	var chunk_rng: RandomNumberGenerator = _build_chunk_rng(seed_key, chunk_index, candidate_attempt_index)
 	var chunk_type: int = _select_chunk_type(route_slot, difficulty_band, chunk_rng)
 	var risky_lane_side_sign: float = _get_risky_lane_side_sign(seed_key, chunk_index, chunk_type)
-	var handholds: Array[GeneratedHandholdSocket] = _build_handholds(chunk_index, chunk_type, route_slot, difficulty_band, chunk_rng)
+	var provisional_handholds: Array[GeneratedHandholdSocket] = _build_handholds(chunk_index, chunk_type, route_slot, difficulty_band, chunk_rng)
+	var route_entry_hold_ids: PackedStringArray = _build_route_port_hold_ids(provisional_handholds, true)
+	var route_exit_hold_ids: PackedStringArray = _build_route_port_hold_ids(provisional_handholds, false)
+	var handholds: Array[GeneratedHandholdSocket] = _assign_route_roles(
+		chunk_type,
+		route_slot,
+		difficulty_band,
+		provisional_handholds,
+		route_entry_hold_ids,
+		route_exit_hold_ids
+	)
 	var pickup_sockets: Array[GeneratedPickupSocket] = _build_pickup_sockets(
 		chunk_index,
 		chunk_type,
@@ -83,8 +97,6 @@ func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attemp
 		handholds,
 		chunk_rng
 	)
-	var route_entry_hold_ids: PackedStringArray = _build_route_port_hold_ids(handholds, true)
-	var route_exit_hold_ids: PackedStringArray = _build_route_port_hold_ids(handholds, false)
 
 	var preliminary_layout: GeneratedChunkLayout = GeneratedChunkLayout.new(
 		seed_key,
@@ -141,6 +153,142 @@ func _build_route_port_hold_ids(handholds: Array[GeneratedHandholdSocket], selec
 	Validation.require_condition(route_port_hold_ids.size() > 0, "DailyChunkGenerator route ports cannot be empty.")
 	return route_port_hold_ids
 
+func _assign_route_roles(
+	chunk_type: int,
+	route_slot: int,
+	difficulty_band: int,
+	handholds: Array[GeneratedHandholdSocket],
+	route_entry_hold_ids: PackedStringArray,
+	route_exit_hold_ids: PackedStringArray
+) -> Array[GeneratedHandholdSocket]:
+	ChunkType.assert_valid(chunk_type)
+	ChunkRouteSlot.assert_valid(route_slot)
+	ChunkDifficultyBand.assert_valid(difficulty_band)
+	Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator route-role assignment requires handholds.")
+	Validation.require_condition(route_entry_hold_ids.size() > 0, "DailyChunkGenerator route-role assignment requires entry ports.")
+	Validation.require_condition(route_exit_hold_ids.size() > 0, "DailyChunkGenerator route-role assignment requires exit ports.")
+
+	var role_assigned_handholds: Array[GeneratedHandholdSocket] = []
+	for handhold in handholds:
+		var route_role: int = _select_route_role(
+			chunk_type,
+			route_slot,
+			difficulty_band,
+			handhold,
+			handholds,
+			route_entry_hold_ids,
+			route_exit_hold_ids
+		)
+		role_assigned_handholds.append(_copy_handhold_with_route_role(handhold, route_role))
+
+	return role_assigned_handholds
+
+func _select_route_role(
+	chunk_type: int,
+	route_slot: int,
+	difficulty_band: int,
+	handhold: GeneratedHandholdSocket,
+	handholds: Array[GeneratedHandholdSocket],
+	route_entry_hold_ids: PackedStringArray,
+	route_exit_hold_ids: PackedStringArray
+) -> int:
+	ChunkType.assert_valid(chunk_type)
+	ChunkRouteSlot.assert_valid(route_slot)
+	ChunkDifficultyBand.assert_valid(difficulty_band)
+	Validation.require_condition(handhold != null, "DailyChunkGenerator route-role selection requires a handhold.")
+	Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator route-role selection requires handholds.")
+
+	if route_entry_hold_ids.has(String(handhold.hold_id)):
+		return RouteRoleScript.Value.ENTRY
+
+	if route_exit_hold_ids.has(String(handhold.hold_id)):
+		return RouteRoleScript.Value.TOP_OUT
+
+	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
+	var route_progress: float = _get_route_progress_ratio(handhold, handholds)
+	var crux_target_ratio: float = (route_validation_tuning.setup_zone_upper_ratio + route_validation_tuning.crux_zone_upper_ratio) * 0.5
+	var base_role: int = RouteRoleScript.Value.SETUP
+
+	if route_progress >= route_validation_tuning.crux_zone_upper_ratio:
+		base_role = RouteRoleScript.Value.RECOVERY
+	elif absf(route_progress - crux_target_ratio) <= 0.16 or (
+		route_slot == ChunkRouteSlot.Value.PRESSURE and route_progress >= crux_target_ratio
+	):
+		base_role = RouteRoleScript.Value.CRUX
+
+	if _is_branch_route_role_candidate(chunk_type, handhold.local_position):
+		match route_slot:
+			ChunkRouteSlot.Value.RECOVERY:
+				if base_role == RouteRoleScript.Value.RECOVERY:
+					return RouteRoleScript.Value.REWARD
+			ChunkRouteSlot.Value.RISK:
+				if base_role == RouteRoleScript.Value.CRUX or base_role == RouteRoleScript.Value.RECOVERY:
+					return RouteRoleScript.Value.HAZARD_DENIAL
+			ChunkRouteSlot.Value.PRESSURE:
+				if base_role == RouteRoleScript.Value.CRUX or base_role == RouteRoleScript.Value.RECOVERY:
+					return RouteRoleScript.Value.HAZARD_DENIAL
+			ChunkRouteSlot.Value.SKILL:
+				if base_role == RouteRoleScript.Value.CRUX or base_role == RouteRoleScript.Value.RECOVERY:
+					return RouteRoleScript.Value.OPTIONAL_BETA
+			ChunkRouteSlot.Value.BASELINE:
+				if base_role == RouteRoleScript.Value.CRUX or base_role == RouteRoleScript.Value.RECOVERY:
+					return RouteRoleScript.Value.OPTIONAL_BETA
+			_:
+				pass
+
+	return base_role
+
+func _get_route_progress_ratio(handhold: GeneratedHandholdSocket, handholds: Array[GeneratedHandholdSocket]) -> float:
+	Validation.require_condition(handhold != null, "DailyChunkGenerator route progress requires a handhold.")
+	Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator route progress requires handholds.")
+
+	var minimum_height_meters: float = -handholds[0].local_position.y
+	var maximum_height_meters: float = minimum_height_meters
+	for candidate_handhold in handholds:
+		var candidate_height_meters: float = -candidate_handhold.local_position.y
+		minimum_height_meters = minf(minimum_height_meters, candidate_height_meters)
+		maximum_height_meters = maxf(maximum_height_meters, candidate_height_meters)
+
+	if is_equal_approx(minimum_height_meters, maximum_height_meters):
+		return 0.0
+
+	var handhold_height_meters: float = -handhold.local_position.y
+	return clampf(
+		(handhold_height_meters - minimum_height_meters) / (maximum_height_meters - minimum_height_meters),
+		0.0,
+		1.0
+	)
+
+func _is_branch_route_role_candidate(chunk_type: int, local_position: Vector2) -> bool:
+	ChunkType.assert_valid(chunk_type)
+	if not _supports_lane_choice(chunk_type):
+		return false
+
+	return absf(local_position.x) >= _get_branch_role_alignment_threshold()
+
+func _get_branch_role_alignment_threshold() -> float:
+	var half_width: float = _tuning.chunk_width_meters * 0.5
+	var inner_lane_alignment: float = half_width * _tuning.inner_lane_position_ratio
+	var outer_lane_alignment: float = half_width * _tuning.outer_lane_position_ratio
+	return (inner_lane_alignment + outer_lane_alignment) * 0.5
+
+func _copy_handhold_with_route_role(handhold: GeneratedHandholdSocket, route_role: int) -> GeneratedHandholdSocket:
+	Validation.require_condition(handhold != null, "DailyChunkGenerator handhold route-role copy requires a handhold.")
+	RouteRoleScript.assert_valid(route_role)
+	return GeneratedHandholdSocket.new(
+		handhold.hold_id,
+		handhold.definition_id,
+		handhold.local_position,
+		handhold.handhold_type,
+		handhold.stamina_drain_multiplier,
+		handhold.physical_size_meters,
+		handhold.visual_color,
+		handhold.break_after_attach_seconds,
+		handhold.breaks_on_release,
+		handhold.release_impulse_vector_pixels,
+		route_role
+	)
+
 func _build_route_path_validator(max_move_distance_meters: float, max_downward_move_meters: float) -> RefCounted:
 	var validator_variant: Variant = RoutePathValidatorScript.new(max_move_distance_meters, max_downward_move_meters)
 	Validation.require_condition(validator_variant is RefCounted, "DailyChunkGenerator route path validator must be RefCounted.")
@@ -193,6 +341,15 @@ func _get_route_validation_tuning() -> RouteValidationTuningScript:
 	var typed_tuning: RouteValidationTuningScript = _tuning.route_validation_tuning as RouteValidationTuningScript
 	return typed_tuning
 
+func _get_route_profile_tuning() -> RouteProfileTuningScript:
+	Validation.require_condition(_tuning.route_profile_tuning != null, "DailyChunkGenerator requires route profile tuning.")
+	Validation.require_condition(
+		_tuning.route_profile_tuning is RouteProfileTuningScript,
+		"DailyChunkGenerator route profile tuning must use RouteProfileTuning resources."
+	)
+	var typed_tuning: RouteProfileTuningScript = _tuning.route_profile_tuning as RouteProfileTuningScript
+	return typed_tuning
+
 func get_difficulty_band_for_chunk(chunk_index: int) -> int:
 	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when calculating a difficulty band.")
 	return get_difficulty_band_for_height(float(chunk_index) * _tuning.segment_height_meters)
@@ -211,27 +368,224 @@ func get_difficulty_band_for_height(height_meters: float) -> int:
 func get_route_slot_for_chunk(chunk_index: int, difficulty_band: int) -> int:
 	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when calculating a route slot.")
 	ChunkDifficultyBand.assert_valid(difficulty_band)
+	var preview_seed_key: String = "%s:route_profile_preview" % _tuning.generator_version
+	return _get_route_slot_for_chunk_seeded(preview_seed_key, chunk_index, difficulty_band)
+
+func _get_route_slot_for_chunk_seeded(seed_key: String, chunk_index: int, difficulty_band: int) -> int:
+	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when calculating a seeded route slot.")
+	ChunkDifficultyBand.assert_valid(difficulty_band)
 
 	if chunk_index == 0:
 		return ChunkRouteSlot.Value.OPENER
 
-	var structured_index: int = (chunk_index - 1) % 5
-	match structured_index:
-		0:
-			return ChunkRouteSlot.Value.BASELINE
+	var cache_key: String = _get_route_slot_cache_key(seed_key, chunk_index)
+	var bootstrap_route_slot: int = _get_bootstrap_route_slot(chunk_index)
+	if bootstrap_route_slot != -1:
+		_route_slot_cache[cache_key] = bootstrap_route_slot
+		return bootstrap_route_slot
+
+	if _route_slot_cache.has(cache_key):
+		var cached_route_slot_variant: Variant = _route_slot_cache[cache_key]
+		Validation.require_condition(cached_route_slot_variant is int, "DailyChunkGenerator route-slot cache must store ints.")
+		var cached_route_slot: int = cached_route_slot_variant
+		ChunkRouteSlot.assert_valid(cached_route_slot)
+		return cached_route_slot
+
+	var route_profile_tuning: RouteProfileTuningScript = _get_route_profile_tuning()
+	var previous_route_slot: int = ChunkRouteSlot.Value.OPENER
+	if chunk_index > 1:
+		var previous_difficulty_band: int = get_difficulty_band_for_chunk(chunk_index - 1)
+		previous_route_slot = _get_route_slot_for_chunk_seeded(seed_key, chunk_index - 1, previous_difficulty_band)
+
+	if previous_route_slot == ChunkRouteSlot.Value.PRESSURE:
+		_route_slot_cache[cache_key] = ChunkRouteSlot.Value.RECOVERY
+		return ChunkRouteSlot.Value.RECOVERY
+
+	var candidate_slots: Array[int] = []
+	var candidate_weights: Array[float] = []
+	_append_route_profile_candidates(route_profile_tuning, difficulty_band, candidate_slots, candidate_weights)
+	_apply_route_profile_history_biases(seed_key, chunk_index, candidate_slots, candidate_weights)
+	var route_slot_rng: RandomNumberGenerator = _build_route_slot_rng(seed_key, chunk_index)
+	var selected_route_slot: int = _select_weighted_route_slot(candidate_slots, candidate_weights, route_slot_rng)
+	_route_slot_cache[cache_key] = selected_route_slot
+	return selected_route_slot
+
+func _get_bootstrap_route_slot(chunk_index: int) -> int:
+	Validation.require_condition(chunk_index > 0, "DailyChunkGenerator bootstrap route slots apply only after the opener.")
+	match chunk_index:
 		1:
-			return ChunkRouteSlot.Value.SKILL
+			return ChunkRouteSlot.Value.BASELINE
 		2:
-			return ChunkRouteSlot.Value.RECOVERY
+			return ChunkRouteSlot.Value.SKILL
 		3:
-			return ChunkRouteSlot.Value.RISK
-		4:
-			if difficulty_band == ChunkDifficultyBand.Value.CHALLENGE:
-				return ChunkRouteSlot.Value.PRESSURE
-			return ChunkRouteSlot.Value.BASELINE
+			return ChunkRouteSlot.Value.RECOVERY
 		_:
-			Validation.require_condition(false, "DailyChunkGenerator route slot sequencing produced an unsupported index.")
-			return ChunkRouteSlot.Value.BASELINE
+			return -1
+
+func _append_route_profile_candidates(
+	route_profile_tuning: RouteProfileTuningScript,
+	difficulty_band: int,
+	candidate_slots: Array[int],
+	candidate_weights: Array[float]
+) -> void:
+	Validation.require_condition(route_profile_tuning != null, "DailyChunkGenerator route-profile candidates require tuning.")
+	ChunkDifficultyBand.assert_valid(difficulty_band)
+
+	match difficulty_band:
+		ChunkDifficultyBand.Value.EASY:
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.BASELINE, route_profile_tuning.easy_baseline_weight)
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.SKILL, route_profile_tuning.easy_skill_weight)
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RECOVERY, route_profile_tuning.easy_recovery_weight)
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, route_profile_tuning.easy_risk_weight)
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.PRESSURE, route_profile_tuning.easy_pressure_weight)
+		ChunkDifficultyBand.Value.BASELINE:
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.BASELINE, route_profile_tuning.baseline_baseline_weight)
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.SKILL, route_profile_tuning.baseline_skill_weight)
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RECOVERY, route_profile_tuning.baseline_recovery_weight)
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, route_profile_tuning.baseline_risk_weight)
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.PRESSURE, route_profile_tuning.baseline_pressure_weight)
+		ChunkDifficultyBand.Value.CHALLENGE:
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.BASELINE, route_profile_tuning.challenge_baseline_weight)
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.SKILL, route_profile_tuning.challenge_skill_weight)
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RECOVERY, route_profile_tuning.challenge_recovery_weight)
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, route_profile_tuning.challenge_risk_weight)
+			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.PRESSURE, route_profile_tuning.challenge_pressure_weight)
+		_:
+			Validation.require_condition(false, "DailyChunkGenerator route-profile candidates require a supported difficulty band.")
+
+	Validation.require_condition(candidate_slots.size() > 0, "DailyChunkGenerator route-profile candidates cannot be empty.")
+
+func _append_route_profile_candidate(
+	candidate_slots: Array[int],
+	candidate_weights: Array[float],
+	route_slot: int,
+	weight: float
+) -> void:
+	ChunkRouteSlot.assert_valid(route_slot)
+	Validation.require_condition(weight >= 0.0, "DailyChunkGenerator route-profile candidate weights cannot be negative.")
+	if is_zero_approx(weight):
+		return
+
+	candidate_slots.append(route_slot)
+	candidate_weights.append(weight)
+
+func _apply_route_profile_history_biases(
+	seed_key: String,
+	chunk_index: int,
+	candidate_slots: Array[int],
+	candidate_weights: Array[float]
+) -> void:
+	Validation.require_condition(chunk_index > 0, "DailyChunkGenerator route-profile history biases require a non-opener chunk.")
+	Validation.require_condition(candidate_slots.size() == candidate_weights.size(), "DailyChunkGenerator route-profile candidates must align with weights.")
+	var route_profile_tuning: RouteProfileTuningScript = _get_route_profile_tuning()
+	var recent_history_count: int = maxi(route_profile_tuning.max_repeat_profile_count, route_profile_tuning.recovery_debt_threshold)
+	var recent_slots: Array[int] = _get_recent_route_slots(seed_key, chunk_index, recent_history_count)
+	var risk_pressure_count: int = 0
+
+	for recent_slot in recent_slots:
+		if recent_slot == ChunkRouteSlot.Value.RISK or recent_slot == ChunkRouteSlot.Value.PRESSURE:
+			risk_pressure_count += 1
+
+	if _recent_slots_are_repeating(recent_slots, route_profile_tuning.max_repeat_profile_count):
+		_set_route_slot_weight(candidate_slots, candidate_weights, recent_slots[0], 0.0)
+
+	if risk_pressure_count >= route_profile_tuning.recovery_debt_threshold:
+		_add_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RECOVERY, route_profile_tuning.novelty_bonus_weight + 1.0)
+		_add_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.BASELINE, 0.5)
+		_scale_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.PRESSURE, 0.25)
+		_scale_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, 0.5)
+
+	for route_slot in candidate_slots:
+		if not recent_slots.has(route_slot):
+			_add_route_slot_weight(candidate_slots, candidate_weights, route_slot, route_profile_tuning.novelty_bonus_weight)
+
+	_add_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, route_profile_tuning.optional_beta_bias_weight)
+
+func _get_recent_route_slots(seed_key: String, chunk_index: int, max_count: int) -> Array[int]:
+	Validation.require_condition(chunk_index > 0, "DailyChunkGenerator recent route-slot lookup requires a non-opener chunk.")
+	Validation.require_condition(max_count >= 0, "DailyChunkGenerator recent route-slot count cannot be negative.")
+	var recent_slots: Array[int] = []
+	for previous_chunk_index in range(chunk_index - 1, maxi(0, chunk_index - max_count) - 1, -1):
+		if previous_chunk_index == 0:
+			recent_slots.append(ChunkRouteSlot.Value.OPENER)
+			continue
+
+		var previous_difficulty_band: int = get_difficulty_band_for_chunk(previous_chunk_index)
+		recent_slots.append(_get_route_slot_for_chunk_seeded(seed_key, previous_chunk_index, previous_difficulty_band))
+
+	return recent_slots
+
+func _recent_slots_are_repeating(recent_slots: Array[int], required_repeat_count: int) -> bool:
+	if required_repeat_count <= 1:
+		return recent_slots.size() > 0
+	if recent_slots.size() < required_repeat_count:
+		return false
+
+	var repeated_route_slot: int = recent_slots[0]
+	for recent_index in range(required_repeat_count):
+		if recent_slots[recent_index] != repeated_route_slot:
+			return false
+
+	return true
+
+func _set_route_slot_weight(candidate_slots: Array[int], candidate_weights: Array[float], route_slot: int, weight: float) -> void:
+	ChunkRouteSlot.assert_valid(route_slot)
+	Validation.require_condition(weight >= 0.0, "DailyChunkGenerator route-slot weight cannot be negative.")
+	for slot_index in range(candidate_slots.size()):
+		if candidate_slots[slot_index] == route_slot:
+			candidate_weights[slot_index] = weight
+			return
+
+func _add_route_slot_weight(candidate_slots: Array[int], candidate_weights: Array[float], route_slot: int, delta: float) -> void:
+	ChunkRouteSlot.assert_valid(route_slot)
+	Validation.require_condition(delta >= 0.0, "DailyChunkGenerator route-slot weight delta cannot be negative.")
+	for slot_index in range(candidate_slots.size()):
+		if candidate_slots[slot_index] == route_slot:
+			candidate_weights[slot_index] += delta
+			return
+
+func _scale_route_slot_weight(candidate_slots: Array[int], candidate_weights: Array[float], route_slot: int, scale: float) -> void:
+	ChunkRouteSlot.assert_valid(route_slot)
+	Validation.require_condition(scale >= 0.0, "DailyChunkGenerator route-slot weight scale cannot be negative.")
+	for slot_index in range(candidate_slots.size()):
+		if candidate_slots[slot_index] == route_slot:
+			candidate_weights[slot_index] *= scale
+			return
+
+func _select_weighted_route_slot(
+	candidate_slots: Array[int],
+	candidate_weights: Array[float],
+	route_slot_rng: RandomNumberGenerator
+) -> int:
+	Validation.require_condition(candidate_slots.size() > 0, "DailyChunkGenerator weighted route-slot selection requires candidates.")
+	Validation.require_condition(candidate_slots.size() == candidate_weights.size(), "DailyChunkGenerator weighted route-slot candidates must align with weights.")
+	Validation.require_condition(route_slot_rng != null, "DailyChunkGenerator weighted route-slot selection requires an RNG.")
+
+	var total_weight: float = 0.0
+	for weight in candidate_weights:
+		total_weight += weight
+
+	Validation.require_condition(total_weight > 0.0, "DailyChunkGenerator weighted route-slot selection requires positive total weight.")
+	var selection_value: float = route_slot_rng.randf_range(0.0, total_weight)
+	var accumulated_weight: float = 0.0
+	for slot_index in range(candidate_slots.size()):
+		accumulated_weight += candidate_weights[slot_index]
+		if selection_value <= accumulated_weight:
+			return candidate_slots[slot_index]
+
+	return candidate_slots[candidate_slots.size() - 1]
+
+func _build_route_slot_rng(seed_key: String, chunk_index: int) -> RandomNumberGenerator:
+	var route_slot_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	var route_slot_seed_key: String = "%s:route_profile:%d" % [seed_key, chunk_index]
+	var route_slot_seed_hash: int = route_slot_seed_key.hash()
+	if route_slot_seed_hash < 0:
+		route_slot_seed_hash = -route_slot_seed_hash
+	route_slot_rng.seed = route_slot_seed_hash
+	return route_slot_rng
+
+func _get_route_slot_cache_key(seed_key: String, chunk_index: int) -> String:
+	return "%s|%d" % [seed_key, chunk_index]
 
 func _build_chunk_rng(seed_key: String, chunk_index: int, candidate_attempt_index: int = 0) -> RandomNumberGenerator:
 	var chunk_rng: RandomNumberGenerator = RandomNumberGenerator.new()
@@ -642,7 +996,8 @@ func _build_handhold_socket(hold_id: StringName, local_position: Vector2, handho
 		definition.visual_color,
 		lifecycle_rule.break_after_attach_seconds,
 		lifecycle_rule.breaks_on_release,
-		movement_rule.release_impulse_vector
+		movement_rule.release_impulse_vector,
+		RouteRoleScript.Value.SETUP
 	)
 
 func _get_risky_lane_side_sign(seed_key: String, chunk_index: int, chunk_type: int) -> float:

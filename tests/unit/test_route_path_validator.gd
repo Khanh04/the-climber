@@ -11,6 +11,7 @@ const HandholdMovementRuleScript: GDScript = preload("res://resources/config/han
 const HandholdSurfaceProfileScript: GDScript = preload("res://resources/config/handhold_surface_profile.gd")
 const HandholdTypeScript: GDScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const HandholdTypeDefinitionScript: GDScript = preload("res://resources/config/handhold_type_definition.gd")
+const RouteRoleScript: GDScript = preload("res://src/gameplay/generation/route_role.gd")
 const RoutePathValidatorScript: GDScript = preload("res://src/gameplay/generation/route_path_validator.gd")
 
 func test_generated_opener_reports_missing_strict_static_path() -> void:
@@ -287,7 +288,8 @@ func _build_handhold_socket(
         definition.visual_color,
         lifecycle_rule.break_after_attach_seconds,
         lifecycle_rule.breaks_on_release,
-        movement_rule.release_impulse_vector
+        movement_rule.release_impulse_vector,
+        RouteRoleScript.Value.SETUP
     )
 
 func _build_layout_fixture(

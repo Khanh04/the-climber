@@ -12,6 +12,7 @@ const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_su
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
 const HandholdRowZoneScript = preload("res://src/gameplay/generation/handhold_row_zone.gd")
+const RouteRoleScript = preload("res://src/gameplay/generation/route_role.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 
 func test_build_chunk_is_stable_for_same_seed_and_index() -> void:
@@ -80,6 +81,30 @@ func test_challenge_band_chunks_can_schedule_pressure_slots() -> void:
             or typed_layout.chunk_type == ChunkTypeScript.Value.SWING_GAP
             or typed_layout.chunk_type == ChunkTypeScript.Value.RISK_LANE
     )
+
+func test_weighted_profile_scheduler_keeps_easy_band_free_of_pressure_slots() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    for chunk_index in range(1, 5):
+        var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, chunk_index))
+        assert_ne(layout.route_slot, ChunkRouteSlotScript.Value.PRESSURE)
+
+func test_weighted_profile_scheduler_inserts_recovery_after_pressure() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+    var pressure_chunk_index: int = _find_first_chunk_index_with_route_slot_and_band(
+        generator,
+        seed_key,
+        ChunkRouteSlotScript.Value.PRESSURE,
+        ChunkDifficultyBandScript.Value.CHALLENGE
+    )
+
+    var next_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, pressure_chunk_index + 1))
+
+    assert_eq(next_layout.route_slot, ChunkRouteSlotScript.Value.RECOVERY)
 
 func test_chunk_generation_is_independent_of_call_order() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -197,6 +222,46 @@ func test_generated_chunks_include_explicit_route_ports() -> void:
     assert_gt(opener_layout.route_entry_hold_ids.size(), 0)
     assert_gt(opener_layout.route_exit_hold_ids.size(), 0)
     assert_true(opener_layout.route_entry_hold_ids.has(String(opener_layout.handholds[0].hold_id)) or opener_layout.route_entry_hold_ids.size() > 0)
+
+func test_generated_chunks_assign_entry_and_top_out_route_roles() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var opener_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
+    var entry_role_count: int = 0
+    var top_out_role_count: int = 0
+
+    for handhold in opener_layout.handholds:
+        if opener_layout.route_entry_hold_ids.has(String(handhold.hold_id)):
+            assert_eq(handhold.route_role, RouteRoleScript.Value.ENTRY)
+            entry_role_count += 1
+
+        if opener_layout.route_exit_hold_ids.has(String(handhold.hold_id)):
+            assert_eq(handhold.route_role, RouteRoleScript.Value.TOP_OUT)
+            top_out_role_count += 1
+
+    assert_gt(entry_role_count, 0)
+    assert_gt(top_out_role_count, 0)
+
+func test_risk_lane_chunks_assign_branch_route_roles() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_keys: PackedStringArray = PackedStringArray([
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.from_utc_date(2026, 5, 15),
+    ])
+
+    var risk_layout: GeneratedChunkLayoutScript = _find_layout_by_chunk_type(generator, seed_keys, ChunkTypeScript.Value.RISK_LANE)
+    var has_branch_role: bool = false
+
+    for handhold in risk_layout.handholds:
+        if handhold.route_role == RouteRoleScript.Value.HAZARD_DENIAL \
+            or handhold.route_role == RouteRoleScript.Value.OPTIONAL_BETA:
+            has_branch_role = true
+            break
+
+    assert_true(has_branch_role)
 
 func test_custom_route_validation_candidate_attempt_count_stays_deterministic() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -414,9 +479,10 @@ func _layout_signature(layout: RefCounted) -> String:
 
     for handhold in typed_layout.handholds:
         var _append_handhold_result: bool = signature_parts.append(
-            "%s:%s@%.3f,%.3f" % [
+            "%s:%s:%s@%.3f,%.3f" % [
                 String(handhold.hold_id),
                 HandholdTypeScript.to_label(handhold.handhold_type),
+                RouteRoleScript.to_label(handhold.route_role),
                 handhold.local_position.x,
                 handhold.local_position.y,
             ]
