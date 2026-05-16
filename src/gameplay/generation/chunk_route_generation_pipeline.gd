@@ -51,9 +51,11 @@ func build_layout(
 	Validation.require_condition(not is_nan(candidate_score), "ChunkRouteGenerationPipeline candidate score cannot be NaN.")
 
 	var plan: ChunkRoutePlanScript = _plan_builder.build_plan(seed_key, chunk_index, route_slot, difficulty_band)
+	var first_row_height_meters: float = _calculate_route_first_row_height_meters(plan)
 	var anchor_graph_builder: RouteAnchorGraphBuilderScript = RouteAnchorGraphBuilderScript.new(
 		_tuning.chunk_width_meters,
-		_calculate_route_row_step_height_meters(plan)
+		_calculate_route_row_step_height_meters(plan, first_row_height_meters),
+		first_row_height_meters
 	)
 	var anchor_graph: RouteAnchorGraphScript = anchor_graph_builder.build_graph(plan)
 	var path_solution: ChunkRoutePathSolutionScript = _path_solver.solve(plan, anchor_graph)
@@ -76,16 +78,40 @@ func build_layout(
 	var layout: GeneratedChunkLayoutScript = layout_ref as GeneratedChunkLayoutScript
 	return layout
 
-func _calculate_route_row_step_height_meters(plan: ChunkRoutePlanScript) -> float:
+func _calculate_route_first_row_height_meters(plan: ChunkRoutePlanScript) -> float:
 	Validation.require_condition(plan != null, "ChunkRouteGenerationPipeline row step requires a route plan.")
 	plan.assert_valid()
-	if plan.route_slot == ChunkRouteSlotScript.Value.OPENER:
-		return _tuning.opener_first_row_height_meters
-
 	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
-	var reachable_step_height_meters: float = route_validation_tuning.max_move_distance_meters - 0.05
-	var segment_step_height_meters: float = _tuning.segment_height_meters / float(plan.get_row_count() + 2)
-	return minf(reachable_step_height_meters, segment_step_height_meters)
+	Validation.require_condition(
+		_tuning.opener_first_row_height_meters < route_validation_tuning.max_move_distance_meters,
+		"ChunkRouteGenerationPipeline first route row must be inside the move envelope."
+	)
+	return _tuning.opener_first_row_height_meters
+
+func _calculate_route_row_step_height_meters(plan: ChunkRoutePlanScript, first_row_height_meters: float) -> float:
+	Validation.require_condition(plan != null, "ChunkRouteGenerationPipeline row step requires a route plan.")
+	plan.assert_valid()
+	Validation.require_condition(first_row_height_meters > 0.0, "ChunkRouteGenerationPipeline first row height must be positive.")
+	Validation.require_condition(plan.get_row_count() >= 2, "ChunkRouteGenerationPipeline route plans require at least two rows.")
+	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
+	var top_row_height_meters: float = _tuning.segment_height_meters - _calculate_route_top_padding_meters(first_row_height_meters)
+	var row_step_height_meters: float = (top_row_height_meters - first_row_height_meters) / float(plan.get_row_count() - 1)
+	Validation.require_condition(row_step_height_meters > 0.0, "ChunkRouteGenerationPipeline route row step must be positive.")
+	Validation.require_condition(
+		row_step_height_meters < route_validation_tuning.max_move_distance_meters,
+		"ChunkRouteGenerationPipeline route row step must stay inside the move envelope."
+	)
+	return row_step_height_meters
+
+func _calculate_route_top_padding_meters(first_row_height_meters: float) -> float:
+	Validation.require_condition(first_row_height_meters > 0.0, "ChunkRouteGenerationPipeline top padding requires a positive first row height.")
+	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
+	var reachable_top_padding_meters: float = route_validation_tuning.max_move_distance_meters - first_row_height_meters - 0.05
+	Validation.require_condition(
+		reachable_top_padding_meters > 0.0,
+		"ChunkRouteGenerationPipeline route seam padding must leave a reachable next entry row."
+	)
+	return minf(_tuning.opener_top_padding_meters, reachable_top_padding_meters)
 
 func _get_route_validation_tuning() -> RouteValidationTuningScript:
 	Validation.require_condition(_tuning.route_validation_tuning != null, "ChunkRouteGenerationPipeline requires route validation tuning.")

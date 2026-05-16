@@ -167,9 +167,10 @@ func test_first_chunk_uses_configured_opener_first_row_height_for_route_start() 
     var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
     var row_heights: Array[float] = _get_sorted_unique_row_heights(layout.handholds)
 
-    assert_eq(row_heights.size(), 5)
+    assert_gte(row_heights.size(), 10)
     assert_true(is_equal_approx(row_heights[0], tuning.opener_first_row_height_meters))
-    assert_true(is_equal_approx(row_heights[1] - row_heights[0], tuning.opener_first_row_height_meters))
+    assert_gte(row_heights[row_heights.size() - 1], tuning.segment_height_meters - 1.0)
+    assert_lte(_get_max_row_height_gap(row_heights), 1.2)
 
 func test_generated_handholds_resolve_type_specific_drain_and_size() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -228,12 +229,11 @@ func test_generated_adjacent_chunks_include_seam_validation_result() -> void:
 
     var seam_result: Object = _require_seam_validation_result(generator.validate_chunk_seam(current_layout, next_layout))
 
-    assert_false(_require_route_validation_bool(seam_result, &"is_valid"))
+    assert_true(_require_route_validation_bool(seam_result, &"is_valid"))
     assert_eq(_require_route_validation_int(seam_result, &"next_chunk_index"), 1)
-    assert_eq(
-        _require_route_validation_string(seam_result, &"failure_reason"),
-        "No reachable seam connects the current chunk exit ports to the next chunk entry ports within the configured move envelope."
-    )
+    assert_eq(_require_route_validation_string(seam_result, &"failure_reason"), "")
+    assert_true(current_layout.route_exit_hold_ids.has(String(_require_route_validation_string_name(seam_result, &"from_hold_id"))))
+    assert_true(next_layout.route_entry_hold_ids.has(String(_require_route_validation_string_name(seam_result, &"to_hold_id"))))
 
 func test_generated_chunks_include_explicit_route_ports() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -869,6 +869,14 @@ func _get_sorted_unique_row_heights(handholds: Array[GeneratedHandholdSocket]) -
 
     row_heights.sort()
     return row_heights
+
+func _get_max_row_height_gap(row_heights: Array[float]) -> float:
+    Validation.require_condition(row_heights.size() >= 2, "Test row gap helper requires at least two rows.")
+    var max_gap: float = 0.0
+    for row_index in range(1, row_heights.size()):
+        max_gap = maxf(max_gap, row_heights[row_index] - row_heights[row_index - 1])
+
+    return max_gap
 
 func _has_handhold_within_distance(
     handholds: Array[GeneratedHandholdSocket],

@@ -96,7 +96,13 @@ func _opener_row_roles() -> Array[int]:
 	return [
 		RouteRowRoleScript.Value.SUPPORT,
 		RouteRowRoleScript.Value.SUPPORT,
+		RouteRowRoleScript.Value.SUPPORT,
 		RouteRowRoleScript.Value.DECISION,
+		RouteRowRoleScript.Value.SUPPORT,
+		RouteRowRoleScript.Value.CATCH,
+		RouteRowRoleScript.Value.SUPPORT,
+		RouteRowRoleScript.Value.DECISION,
+		RouteRowRoleScript.Value.SUPPORT,
 		RouteRowRoleScript.Value.CATCH,
 		RouteRowRoleScript.Value.TOP_OUT,
 	]
@@ -104,6 +110,11 @@ func _opener_row_roles() -> Array[int]:
 func _recovery_row_roles() -> Array[int]:
 	return [
 		RouteRowRoleScript.Value.SUPPORT,
+		RouteRowRoleScript.Value.SUPPORT,
+		RouteRowRoleScript.Value.CATCH,
+		RouteRowRoleScript.Value.SUPPORT,
+		RouteRowRoleScript.Value.DECISION,
+		RouteRowRoleScript.Value.CATCH,
 		RouteRowRoleScript.Value.SUPPORT,
 		RouteRowRoleScript.Value.CATCH,
 		RouteRowRoleScript.Value.SUPPORT,
@@ -118,8 +129,13 @@ func _baseline_row_roles(difficulty_band: int) -> Array[int]:
 				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.DECISION,
+				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.CRUX,
 				RouteRowRoleScript.Value.CATCH,
+				RouteRowRoleScript.Value.SUPPORT,
+				RouteRowRoleScript.Value.CRUX,
+				RouteRowRoleScript.Value.CATCH,
+				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.TOP_OUT,
 			]
 		ChunkDifficultyBandScript.Value.BASELINE:
@@ -127,14 +143,23 @@ func _baseline_row_roles(difficulty_band: int) -> Array[int]:
 				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.DECISION,
 				RouteRowRoleScript.Value.TRAVERSE,
+				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.CRUX,
 				RouteRowRoleScript.Value.CATCH,
+				RouteRowRoleScript.Value.TRAVERSE,
+				RouteRowRoleScript.Value.CRUX,
+				RouteRowRoleScript.Value.CATCH,
+				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.TOP_OUT,
 			]
 		ChunkDifficultyBandScript.Value.CHALLENGE:
 			return [
 				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.DECISION,
+				RouteRowRoleScript.Value.TRAVERSE,
+				RouteRowRoleScript.Value.CRUX,
+				RouteRowRoleScript.Value.PRESSURE,
+				RouteRowRoleScript.Value.CATCH,
 				RouteRowRoleScript.Value.TRAVERSE,
 				RouteRowRoleScript.Value.CRUX,
 				RouteRowRoleScript.Value.PRESSURE,
@@ -153,7 +178,11 @@ func _branch_row_roles(difficulty_band: int) -> Array[int]:
 				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.DECISION,
 				RouteRowRoleScript.Value.TRAVERSE,
+				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.CRUX,
+				RouteRowRoleScript.Value.TRAVERSE,
+				RouteRowRoleScript.Value.CATCH,
+				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.CATCH,
 				RouteRowRoleScript.Value.TOP_OUT,
 			]
@@ -162,8 +191,12 @@ func _branch_row_roles(difficulty_band: int) -> Array[int]:
 				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.DECISION,
 				RouteRowRoleScript.Value.TRAVERSE,
+				RouteRowRoleScript.Value.SUPPORT,
 				RouteRowRoleScript.Value.CRUX,
 				RouteRowRoleScript.Value.TRAVERSE,
+				RouteRowRoleScript.Value.CATCH,
+				RouteRowRoleScript.Value.TRAVERSE,
+				RouteRowRoleScript.Value.CRUX,
 				RouteRowRoleScript.Value.CATCH,
 				RouteRowRoleScript.Value.TOP_OUT,
 			]
@@ -175,6 +208,9 @@ func _branch_row_roles(difficulty_band: int) -> Array[int]:
 				RouteRowRoleScript.Value.CRUX,
 				RouteRowRoleScript.Value.PRESSURE,
 				RouteRowRoleScript.Value.TRAVERSE,
+				RouteRowRoleScript.Value.CATCH,
+				RouteRowRoleScript.Value.TRAVERSE,
+				RouteRowRoleScript.Value.CRUX,
 				RouteRowRoleScript.Value.CATCH,
 				RouteRowRoleScript.Value.TOP_OUT,
 			]

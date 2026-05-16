@@ -92,12 +92,9 @@ func test_reset_chunks_records_next_chunk_seam_metadata() -> void:
     var next_chunk_seam_failure_reason: String = _get_string_meta(chunk_zero, &"next_chunk_seam_failure_reason")
     var next_chunk_seam_from_hold_id: String = _get_string_meta(chunk_zero, &"next_chunk_seam_from_hold_id")
     var next_chunk_seam_to_hold_id: String = _get_string_meta(chunk_zero, &"next_chunk_seam_to_hold_id")
-    assert_eq(next_chunk_seam_is_valid, false)
+    assert_eq(next_chunk_seam_is_valid, true)
     assert_eq(next_chunk_seam_target_chunk_index, 1)
-    assert_eq(
-        next_chunk_seam_failure_reason,
-        "No reachable seam connects the current chunk exit ports to the next chunk entry ports within the configured move envelope."
-    )
+    assert_eq(next_chunk_seam_failure_reason, "")
     assert_ne(next_chunk_seam_from_hold_id, "")
     assert_ne(next_chunk_seam_to_hold_id, "")
 
