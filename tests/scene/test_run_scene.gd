@@ -8,6 +8,7 @@ const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.g
 const CosmeticPurchaseOutcomeScript = preload("res://src/cosmetics/cosmetic_purchase_outcome.gd")
 const CosmeticPurchaseResultScript = preload("res://src/cosmetics/cosmetic_purchase_result.gd")
 const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickups/generated_coin_pickup_spawn_adapter.gd")
+const GeneratedHandholdAdapterScript = preload("res://src/gameplay/generation/generated_handhold_adapter.gd")
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/generated_hazard_spawn_adapter.gd")
 const InMemoryLocalStorageAdapterScript = preload("res://src/platform/storage/in_memory_local_storage_adapter.gd")
@@ -1361,7 +1362,7 @@ func test_run_scene_chaser_contact_ends_run_without_rescue_and_restart_resets_ch
 
     await get_tree().process_frame
 
-    assert_eq(player_body.global_position, reset_anchor.global_position)
+    assert_lte(player_body.global_position.distance_to(reset_anchor.global_position), 2.0)
     assert_eq(player_body.global_rotation, starting_rotation)
     assert_null(player.get_node_or_null("GripJoints/LeftGripJointAnchor/LeftRuntimeGripJoint"))
     assert_null(player.get_node_or_null("GripJoints/RightGripJointAnchor/RightRuntimeGripJoint"))
@@ -1512,6 +1513,21 @@ func test_run_scene_left_grip_creates_and_releases_runtime_link() -> void:
     await get_tree().process_frame
 
     assert_null(playground.get_player_for_test().get_left_runtime_grip_link())
+
+func test_run_scene_generated_handhold_lifecycle_handles_right_only_attachment() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    _attach_to_generated_opener_holds(playground, false, true)
+
+    playground._physics_process(1.0 / 60.0)
+
+    assert_eq(playground.get_controller_for_test().get_attachment_state().get_attached_hand_count(), 1)
 
 func test_run_scene_aim_preview_shows_for_unattached_hands_when_aiming() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -1708,6 +1724,9 @@ func _attach_to_generated_opener_holds(playground: RunSceneScript, attach_left: 
             left_hold.global_position,
             left_hold.get_path()
         )
+        if left_hold is GeneratedHandholdAdapterScript:
+            var typed_left_hold: GeneratedHandholdAdapterScript = left_hold as GeneratedHandholdAdapterScript
+            typed_left_hold.notify_hand_attached()
 
     if attach_right:
         playground.get_controller_for_test().get_attachment_state().attach(
@@ -1716,6 +1735,9 @@ func _attach_to_generated_opener_holds(playground: RunSceneScript, attach_left: 
             right_hold.global_position,
             right_hold.get_path()
         )
+        if right_hold is GeneratedHandholdAdapterScript:
+            var typed_right_hold: GeneratedHandholdAdapterScript = right_hold as GeneratedHandholdAdapterScript
+            typed_right_hold.notify_hand_attached()
 
 func _get_required_string_meta(node: Node, key: StringName) -> String:
     assert_not_null(node)

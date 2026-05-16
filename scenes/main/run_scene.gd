@@ -321,13 +321,14 @@ func _physics_process(delta: float) -> void:
 func _advance_generated_handhold_lifecycle(delta_seconds: float) -> void:
 	Validation.require_condition(delta_seconds >= 0.0, "RunScene generated handhold lifecycle advance cannot use a negative delta.")
 	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
+	var left_hold_path: NodePath = NodePath()
 	if attachment_state.is_attached(HandSideScript.Value.LEFT):
-		var left_hold_path: NodePath = attachment_state.get_hold_path(HandSideScript.Value.LEFT)
+		left_hold_path = attachment_state.get_hold_path(HandSideScript.Value.LEFT)
 		_advance_generated_handhold_lifecycle_for_path(left_hold_path, delta_seconds)
 
 	if attachment_state.is_attached(HandSideScript.Value.RIGHT):
 		var right_hold_path: NodePath = attachment_state.get_hold_path(HandSideScript.Value.RIGHT)
-		if right_hold_path != attachment_state.get_hold_path(HandSideScript.Value.LEFT) or not attachment_state.is_attached(HandSideScript.Value.LEFT):
+		if left_hold_path.is_empty() or right_hold_path != left_hold_path:
 			_advance_generated_handhold_lifecycle_for_path(right_hold_path, delta_seconds)
 
 func _advance_generated_handhold_lifecycle_for_path(hold_path: NodePath, delta_seconds: float) -> void:

@@ -4,8 +4,11 @@ const EconomyTuningScript = preload("res://resources/config/economy_tuning.gd")
 const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
 const RewardedAdsTuningScript = preload("res://resources/config/rewarded_ads_tuning.gd")
 const ChaserThemeCatalogScript = preload("res://resources/config/chaser_theme_catalog.gd")
+const HandholdAssignmentRuleCatalogScript = preload("res://resources/config/handhold_assignment_rule_catalog.gd")
 const HandholdAssignmentRuleScript = preload("res://resources/config/handhold_assignment_rule.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
+const HandholdTypeDefinitionCatalogScript = preload("res://resources/config/handhold_type_definition_catalog.gd")
+const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
 const ChaserThemeScript = preload("res://resources/config/chaser_theme.gd")
 const ChaserTuningScript = preload("res://resources/config/chaser_tuning.gd")
 const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_catalog.gd")
@@ -61,6 +64,36 @@ func test_default_generation_tuning_is_valid() -> void:
     var tuning = GenerationTuningScript.new()
 
     assert_true(tuning.is_valid())
+
+func test_default_handhold_type_definition_catalog_is_valid() -> void:
+    var catalog: HandholdTypeDefinitionCatalogScript = load("res://resources/config/handhold_type_definition_catalog.tres") as HandholdTypeDefinitionCatalogScript
+
+    assert_not_null(catalog)
+    assert_true(catalog.is_valid())
+
+func test_default_handhold_assignment_rule_catalog_is_valid() -> void:
+    var catalog: HandholdAssignmentRuleCatalogScript = load("res://resources/config/handhold_assignment_rule_catalog.tres") as HandholdAssignmentRuleCatalogScript
+
+    assert_not_null(catalog)
+    assert_true(catalog.is_valid())
+
+func test_generation_tuning_duplicates_authored_default_handhold_resources() -> void:
+    var first_tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var second_tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var first_definition: HandholdTypeDefinitionScript = first_tuning.handhold_definitions[0] as HandholdTypeDefinitionScript
+    var second_definition: HandholdTypeDefinitionScript = second_tuning.handhold_definitions[0] as HandholdTypeDefinitionScript
+    var first_rule: HandholdAssignmentRuleScript = first_tuning.handhold_assignment_rules[0] as HandholdAssignmentRuleScript
+    var second_rule: HandholdAssignmentRuleScript = second_tuning.handhold_assignment_rules[0] as HandholdAssignmentRuleScript
+
+    assert_not_null(first_definition)
+    assert_not_null(second_definition)
+    assert_not_null(first_rule)
+    assert_not_null(second_rule)
+    assert_ne(first_definition, second_definition)
+    assert_ne(first_definition.surface_profile, second_definition.surface_profile)
+    assert_ne(first_definition.lifecycle_rule, second_definition.lifecycle_rule)
+    assert_ne(first_definition.movement_rule, second_definition.movement_rule)
+    assert_ne(first_rule, second_rule)
 
 func test_invalid_generation_tuning_is_detected() -> void:
     var tuning = GenerationTuningScript.new()

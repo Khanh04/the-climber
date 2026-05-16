@@ -1,0 +1,131 @@
+[gd_resource type="Resource" script_class="HandholdTypeDefinitionCatalog" load_steps=26 format=3]
+
+[ext_resource type="Script" path="res://resources/config/handhold_type_definition_catalog.gd" id="1_catalog"]
+[ext_resource type="Script" path="res://resources/config/handhold_type_definition.gd" id="2_definition"]
+[ext_resource type="Script" path="res://resources/config/handhold_surface_profile.gd" id="3_surface"]
+[ext_resource type="Script" path="res://resources/config/handhold_lifecycle_rule.gd" id="4_lifecycle"]
+[ext_resource type="Script" path="res://resources/config/handhold_movement_rule.gd" id="5_movement"]
+
+[sub_resource type="Resource" id="SurfaceProfile_normal"]
+script = ExtResource("3_surface")
+stamina_drain_multiplier = 1.0
+
+[sub_resource type="Resource" id="LifecycleRule_normal"]
+script = ExtResource("4_lifecycle")
+break_after_attach_seconds = 0.0
+breaks_on_release = false
+
+[sub_resource type="Resource" id="MovementRule_normal"]
+script = ExtResource("5_movement")
+release_impulse_vector = Vector2(0, 0)
+
+[sub_resource type="Resource" id="Definition_normal"]
+script = ExtResource("2_definition")
+definition_id = &"NORMAL"
+handhold_type = 0
+display_name = "Normal"
+physical_size_meters = Vector2(1.12, 0.3)
+visual_color = Color(0.92, 0.72, 0.23, 1)
+surface_profile = SubResource("SurfaceProfile_normal")
+lifecycle_rule = SubResource("LifecycleRule_normal")
+movement_rule = SubResource("MovementRule_normal")
+
+[sub_resource type="Resource" id="SurfaceProfile_rest"]
+script = ExtResource("3_surface")
+stamina_drain_multiplier = 0.75
+
+[sub_resource type="Resource" id="LifecycleRule_rest"]
+script = ExtResource("4_lifecycle")
+break_after_attach_seconds = 0.0
+breaks_on_release = false
+
+[sub_resource type="Resource" id="MovementRule_rest"]
+script = ExtResource("5_movement")
+release_impulse_vector = Vector2(0, 0)
+
+[sub_resource type="Resource" id="Definition_rest"]
+script = ExtResource("2_definition")
+definition_id = &"REST"
+handhold_type = 1
+display_name = "Rest"
+physical_size_meters = Vector2(1.24, 0.3)
+visual_color = Color(0.41, 0.82, 0.47, 1)
+surface_profile = SubResource("SurfaceProfile_rest")
+lifecycle_rule = SubResource("LifecycleRule_rest")
+movement_rule = SubResource("MovementRule_rest")
+
+[sub_resource type="Resource" id="SurfaceProfile_burn"]
+script = ExtResource("3_surface")
+stamina_drain_multiplier = 1.35
+
+[sub_resource type="Resource" id="LifecycleRule_burn"]
+script = ExtResource("4_lifecycle")
+break_after_attach_seconds = 0.0
+breaks_on_release = false
+
+[sub_resource type="Resource" id="MovementRule_burn"]
+script = ExtResource("5_movement")
+release_impulse_vector = Vector2(0, 0)
+
+[sub_resource type="Resource" id="Definition_burn"]
+script = ExtResource("2_definition")
+definition_id = &"BURN"
+handhold_type = 2
+display_name = "Burn"
+physical_size_meters = Vector2(0.96, 0.3)
+visual_color = Color(0.92, 0.39, 0.27, 1)
+surface_profile = SubResource("SurfaceProfile_burn")
+lifecycle_rule = SubResource("LifecycleRule_burn")
+movement_rule = SubResource("MovementRule_burn")
+
+[sub_resource type="Resource" id="SurfaceProfile_break"]
+script = ExtResource("3_surface")
+stamina_drain_multiplier = 1.0
+
+[sub_resource type="Resource" id="LifecycleRule_break"]
+script = ExtResource("4_lifecycle")
+break_after_attach_seconds = 0.6
+breaks_on_release = true
+
+[sub_resource type="Resource" id="MovementRule_break"]
+script = ExtResource("5_movement")
+release_impulse_vector = Vector2(0, 0)
+
+[sub_resource type="Resource" id="Definition_break"]
+script = ExtResource("2_definition")
+definition_id = &"BREAK"
+handhold_type = 3
+display_name = "Break"
+physical_size_meters = Vector2(0.88, 0.28)
+visual_color = Color(0.95, 0.64, 0.21, 1)
+surface_profile = SubResource("SurfaceProfile_break")
+lifecycle_rule = SubResource("LifecycleRule_break")
+movement_rule = SubResource("MovementRule_break")
+
+[sub_resource type="Resource" id="SurfaceProfile_boost"]
+script = ExtResource("3_surface")
+stamina_drain_multiplier = 1.0
+
+[sub_resource type="Resource" id="LifecycleRule_boost"]
+script = ExtResource("4_lifecycle")
+break_after_attach_seconds = 0.0
+breaks_on_release = false
+
+[sub_resource type="Resource" id="MovementRule_boost"]
+script = ExtResource("5_movement")
+release_impulse_vector = Vector2(0, -240)
+
+[sub_resource type="Resource" id="Definition_boost"]
+script = ExtResource("2_definition")
+definition_id = &"BOOST"
+handhold_type = 4
+display_name = "Boost"
+physical_size_meters = Vector2(1.04, 0.3)
+visual_color = Color(0.32, 0.72, 0.96, 1)
+surface_profile = SubResource("SurfaceProfile_boost")
+lifecycle_rule = SubResource("LifecycleRule_boost")
+movement_rule = SubResource("MovementRule_boost")
+
+[resource]
+script = ExtResource("1_catalog")
+definitions = [SubResource("Definition_normal"), SubResource("Definition_rest"), SubResource("Definition_burn"), SubResource("Definition_break"), SubResource("Definition_boost")]
