@@ -87,6 +87,105 @@ object budgets.
   UTC reset timing, but the generator must not depend on live service
   availability.
 
+### Planned Handhold Type Expansion
+
+- Chunk types remain route-pattern archetypes. Per-handhold behavior
+  must ship as a second typed layer and must never overload
+  `ChunkType`.
+- Special handholds must stay readable within one grab window through
+  distinct silhouette, color, and one primary gameplay effect per
+  hold.
+- Deterministic generation must assign handhold types after handhold
+  geometry is placed so the same seed reproduces both route pattern
+  and hold behavior.
+- Opener and early easy-band chunks must restrict hold selection to
+  beginner-safe holds with no hidden timers, forced launch
+  requirements, or linked-route dependencies.
+- The first handhold-type issue should ship only `NORMAL`, `REST`,
+  `BURN`, `BREAK`, and `BOOST`.
+- The first issue subset should prove passive drain tuning, readable
+  timed failure, and release-triggered movement before adding reward,
+  shield, linked-route, or moving-path holds.
+
+#### Reference Hold Idea Catalog
+
+The catalog below preserves candidate ideas from handhold-type
+brainstorming. Some entries may ship as fully distinct mechanics,
+while climbing-flavored names may later collapse into presentation
+aliases over a smaller ruleset.
+
+##### Core Surface, Stamina, And Risk Holds
+
+- `NORMAL`: default hold with no special rule.
+- `REST`: lower stamina drain and recovery-friendly readability.
+- `BURN`: higher stamina drain to create tempo pressure.
+- `STICKY`: increased grip stability or hazard resistance while
+  attached.
+- `SLICK`: easier to peel off under swing or force hazards.
+- `ANCHOR`: resists wind-style forced releases and stabilizes recovery
+  lines.
+- `SPIKE`: still grabbable, but taxes health, score, or stamina on
+  use.
+- `OVERHEAT`: starts safe, then turns hostile if the player camps on
+  it.
+- `HEAVY`: damps swing and keeps the player from overcommitting.
+- `GRAVITY`: alters post-release gravity to exaggerate float or drop.
+- `PAINT`: applies a temporary buff or debuff that changes the next
+  move.
+
+##### Timed, Consumable, And Stateful Holds
+
+- `BREAK`: valid on attach, then breaks after a short readable window
+  or on release.
+- `GHOST`: usable once, then disappears for the rest of the run.
+- `FLIP`: alternates between safe and dangerous states on each grab.
+- `BLINK`: phases in and out on a readable rhythm.
+- `DICE`: resolves to one of several outcomes on first grab.
+- `MOVING`: shifts position along a simple path while remaining
+  grabbable.
+
+##### Motion And Routing Holds
+
+- `BOOST`: adds a deterministic release impulse.
+- `ROCKET`: converts aim direction into a stronger release launch.
+- `PINBALL`: kicks the player away immediately after grab or release.
+- `ORBIT`: increases angular control and encourages circular swing
+  setups.
+- `ZIP`: slides the player along a short authored rail or lane.
+- `TETHER`: keeps a short elastic attachment after release and can
+  slingshot the player.
+- `MAGNET`: gently pulls a nearby aiming hand toward the hold.
+- `ELASTIC_VINE`: stretches under load and rebounds on release.
+- `MIRROR`: activates a mirrored counterpart on the opposite side.
+- `KEY`: unlocks a nearby reward, safer lane, or temporary route aid.
+- `SWITCH`: toggles another runtime object such as a hazard, reward
+  line, or bridge hold.
+
+##### Reward, Defense, And Combo Holds
+
+- `BATTERY`: grants a one-time stamina burst on first grab.
+- `COIN`: pays out coin only when successfully grabbed.
+- `COMBO`: rewards clean left-right alternation or chain timing.
+- `CHAIN`: escalates payoff when grabbed after another chain hold.
+- `BUBBLE`: grants a temporary shield against one hazard
+  interaction.
+
+##### Climbing-Flavored Aliases And Structural Variants
+
+- `JUG`: big forgiving hold that likely maps to `NORMAL` or `REST`.
+- `CRIMP`: small stressful hold that likely maps to `BURN`.
+- `SLOPER`: rewards controlled motion and likely maps to `SLICK`.
+- `POCKET`: narrow commitment hold that can bias one-hand route
+  decisions.
+- `SIDEPULL`: directional grip that favors lateral movement.
+- `UNDERCLING`: rewards upward pop or reversal timing under the hold.
+- `FRAGILE_TWIN`: works for one hand but punishes or breaks under dual
+  load.
+- `ONE_WAY`: reliable only when approached from the intended side or
+  direction.
+- `PHASE`: only becomes valid under a specific state such as upward
+  movement or sufficient stamina.
+
 ### Current MVP Hazard Set
 
 #### Spike Clusters
@@ -146,6 +245,25 @@ object budgets.
 - Keep the opener handhold pattern explicit and testable so initial
   reachability regressions fail fast.
 
+### Handhold Type Model
+
+- Keep `ChunkType` responsible for route geometry and add a second
+  typed handhold layer for per-hold behavior.
+- Generate handhold positions first, then assign handhold types in a
+  deterministic second pass keyed by seed, chunk index, route slot,
+  difficulty band, and local row role.
+- Use immutable authored type definitions for rules and keep mutable
+  per-run state local to spawned handhold runtime nodes rather than
+  inside generated layout snapshots.
+- Extend the generated handhold socket and player target models with
+  typed handhold-type data rather than growing ad hoc node metadata.
+- Add a dedicated handhold runtime adapter, mirroring the pickup and
+  hazard seams, before implementing timed, reward, defense, or
+  linked-route holds.
+- See [ADR 0004](adr/0004-generated-hold-type-model.md) for the
+  proposed typed model that can scale from the first five handhold
+  types to the broader catalog above.
+
 ### Mobile Object Budgets
 
 - Cap active generated content by chunk window rather than letting
@@ -175,6 +293,10 @@ object budgets.
 
 - Crumbling ledges, greasy ledges, and elastic vines can follow once
   the generated opener and current four-hazard set are stable.
+- Linked, moving, and shield or reward-reactive holds such as `ZIP`,
+  `MIRROR`, `KEY`, `TETHER`, `BUBBLE`, and `DICE` can follow once the
+  first five handhold types validate readability, determinism, and
+  runtime cost.
 - Friend ghost overlays and fall sprays stay associated with the UTC
   seed and generator version.
 - Generator migrations should preserve old ghost data when content
@@ -190,6 +312,11 @@ object budgets.
   debug tools and player-facing UI?
 - How many generated objects can remain active on mobile before
   pooling or stricter despawning is required?
+- Which reference handhold ideas should ship as distinct mechanics
+  versus presentation aliases over the same smaller runtime ruleset?
+- How much active timer, shield, and linked-route state can remain in
+  the loaded chunk window before mobile performance or debugging
+  clarity degrades?
 - Which local daily progression hooks should be in the first Android
   release: daily best only, daily best plus streaks, or a broader goal
   set?
@@ -209,6 +336,9 @@ object budgets.
   daily reset timing.
 - Mobile performance can degrade quickly if scattered pickups, force
   hazards, and chunk lifetimes are allowed to scale together.
+- Special handholds can become unreadable if safe, breaking, launch,
+  and reward behaviors are not differentiated quickly enough through
+  color, silhouette, and timing cues.
 - Force hazards can feel arbitrary if impulse tuning bypasses the
   shared fall rules or obscures readable route intent.
 
@@ -226,3 +356,9 @@ object budgets.
 5. Add chunk metadata, UTC rollover coverage, and local daily
   progression hooks so the daily layout stays debuggable and
   replay-worthy.
+6. Land the typed handhold model and deterministic handhold-type
+  assignment pass described in
+  [ADR 0004](adr/0004-generated-hold-type-model.md).
+7. Implement `NORMAL`, `REST`, `BURN`, `BREAK`, and `BOOST` through a
+  dedicated handhold runtime adapter before adding reward, defense,
+  moving, or linked-route holds.
