@@ -86,12 +86,14 @@ func _apply_chunk_metadata(chunk_root: Node2D, layout: GeneratedChunkLayout) -> 
 
     if layout.route_validation_result != null:
         var route_validation_result: RefCounted = layout.route_validation_result
+        var route_validation_path_hold_ids: PackedStringArray = _get_required_packed_string_array_property(route_validation_result, &"path_hold_ids")
         chunk_root.set_meta(&"route_validation_is_valid", _get_required_bool_property(route_validation_result, &"is_valid"))
         chunk_root.set_meta(&"route_validation_target_hold_id", _get_required_string_name_property(route_validation_result, &"target_hold_id"))
         chunk_root.set_meta(&"route_validation_failure_reason", _get_required_string_property(route_validation_result, &"failure_reason"))
+        chunk_root.set_meta(&"route_validation_path_hold_ids", route_validation_path_hold_ids)
         chunk_root.set_meta(
             &"route_validation_path_length",
-            _get_required_packed_string_array_property(route_validation_result, &"path_hold_ids").size()
+            route_validation_path_hold_ids.size()
         )
 
 func _get_required_bool_property(source: Object, property_name: StringName) -> bool:

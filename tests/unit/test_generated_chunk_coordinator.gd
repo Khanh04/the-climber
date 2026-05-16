@@ -1,16 +1,16 @@
 extends GutTest
 
-const DailyChunkGeneratorScript = preload("res://src/gameplay/generation/daily_chunk_generator.gd")
-const GeneratedChunkCoordinatorScript = preload("res://src/gameplay/generation/generated_chunk_coordinator.gd")
-const GeneratedChunkSceneBuilderScript = preload("res://src/gameplay/generation/generated_chunk_scene_builder.gd")
-const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
+const DailyChunkGeneratorScript: GDScript = preload("res://src/gameplay/generation/daily_chunk_generator.gd")
+const GeneratedChunkCoordinatorScript: GDScript = preload("res://src/gameplay/generation/generated_chunk_coordinator.gd")
+const GeneratedChunkSceneBuilderScript: GDScript = preload("res://src/gameplay/generation/generated_chunk_scene_builder.gd")
+const GenerationTuningScript: GDScript = preload("res://resources/config/generation_tuning.gd")
 
 func test_reset_chunks_spawns_initial_window() -> void:
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    var coordinator: GeneratedChunkCoordinatorScript = GeneratedChunkCoordinatorScript.new()
+    var tuning: GenerationTuning = GenerationTuningScript.new()
+    var coordinator: GeneratedChunkCoordinator = GeneratedChunkCoordinatorScript.new()
     add_child_autofree(coordinator)
-    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
-    var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(100.0)
+    var generator: DailyChunkGenerator = DailyChunkGeneratorScript.new(tuning)
+    var builder: GeneratedChunkSceneBuilder = GeneratedChunkSceneBuilderScript.new(100.0)
 
     coordinator.configure(
         tuning,
@@ -29,11 +29,11 @@ func test_reset_chunks_spawns_initial_window() -> void:
     assert_not_null(coordinator.get_chunk_node(2))
 
 func test_sync_chunks_prunes_old_window_but_keeps_retained_chunk_paths() -> void:
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    var coordinator: GeneratedChunkCoordinatorScript = GeneratedChunkCoordinatorScript.new()
+    var tuning: GenerationTuning = GenerationTuningScript.new()
+    var coordinator: GeneratedChunkCoordinator = GeneratedChunkCoordinatorScript.new()
     add_child_autofree(coordinator)
-    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
-    var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(100.0)
+    var generator: DailyChunkGenerator = DailyChunkGeneratorScript.new(tuning)
+    var builder: GeneratedChunkSceneBuilder = GeneratedChunkSceneBuilderScript.new(100.0)
     var chunk_start_height_offset_meters: float = 12.0
 
     coordinator.configure(
@@ -64,11 +64,11 @@ func test_sync_chunks_prunes_old_window_but_keeps_retained_chunk_paths() -> void
     assert_not_null(coordinator.get_chunk_node(max_chunk_index))
 
 func test_reset_chunks_records_next_chunk_seam_metadata() -> void:
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    var coordinator: GeneratedChunkCoordinatorScript = GeneratedChunkCoordinatorScript.new()
+    var tuning: GenerationTuning = GenerationTuningScript.new()
+    var coordinator: GeneratedChunkCoordinator = GeneratedChunkCoordinatorScript.new()
     add_child_autofree(coordinator)
-    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
-    var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(100.0)
+    var generator: DailyChunkGenerator = DailyChunkGeneratorScript.new(tuning)
+    var builder: GeneratedChunkSceneBuilder = GeneratedChunkSceneBuilderScript.new(100.0)
 
     coordinator.configure(
         tuning,
@@ -85,15 +85,21 @@ func test_reset_chunks_records_next_chunk_seam_metadata() -> void:
     assert_true(chunk_zero.has_meta(&"next_chunk_seam_is_valid"))
     assert_true(chunk_zero.has_meta(&"next_chunk_seam_target_chunk_index"))
     assert_true(chunk_zero.has_meta(&"next_chunk_seam_failure_reason"))
+    assert_true(chunk_zero.has_meta(&"next_chunk_seam_from_hold_id"))
+    assert_true(chunk_zero.has_meta(&"next_chunk_seam_to_hold_id"))
     var next_chunk_seam_is_valid: bool = _get_bool_meta(chunk_zero, &"next_chunk_seam_is_valid")
     var next_chunk_seam_target_chunk_index: int = _get_int_meta(chunk_zero, &"next_chunk_seam_target_chunk_index")
     var next_chunk_seam_failure_reason: String = _get_string_meta(chunk_zero, &"next_chunk_seam_failure_reason")
+    var next_chunk_seam_from_hold_id: String = _get_string_meta(chunk_zero, &"next_chunk_seam_from_hold_id")
+    var next_chunk_seam_to_hold_id: String = _get_string_meta(chunk_zero, &"next_chunk_seam_to_hold_id")
     assert_eq(next_chunk_seam_is_valid, false)
     assert_eq(next_chunk_seam_target_chunk_index, 1)
     assert_eq(
         next_chunk_seam_failure_reason,
         "No reachable seam connects the current chunk exit ports to the next chunk entry ports within the configured move envelope."
     )
+    assert_ne(next_chunk_seam_from_hold_id, "")
+    assert_ne(next_chunk_seam_to_hold_id, "")
 
 func _get_bool_meta(node: Node, key: StringName) -> bool:
     var raw_value: Variant = node.get_meta(key)
@@ -115,9 +121,13 @@ func _get_int_meta(node: Node, key: StringName) -> int:
 
 func _get_string_meta(node: Node, key: StringName) -> String:
     var raw_value: Variant = node.get_meta(key)
-    if not raw_value is String:
-        fail_test("Expected string metadata for %s." % String(key))
-        return ""
+    if raw_value is String:
+        var typed_string: String = raw_value
+        return typed_string
 
-    var typed_value: String = raw_value
-    return typed_value
+    if raw_value is StringName:
+        var typed_name: StringName = raw_value
+        return String(typed_name)
+
+    fail_test("Expected string-like metadata for %s." % String(key))
+    return ""
