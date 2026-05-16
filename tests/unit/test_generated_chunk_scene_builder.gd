@@ -2,6 +2,7 @@ extends GutTest
 
 const ChunkDifficultyBandScript = preload("res://src/gameplay/generation/chunk_difficulty_band.gd")
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
+const GeneratedHandholdAdapterScript = preload("res://src/gameplay/generation/generated_handhold_adapter.gd")
 const ChunkRouteSlotScript = preload("res://src/gameplay/generation/chunk_route_slot.gd")
 const ChunkTypeScript = preload("res://src/gameplay/generation/chunk_type.gd")
 const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickups/generated_coin_pickup_spawn_adapter.gd")
@@ -10,6 +11,7 @@ const GeneratedChunkLayoutScript = preload("res://src/gameplay/generation/genera
 const GeneratedChunkSceneBuilderScript = preload("res://src/gameplay/generation/generated_chunk_scene_builder.gd")
 const GeneratedHandholdSocketScript = preload("res://src/gameplay/generation/generated_handhold_socket.gd")
 const GeneratedHazardSocketScript = preload("res://src/gameplay/generation/generated_hazard_socket.gd")
+const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const GeneratedPickupSocketScript = preload("res://src/gameplay/generation/generated_pickup_socket.gd")
 
 func test_scene_builder_creates_chunk_root_with_metadata_and_scaled_position() -> void:
@@ -36,7 +38,7 @@ func test_scene_builder_creates_non_blocking_handholds_and_runtime_spawn_adapter
     var chunk_node: Node2D = builder.build_chunk_node(layout)
     add_child_autofree(chunk_node)
 
-    var handhold: StaticBody2D = chunk_node.get_node("Handholds/chunk_02_hold_00") as StaticBody2D
+    var handhold: GeneratedHandholdAdapterScript = chunk_node.get_node("Handholds/chunk_02_hold_00") as GeneratedHandholdAdapterScript
     var collision_shape: CollisionShape2D = handhold.get_node("CollisionShape2D") as CollisionShape2D
     var rectangle_shape: RectangleShape2D = collision_shape.shape as RectangleShape2D
     var handhold_visual: Polygon2D = handhold.get_node("Visual") as Polygon2D
@@ -62,13 +64,21 @@ func test_scene_builder_creates_non_blocking_handholds_and_runtime_spawn_adapter
     var updraft_visual: Polygon2D = updraft_spawn.get_node("Visual") as Polygon2D
 
     assert_not_null(handhold)
+    assert_true(handhold is StaticBody2D)
     assert_true(handhold.is_in_group(&"handhold"))
     assert_true(handhold.position.is_equal_approx(Vector2(-120.0, -150.0)))
     assert_eq(handhold.collision_layer, 2)
     assert_eq(handhold.collision_mask, 0)
+    assert_eq(handhold.handhold_type, HandholdTypeScript.Value.REST)
+    assert_eq(handhold.stamina_drain_multiplier, 0.75)
+    assert_eq(handhold.definition_id, &"REST")
     assert_not_null(collision_shape)
     assert_not_null(rectangle_shape)
-    assert_eq(rectangle_shape.size, Vector2(128.0, 34.0))
+    assert_true(rectangle_shape.size.is_equal_approx(Vector2(124.0, 30.0)))
+    var handhold_type_meta: Variant = handhold.get_meta(&"handhold_type")
+    assert_true(handhold_type_meta is String)
+    var typed_handhold_type_meta: String = handhold_type_meta
+    assert_eq(typed_handhold_type_meta, "REST")
     assert_not_null(handhold_visual)
 
     assert_not_null(pickup_spawn)
@@ -124,8 +134,8 @@ func test_scene_builder_creates_non_blocking_handholds_and_runtime_spawn_adapter
 
 func _build_layout_fixture() -> GeneratedChunkLayoutScript:
     var handholds: Array[GeneratedHandholdSocketScript] = [
-        GeneratedHandholdSocketScript.new(&"chunk_02_hold_00", Vector2(-1.2, -1.5)),
-        GeneratedHandholdSocketScript.new(&"chunk_02_hold_01", Vector2(1.1, -2.8)),
+        GeneratedHandholdSocketScript.new(&"chunk_02_hold_00", Vector2(-1.2, -1.5), 0.75, HandholdTypeScript.Value.REST),
+        GeneratedHandholdSocketScript.new(&"chunk_02_hold_01", Vector2(1.1, -2.8), 1.35, HandholdTypeScript.Value.BURN),
     ]
     var pickup_sockets: Array[GeneratedPickupSocketScript] = [
         GeneratedPickupSocketScript.new(&"chunk_02_pickup_00", Vector2(-0.6, -2.4)),

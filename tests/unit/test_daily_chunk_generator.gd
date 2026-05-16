@@ -6,6 +6,7 @@ const ChunkTypeScript = preload("res://src/gameplay/generation/chunk_type.gd")
 const DailyChunkGeneratorScript = preload("res://src/gameplay/generation/daily_chunk_generator.gd")
 const GeneratedChunkLayoutScript = preload("res://src/gameplay/generation/generated_chunk_layout.gd")
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
+const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 
 func test_build_chunk_is_stable_for_same_seed_and_index() -> void:
@@ -88,6 +89,38 @@ func test_first_chunk_provides_reachable_generated_starter_holds() -> void:
 
     assert_true(_has_handhold_within_distance(layout.handholds, left_anchor_local_position, grip_range_meters))
     assert_true(_has_handhold_within_distance(layout.handholds, right_anchor_local_position, grip_range_meters))
+
+func test_first_chunk_only_uses_beginner_safe_handhold_types() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
+
+    for handhold in layout.handholds:
+        assert_true(
+            handhold.handhold_type == HandholdTypeScript.Value.NORMAL
+                or handhold.handhold_type == HandholdTypeScript.Value.REST
+        )
+
+func test_generated_handholds_resolve_type_specific_drain_and_size() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 4))
+
+    for handhold in layout.handholds:
+        assert_eq(handhold.definition_id, HandholdTypeScript.get_default_definition_id(handhold.handhold_type))
+        assert_eq(
+            handhold.stamina_drain_multiplier,
+            HandholdTypeScript.get_default_stamina_drain_multiplier(handhold.handhold_type)
+        )
+        assert_true(
+            handhold.physical_size_meters.is_equal_approx(
+                HandholdTypeScript.get_default_physical_size_meters(handhold.handhold_type)
+            )
+        )
 
 func test_first_chunk_respects_tuned_segment_height_and_avoids_legacy_span() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -203,6 +236,28 @@ func test_risk_lane_chunks_bias_hazards_and_pickups_to_shared_risky_side() -> vo
     assert_gte(absi(pickup_side_score), 2)
     assert_gte(absi(hazard_side_score), 2)
 
+func test_challenge_pressure_chunks_assign_break_or_boost_handholds() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+    var pressure_chunk_index: int = _find_first_chunk_index_with_route_slot_and_band(
+        generator,
+        seed_key,
+        ChunkRouteSlotScript.Value.PRESSURE,
+        ChunkDifficultyBandScript.Value.CHALLENGE
+    )
+
+    var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, pressure_chunk_index))
+    var has_special_pressure_hold: bool = false
+
+    for handhold in layout.handholds:
+        if handhold.handhold_type == HandholdTypeScript.Value.BREAK \
+            or handhold.handhold_type == HandholdTypeScript.Value.BOOST:
+            has_special_pressure_hold = true
+            break
+
+    assert_true(has_special_pressure_hold)
+
 func test_custom_tuning_changes_fork_branch_shape_and_socket_split() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     tuning.pickup_socket_ratio = 0.75
@@ -253,7 +308,12 @@ func _layout_signature(layout: RefCounted) -> String:
 
     for handhold in typed_layout.handholds:
         var _append_handhold_result: bool = signature_parts.append(
-            "%s@%.3f,%.3f" % [String(handhold.hold_id), handhold.local_position.x, handhold.local_position.y]
+            "%s:%s@%.3f,%.3f" % [
+                String(handhold.hold_id),
+                HandholdTypeScript.to_label(handhold.handhold_type),
+                handhold.local_position.x,
+                handhold.local_position.y,
+            ]
         )
 
     for pickup_socket in typed_layout.pickup_sockets:

@@ -2,6 +2,7 @@ class_name GeneratedChunkSceneBuilder
 extends RefCounted
 
 const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickups/generated_coin_pickup_spawn_adapter.gd")
+const GeneratedHandholdAdapterScript = preload("res://src/gameplay/generation/generated_handhold_adapter.gd")
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/generated_hazard_spawn_adapter.gd")
 
@@ -78,30 +79,22 @@ func _apply_chunk_metadata(chunk_root: Node2D, layout: GeneratedChunkLayout) -> 
     chunk_root.set_meta(&"route_slot", ChunkRouteSlot.to_label(layout.route_slot))
     chunk_root.set_meta(&"difficulty_band", ChunkDifficultyBand.to_label(layout.difficulty_band))
 
-func _build_handhold_body(handhold_socket: GeneratedHandholdSocket) -> StaticBody2D:
+func _build_handhold_body(handhold_socket: GeneratedHandholdSocket) -> GeneratedHandholdAdapterScript:
     handhold_socket.assert_valid()
 
-    var handhold_body: StaticBody2D = StaticBody2D.new()
+    var handhold_body: GeneratedHandholdAdapterScript = GeneratedHandholdAdapterScript.new()
     handhold_body.name = handhold_socket.hold_id
-    handhold_body.position = _meters_to_pixels(handhold_socket.local_position)
-    handhold_body.collision_layer = _hold_collision_layer
-    handhold_body.collision_mask = _hold_collision_mask
-    handhold_body.add_to_group(_handhold_group_name)
-    handhold_body.set_meta(&"stamina_drain_multiplier", handhold_socket.stamina_drain_multiplier)
-
-    var collision_shape: CollisionShape2D = CollisionShape2D.new()
-    collision_shape.name = &"CollisionShape2D"
-    var rectangle_shape: RectangleShape2D = RectangleShape2D.new()
-    rectangle_shape.size = _hold_size_pixels
-    collision_shape.shape = rectangle_shape
-    handhold_body.add_child(collision_shape)
-
-    var visual: Polygon2D = Polygon2D.new()
-    visual.name = &"Visual"
-    visual.color = Color(0.92, 0.72, 0.23, 1.0)
-    visual.polygon = _build_rectangle_polygon(_hold_size_pixels)
-    handhold_body.add_child(visual)
-
+    handhold_body.configure_handhold(
+        handhold_socket.hold_id,
+        handhold_socket.definition_id,
+        handhold_socket.handhold_type,
+        _meters_to_pixels(handhold_socket.local_position),
+        _meters_to_pixels(handhold_socket.physical_size_meters),
+        handhold_socket.stamina_drain_multiplier,
+        _handhold_group_name,
+        _hold_collision_layer,
+        _hold_collision_mask
+    )
     return handhold_body
 
 func _build_pickup_spawn(pickup_socket: GeneratedPickupSocket) -> GeneratedCoinPickupSpawnAdapterScript:

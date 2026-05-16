@@ -14,6 +14,8 @@ var _tuning: ClimbPrototypeTuningScript
 var _stamina: StaminaRuntimeScript
 var _attachments: HandAttachmentStateScript = HandAttachmentStateScript.new()
 var _last_drain_multiplier: float = 1.0
+var _left_attached_drain_multiplier: float = 1.0
+var _right_attached_drain_multiplier: float = 1.0
 
 func _init(tuning: Resource, stamina: RefCounted) -> void:
     Validation.require_condition(tuning != null, "ClimbPrototypeController requires climb prototype tuning.")
@@ -56,13 +58,14 @@ func apply_input_frame(
     var depleted_now: bool = _stamina.advance(_attachments.get_attached_hand_count(), delta_seconds, _last_drain_multiplier)
     if depleted_now:
         _attachments.release_all()
+        _reset_attached_drain_multipliers()
 
     return ClimbPrototypeFrameResultScript.new(control_force, depleted_now, _attachments.get_attached_hand_count())
 
 func reset() -> void:
     _attachments.release_all()
     _stamina.restore_full()
-    _last_drain_multiplier = 1.0
+    _reset_attached_drain_multipliers()
 
 func _apply_release_intents(input_frame: PlayerInputFrameScript) -> void:
     for release_intent in input_frame.release_intents:
@@ -71,6 +74,7 @@ func _apply_release_intents(input_frame: PlayerInputFrameScript) -> void:
 
         if _attachments.is_attached(hand_side):
             _attachments.release(hand_side)
+            _reset_attached_drain_multiplier_for_hand(hand_side)
 
     _refresh_drain_multiplier()
 
@@ -89,6 +93,7 @@ func _apply_grip_intents(input_frame: PlayerInputFrameScript, left_target: RefCo
 
         if not _attachments.is_attached(hand_side):
             _attachments.attach(hand_side, typed_target.hold_id, typed_target.attach_position, typed_target.hold_path)
+            _set_attached_drain_multiplier(hand_side, typed_target.stamina_drain_multiplier)
 
     _refresh_drain_multiplier()
 
@@ -101,4 +106,33 @@ func _target_for_hand(hand_side: int, left_target: RefCounted, right_target: Ref
     return right_target
 
 func _refresh_drain_multiplier() -> void:
+    _last_drain_multiplier = 1.0
+    if _attachments.is_attached(HandSideScript.Value.LEFT):
+        _last_drain_multiplier = maxf(_last_drain_multiplier, _left_attached_drain_multiplier)
+
+    if _attachments.is_attached(HandSideScript.Value.RIGHT):
+        _last_drain_multiplier = maxf(_last_drain_multiplier, _right_attached_drain_multiplier)
+
+func _set_attached_drain_multiplier(hand_side: int, drain_multiplier: float) -> void:
+    HandSideScript.assert_valid(hand_side)
+    Validation.require_condition(drain_multiplier > 0.0, "ClimbPrototypeController attached drain multiplier must be positive.")
+
+    if hand_side == HandSideScript.Value.LEFT:
+        _left_attached_drain_multiplier = drain_multiplier
+        return
+
+    _right_attached_drain_multiplier = drain_multiplier
+
+func _reset_attached_drain_multiplier_for_hand(hand_side: int) -> void:
+    HandSideScript.assert_valid(hand_side)
+
+    if hand_side == HandSideScript.Value.LEFT:
+        _left_attached_drain_multiplier = 1.0
+        return
+
+    _right_attached_drain_multiplier = 1.0
+
+func _reset_attached_drain_multipliers() -> void:
+    _left_attached_drain_multiplier = 1.0
+    _right_attached_drain_multiplier = 1.0
     _last_drain_multiplier = 1.0

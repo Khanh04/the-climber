@@ -2,6 +2,7 @@ class_name DailyChunkGenerator
 extends RefCounted
 
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
+const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 
 var _tuning: GenerationTuning
 
@@ -23,7 +24,7 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
     var chunk_rng: RandomNumberGenerator = _build_chunk_rng(seed_key, chunk_index)
     var chunk_type: int = _select_chunk_type(route_slot, difficulty_band, chunk_rng)
     var risky_lane_side_sign: float = _get_risky_lane_side_sign(seed_key, chunk_index, chunk_type)
-    var handholds: Array[GeneratedHandholdSocket] = _build_handholds(chunk_index, chunk_type, difficulty_band, chunk_rng)
+    var handholds: Array[GeneratedHandholdSocket] = _build_handholds(chunk_index, chunk_type, route_slot, difficulty_band, chunk_rng)
     var pickup_sockets: Array[GeneratedPickupSocket] = _build_pickup_sockets(
         chunk_index,
         chunk_type,
@@ -160,15 +161,17 @@ func _get_allowed_chunk_types(route_slot: int, difficulty_band: int) -> Array[in
 func _build_handholds(
     chunk_index: int,
     chunk_type: int,
+    route_slot: int,
     difficulty_band: int,
     chunk_rng: RandomNumberGenerator
 ) -> Array[GeneratedHandholdSocket]:
     ChunkType.assert_valid(chunk_type)
+    ChunkRouteSlot.assert_valid(route_slot)
     ChunkDifficultyBand.assert_valid(difficulty_band)
     Validation.require_condition(chunk_rng != null, "DailyChunkGenerator requires an RNG when building handholds.")
 
     if chunk_index == 0:
-        return _build_opener_handholds(chunk_type, chunk_rng)
+        return _build_opener_handholds(chunk_type, difficulty_band, chunk_rng)
 
     var lane_positions: Array[float] = _get_lane_positions(chunk_rng)
     var hold_rows: Array[PackedInt32Array] = _get_hold_rows(chunk_type)
@@ -200,13 +203,25 @@ func _build_handholds(
                 -(row_height_meters + row_height_jitter + hold_height_jitter)
             )
             var handhold_id: StringName = StringName("chunk_%02d_hold_%02d" % [chunk_index, handhold_sequence_index])
-            handholds.append(GeneratedHandholdSocket.new(handhold_id, local_position, 1.0))
+            var handhold_type: int = _select_handhold_type(
+                chunk_index,
+                chunk_type,
+                route_slot,
+                difficulty_band,
+                row_index,
+                hold_rows.size(),
+                lane_entry_index,
+                row_lane_indices.size(),
+                local_position
+            )
+            handholds.append(GeneratedHandholdSocket.new(handhold_id, local_position, -1.0, handhold_type))
             handhold_sequence_index += 1
 
     return handholds
 
-func _build_opener_handholds(chunk_type: int, chunk_rng: RandomNumberGenerator) -> Array[GeneratedHandholdSocket]:
+func _build_opener_handholds(chunk_type: int, difficulty_band: int, chunk_rng: RandomNumberGenerator) -> Array[GeneratedHandholdSocket]:
     ChunkType.assert_valid(chunk_type)
+    ChunkDifficultyBand.assert_valid(difficulty_band)
     Validation.require_condition(chunk_rng != null, "DailyChunkGenerator requires an RNG when building opener handholds.")
 
     var hold_rows: Array[PackedInt32Array] = _tuning.get_opener_hold_rows(chunk_type)
@@ -233,7 +248,18 @@ func _build_opener_handholds(chunk_type: int, chunk_rng: RandomNumberGenerator) 
                 -(row_height_meters + chunk_rng.randf_range(-_tuning.opener_vertical_jitter_meters, _tuning.opener_vertical_jitter_meters))
             )
             var handhold_id: StringName = StringName("chunk_00_hold_%02d" % handhold_sequence_index)
-            handholds.append(GeneratedHandholdSocket.new(handhold_id, local_position, 1.0))
+            var handhold_type: int = _select_handhold_type(
+                0,
+                chunk_type,
+                ChunkRouteSlot.Value.OPENER,
+                difficulty_band,
+                row_index,
+                hold_rows.size(),
+                lane_entry_index,
+                row_lane_indices.size(),
+                local_position
+            )
+            handholds.append(GeneratedHandholdSocket.new(handhold_id, local_position, -1.0, handhold_type))
             handhold_sequence_index += 1
 
     return handholds
@@ -413,6 +439,93 @@ func _get_vertical_jitter_scale(difficulty_band: int) -> float:
         _:
             Validation.require_condition(false, "DailyChunkGenerator requires a supported difficulty band for jitter scaling.")
             return 0.0
+
+func _select_handhold_type(
+    chunk_index: int,
+    chunk_type: int,
+    route_slot: int,
+    difficulty_band: int,
+    row_index: int,
+    row_count: int,
+    lane_entry_index: int,
+    lane_entry_count: int,
+    local_position: Vector2
+) -> int:
+    Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator handhold type selection requires a non-negative chunk index.")
+    ChunkType.assert_valid(chunk_type)
+    ChunkRouteSlot.assert_valid(route_slot)
+    ChunkDifficultyBand.assert_valid(difficulty_band)
+    Validation.require_condition(row_count > 0, "DailyChunkGenerator handhold type selection requires at least one row.")
+    Validation.require_condition(row_index >= 0 and row_index < row_count, "DailyChunkGenerator handhold type selection row index is out of bounds.")
+    Validation.require_condition(lane_entry_count > 0, "DailyChunkGenerator handhold type selection requires at least one lane entry.")
+    Validation.require_condition(
+        lane_entry_index >= 0 and lane_entry_index < lane_entry_count,
+        "DailyChunkGenerator handhold type selection lane entry index is out of bounds."
+    )
+
+    var allowed_handhold_types: Array[int] = _get_allowed_handhold_types_for_row(route_slot, difficulty_band, row_index, row_count)
+    Validation.require_condition(
+        allowed_handhold_types.size() > 0,
+        "DailyChunkGenerator handhold type selection requires at least one allowed handhold type."
+    )
+
+    var selector_seed: int = chunk_index \
+        + (chunk_type * 17) \
+        + (route_slot * 23) \
+        + (difficulty_band * 31) \
+        + (row_index * 37) \
+        + (lane_entry_index * 41) \
+        + (lane_entry_count * 43) \
+        + roundi(absf(local_position.x) * 100.0) \
+        + roundi(absf(local_position.y) * 100.0)
+    var selector_index: int = selector_seed % allowed_handhold_types.size()
+    var handhold_type: int = allowed_handhold_types[selector_index]
+    HandholdTypeScript.assert_valid(handhold_type)
+    return handhold_type
+
+func _get_allowed_handhold_types_for_row(route_slot: int, difficulty_band: int, row_index: int, row_count: int) -> Array[int]:
+    ChunkRouteSlot.assert_valid(route_slot)
+    ChunkDifficultyBand.assert_valid(difficulty_band)
+    Validation.require_condition(row_count > 0, "DailyChunkGenerator allowed handhold type selection requires at least one row.")
+    Validation.require_condition(row_index >= 0 and row_index < row_count, "DailyChunkGenerator allowed handhold type selection row index is out of bounds.")
+
+    var is_lower_row: bool = row_index <= 1
+    var is_upper_row: bool = row_index >= maxi(0, row_count - 2)
+
+    match route_slot:
+        ChunkRouteSlot.Value.OPENER:
+            if is_lower_row:
+                return [HandholdTypeScript.Value.REST, HandholdTypeScript.Value.NORMAL]
+            return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST]
+        ChunkRouteSlot.Value.BASELINE:
+            if difficulty_band == ChunkDifficultyBand.Value.EASY:
+                return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST]
+            if is_upper_row:
+                return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST, HandholdTypeScript.Value.BURN]
+            return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST]
+        ChunkRouteSlot.Value.SKILL:
+            if difficulty_band == ChunkDifficultyBand.Value.EASY:
+                return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN]
+            if is_upper_row:
+                return [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BOOST, HandholdTypeScript.Value.NORMAL]
+            return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BOOST]
+        ChunkRouteSlot.Value.RECOVERY:
+            return [HandholdTypeScript.Value.REST, HandholdTypeScript.Value.NORMAL]
+        ChunkRouteSlot.Value.RISK:
+            if difficulty_band == ChunkDifficultyBand.Value.EASY:
+                return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN]
+            if is_lower_row:
+                return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK]
+            if is_upper_row:
+                return [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK, HandholdTypeScript.Value.BOOST]
+            return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK]
+        ChunkRouteSlot.Value.PRESSURE:
+            if is_lower_row:
+                return [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK]
+            return [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK, HandholdTypeScript.Value.BOOST]
+        _:
+            Validation.require_condition(false, "DailyChunkGenerator requires a supported route slot for handhold type selection.")
+            return []
 
 func _get_risky_lane_side_sign(seed_key: String, chunk_index: int, chunk_type: int) -> float:
     ChunkType.assert_valid(chunk_type)

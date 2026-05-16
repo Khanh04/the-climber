@@ -21,6 +21,7 @@ const CosmeticUnlockPurchaseServiceScript = preload("res://src/cosmetics/cosmeti
 const DailyChunkGeneratorScript = preload("res://src/gameplay/generation/daily_chunk_generator.gd")
 const DesktopDebugInputAdapterScript = preload("res://src/gameplay/player/desktop_debug_input_adapter.gd")
 const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickups/generated_coin_pickup_spawn_adapter.gd")
+const GeneratedHandholdAdapterScript = preload("res://src/gameplay/generation/generated_handhold_adapter.gd")
 const GeneratedChunkCoordinatorScript = preload("res://src/gameplay/generation/generated_chunk_coordinator.gd")
 const GeneratedChunkSceneBuilderScript = preload("res://src/gameplay/generation/generated_chunk_scene_builder.gd")
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
@@ -28,6 +29,7 @@ const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/ge
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.gd")
+const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const AppSettingsSnapshotScript = preload("res://src/platform/storage/app_settings_snapshot.gd")
 const AppSettingsStorageScript = preload("res://src/platform/storage/app_settings_storage.gd")
 const AudioSettingsAdapterScript = preload("res://src/platform/audio/audio_settings_adapter.gd")
@@ -156,6 +158,7 @@ var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
 
 func _ready() -> void:
 	_validate_required_state()
+	_configure_authored_handholds()
 	_initialize_save_storage()
 	_initialize_app_settings_storage()
 	_load_or_create_app_settings()
@@ -522,6 +525,29 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_ui_layer != null, "RunScene requires UiLayer.")
 	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "RunScene requires at least one handhold.")
 
+func _configure_authored_handholds() -> void:
+	Validation.require_condition(_starter_handholds_root != null, "RunScene requires Handholds before configuring authored handholds.")
+
+	for child in _starter_handholds_root.get_children():
+		Validation.require_condition(child is Node, "RunScene starter handhold roots must contain nodes.")
+		var handhold_node: Node = child
+		if not handhold_node.is_in_group(climb_tuning.handhold_group_name):
+			continue
+
+		Validation.require_condition(
+			handhold_node is StaticBody2D,
+			"RunScene authored handholds must be StaticBody2D instances."
+		)
+		if handhold_node is GeneratedHandholdAdapterScript:
+			continue
+
+		handhold_node.set_meta(
+			&"stamina_drain_multiplier",
+			HandholdTypeScript.get_default_stamina_drain_multiplier(HandholdTypeScript.Value.NORMAL)
+		)
+		handhold_node.set_meta(&"handhold_type", HandholdTypeScript.to_label(HandholdTypeScript.Value.NORMAL))
+		handhold_node.set_meta(&"definition_id", String(HandholdTypeScript.get_default_definition_id(HandholdTypeScript.Value.NORMAL)))
+
 func _create_input_frame() -> PlayerInputFrameScript:
 	if _active_touch_contacts.size() > 0 or _mobile_input.has_held_grip_state():
 		Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before creating mobile input frames.")
@@ -615,10 +641,53 @@ func _find_nearest_handhold(anchor_position: Vector2) -> RefCounted:
 		var distance: float = anchor_position.distance_to(handhold_node.global_position)
 
 		if distance <= nearest_distance:
-			nearest_target = HandholdTargetScript.new(StringName(handhold_node.name), handhold_node.global_position, handhold_node.get_path())
+			nearest_target = HandholdTargetScript.new(
+				StringName(handhold_node.name),
+				handhold_node.global_position,
+				handhold_node.get_path(),
+				_require_handhold_drain_multiplier(handhold_node),
+				_require_handhold_type(handhold_node)
+			)
 			nearest_distance = distance
 
 	return nearest_target
+
+func _require_handhold_drain_multiplier(handhold_node: Node2D) -> float:
+	Validation.require_condition(handhold_node != null, "RunScene requires a handhold node when reading drain multiplier.")
+
+	if handhold_node is GeneratedHandholdAdapterScript:
+		var typed_handhold: GeneratedHandholdAdapterScript = handhold_node
+		return typed_handhold.stamina_drain_multiplier
+
+	Validation.require_condition(handhold_node.has_meta(&"stamina_drain_multiplier"), "RunScene handholds must provide a stamina drain multiplier.")
+	var raw_drain_multiplier: Variant = handhold_node.get_meta(&"stamina_drain_multiplier")
+	Validation.require_condition(
+		raw_drain_multiplier is float or raw_drain_multiplier is int,
+		"RunScene handhold stamina drain multiplier metadata must be numeric."
+	)
+	var drain_multiplier: float = 0.0
+	if raw_drain_multiplier is float:
+		drain_multiplier = raw_drain_multiplier
+	else:
+		var typed_drain_multiplier_int: int = raw_drain_multiplier
+		drain_multiplier = float(typed_drain_multiplier_int)
+	Validation.require_condition(drain_multiplier > 0.0, "RunScene handhold stamina drain multiplier must be positive.")
+	return drain_multiplier
+
+func _require_handhold_type(handhold_node: Node2D) -> int:
+	Validation.require_condition(handhold_node != null, "RunScene requires a handhold node when reading handhold type.")
+
+	if handhold_node is GeneratedHandholdAdapterScript:
+		var typed_handhold: GeneratedHandholdAdapterScript = handhold_node
+		return typed_handhold.handhold_type
+
+	Validation.require_condition(handhold_node.has_meta(&"handhold_type"), "RunScene handholds must provide a handhold type.")
+	var raw_handhold_type: Variant = handhold_node.get_meta(&"handhold_type")
+	Validation.require_condition(raw_handhold_type is String, "RunScene handhold type metadata must be a string label.")
+	var handhold_type_label: String = raw_handhold_type
+	var handhold_type: int = HandholdTypeScript.from_label(handhold_type_label)
+	HandholdTypeScript.assert_valid(handhold_type)
+	return handhold_type
 
 func _sync_aim_preview(input_frame: PlayerInputFrameScript) -> void:
 	if not input_frame.has_aim_intent():

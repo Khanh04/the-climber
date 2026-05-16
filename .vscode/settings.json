@@ -30,6 +30,7 @@
       "matchCommandLine": true
     },
     "$HOME/.local/godot": true,
-    "\"$GODOT_BIN\"": true
+    "\"$GODOT_BIN\"": true,
+    "\"${GODOT_BIN:-$HOME/.local/godot}\"": true
   }
 }

@@ -4,6 +4,7 @@ const AimInputIntentScript = preload("res://src/gameplay/player/aim_input_intent
 const ClimbPrototypeControllerScript = preload("res://src/gameplay/player/climb_prototype_controller.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
 const GripInputIntentScript = preload("res://src/gameplay/player/grip_input_intent.gd")
+const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
@@ -31,13 +32,34 @@ func test_hand_attachment_state_tracks_independent_hands() -> void:
     assert_eq(state.get_attached_hand_count(), 1)
 
 func test_handhold_target_requires_id_and_positive_drain_multiplier() -> void:
-    var target := HandholdTargetScript.new(&"hold", Vector2(1.0, 2.0), NodePath("hold"), 2.0)
+    var target := HandholdTargetScript.new(&"hold", Vector2(1.0, 2.0), NodePath("hold"), 2.0, HandholdTypeScript.Value.BURN)
 
     assert_true(target.is_valid())
 
     target.stamina_drain_multiplier = 0.0
 
     assert_false(target.is_valid())
+
+func test_controller_uses_attached_target_drain_multiplier_for_stamina() -> void:
+    var tuning := ClimbPrototypeTuningScript.new()
+    var stamina_tuning := StaminaTuningScript.new()
+    stamina_tuning.one_hand_seconds = 0.1
+    var stamina := StaminaRuntimeScript.new(stamina_tuning)
+    var controller := ClimbPrototypeControllerScript.new(tuning, stamina)
+    var left_target := HandholdTargetScript.new(
+        &"left_hold",
+        Vector2(100.0, 200.0),
+        NodePath("left_hold"),
+        2.0,
+        HandholdTypeScript.Value.BURN
+    )
+    var grip_frame := PlayerInputFrameScript.new([GripInputIntentScript.new(HandSideScript.Value.LEFT)])
+
+    var result := controller.apply_input_frame(grip_frame, left_target, null, 0.05)
+
+    assert_true(result.stamina_depleted_now)
+    assert_eq(result.attached_hand_count, 0)
+    assert_false(controller.get_attachment_state().is_attached(HandSideScript.Value.LEFT))
 
 func test_controller_attaches_from_typed_grip_intents_and_releases_from_typed_release_intents() -> void:
     var controller := _create_controller()
