@@ -30,7 +30,7 @@ func test_scene_builder_creates_chunk_root_with_metadata_and_scaled_position() -
 
     assert_eq(chunk_node.name, &"GeneratedChunk_02_ZIGZAG")
     assert_eq(chunk_node.position, Vector2(0.0, -4800.0))
-    assert_eq(seed_key, "generator_v2:2026-05-14")
+    assert_eq(seed_key, "generator_v4:2026-05-14")
     assert_eq(chunk_type_label, "ZIGZAG")
     var route_entry_hold_ids_meta: Variant = chunk_node.get_meta(&"route_entry_hold_ids")
     var route_exit_hold_ids_meta: Variant = chunk_node.get_meta(&"route_exit_hold_ids")
@@ -61,6 +61,9 @@ func test_scene_builder_creates_chunk_root_with_metadata_and_scaled_position() -
 func test_scene_builder_creates_non_blocking_handholds_and_runtime_spawn_adapters() -> void:
     var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(100.0)
     var layout: GeneratedChunkLayoutScript = _build_layout_fixture()
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var rest_definition: HandholdTypeDefinitionScript = tuning.get_required_handhold_definition(HandholdTypeScript.Value.REST)
+    var expected_rest_size_pixels: Vector2 = rest_definition.physical_size_meters * 100.0
 
     var chunk_node: Node2D = builder.build_chunk_node(layout)
     add_child_autofree(chunk_node)
@@ -101,7 +104,7 @@ func test_scene_builder_creates_non_blocking_handholds_and_runtime_spawn_adapter
     assert_eq(handhold.definition_id, &"REST")
     assert_not_null(collision_shape)
     assert_not_null(rectangle_shape)
-    assert_true(rectangle_shape.size.is_equal_approx(Vector2(124.0, 30.0)))
+    assert_true(rectangle_shape.size.is_equal_approx(expected_rest_size_pixels))
     var handhold_type_meta: Variant = handhold.get_meta(&"handhold_type")
     var handhold_route_role_meta: Variant = handhold.get_meta(&"route_role")
     assert_true(handhold_type_meta is String)
@@ -216,8 +219,8 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
     var route_validation_result: RefCounted = route_validation_result_variant
 
     return GeneratedChunkLayoutScript.new(
-        "generator_v2:2026-05-14",
-        "generator_v2",
+        "generator_v4:2026-05-14",
+        "generator_v4",
         2,
         ChunkTypeScript.Value.ZIGZAG,
         ChunkRouteSlotScript.Value.SKILL,

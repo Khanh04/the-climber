@@ -1094,8 +1094,7 @@ func _build_handholds(
 	var hold_rows: Array[PackedInt32Array] = _get_hold_rows(chunk_type)
 	var handholds: Array[GeneratedHandholdSocket] = []
 	Validation.require_condition(hold_rows.size() > 0, "DailyChunkGenerator requires at least one handhold row.")
-	var vertical_span_meters: float = _tuning.segment_height_meters - 3.0
-	var step_height_meters: float = vertical_span_meters / float(hold_rows.size() + 1)
+	var step_height_meters: float = _tuning.get_chunk_row_step_height_meters(chunk_type)
 	var jitter_scale: float = _get_vertical_jitter_scale(difficulty_band)
 	var handhold_sequence_index: int = 0
 
@@ -1104,7 +1103,7 @@ func _build_handholds(
 		Validation.require_condition(row_lane_indices.size() > 0, "DailyChunkGenerator handhold rows cannot be empty.")
 		var row_template_role: int = _get_route_row_template_role(row_index, hold_rows.size())
 
-		var row_height_meters: float = 1.5 + (step_height_meters * float(row_index + 1))
+		var row_height_meters: float = _tuning.non_opener_row_base_height_meters + (step_height_meters * float(row_index + 1))
 		var row_height_jitter: float = chunk_rng.randf_range(-(jitter_scale * 0.65), jitter_scale * 0.65)
 		var horizontal_jitter_scale: float = _get_horizontal_jitter_scale(difficulty_band, row_lane_indices.size())
 
@@ -1205,14 +1204,14 @@ func _get_route_row_center_pull_meters(route_slot: int, row_template_role: int) 
 	RouteRoleScript.assert_valid(row_template_role)
 	match row_template_role:
 		RouteRoleScript.Value.ENTRY:
-			return 0.1
+			return 0.04
 		RouteRoleScript.Value.SETUP:
-			return 0.06
+			return 0.02
 		RouteRoleScript.Value.TOP_OUT:
-			return 0.08
+			return 0.03
 		RouteRoleScript.Value.RECOVERY:
 			if route_slot == ChunkRouteSlot.Value.RECOVERY:
-				return 0.04
+				return 0.02
 			return 0.0
 		_:
 			return 0.0
@@ -1225,11 +1224,11 @@ func _get_route_row_branch_push_meters(route_slot: int, row_template_role: int) 
 
 	match route_slot:
 		ChunkRouteSlot.Value.BASELINE, ChunkRouteSlot.Value.SKILL:
-			return 0.1
-		ChunkRouteSlot.Value.RECOVERY:
-			return 0.08
-		ChunkRouteSlot.Value.RISK, ChunkRouteSlot.Value.PRESSURE:
 			return 0.14
+		ChunkRouteSlot.Value.RECOVERY:
+			return 0.12
+		ChunkRouteSlot.Value.RISK, ChunkRouteSlot.Value.PRESSURE:
+			return 0.18
 		_:
 			return 0.0
 
@@ -1242,10 +1241,7 @@ func _build_opener_handholds(chunk_type: int, difficulty_band: int, chunk_rng: R
 	var lane_positions: Array[float] = _get_opener_lane_positions()
 	var handholds: Array[GeneratedHandholdSocket] = []
 	Validation.require_condition(hold_rows.size() > 0, "DailyChunkGenerator opener generation requires at least one handhold row.")
-	var last_row_height_meters: float = _tuning.segment_height_meters - _tuning.opener_top_padding_meters
-	var row_step_height_meters: float = 0.0
-	if hold_rows.size() > 1:
-		row_step_height_meters = (last_row_height_meters - _tuning.opener_first_row_height_meters) / float(hold_rows.size() - 1)
+	var row_step_height_meters: float = _tuning.get_opener_row_step_height_meters(chunk_type)
 
 	var handhold_sequence_index: int = 0
 

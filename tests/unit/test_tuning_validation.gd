@@ -17,6 +17,7 @@ const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_
 const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
 const CosmeticsTuningScript = preload("res://resources/config/cosmetics_tuning.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
+const ChunkTypeScript = preload("res://src/gameplay/generation/chunk_type.gd")
 const ChunkDifficultyBandScript = preload("res://src/gameplay/generation/chunk_difficulty_band.gd")
 const ChunkRouteSlotScript = preload("res://src/gameplay/generation/chunk_route_slot.gd")
 const HandholdRowZoneScript = preload("res://src/gameplay/generation/handhold_row_zone.gd")
@@ -186,10 +187,36 @@ func test_generation_tuning_rejects_invalid_lane_position_ratios() -> void:
 
     assert_false(tuning.is_valid())
 
+func test_generation_tuning_returns_explicit_row_steps_for_chunk_archetypes() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+
+    assert_eq(tuning.get_chunk_row_step_height_meters(ChunkTypeScript.Value.LADDER), tuning.ladder_row_step_height_meters)
+    assert_eq(tuning.get_chunk_row_step_height_meters(ChunkTypeScript.Value.SWING_GAP), tuning.swing_gap_row_step_height_meters)
+    assert_eq(tuning.get_opener_row_step_height_meters(ChunkTypeScript.Value.LADDER), tuning.opener_ladder_row_step_height_meters)
+    assert_eq(tuning.get_opener_row_step_height_meters(ChunkTypeScript.Value.ZIGZAG), tuning.opener_zigzag_row_step_height_meters)
+
+func test_generation_tuning_rejects_non_positive_chunk_row_step_height() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    tuning.dense_recovery_row_step_height_meters = 0.0
+
+    assert_false(tuning.is_valid())
+
+func test_generation_tuning_rejects_chunk_row_step_height_that_exceeds_chunk_height() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    tuning.ladder_row_step_height_meters = 2.0
+
+    assert_false(tuning.is_valid())
+
 func test_generation_tuning_rejects_opener_spacing_that_exceeds_chunk_height() -> void:
     var tuning = GenerationTuningScript.new()
     tuning.opener_first_row_height_meters = tuning.segment_height_meters * 0.8
     tuning.opener_top_padding_meters = tuning.segment_height_meters * 0.25
+
+    assert_false(tuning.is_valid())
+
+func test_generation_tuning_rejects_opener_row_step_height_that_exceeds_top_padding_budget() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    tuning.opener_ladder_row_step_height_meters = 2.4
 
     assert_false(tuning.is_valid())
 

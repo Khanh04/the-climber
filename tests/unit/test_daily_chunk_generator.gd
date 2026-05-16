@@ -158,6 +158,36 @@ func test_first_chunk_only_uses_beginner_safe_handhold_types() -> void:
                 or handhold.handhold_type == HandholdTypeScript.Value.REST
         )
 
+func test_first_chunk_uses_configured_opener_row_step_height() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    tuning.opener_ladder_hold_rows = [
+        PackedInt32Array([1]),
+        PackedInt32Array([2]),
+        PackedInt32Array([1]),
+        PackedInt32Array([2]),
+    ]
+    tuning.opener_zigzag_hold_rows = [
+        PackedInt32Array([1]),
+        PackedInt32Array([2]),
+        PackedInt32Array([1]),
+        PackedInt32Array([2]),
+    ]
+    tuning.opener_horizontal_jitter_meters = 0.0
+    tuning.opener_vertical_jitter_meters = 0.0
+    tuning.opener_ladder_row_step_height_meters = 1.4
+    tuning.opener_zigzag_row_step_height_meters = 1.4
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
+    var row_heights: Array[float] = _get_sorted_unique_row_heights(layout.handholds)
+
+    assert_eq(row_heights.size(), 4)
+    assert_true(is_equal_approx(row_heights[0], tuning.opener_first_row_height_meters))
+    assert_true(is_equal_approx(row_heights[1] - row_heights[0], 1.4))
+    assert_true(is_equal_approx(row_heights[2] - row_heights[1], 1.4))
+    assert_true(is_equal_approx(row_heights[3] - row_heights[2], 1.4))
+
 func test_generated_handholds_resolve_type_specific_drain_and_size() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
@@ -968,6 +998,23 @@ func _build_scoring_handhold(
 
 func _get_lane_choice_threshold(tuning: GenerationTuningScript) -> float:
     return (tuning.chunk_width_meters * 0.5 * tuning.inner_lane_position_ratio) * 0.5
+
+func _get_sorted_unique_row_heights(handholds: Array[GeneratedHandholdSocket]) -> Array[float]:
+    var row_heights: Array[float] = []
+
+    for handhold in handholds:
+        var row_height_meters: float = -handhold.local_position.y
+        var has_matching_row: bool = false
+        for existing_row_height in row_heights:
+            if is_equal_approx(existing_row_height, row_height_meters):
+                has_matching_row = true
+                break
+
+        if not has_matching_row:
+            row_heights.append(row_height_meters)
+
+    row_heights.sort()
+    return row_heights
 
 func _has_handhold_within_distance(
     handholds: Array[GeneratedHandholdSocket],

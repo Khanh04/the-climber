@@ -47,7 +47,7 @@ for mobile object budgets.
 - All players share the same global layout for each 24-hour period.
 - Seed generation is based on the full UTC date rather than
   day-of-month only.
-- Recommended key format: `generator_v2:YYYY-MM-DD` using UTC.
+- Recommended key format: `generator_v4:YYYY-MM-DD` using UTC.
 - Use a dedicated `RandomNumberGenerator` instance for daily generation
   rather than relying on global RNG state.
 - Include a generator version in the seed key so future layout changes
@@ -84,6 +84,9 @@ for mobile object budgets.
   toward denser central lines, risk chunks bias toward forked or
   hazard-denial branches, and pressure chunks bias toward sparse or
   commitment-heavy shapes without collapsing to one archetype.
+- Vertical density should be authored per chunk archetype through
+  explicit row-step tuning. Chunk segment height remains a ceiling and
+  seam budget, not the source of row spacing.
 - Chunk spawn and despawn windows around the camera must never change
   layout content or chunk metadata.
 

@@ -20,17 +20,19 @@ const DefaultRouteProfileTuningResource = preload("res://resources/config/route_
 ## Horizontal meters available for generated lanes inside a chunk.
 @export var chunk_width_meters: float = 3.0
 ## Ratio of half-width used for the inner left and inner right lane anchors.
-@export var inner_lane_position_ratio: float = 0.2
+@export var inner_lane_position_ratio: float = 0.28
 ## Ratio of half-width used for the outer left and outer right lane anchors.
-@export var outer_lane_position_ratio: float = 0.66
+@export var outer_lane_position_ratio: float = 0.82
 ## Height of the opener's first reachable row above the reset anchor.
-@export var opener_first_row_height_meters: float = 0.52
+@export var opener_first_row_height_meters: float = 0.72
 ## Clearance kept between the top of the opener route and the chunk ceiling.
-@export var opener_top_padding_meters: float = 0.6
+@export var opener_top_padding_meters: float = 0.9
 ## Maximum lateral jitter applied to opener handholds after lane placement.
-@export var opener_horizontal_jitter_meters: float = 0.08
+@export var opener_horizontal_jitter_meters: float = 0.06
 ## Maximum vertical jitter applied to opener handholds after row placement.
-@export var opener_vertical_jitter_meters: float = 0.08
+@export var opener_vertical_jitter_meters: float = 0.05
+## Vertical offset applied before non-opener chunk rows begin climbing away from the chunk base.
+@export var non_opener_row_base_height_meters: float = 1.5
 ## Portion of each chunk's placeholder sockets reserved for pickups before hazards take the remainder.
 @export var pickup_socket_ratio: float = 0.6
 ## Maximum lateral meters a generated pickup can drift from its anchor handhold.
@@ -57,6 +59,26 @@ const DefaultRouteProfileTuningResource = preload("res://resources/config/route_
 @export var handhold_definitions: Array[Resource] = _duplicate_default_handhold_definitions()
 ## Ordered handhold assignment rules matched by route slot, difficulty band, and row zone.
 @export var handhold_assignment_rules: Array[Resource] = _duplicate_default_handhold_assignment_rules()
+## Vertical spacing between LADDER template rows.
+@export var ladder_row_step_height_meters: float = 1.0
+## Vertical spacing between ZIGZAG template rows.
+@export var zigzag_row_step_height_meters: float = 1.05
+## Vertical spacing between WIDE_TRAVERSE template rows.
+@export var wide_traverse_row_step_height_meters: float = 1.08
+## Vertical spacing between SPARSE_REACH template rows.
+@export var sparse_reach_row_step_height_meters: float = 1.16
+## Vertical spacing between DENSE_RECOVERY template rows.
+@export var dense_recovery_row_step_height_meters: float = 0.96
+## Vertical spacing between FORK template rows.
+@export var fork_row_step_height_meters: float = 1.08
+## Vertical spacing between RISK_LANE template rows.
+@export var risk_lane_row_step_height_meters: float = 1.1
+## Vertical spacing between SWING_GAP template rows.
+@export var swing_gap_row_step_height_meters: float = 1.2
+## Vertical spacing between opener LADDER template rows.
+@export var opener_ladder_row_step_height_meters: float = 1.88
+## Vertical spacing between opener ZIGZAG template rows.
+@export var opener_zigzag_row_step_height_meters: float = 1.92
 ## Handhold rows for LADDER chunks; each row lists the lane indices spawned at one vertical step.
 @export var ladder_hold_rows: Array[PackedInt32Array] = [
     PackedInt32Array([1, 2]),
@@ -139,10 +161,8 @@ const DefaultRouteProfileTuningResource = preload("res://resources/config/route_
     PackedInt32Array([1, 2]),
     PackedInt32Array([1]),
     PackedInt32Array([2]),
-    PackedInt32Array([1]),
-    PackedInt32Array([2]),
-    PackedInt32Array([1]),
-    PackedInt32Array([2]),
+    PackedInt32Array([0]),
+    PackedInt32Array([3]),
     PackedInt32Array([1, 2]),
 ]
 ## Handhold rows for ZIGZAG opener chunks; rows keep the start readable while widening later choices.
@@ -152,9 +172,7 @@ const DefaultRouteProfileTuningResource = preload("res://resources/config/route_
     PackedInt32Array([3]),
     PackedInt32Array([1]),
     PackedInt32Array([2]),
-    PackedInt32Array([0]),
-    PackedInt32Array([3]),
-    PackedInt32Array([1, 2]),
+    PackedInt32Array([0, 3]),
 ]
 
 var route_port_row_tolerance_meters: float:
@@ -181,6 +199,7 @@ func is_valid() -> bool:
         and opener_first_row_height_meters + opener_top_padding_meters < segment_height_meters \
         and opener_horizontal_jitter_meters >= 0.0 \
         and opener_vertical_jitter_meters >= 0.0 \
+        and non_opener_row_base_height_meters > 0.0 \
         and pickup_socket_ratio > 0.0 \
         and pickup_socket_ratio < 1.0 \
         and pickup_lateral_offset_meters >= 0.0 \
@@ -206,7 +225,9 @@ func is_valid() -> bool:
         and _hold_rows_are_valid(dense_recovery_hold_rows) \
         and _hold_rows_are_valid(fork_hold_rows) \
         and _hold_rows_are_valid(risk_lane_hold_rows) \
-        and _hold_rows_are_valid(swing_gap_hold_rows)
+        and _hold_rows_are_valid(swing_gap_hold_rows) \
+        and _chunk_row_steps_are_valid() \
+        and _opener_row_steps_are_valid()
 
 func validate() -> void:
     assert_valid()
@@ -229,6 +250,7 @@ func assert_valid() -> void:
     )
     Validation.require_condition(opener_horizontal_jitter_meters >= 0.0, "Generation opener horizontal jitter cannot be negative.")
     Validation.require_condition(opener_vertical_jitter_meters >= 0.0, "Generation opener vertical jitter cannot be negative.")
+    Validation.require_condition(non_opener_row_base_height_meters > 0.0, "Generation non-opener row base height must be positive.")
     Validation.require_condition(pickup_socket_ratio > 0.0, "Generation pickup socket ratio must be positive.")
     Validation.require_condition(pickup_socket_ratio < 1.0, "Generation pickup socket ratio must leave room for hazards.")
     Validation.require_condition(pickup_lateral_offset_meters >= 0.0, "Generation pickup lateral offset cannot be negative.")
@@ -270,6 +292,8 @@ func assert_valid() -> void:
     _assert_valid_hold_rows("FORK", fork_hold_rows)
     _assert_valid_hold_rows("RISK_LANE", risk_lane_hold_rows)
     _assert_valid_hold_rows("SWING_GAP", swing_gap_hold_rows)
+    _assert_valid_chunk_row_steps()
+    _assert_valid_opener_row_steps()
 
 func get_pickup_socket_count() -> int:
     return ceili(float(socket_count_per_chunk) * pickup_socket_ratio)
@@ -336,6 +360,30 @@ func get_hold_rows(chunk_type: int) -> Array[PackedInt32Array]:
             Validation.require_condition(false, "Generation config requires a supported chunk type when fetching hold rows.")
             return []
 
+func get_chunk_row_step_height_meters(chunk_type: int) -> float:
+    ChunkType.assert_valid(chunk_type)
+
+    match chunk_type:
+        ChunkType.Value.LADDER:
+            return ladder_row_step_height_meters
+        ChunkType.Value.ZIGZAG:
+            return zigzag_row_step_height_meters
+        ChunkType.Value.WIDE_TRAVERSE:
+            return wide_traverse_row_step_height_meters
+        ChunkType.Value.SPARSE_REACH:
+            return sparse_reach_row_step_height_meters
+        ChunkType.Value.DENSE_RECOVERY:
+            return dense_recovery_row_step_height_meters
+        ChunkType.Value.FORK:
+            return fork_row_step_height_meters
+        ChunkType.Value.RISK_LANE:
+            return risk_lane_row_step_height_meters
+        ChunkType.Value.SWING_GAP:
+            return swing_gap_row_step_height_meters
+        _:
+            Validation.require_condition(false, "Generation config requires a supported chunk type when fetching row-step height.")
+            return 0.0
+
 func get_opener_hold_rows(chunk_type: int) -> Array[PackedInt32Array]:
     ChunkType.assert_valid(chunk_type)
 
@@ -347,6 +395,18 @@ func get_opener_hold_rows(chunk_type: int) -> Array[PackedInt32Array]:
         _:
             Validation.require_condition(false, "Generation config requires a supported opener chunk type when fetching hold rows.")
             return []
+
+func get_opener_row_step_height_meters(chunk_type: int) -> float:
+    ChunkType.assert_valid(chunk_type)
+
+    match chunk_type:
+        ChunkType.Value.LADDER:
+            return opener_ladder_row_step_height_meters
+        ChunkType.Value.ZIGZAG:
+            return opener_zigzag_row_step_height_meters
+        _:
+            Validation.require_condition(false, "Generation config requires a supported opener chunk type when fetching row-step height.")
+            return 0.0
 
 func _hold_rows_are_valid(hold_rows: Array[PackedInt32Array]) -> bool:
     if hold_rows.size() == 0:
@@ -361,6 +421,52 @@ func _hold_rows_are_valid(hold_rows: Array[PackedInt32Array]) -> bool:
             var lane_index: int = hold_row[lane_entry_index]
             if lane_index < 0 or lane_index > 3:
                 return false
+
+    return true
+
+func _chunk_row_steps_are_valid() -> bool:
+    var chunk_types: Array[int] = [
+        ChunkType.Value.LADDER,
+        ChunkType.Value.ZIGZAG,
+        ChunkType.Value.WIDE_TRAVERSE,
+        ChunkType.Value.SPARSE_REACH,
+        ChunkType.Value.DENSE_RECOVERY,
+        ChunkType.Value.FORK,
+        ChunkType.Value.RISK_LANE,
+        ChunkType.Value.SWING_GAP,
+    ]
+
+    for chunk_type in chunk_types:
+        var row_step_height_meters: float = get_chunk_row_step_height_meters(chunk_type)
+        if row_step_height_meters <= 0.0:
+            return false
+
+        var hold_rows: Array[PackedInt32Array] = get_hold_rows(chunk_type)
+        if hold_rows.size() == 0:
+            return false
+
+        var last_row_height_meters: float = non_opener_row_base_height_meters + (row_step_height_meters * float(hold_rows.size()))
+        if last_row_height_meters >= segment_height_meters:
+            return false
+
+    return true
+
+func _opener_row_steps_are_valid() -> bool:
+    var opener_chunk_types: Array[int] = [ChunkType.Value.LADDER, ChunkType.Value.ZIGZAG]
+    var opener_ceiling_height_meters: float = segment_height_meters - opener_top_padding_meters
+
+    for chunk_type in opener_chunk_types:
+        var row_step_height_meters: float = get_opener_row_step_height_meters(chunk_type)
+        if row_step_height_meters <= 0.0:
+            return false
+
+        var hold_rows: Array[PackedInt32Array] = get_opener_hold_rows(chunk_type)
+        if hold_rows.size() == 0:
+            return false
+
+        var last_row_height_meters: float = opener_first_row_height_meters + (row_step_height_meters * float(maxi(0, hold_rows.size() - 1)))
+        if last_row_height_meters > opener_ceiling_height_meters:
+            return false
 
     return true
 
@@ -500,6 +606,50 @@ func _assert_valid_hold_rows(label: String, hold_rows: Array[PackedInt32Array]) 
                 lane_index >= 0 and lane_index <= 3,
                 "Generation %s hold row %d contains an out-of-range lane index." % [label, row_index]
             )
+
+func _assert_valid_chunk_row_steps() -> void:
+    var chunk_types: Array[int] = [
+        ChunkType.Value.LADDER,
+        ChunkType.Value.ZIGZAG,
+        ChunkType.Value.WIDE_TRAVERSE,
+        ChunkType.Value.SPARSE_REACH,
+        ChunkType.Value.DENSE_RECOVERY,
+        ChunkType.Value.FORK,
+        ChunkType.Value.RISK_LANE,
+        ChunkType.Value.SWING_GAP,
+    ]
+
+    for chunk_type in chunk_types:
+        var row_step_height_meters: float = get_chunk_row_step_height_meters(chunk_type)
+        Validation.require_condition(
+            row_step_height_meters > 0.0,
+            "Generation %s row-step height must be positive." % ChunkType.to_label(chunk_type)
+        )
+
+        var hold_rows: Array[PackedInt32Array] = get_hold_rows(chunk_type)
+        var last_row_height_meters: float = non_opener_row_base_height_meters + (row_step_height_meters * float(hold_rows.size()))
+        Validation.require_condition(
+            last_row_height_meters < segment_height_meters,
+            "Generation %s row-step height must keep the last row inside the chunk height." % ChunkType.to_label(chunk_type)
+        )
+
+func _assert_valid_opener_row_steps() -> void:
+    var opener_chunk_types: Array[int] = [ChunkType.Value.LADDER, ChunkType.Value.ZIGZAG]
+    var opener_ceiling_height_meters: float = segment_height_meters - opener_top_padding_meters
+
+    for chunk_type in opener_chunk_types:
+        var row_step_height_meters: float = get_opener_row_step_height_meters(chunk_type)
+        Validation.require_condition(
+            row_step_height_meters > 0.0,
+            "Generation opener %s row-step height must be positive." % ChunkType.to_label(chunk_type)
+        )
+
+        var hold_rows: Array[PackedInt32Array] = get_opener_hold_rows(chunk_type)
+        var last_row_height_meters: float = opener_first_row_height_meters + (row_step_height_meters * float(maxi(0, hold_rows.size() - 1)))
+        Validation.require_condition(
+            last_row_height_meters <= opener_ceiling_height_meters,
+            "Generation opener %s row-step height must leave the configured top padding inside the chunk." % ChunkType.to_label(chunk_type)
+        )
 
 func _max_lane_alignment_meters() -> float:
     return (chunk_width_meters * 0.5) * outer_lane_position_ratio
