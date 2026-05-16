@@ -3,9 +3,11 @@ extends RefCounted
 
 const GeneratedChunkSeamValidationResultScript: GDScript = preload("res://src/gameplay/generation/generated_chunk_seam_validation_result.gd")
 const GeneratedRouteValidationResultScript: GDScript = preload("res://src/gameplay/generation/generated_route_validation_result.gd")
+const RouteGraphBuilderScript: GDScript = preload("res://src/gameplay/generation/route_graph_builder.gd")
 
 var _max_move_distance_meters: float
 var _max_downward_move_meters: float
+var _route_graph_builder: RefCounted
 
 func _init(
     max_move_distance_meters_value: float,
@@ -21,6 +23,12 @@ func _init(
     )
     _max_move_distance_meters = max_move_distance_meters_value
     _max_downward_move_meters = max_downward_move_meters_value
+    var route_graph_builder_variant: Variant = RouteGraphBuilderScript.new(
+        max_move_distance_meters_value,
+        max_downward_move_meters_value
+    )
+    Validation.require_condition(route_graph_builder_variant is RefCounted, "RoutePathValidator must create a RefCounted route graph builder.")
+    _route_graph_builder = route_graph_builder_variant
 
 func validate_layout(
     layout: RefCounted,
@@ -34,49 +42,50 @@ func validate_layout(
         "RoutePathValidator requires at least one entry anchor position."
     )
 
-    var handholds: Array[RefCounted] = _require_handholds(layout)
-    var exit_port_hold_ids: PackedStringArray = _require_route_port_hold_ids(layout, &"route_exit_hold_ids")
-    var preferred_exit_hold: RefCounted = _find_highest_route_port_handhold(handholds, exit_port_hold_ids)
+    Validation.require_condition(_route_graph_builder != null, "RoutePathValidator requires a route graph builder.")
+    var route_graph_variant: Variant = _route_graph_builder.call("build_layout_graph", layout)
+    Validation.require_condition(route_graph_variant is RefCounted, "RoutePathValidator layout graph builder must return a RefCounted route graph.")
+    var route_graph: RefCounted = route_graph_variant
+    var graph_nodes: Array = _require_graph_nodes(route_graph)
+    var preferred_exit_node: RefCounted = _require_graph_node(route_graph.call("get_highest_exit_port_node"))
+    var exit_port_hold_ids: PackedStringArray = _require_graph_route_port_hold_ids(route_graph, &"exit_port_hold_ids")
     var predecessors: PackedInt32Array = PackedInt32Array()
     var visited: Array[bool] = []
     var frontier: Array[int] = []
 
-    for _index in range(handholds.size()):
+    for _index in range(graph_nodes.size()):
         var _append_predecessor_result: bool = predecessors.append(-1)
         visited.append(false)
 
-    for handhold_index in range(handholds.size()):
-        var handhold: RefCounted = handholds[handhold_index]
-        if _is_reachable_from_any_anchor(handhold, entry_anchor_positions):
-            visited[handhold_index] = true
-            frontier.append(handhold_index)
+    for node_index in range(graph_nodes.size()):
+        var node: RefCounted = _require_graph_node(graph_nodes[node_index])
+        if _is_reachable_from_any_anchor(node, entry_anchor_positions):
+            visited[node_index] = true
+            frontier.append(node_index)
 
     if frontier.is_empty():
         return GeneratedRouteValidationResultScript.new(
             false,
             "No handhold is reachable from the provided entry anchors.",
-            _require_hold_id(preferred_exit_hold),
+            _require_graph_node_hold_id(preferred_exit_node),
             PackedStringArray()
         )
 
     while not frontier.is_empty():
         var current_index: int = frontier.pop_front()
-        var current_hold_id: StringName = _require_hold_id(handholds[current_index])
-        if exit_port_hold_ids.has(String(current_hold_id)):
+        var current_node: RefCounted = _require_graph_node(graph_nodes[current_index])
+        if exit_port_hold_ids.has(String(_require_graph_node_hold_id(current_node))):
             return GeneratedRouteValidationResultScript.new(
                 true,
                 "",
-                current_hold_id,
-                _build_path_hold_ids(handholds, predecessors, current_index)
+                _require_graph_node_hold_id(current_node),
+                _build_path_hold_ids(route_graph, predecessors, current_index)
             )
 
-        var current_handhold: RefCounted = handholds[current_index]
-        for next_index in range(handholds.size()):
+        for edge_variant in _require_graph_outgoing_edges(route_graph, current_index):
+            var edge: RefCounted = _require_graph_edge(edge_variant)
+            var next_index: int = _require_graph_edge_to_node_index(edge)
             if visited[next_index]:
-                continue
-
-            var next_handhold: RefCounted = handholds[next_index]
-            if not _can_move_between(current_handhold, next_handhold):
                 continue
 
             visited[next_index] = true
@@ -86,7 +95,7 @@ func validate_layout(
     return GeneratedRouteValidationResultScript.new(
         false,
         "No path reaches a generated route exit hold within the configured move envelope.",
-        _require_hold_id(preferred_exit_hold),
+        _require_graph_node_hold_id(preferred_exit_node),
         PackedStringArray()
     )
 
@@ -105,32 +114,37 @@ func validate_chunk_seam(current_layout: RefCounted, next_layout: RefCounted) ->
         "RoutePathValidator seam validation requires adjacent chunk indices."
     )
 
-    var current_handholds: Array[RefCounted] = _require_handholds(current_layout)
-    var next_handholds: Array[RefCounted] = _require_handholds(next_layout)
-    var current_exit_hold_ids: PackedStringArray = _require_route_port_hold_ids(current_layout, &"route_exit_hold_ids")
-    var next_entry_hold_ids: PackedStringArray = _require_route_port_hold_ids(next_layout, &"route_entry_hold_ids")
+    Validation.require_condition(_route_graph_builder != null, "RoutePathValidator requires a route graph builder.")
+    var current_route_graph_variant: Variant = _route_graph_builder.call("build_layout_graph", current_layout)
+    var next_route_graph_variant: Variant = _route_graph_builder.call("build_layout_graph", next_layout)
+    Validation.require_condition(current_route_graph_variant is RefCounted, "RoutePathValidator current layout graph builder must return a RefCounted route graph.")
+    Validation.require_condition(next_route_graph_variant is RefCounted, "RoutePathValidator next layout graph builder must return a RefCounted route graph.")
+    var current_route_graph: RefCounted = current_route_graph_variant
+    var next_route_graph: RefCounted = next_route_graph_variant
+    var current_exit_hold_ids: PackedStringArray = _require_graph_route_port_hold_ids(current_route_graph, &"exit_port_hold_ids")
+    var next_entry_hold_ids: PackedStringArray = _require_graph_route_port_hold_ids(next_route_graph, &"entry_port_hold_ids")
     var current_start_height_meters: float = _require_start_height_meters(current_layout)
     var next_start_height_meters: float = _require_start_height_meters(next_layout)
-    var exit_hold: RefCounted = _find_handhold_by_hold_id(current_handholds, current_exit_hold_ids[0])
-    var closest_entry_hold: RefCounted = _find_handhold_by_hold_id(next_handholds, next_entry_hold_ids[0])
+    var exit_node: RefCounted = _get_required_graph_node_by_hold_id(current_route_graph, current_exit_hold_ids[0])
+    var closest_entry_node: RefCounted = _get_required_graph_node_by_hold_id(next_route_graph, next_entry_hold_ids[0])
     var closest_gap_distance: float = INF
 
     for current_exit_hold_id in current_exit_hold_ids:
-        var current_exit_hold: RefCounted = _find_handhold_by_hold_id(current_handholds, current_exit_hold_id)
-        var exit_world_position: Vector2 = _to_world_position(current_start_height_meters, _require_local_position(current_exit_hold))
+        var current_exit_node: RefCounted = _get_required_graph_node_by_hold_id(current_route_graph, current_exit_hold_id)
+        var exit_world_position: Vector2 = _to_world_position(current_start_height_meters, _require_graph_node_local_position(current_exit_node))
         for next_entry_hold_id in next_entry_hold_ids:
-            var entry_hold: RefCounted = _find_handhold_by_hold_id(next_handholds, next_entry_hold_id)
-            var entry_world_position: Vector2 = _to_world_position(next_start_height_meters, _require_local_position(entry_hold))
+            var entry_node: RefCounted = _get_required_graph_node_by_hold_id(next_route_graph, next_entry_hold_id)
+            var entry_world_position: Vector2 = _to_world_position(next_start_height_meters, _require_graph_node_local_position(entry_node))
             var gap_distance: float = _measure_gap_distance(
                 exit_world_position,
-                _require_physical_size(current_exit_hold),
+                _require_graph_node_physical_size(current_exit_node),
                 entry_world_position,
-                _require_physical_size(entry_hold)
+                _require_graph_node_physical_size(entry_node)
             )
             if gap_distance < closest_gap_distance:
                 closest_gap_distance = gap_distance
-                exit_hold = current_exit_hold
-                closest_entry_hold = entry_hold
+                exit_node = current_exit_node
+                closest_entry_node = entry_node
 
             if gap_distance <= _max_move_distance_meters:
                 return GeneratedChunkSeamValidationResultScript.new(
@@ -138,8 +152,8 @@ func validate_chunk_seam(current_layout: RefCounted, next_layout: RefCounted) ->
                     "",
                     current_chunk_index,
                     next_chunk_index,
-                    _require_hold_id(current_exit_hold),
-                    _require_hold_id(entry_hold)
+                    _require_graph_node_hold_id(current_exit_node),
+                    _require_graph_node_hold_id(entry_node)
                 )
 
     return GeneratedChunkSeamValidationResultScript.new(
@@ -147,94 +161,29 @@ func validate_chunk_seam(current_layout: RefCounted, next_layout: RefCounted) ->
         "No reachable seam connects the current chunk exit ports to the next chunk entry ports within the configured move envelope.",
         current_chunk_index,
         next_chunk_index,
-        _require_hold_id(exit_hold),
-        _require_hold_id(closest_entry_hold)
+        _require_graph_node_hold_id(exit_node),
+        _require_graph_node_hold_id(closest_entry_node)
     )
 
-func _require_handholds(layout: RefCounted) -> Array[RefCounted]:
-    var raw_handholds: Variant = layout.get("handholds")
-    Validation.require_condition(raw_handholds is Array, "RoutePathValidator layout handholds must be an Array.")
-    var handhold_variants: Array = raw_handholds
-    Validation.require_condition(handhold_variants.size() > 0, "RoutePathValidator requires at least one handhold.")
-
-    var handholds: Array[RefCounted] = []
-    for raw_handhold in handhold_variants:
-        Validation.require_condition(raw_handhold is RefCounted, "RoutePathValidator handholds must be RefCounted instances.")
-        var handhold: RefCounted = raw_handhold
-        Validation.require_condition(handhold.has_method("assert_valid"), "RoutePathValidator handholds must expose assert_valid().")
-        handhold.call("assert_valid")
-        handholds.append(handhold)
-
-    return handholds
-
-func _find_handhold_by_hold_id(handholds: Array[RefCounted], hold_id_text: String) -> RefCounted:
-    Validation.require_condition(hold_id_text != "", "RoutePathValidator hold lookup requires a non-empty hold id.")
-    for handhold in handholds:
-        if String(_require_hold_id(handhold)) == hold_id_text:
-            return handhold
-
-    Validation.require_condition(false, "RoutePathValidator could not find the requested hold id in the layout.")
-    return null
-
-func _find_highest_route_port_handhold(handholds: Array[RefCounted], route_port_hold_ids: PackedStringArray) -> RefCounted:
-    Validation.require_condition(route_port_hold_ids.size() > 0, "RoutePathValidator requires at least one route port hold id.")
-
-    var selected_handhold: RefCounted = _find_handhold_by_hold_id(handholds, route_port_hold_ids[0])
-    var selected_position: Vector2 = _require_local_position(selected_handhold)
-
-    for route_port_hold_id in route_port_hold_ids:
-        var candidate_handhold: RefCounted = _find_handhold_by_hold_id(handholds, route_port_hold_id)
-        var candidate_position: Vector2 = _require_local_position(candidate_handhold)
-        if candidate_position.y < selected_position.y:
-            selected_handhold = candidate_handhold
-            selected_position = candidate_position
-
-    return selected_handhold
-
-func _is_reachable_from_any_anchor(handhold: RefCounted, entry_anchor_positions: Array[Vector2]) -> bool:
-    var handhold_position: Vector2 = _require_local_position(handhold)
-    var handhold_size: Vector2 = _require_physical_size(handhold)
+func _is_reachable_from_any_anchor(node: RefCounted, entry_anchor_positions: Array[Vector2]) -> bool:
     for anchor_position in entry_anchor_positions:
-        if _measure_gap_distance(anchor_position, Vector2.ZERO, handhold_position, handhold_size) <= _max_move_distance_meters:
+        if _measure_gap_distance(anchor_position, Vector2.ZERO, _require_graph_node_local_position(node), _require_graph_node_physical_size(node)) <= _max_move_distance_meters:
             return true
 
     return false
 
-func _can_move_between(from_handhold: RefCounted, to_handhold: RefCounted) -> bool:
-    var from_position: Vector2 = _require_local_position(from_handhold)
-    var to_position: Vector2 = _require_local_position(to_handhold)
-    if from_position == to_position:
-        return false
-
-    if _measure_gap_distance(
-        from_position,
-        _require_physical_size(from_handhold),
-        to_position,
-        _require_physical_size(to_handhold)
-    ) > _max_move_distance_meters:
-        return false
-
-    var downward_gap: float = _measure_downward_gap(
-        from_position,
-        _require_physical_size(from_handhold),
-        to_position,
-        _require_physical_size(to_handhold)
-    )
-    if downward_gap > _max_downward_move_meters:
-        return false
-
-    return true
-
 func _build_path_hold_ids(
-    handholds: Array[RefCounted],
+    route_graph: RefCounted,
     predecessors: PackedInt32Array,
     target_index: int
 ) -> PackedStringArray:
+    var graph_nodes: Array = _require_graph_nodes(route_graph)
     var reversed_path: PackedStringArray = PackedStringArray()
     var current_index: int = target_index
 
     while current_index >= 0:
-        var _append_reversed_path_result: bool = reversed_path.append(String(_require_hold_id(handholds[current_index])))
+        var current_node: RefCounted = _require_graph_node(graph_nodes[current_index])
+        var _append_reversed_path_result: bool = reversed_path.append(String(_require_graph_node_hold_id(current_node)))
         current_index = predecessors[current_index]
 
     var path_hold_ids: PackedStringArray = PackedStringArray()
@@ -243,23 +192,62 @@ func _build_path_hold_ids(
 
     return path_hold_ids
 
-func _require_local_position(handhold: RefCounted) -> Vector2:
-    var raw_local_position: Variant = handhold.get("local_position")
-    Validation.require_condition(raw_local_position is Vector2, "RoutePathValidator handholds must expose a Vector2 local_position.")
-    var local_position: Vector2 = raw_local_position
-    return local_position
+func _get_required_graph_node_by_hold_id(route_graph: RefCounted, hold_id_text: String) -> RefCounted:
+    var node_variant: Variant = route_graph.call("get_required_node_by_hold_id", hold_id_text)
+    return _require_graph_node(node_variant)
 
-func _require_hold_id(handhold: RefCounted) -> StringName:
-    var raw_hold_id: Variant = handhold.get("hold_id")
-    Validation.require_condition(raw_hold_id is StringName, "RoutePathValidator handholds must expose a StringName hold_id.")
+func _require_graph_edge(edge_variant: Variant) -> RefCounted:
+    Validation.require_condition(edge_variant is RefCounted, "RoutePathValidator graph edges must be RefCounted instances.")
+    var edge: RefCounted = edge_variant
+    return edge
+
+func _require_graph_edge_to_node_index(edge: RefCounted) -> int:
+    var raw_to_node_index: Variant = edge.get("to_node_index")
+    Validation.require_condition(raw_to_node_index is int, "RoutePathValidator graph edges must expose an int to_node_index.")
+    var to_node_index: int = raw_to_node_index
+    return to_node_index
+
+func _require_graph_node(node_variant: Variant) -> RefCounted:
+    Validation.require_condition(node_variant is RefCounted, "RoutePathValidator graph nodes must be RefCounted instances.")
+    var node: RefCounted = node_variant
+    return node
+
+func _require_graph_nodes(route_graph: RefCounted) -> Array:
+    var raw_nodes: Variant = route_graph.get("nodes")
+    Validation.require_condition(raw_nodes is Array, "RoutePathValidator route graph must expose an Array nodes property.")
+    var graph_nodes: Array = raw_nodes
+    return graph_nodes
+
+func _require_graph_node_hold_id(node: RefCounted) -> StringName:
+    var raw_hold_id: Variant = node.get("hold_id")
+    Validation.require_condition(raw_hold_id is StringName, "RoutePathValidator graph nodes must expose a StringName hold_id.")
     var hold_id: StringName = raw_hold_id
     return hold_id
 
-func _require_physical_size(handhold: RefCounted) -> Vector2:
-    var raw_physical_size: Variant = handhold.get("physical_size_meters")
-    Validation.require_condition(raw_physical_size is Vector2, "RoutePathValidator handholds must expose a Vector2 physical_size_meters.")
+func _require_graph_node_local_position(node: RefCounted) -> Vector2:
+    var raw_local_position: Variant = node.get("local_position")
+    Validation.require_condition(raw_local_position is Vector2, "RoutePathValidator graph nodes must expose a Vector2 local_position.")
+    var local_position: Vector2 = raw_local_position
+    return local_position
+
+func _require_graph_node_physical_size(node: RefCounted) -> Vector2:
+    var raw_physical_size: Variant = node.get("physical_size_meters")
+    Validation.require_condition(raw_physical_size is Vector2, "RoutePathValidator graph nodes must expose a Vector2 physical_size_meters.")
     var physical_size: Vector2 = raw_physical_size
     return physical_size
+
+func _require_graph_outgoing_edges(route_graph: RefCounted, from_node_index: int) -> Array:
+    var raw_outgoing_edges: Variant = route_graph.call("get_outgoing_edges", from_node_index)
+    Validation.require_condition(raw_outgoing_edges is Array, "RoutePathValidator route graph must return outgoing edges as an Array.")
+    var outgoing_edges: Array = raw_outgoing_edges
+    return outgoing_edges
+
+func _require_graph_route_port_hold_ids(route_graph: RefCounted, property_name: StringName) -> PackedStringArray:
+    var raw_hold_ids: Variant = route_graph.get(property_name)
+    Validation.require_condition(raw_hold_ids is PackedStringArray, "RoutePathValidator route graphs must expose PackedStringArray route ports.")
+    var hold_ids: PackedStringArray = raw_hold_ids
+    Validation.require_condition(hold_ids.size() > 0, "RoutePathValidator route graph ports cannot be empty.")
+    return hold_ids
 
 func _measure_gap_distance(
     from_position: Vector2,
