@@ -12,6 +12,9 @@ const GeneratedChunkSceneBuilderScript = preload("res://src/gameplay/generation/
 const GeneratedHandholdSocketScript = preload("res://src/gameplay/generation/generated_handhold_socket.gd")
 const GeneratedHazardSocketScript = preload("res://src/gameplay/generation/generated_hazard_socket.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
+const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_surface_profile.gd")
+const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
+const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 const GeneratedPickupSocketScript = preload("res://src/gameplay/generation/generated_pickup_socket.gd")
 
 func test_scene_builder_creates_chunk_root_with_metadata_and_scaled_position() -> void:
@@ -133,9 +136,30 @@ func test_scene_builder_creates_non_blocking_handholds_and_runtime_spawn_adapter
     assert_not_null(updraft_visual)
 
 func _build_layout_fixture() -> GeneratedChunkLayoutScript:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var rest_definition: HandholdTypeDefinitionScript = tuning.get_required_handhold_definition(HandholdTypeScript.Value.REST)
+    var burn_definition: HandholdTypeDefinitionScript = tuning.get_required_handhold_definition(HandholdTypeScript.Value.BURN)
+    var rest_surface_profile: HandholdSurfaceProfileScript = rest_definition.surface_profile as HandholdSurfaceProfileScript
+    var burn_surface_profile: HandholdSurfaceProfileScript = burn_definition.surface_profile as HandholdSurfaceProfileScript
     var handholds: Array[GeneratedHandholdSocketScript] = [
-        GeneratedHandholdSocketScript.new(&"chunk_02_hold_00", Vector2(-1.2, -1.5), 0.75, HandholdTypeScript.Value.REST),
-        GeneratedHandholdSocketScript.new(&"chunk_02_hold_01", Vector2(1.1, -2.8), 1.35, HandholdTypeScript.Value.BURN),
+        GeneratedHandholdSocketScript.new(
+            &"chunk_02_hold_00",
+            rest_definition.definition_id,
+            Vector2(-1.2, -1.5),
+            HandholdTypeScript.Value.REST,
+            rest_surface_profile.stamina_drain_multiplier,
+            rest_definition.physical_size_meters,
+            rest_definition.visual_color
+        ),
+        GeneratedHandholdSocketScript.new(
+            &"chunk_02_hold_01",
+            burn_definition.definition_id,
+            Vector2(1.1, -2.8),
+            HandholdTypeScript.Value.BURN,
+            burn_surface_profile.stamina_drain_multiplier,
+            burn_definition.physical_size_meters,
+            burn_definition.visual_color
+        ),
     ]
     var pickup_sockets: Array[GeneratedPickupSocketScript] = [
         GeneratedPickupSocketScript.new(&"chunk_02_pickup_00", Vector2(-0.6, -2.4)),

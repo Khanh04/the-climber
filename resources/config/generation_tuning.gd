@@ -1,6 +1,12 @@
 class_name GenerationTuning
 extends Resource
 
+const HandholdLifecycleRuleScript = preload("res://resources/config/handhold_lifecycle_rule.gd")
+const HandholdMovementRuleScript = preload("res://resources/config/handhold_movement_rule.gd")
+const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_surface_profile.gd")
+const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
+const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
+
 ## Generator version prefix embedded into daily seed keys and chunk metadata.
 @export var generator_version: String = DailySeedKey.GENERATOR_VERSION
 ## Vertical meters covered by one generated chunk before the next chunk begins.
@@ -37,6 +43,8 @@ extends Resource
 @export var chunk_keep_behind_count: int = 1
 ## Total placeholder sockets per chunk before pickup and hazard splits are applied.
 @export var socket_count_per_chunk: int = 12
+## Typed handhold definitions keyed by HandholdType for generation and runtime setup.
+@export var handhold_definitions: Array[Resource] = _build_default_handhold_definitions()
 ## Handhold rows for LADDER chunks; each row lists the lane indices spawned at one vertical step.
 @export var ladder_hold_rows: Array[PackedInt32Array] = [
     PackedInt32Array([1, 2]),
@@ -160,6 +168,7 @@ func is_valid() -> bool:
         and baseline_band_max_height_meters > easy_band_max_height_meters \
         and chunk_spawn_ahead_count >= 1 \
         and chunk_keep_behind_count >= 0 \
+        and _handhold_definitions_are_valid() \
         and socket_count_per_chunk > 0 \
         and _hold_rows_are_valid(ladder_hold_rows) \
         and _hold_rows_are_valid(zigzag_hold_rows) \
@@ -219,6 +228,7 @@ func assert_valid() -> void:
     )
     Validation.require_condition(chunk_spawn_ahead_count >= 1, "Generation config must keep at least one chunk ahead of the camera.")
     Validation.require_condition(chunk_keep_behind_count >= 0, "Generation config cannot keep a negative number of chunks behind the camera.")
+    _assert_valid_handhold_definitions()
     Validation.require_condition(socket_count_per_chunk > 0, "Generation config must provide at least one socket per chunk.")
     _assert_valid_hold_rows("LADDER", ladder_hold_rows)
     _assert_valid_hold_rows("ZIGZAG", zigzag_hold_rows)
@@ -236,6 +246,18 @@ func get_pickup_socket_count() -> int:
 
 func get_hazard_socket_count() -> int:
     return maxi(0, socket_count_per_chunk - get_pickup_socket_count())
+
+func get_required_handhold_definition(handhold_type: int) -> HandholdTypeDefinitionScript:
+    HandholdTypeScript.assert_valid(handhold_type)
+    assert_valid()
+
+    for definition_resource in handhold_definitions:
+        var typed_definition: HandholdTypeDefinitionScript = definition_resource as HandholdTypeDefinitionScript
+        if typed_definition.handhold_type == handhold_type:
+            return typed_definition
+
+    Validation.require_condition(false, "Generation config requires a handhold definition for %s." % HandholdTypeScript.to_label(handhold_type))
+    return null
 
 func get_hold_rows(chunk_type: int) -> Array[PackedInt32Array]:
     ChunkType.assert_valid(chunk_type)
@@ -289,6 +311,65 @@ func _hold_rows_are_valid(hold_rows: Array[PackedInt32Array]) -> bool:
 
     return true
 
+func _handhold_definitions_are_valid() -> bool:
+    if handhold_definitions.is_empty():
+        return false
+
+    var seen_definition_ids: Dictionary[StringName, bool] = {}
+    var seen_handhold_types: Dictionary[int, bool] = {}
+    for definition_resource in handhold_definitions:
+        if definition_resource == null or not definition_resource is HandholdTypeDefinitionScript:
+            return false
+
+        var typed_definition: HandholdTypeDefinitionScript = definition_resource as HandholdTypeDefinitionScript
+        if not typed_definition.is_valid():
+            return false
+
+        if seen_definition_ids.has(typed_definition.definition_id):
+            return false
+
+        if seen_handhold_types.has(typed_definition.handhold_type):
+            return false
+
+        seen_definition_ids[typed_definition.definition_id] = true
+        seen_handhold_types[typed_definition.handhold_type] = true
+
+    for handhold_type in HandholdTypeScript.get_all_values():
+        if not seen_handhold_types.has(handhold_type):
+            return false
+
+    return true
+
+func _assert_valid_handhold_definitions() -> void:
+    Validation.require_condition(not handhold_definitions.is_empty(), "Generation config requires at least one handhold definition.")
+
+    var seen_definition_ids: Dictionary[StringName, bool] = {}
+    var seen_handhold_types: Dictionary[int, bool] = {}
+    for definition_resource in handhold_definitions:
+        Validation.require_condition(definition_resource != null, "Generation config handhold definitions cannot contain null entries.")
+        Validation.require_condition(
+            definition_resource is HandholdTypeDefinitionScript,
+            "Generation config handhold definitions must use HandholdTypeDefinition resources."
+        )
+        var typed_definition: HandholdTypeDefinitionScript = definition_resource as HandholdTypeDefinitionScript
+        typed_definition.assert_valid()
+        Validation.require_condition(
+            not seen_definition_ids.has(typed_definition.definition_id),
+            "Generation config handhold definition ids must be unique."
+        )
+        Validation.require_condition(
+            not seen_handhold_types.has(typed_definition.handhold_type),
+            "Generation config handhold types must be unique."
+        )
+        seen_definition_ids[typed_definition.definition_id] = true
+        seen_handhold_types[typed_definition.handhold_type] = true
+
+    for handhold_type in HandholdTypeScript.get_all_values():
+        Validation.require_condition(
+            seen_handhold_types.has(handhold_type),
+            "Generation config requires a handhold definition for %s." % HandholdTypeScript.to_label(handhold_type)
+        )
+
 func _assert_valid_hold_rows(label: String, hold_rows: Array[PackedInt32Array]) -> void:
     Validation.require_condition(hold_rows.size() > 0, "Generation %s hold rows must not be empty." % label)
 
@@ -305,3 +386,94 @@ func _assert_valid_hold_rows(label: String, hold_rows: Array[PackedInt32Array]) 
 
 func _max_lane_alignment_meters() -> float:
     return (chunk_width_meters * 0.5) * outer_lane_position_ratio
+
+static func _build_default_handhold_definitions() -> Array[Resource]:
+    return [
+        _create_handhold_definition(
+            &"NORMAL",
+            HandholdTypeScript.Value.NORMAL,
+            "Normal",
+            Vector2(1.12, 0.30),
+            Color(0.92, 0.72, 0.23, 1.0),
+            1.0,
+            0.0,
+            false,
+            Vector2.ZERO
+        ),
+        _create_handhold_definition(
+            &"REST",
+            HandholdTypeScript.Value.REST,
+            "Rest",
+            Vector2(1.24, 0.30),
+            Color(0.41, 0.82, 0.47, 1.0),
+            0.75,
+            0.0,
+            false,
+            Vector2.ZERO
+        ),
+        _create_handhold_definition(
+            &"BURN",
+            HandholdTypeScript.Value.BURN,
+            "Burn",
+            Vector2(0.96, 0.30),
+            Color(0.92, 0.39, 0.27, 1.0),
+            1.35,
+            0.0,
+            false,
+            Vector2.ZERO
+        ),
+        _create_handhold_definition(
+            &"BREAK",
+            HandholdTypeScript.Value.BREAK,
+            "Break",
+            Vector2(0.88, 0.28),
+            Color(0.95, 0.64, 0.21, 1.0),
+            1.0,
+            0.6,
+            true,
+            Vector2.ZERO
+        ),
+        _create_handhold_definition(
+            &"BOOST",
+            HandholdTypeScript.Value.BOOST,
+            "Boost",
+            Vector2(1.04, 0.30),
+            Color(0.32, 0.72, 0.96, 1.0),
+            1.0,
+            0.0,
+            false,
+            Vector2(0.0, -240.0)
+        ),
+    ]
+
+static func _create_handhold_definition(
+    definition_id: StringName,
+    handhold_type: int,
+    display_name: String,
+    physical_size_meters: Vector2,
+    visual_color: Color,
+    stamina_drain_multiplier: float,
+    break_after_attach_seconds: float,
+    breaks_on_release: bool,
+    release_impulse_vector: Vector2
+) -> HandholdTypeDefinitionScript:
+    var surface_profile: HandholdSurfaceProfileScript = HandholdSurfaceProfileScript.new()
+    surface_profile.stamina_drain_multiplier = stamina_drain_multiplier
+
+    var lifecycle_rule: HandholdLifecycleRuleScript = HandholdLifecycleRuleScript.new()
+    lifecycle_rule.break_after_attach_seconds = break_after_attach_seconds
+    lifecycle_rule.breaks_on_release = breaks_on_release
+
+    var movement_rule: HandholdMovementRuleScript = HandholdMovementRuleScript.new()
+    movement_rule.release_impulse_vector = release_impulse_vector
+
+    var definition: HandholdTypeDefinitionScript = HandholdTypeDefinitionScript.new()
+    definition.definition_id = definition_id
+    definition.handhold_type = handhold_type
+    definition.display_name = display_name
+    definition.physical_size_meters = physical_size_meters
+    definition.visual_color = visual_color
+    definition.surface_profile = surface_profile
+    definition.lifecycle_rule = lifecycle_rule
+    definition.movement_rule = movement_rule
+    return definition

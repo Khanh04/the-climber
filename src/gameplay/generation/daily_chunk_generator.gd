@@ -3,6 +3,7 @@ extends RefCounted
 
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
+const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
 
 var _tuning: GenerationTuning
 
@@ -214,7 +215,7 @@ func _build_handholds(
                 row_lane_indices.size(),
                 local_position
             )
-            handholds.append(GeneratedHandholdSocket.new(handhold_id, local_position, -1.0, handhold_type))
+            handholds.append(_build_handhold_socket(handhold_id, local_position, handhold_type))
             handhold_sequence_index += 1
 
     return handholds
@@ -259,7 +260,7 @@ func _build_opener_handholds(chunk_type: int, difficulty_band: int, chunk_rng: R
                 row_lane_indices.size(),
                 local_position
             )
-            handholds.append(GeneratedHandholdSocket.new(handhold_id, local_position, -1.0, handhold_type))
+            handholds.append(_build_handhold_socket(handhold_id, local_position, handhold_type))
             handhold_sequence_index += 1
 
     return handholds
@@ -526,6 +527,21 @@ func _get_allowed_handhold_types_for_row(route_slot: int, difficulty_band: int, 
         _:
             Validation.require_condition(false, "DailyChunkGenerator requires a supported route slot for handhold type selection.")
             return []
+
+func _build_handhold_socket(hold_id: StringName, local_position: Vector2, handhold_type: int) -> GeneratedHandholdSocket:
+    Validation.require_condition(not String(hold_id).is_empty(), "DailyChunkGenerator handhold socket creation requires a hold id.")
+    HandholdTypeScript.assert_valid(handhold_type)
+
+    var definition: HandholdTypeDefinitionScript = _tuning.get_required_handhold_definition(handhold_type)
+    return GeneratedHandholdSocket.new(
+        hold_id,
+        definition.definition_id,
+        local_position,
+        handhold_type,
+        definition.surface_profile.stamina_drain_multiplier,
+        definition.physical_size_meters,
+        definition.visual_color
+    )
 
 func _get_risky_lane_side_sign(seed_key: String, chunk_index: int, chunk_type: int) -> float:
     ChunkType.assert_valid(chunk_type)

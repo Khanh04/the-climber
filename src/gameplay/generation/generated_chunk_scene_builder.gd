@@ -91,6 +91,7 @@ func _build_handhold_body(handhold_socket: GeneratedHandholdSocket) -> Generated
         _meters_to_pixels(handhold_socket.local_position),
         _meters_to_pixels(handhold_socket.physical_size_meters),
         handhold_socket.stamina_drain_multiplier,
+        handhold_socket.visual_color,
         _handhold_group_name,
         _hold_collision_layer,
         _hold_collision_mask

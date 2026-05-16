@@ -29,6 +29,7 @@ const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/ge
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.gd")
+const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const AppSettingsSnapshotScript = preload("res://src/platform/storage/app_settings_snapshot.gd")
 const AppSettingsStorageScript = preload("res://src/platform/storage/app_settings_storage.gd")
@@ -541,12 +542,13 @@ func _configure_authored_handholds() -> void:
 		if handhold_node is GeneratedHandholdAdapterScript:
 			continue
 
+		var normal_definition: HandholdTypeDefinitionScript = generation_tuning.get_required_handhold_definition(HandholdTypeScript.Value.NORMAL)
 		handhold_node.set_meta(
 			&"stamina_drain_multiplier",
-			HandholdTypeScript.get_default_stamina_drain_multiplier(HandholdTypeScript.Value.NORMAL)
+			normal_definition.surface_profile.stamina_drain_multiplier
 		)
 		handhold_node.set_meta(&"handhold_type", HandholdTypeScript.to_label(HandholdTypeScript.Value.NORMAL))
-		handhold_node.set_meta(&"definition_id", String(HandholdTypeScript.get_default_definition_id(HandholdTypeScript.Value.NORMAL)))
+		handhold_node.set_meta(&"definition_id", String(normal_definition.definition_id))
 
 func _create_input_frame() -> PlayerInputFrameScript:
 	if _active_touch_contacts.size() > 0 or _mobile_input.has_held_grip_state():
@@ -659,6 +661,10 @@ func _require_handhold_drain_multiplier(handhold_node: Node2D) -> float:
 		var typed_handhold: GeneratedHandholdAdapterScript = handhold_node
 		return typed_handhold.stamina_drain_multiplier
 
+	if _is_authored_starter_handhold(handhold_node):
+		var normal_definition: HandholdTypeDefinitionScript = generation_tuning.get_required_handhold_definition(HandholdTypeScript.Value.NORMAL)
+		return normal_definition.surface_profile.stamina_drain_multiplier
+
 	Validation.require_condition(handhold_node.has_meta(&"stamina_drain_multiplier"), "RunScene handholds must provide a stamina drain multiplier.")
 	var raw_drain_multiplier: Variant = handhold_node.get_meta(&"stamina_drain_multiplier")
 	Validation.require_condition(
@@ -681,6 +687,9 @@ func _require_handhold_type(handhold_node: Node2D) -> int:
 		var typed_handhold: GeneratedHandholdAdapterScript = handhold_node
 		return typed_handhold.handhold_type
 
+	if _is_authored_starter_handhold(handhold_node):
+		return HandholdTypeScript.Value.NORMAL
+
 	Validation.require_condition(handhold_node.has_meta(&"handhold_type"), "RunScene handholds must provide a handhold type.")
 	var raw_handhold_type: Variant = handhold_node.get_meta(&"handhold_type")
 	Validation.require_condition(raw_handhold_type is String, "RunScene handhold type metadata must be a string label.")
@@ -688,6 +697,12 @@ func _require_handhold_type(handhold_node: Node2D) -> int:
 	var handhold_type: int = HandholdTypeScript.from_label(handhold_type_label)
 	HandholdTypeScript.assert_valid(handhold_type)
 	return handhold_type
+
+func _is_authored_starter_handhold(handhold_node: Node2D) -> bool:
+	Validation.require_condition(handhold_node != null, "RunScene requires a handhold node when checking starter-handhold ownership.")
+	return handhold_node is StaticBody2D \
+		and not handhold_node is GeneratedHandholdAdapterScript \
+		and handhold_node.get_parent() == _starter_handholds_root
 
 func _sync_aim_preview(input_frame: PlayerInputFrameScript) -> void:
 	if not input_frame.has_aim_intent():
@@ -1438,8 +1453,20 @@ func _find_rewarded_continue_hold_targets() -> Array[HandholdTargetScript]:
 	Validation.require_condition(best_left_hold != null, "RunScene rewarded continue requires a left rescue handhold.")
 	Validation.require_condition(best_right_hold != null, "RunScene rewarded continue requires a right rescue handhold.")
 	return [
-		HandholdTargetScript.new(best_left_hold.name, best_left_hold.global_position, best_left_hold.get_path()),
-		HandholdTargetScript.new(best_right_hold.name, best_right_hold.global_position, best_right_hold.get_path()),
+		HandholdTargetScript.new(
+			best_left_hold.name,
+			best_left_hold.global_position,
+			best_left_hold.get_path(),
+			_require_handhold_drain_multiplier(best_left_hold),
+			_require_handhold_type(best_left_hold)
+		),
+		HandholdTargetScript.new(
+			best_right_hold.name,
+			best_right_hold.global_position,
+			best_right_hold.get_path(),
+			_require_handhold_drain_multiplier(best_right_hold),
+			_require_handhold_type(best_right_hold)
+		),
 	]
 
 func _calculate_rewarded_continue_body_position(left_hold_target: HandholdTargetScript, right_hold_target: HandholdTargetScript) -> Vector2:

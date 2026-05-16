@@ -7,6 +7,7 @@ const DailyChunkGeneratorScript = preload("res://src/gameplay/generation/daily_c
 const GeneratedChunkLayoutScript = preload("res://src/gameplay/generation/generated_chunk_layout.gd")
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
+const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 
 func test_build_chunk_is_stable_for_same_seed_and_index() -> void:
@@ -111,14 +112,15 @@ func test_generated_handholds_resolve_type_specific_drain_and_size() -> void:
     var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 4))
 
     for handhold in layout.handholds:
-        assert_eq(handhold.definition_id, HandholdTypeScript.get_default_definition_id(handhold.handhold_type))
+        var definition: HandholdTypeDefinitionScript = tuning.get_required_handhold_definition(handhold.handhold_type)
+        assert_eq(handhold.definition_id, definition.definition_id)
         assert_eq(
             handhold.stamina_drain_multiplier,
-            HandholdTypeScript.get_default_stamina_drain_multiplier(handhold.handhold_type)
+            definition.surface_profile.stamina_drain_multiplier
         )
         assert_true(
             handhold.physical_size_meters.is_equal_approx(
-                HandholdTypeScript.get_default_physical_size_meters(handhold.handhold_type)
+                definition.physical_size_meters
             )
         )
 

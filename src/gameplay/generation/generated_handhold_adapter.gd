@@ -8,6 +8,7 @@ var definition_id: StringName = StringName()
 var handhold_type: int = HandholdTypeScript.Value.NORMAL
 var stamina_drain_multiplier: float = 1.0
 var body_size_pixels: Vector2 = Vector2.ZERO
+var visual_color: Color = Color.WHITE
 
 func configure_handhold(
 	hold_id_value: StringName,
@@ -16,6 +17,7 @@ func configure_handhold(
 	local_position_pixels_value: Vector2,
 	body_size_pixels_value: Vector2,
 	stamina_drain_multiplier_value: float,
+	visual_color_value: Color,
 	handhold_group_name_value: StringName = &"handhold",
 	collision_layer_value: int = 2,
 	collision_mask_value: int = 0
@@ -40,6 +42,7 @@ func configure_handhold(
 	handhold_type = handhold_type_value
 	stamina_drain_multiplier = stamina_drain_multiplier_value
 	body_size_pixels = body_size_pixels_value
+	visual_color = visual_color_value
 	position = local_position_pixels_value
 	collision_layer = collision_layer_value
 	collision_mask = collision_mask_value
@@ -86,7 +89,7 @@ func _ensure_presentation() -> void:
 		visual.name = &"Visual"
 		add_child(visual)
 
-	visual.color = HandholdTypeScript.get_default_color(handhold_type)
+	visual.color = visual_color
 	visual.polygon = _build_rectangle_polygon(body_size_pixels)
 
 func _build_rectangle_polygon(size_pixels: Vector2) -> PackedVector2Array:
