@@ -27,6 +27,7 @@ const GeneratedChunkSceneBuilderScript = preload("res://src/gameplay/generation/
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/generated_hazard_spawn_adapter.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
+const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_surface_profile.gd")
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
@@ -543,9 +544,10 @@ func _configure_authored_handholds() -> void:
 			continue
 
 		var normal_definition: HandholdTypeDefinitionScript = generation_tuning.get_required_handhold_definition(HandholdTypeScript.Value.NORMAL)
+		var normal_surface_profile: HandholdSurfaceProfileScript = normal_definition.surface_profile as HandholdSurfaceProfileScript
 		handhold_node.set_meta(
 			&"stamina_drain_multiplier",
-			normal_definition.surface_profile.stamina_drain_multiplier
+			normal_surface_profile.stamina_drain_multiplier
 		)
 		handhold_node.set_meta(&"handhold_type", HandholdTypeScript.to_label(HandholdTypeScript.Value.NORMAL))
 		handhold_node.set_meta(&"definition_id", String(normal_definition.definition_id))
@@ -663,7 +665,8 @@ func _require_handhold_drain_multiplier(handhold_node: Node2D) -> float:
 
 	if _is_authored_starter_handhold(handhold_node):
 		var normal_definition: HandholdTypeDefinitionScript = generation_tuning.get_required_handhold_definition(HandholdTypeScript.Value.NORMAL)
-		return normal_definition.surface_profile.stamina_drain_multiplier
+		var normal_surface_profile: HandholdSurfaceProfileScript = normal_definition.surface_profile as HandholdSurfaceProfileScript
+		return normal_surface_profile.stamina_drain_multiplier
 
 	Validation.require_condition(handhold_node.has_meta(&"stamina_drain_multiplier"), "RunScene handholds must provide a stamina drain multiplier.")
 	var raw_drain_multiplier: Variant = handhold_node.get_meta(&"stamina_drain_multiplier")
