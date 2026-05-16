@@ -14,7 +14,7 @@ const HandholdTypeDefinitionScript: GDScript = preload("res://resources/config/h
 const RouteRoleScript: GDScript = preload("res://src/gameplay/generation/route_role.gd")
 const RoutePathValidatorScript: GDScript = preload("res://src/gameplay/generation/route_path_validator.gd")
 
-func test_generated_opener_reports_missing_strict_static_path() -> void:
+func test_generated_opener_returns_strict_static_path() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
     var validator: RefCounted = _build_route_path_validator(1.20)
@@ -27,13 +27,10 @@ func test_generated_opener_reports_missing_strict_static_path() -> void:
         _default_entry_anchor_positions()
     )
 
-    assert_false(_require_bool_property(result, &"is_valid"))
-    assert_eq(_require_string_name_property(result, &"target_hold_id"), StringName(_get_top_hold_id(layout)))
-    assert_eq(
-        _require_string_property(result, &"failure_reason"),
-        "No path reaches a generated route exit hold within the configured move envelope."
-    )
-    assert_eq(_require_packed_string_array_property(result, &"path_hold_ids").size(), 0)
+    assert_true(_require_bool_property(result, &"is_valid"))
+    assert_true(layout.route_exit_hold_ids.has(String(_require_string_name_property(result, &"target_hold_id"))))
+    assert_eq(_require_string_property(result, &"failure_reason"), "")
+    assert_gt(_require_packed_string_array_property(result, &"path_hold_ids").size(), 0)
 
 func test_validator_rejects_layout_without_reachable_progression() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
