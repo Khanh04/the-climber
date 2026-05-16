@@ -309,6 +309,39 @@ aliases over a smaller ruleset.
 
 ### Route Graph And Validation
 
+- The generator rewrite uses a route-first model. Route intent is planned
+  before handhold geometry, and fixed lane-row templates are replaced by
+  typed route plans, layered anchor graphs, solved paths, support
+  population, deterministic hold-type assignment, and hazard-intent
+  placement.
+- Use five logical lanes for route planning: outer-left, inner-left,
+  center, inner-right, and outer-right. The center lane keeps beginner
+  safe routes readable, while outer lanes make optional traverses visibly
+  distinct.
+- Build each chunk from row roles rather than raw hold counts. MVP row
+  roles are support, decision, traverse, crux, pressure, catch, and
+  top-out. Easy chunks should preserve frequent support and catch rows;
+  challenge chunks may use longer sparse or pressure windows only when
+  recovery appears in the broader schedule.
+- Treat branchable chunks as two-route problems. A branchable plan must
+  include a mandatory safe path and a distinct optional path with explicit
+  split and merge rows, minimum branch separation, and minimum outer-lane
+  occupancy.
+- Horizontal branch quality is a first-class score. Optional paths should
+  earn score for sustained width and lateral movement, and lose score for
+  returning to the center before the merge row.
+- Assign hold types after path solving. `NORMAL` and `REST` support
+  beginner-safe and recovery roles; `BURN` adds stamina pressure on crux
+  or optional lines; `BREAK` is reserved for readable challenge pressure;
+  `BOOST` is a deliberate connector or fast-branch tool, not random
+  decoration.
+- Place hazards from typed route intent. Spike clusters deny or tax risky
+  and reward branches, wind gusts shape traverse timing, downdrafts add
+  challenge pressure, and updrafts provide recovery or connector relief.
+  Hazards must not block the only safe path.
+- Reject invalid candidates. A generated chunk must not fall back to an
+  invalid layout when safe-path, branch, seam, support, hazard, or
+  hold-type constraints fail.
 - Build the primary handhold path before placing rewards and hazards.
   Handhold placement should own route readability; pickup and hazard
   passes should react to route roles rather than redefine the path.
@@ -336,6 +369,8 @@ aliases over a smaller ruleset.
 - Add distribution tests across multiple dates and chunk ranges so
   weighted profile changes do not accidentally remove recovery chunks,
   overproduce hazards, or create repeated crux styles.
+- See [ADR 0006](adr/0006-route-first-generation-rewrite.md) for the
+  route-first rewrite decision, data model, and validation scope.
 
 ### Handhold Type Model
 
