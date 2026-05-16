@@ -78,6 +78,8 @@ func _apply_chunk_metadata(chunk_root: Node2D, layout: GeneratedChunkLayout) -> 
     chunk_root.set_meta(&"chunk_type", ChunkType.to_label(layout.chunk_type))
     chunk_root.set_meta(&"route_slot", ChunkRouteSlot.to_label(layout.route_slot))
     chunk_root.set_meta(&"difficulty_band", ChunkDifficultyBand.to_label(layout.difficulty_band))
+    chunk_root.set_meta(&"route_entry_hold_ids", layout.route_entry_hold_ids)
+    chunk_root.set_meta(&"route_exit_hold_ids", layout.route_exit_hold_ids)
 
     if layout.route_validation_result != null:
         var route_validation_result: RefCounted = layout.route_validation_result

@@ -31,10 +31,20 @@ func test_scene_builder_creates_chunk_root_with_metadata_and_scaled_position() -
     assert_eq(chunk_node.position, Vector2(0.0, -4800.0))
     assert_eq(seed_key, "generator_v1:2026-05-14")
     assert_eq(chunk_type_label, "ZIGZAG")
-    assert_eq(chunk_node.get_meta(&"route_validation_is_valid"), true)
+    var route_entry_hold_ids_meta: Variant = chunk_node.get_meta(&"route_entry_hold_ids")
+    var route_exit_hold_ids_meta: Variant = chunk_node.get_meta(&"route_exit_hold_ids")
+    assert_true(route_entry_hold_ids_meta is PackedStringArray)
+    assert_true(route_exit_hold_ids_meta is PackedStringArray)
+    var typed_route_entry_hold_ids: PackedStringArray = route_entry_hold_ids_meta
+    var typed_route_exit_hold_ids: PackedStringArray = route_exit_hold_ids_meta
+    var route_validation_is_valid: bool = _get_bool_meta(chunk_node, &"route_validation_is_valid")
+    var route_validation_path_length: int = _get_int_meta(chunk_node, &"route_validation_path_length")
+    assert_eq(typed_route_entry_hold_ids, PackedStringArray(["chunk_02_hold_00"]))
+    assert_eq(typed_route_exit_hold_ids, PackedStringArray(["chunk_02_hold_01"]))
+    assert_eq(route_validation_is_valid, true)
     assert_eq(_get_string_meta(chunk_node, &"route_validation_target_hold_id"), "chunk_02_hold_01")
     assert_eq(_get_string_meta(chunk_node, &"route_validation_failure_reason"), "")
-    assert_eq(chunk_node.get_meta(&"route_validation_path_length"), 2)
+    assert_eq(route_validation_path_length, 2)
     assert_not_null(chunk_node.get_node_or_null("Handholds"))
     assert_not_null(chunk_node.get_node_or_null("Pickups"))
     assert_not_null(chunk_node.get_node_or_null("Hazards"))
@@ -201,6 +211,8 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
         handholds,
         pickup_sockets,
         hazard_sockets,
+        PackedStringArray(["chunk_02_hold_00"]),
+        PackedStringArray(["chunk_02_hold_01"]),
         route_validation_result
     )
 
@@ -217,3 +229,21 @@ func _get_string_meta(node: Node, key: StringName) -> String:
 
     fail_test("Expected string-like metadata for %s." % String(key))
     return ""
+
+func _get_bool_meta(node: Node, key: StringName) -> bool:
+    var raw_value: Variant = node.get_meta(key)
+    if not raw_value is bool:
+        fail_test("Expected bool metadata for %s." % String(key))
+        return false
+
+    var typed_value: bool = raw_value
+    return typed_value
+
+func _get_int_meta(node: Node, key: StringName) -> int:
+    var raw_value: Variant = node.get_meta(key)
+    if not raw_value is int:
+        fail_test("Expected int metadata for %s." % String(key))
+        return 0
+
+    var typed_value: int = raw_value
+    return typed_value

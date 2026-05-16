@@ -30,7 +30,7 @@ func test_generated_opener_reports_missing_strict_static_path() -> void:
     assert_eq(_require_string_name_property(result, &"target_hold_id"), StringName(_get_top_hold_id(layout)))
     assert_eq(
         _require_string_property(result, &"failure_reason"),
-        "No path reaches the top-most generated handhold within the configured move envelope."
+        "No path reaches a generated route exit hold within the configured move envelope."
     )
     assert_eq(_require_packed_string_array_property(result, &"path_hold_ids").size(), 0)
 
@@ -53,7 +53,9 @@ func test_validator_rejects_layout_without_reachable_progression() -> void:
         0.0,
         handholds,
         pickup_sockets,
-        hazard_sockets
+        hazard_sockets,
+        PackedStringArray(["start"]),
+        PackedStringArray(["gap"])
     )
 
     var result: Object = _validate_layout(
@@ -65,7 +67,7 @@ func test_validator_rejects_layout_without_reachable_progression() -> void:
     assert_false(_require_bool_property(result, &"is_valid"))
     assert_eq(
         _require_string_property(result, &"failure_reason"),
-        "No path reaches the top-most generated handhold within the configured move envelope."
+        "No path reaches a generated route exit hold within the configured move envelope."
     )
     assert_eq(_require_packed_string_array_property(result, &"path_hold_ids").size(), 0)
     assert_eq(String(_require_string_name_property(result, &"target_hold_id")), "gap")
@@ -90,7 +92,9 @@ func test_validator_returns_path_hold_sequence_for_simple_layout() -> void:
         0.0,
         handholds,
         pickup_sockets,
-        hazard_sockets
+        hazard_sockets,
+        PackedStringArray(["first"]),
+        PackedStringArray(["top"])
     )
 
     var result: Object = _validate_layout(
@@ -155,7 +159,7 @@ func test_validator_rejects_unreachable_adjacent_chunk_seam() -> void:
     assert_false(_require_bool_property(seam_result, &"is_valid"))
     assert_eq(
         _require_string_property(seam_result, &"failure_reason"),
-        "No reachable seam connects the current chunk exit hold to the next chunk entry row within the configured move envelope."
+        "No reachable seam connects the current chunk exit ports to the next chunk entry ports within the configured move envelope."
     )
     assert_eq(_require_string_name_property(seam_result, &"from_hold_id"), StringName("current_top"))
     assert_eq(_require_string_name_property(seam_result, &"to_hold_id"), StringName("next_entry"))
@@ -289,10 +293,18 @@ func _build_handhold_socket(
 func _build_layout_fixture(
     chunk_index: int,
     start_height_meters: float,
-    handholds: Array[GeneratedHandholdSocket]
+    handholds: Array[GeneratedHandholdSocket],
+    route_entry_hold_ids: PackedStringArray = PackedStringArray(),
+    route_exit_hold_ids: PackedStringArray = PackedStringArray()
 ) -> GeneratedChunkLayoutScript:
     var pickup_sockets: Array[GeneratedPickupSocket] = []
     var hazard_sockets: Array[GeneratedHazardSocket] = []
+    var resolved_entry_hold_ids: PackedStringArray = route_entry_hold_ids
+    var resolved_exit_hold_ids: PackedStringArray = route_exit_hold_ids
+    if resolved_entry_hold_ids.size() == 0:
+        var _append_default_entry_result: bool = resolved_entry_hold_ids.append(String(handholds[0].hold_id))
+    if resolved_exit_hold_ids.size() == 0:
+        var _append_default_exit_result: bool = resolved_exit_hold_ids.append(String(handholds[handholds.size() - 1].hold_id))
     return GeneratedChunkLayoutScript.new(
         DailySeedKey.from_utc_date(2026, 5, 14),
         DailySeedKey.GENERATOR_VERSION,
@@ -303,7 +315,9 @@ func _build_layout_fixture(
         start_height_meters,
         handholds,
         pickup_sockets,
-        hazard_sockets
+        hazard_sockets,
+        resolved_entry_hold_ids,
+        resolved_exit_hold_ids
     )
 
 func _get_top_hold_id(layout: GeneratedChunkLayoutScript) -> String:

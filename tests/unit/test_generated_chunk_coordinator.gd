@@ -85,9 +85,39 @@ func test_reset_chunks_records_next_chunk_seam_metadata() -> void:
     assert_true(chunk_zero.has_meta(&"next_chunk_seam_is_valid"))
     assert_true(chunk_zero.has_meta(&"next_chunk_seam_target_chunk_index"))
     assert_true(chunk_zero.has_meta(&"next_chunk_seam_failure_reason"))
-    assert_eq(chunk_zero.get_meta(&"next_chunk_seam_is_valid"), false)
-    assert_eq(chunk_zero.get_meta(&"next_chunk_seam_target_chunk_index"), 1)
+    var next_chunk_seam_is_valid: bool = _get_bool_meta(chunk_zero, &"next_chunk_seam_is_valid")
+    var next_chunk_seam_target_chunk_index: int = _get_int_meta(chunk_zero, &"next_chunk_seam_target_chunk_index")
+    var next_chunk_seam_failure_reason: String = _get_string_meta(chunk_zero, &"next_chunk_seam_failure_reason")
+    assert_eq(next_chunk_seam_is_valid, false)
+    assert_eq(next_chunk_seam_target_chunk_index, 1)
     assert_eq(
-        chunk_zero.get_meta(&"next_chunk_seam_failure_reason"),
-        "No reachable seam connects the current chunk exit hold to the next chunk entry row within the configured move envelope."
+        next_chunk_seam_failure_reason,
+        "No reachable seam connects the current chunk exit ports to the next chunk entry ports within the configured move envelope."
     )
+
+func _get_bool_meta(node: Node, key: StringName) -> bool:
+    var raw_value: Variant = node.get_meta(key)
+    if not raw_value is bool:
+        fail_test("Expected bool metadata for %s." % String(key))
+        return false
+
+    var typed_value: bool = raw_value
+    return typed_value
+
+func _get_int_meta(node: Node, key: StringName) -> int:
+    var raw_value: Variant = node.get_meta(key)
+    if not raw_value is int:
+        fail_test("Expected int metadata for %s." % String(key))
+        return 0
+
+    var typed_value: int = raw_value
+    return typed_value
+
+func _get_string_meta(node: Node, key: StringName) -> String:
+    var raw_value: Variant = node.get_meta(key)
+    if not raw_value is String:
+        fail_test("Expected string metadata for %s." % String(key))
+        return ""
+
+    var typed_value: String = raw_value
+    return typed_value

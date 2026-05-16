@@ -14,6 +14,8 @@ const ROUTE_VALIDATION_MAX_MOVE_DISTANCE_METERS: float = 1.2
 var _tuning: GenerationTuning
 var _route_path_validator: RefCounted
 var _route_entry_anchor_positions: Array[Vector2]
+var _chunk_layout_cache: Dictionary
+var _chunk_seam_cache: Dictionary
 
 func _init(tuning_value: GenerationTuning) -> void:
 	Validation.require_condition(tuning_value != null, "DailyChunkGenerator requires generation tuning.")
@@ -21,6 +23,8 @@ func _init(tuning_value: GenerationTuning) -> void:
 	_tuning.assert_valid()
 	_route_path_validator = _build_route_path_validator(ROUTE_VALIDATION_MAX_MOVE_DISTANCE_METERS)
 	_route_entry_anchor_positions = [Vector2(-0.42, -0.24), Vector2(0.42, -0.24)]
+	_chunk_layout_cache = {}
+	_chunk_seam_cache = {}
 
 func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative.")
@@ -28,11 +32,35 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 		seed_key.begins_with(_tuning.generator_version + ":"),
         "DailyChunkGenerator seed key must match the configured generator version."
 	)
+	var cache_key: String = _get_chunk_cache_key(seed_key, chunk_index)
+	if _chunk_layout_cache.has(cache_key):
+		var cached_layout_variant: Variant = _chunk_layout_cache[cache_key]
+		Validation.require_condition(cached_layout_variant is GeneratedChunkLayout, "DailyChunkGenerator chunk cache must store GeneratedChunkLayout values.")
+		var cached_layout: GeneratedChunkLayout = cached_layout_variant
+		return cached_layout
+
+	var fallback_layout: GeneratedChunkLayout = null
+	for candidate_attempt_index in range(_tuning.route_validation_candidate_attempt_count):
+		var candidate_layout: GeneratedChunkLayout = _build_chunk_candidate(seed_key, chunk_index, candidate_attempt_index)
+		if fallback_layout == null:
+			fallback_layout = candidate_layout
+
+		var route_validation_result: RefCounted = candidate_layout.route_validation_result
+		if route_validation_result != null and _route_validation_result_is_valid(route_validation_result):
+			_chunk_layout_cache[cache_key] = candidate_layout
+			return candidate_layout
+
+	Validation.require_condition(fallback_layout != null, "DailyChunkGenerator must produce at least one chunk candidate.")
+	_chunk_layout_cache[cache_key] = fallback_layout
+	return fallback_layout
+
+func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attempt_index: int) -> GeneratedChunkLayout:
+	Validation.require_condition(candidate_attempt_index >= 0, "DailyChunkGenerator candidate attempt index cannot be negative.")
 
 	var start_height_meters: float = float(chunk_index) * _tuning.segment_height_meters
 	var difficulty_band: int = get_difficulty_band_for_height(start_height_meters)
 	var route_slot: int = get_route_slot_for_chunk(chunk_index, difficulty_band)
-	var chunk_rng: RandomNumberGenerator = _build_chunk_rng(seed_key, chunk_index)
+	var chunk_rng: RandomNumberGenerator = _build_chunk_rng(seed_key, chunk_index, candidate_attempt_index)
 	var chunk_type: int = _select_chunk_type(route_slot, difficulty_band, chunk_rng)
 	var risky_lane_side_sign: float = _get_risky_lane_side_sign(seed_key, chunk_index, chunk_type)
 	var handholds: Array[GeneratedHandholdSocket] = _build_handholds(chunk_index, chunk_type, route_slot, difficulty_band, chunk_rng)
@@ -52,6 +80,8 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 		handholds,
 		chunk_rng
 	)
+	var route_entry_hold_ids: PackedStringArray = _build_route_port_hold_ids(handholds, true)
+	var route_exit_hold_ids: PackedStringArray = _build_route_port_hold_ids(handholds, false)
 
 	var preliminary_layout: GeneratedChunkLayout = GeneratedChunkLayout.new(
 		seed_key,
@@ -63,7 +93,9 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 		start_height_meters,
 		handholds,
 		pickup_sockets,
-		hazard_sockets
+		hazard_sockets,
+		route_entry_hold_ids,
+		route_exit_hold_ids
 	)
 	var route_validation_result: RefCounted = _validate_generated_layout(preliminary_layout)
 
@@ -78,8 +110,33 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 		handholds,
 		pickup_sockets,
 		hazard_sockets,
+		route_entry_hold_ids,
+		route_exit_hold_ids,
 		route_validation_result
 	)
+
+func _route_validation_result_is_valid(route_validation_result: RefCounted) -> bool:
+	var raw_is_valid: Variant = route_validation_result.get("is_valid")
+	Validation.require_condition(raw_is_valid is bool, "DailyChunkGenerator route validation result must expose a bool is_valid property.")
+	var is_valid: bool = raw_is_valid
+	return is_valid
+
+func _build_route_port_hold_ids(handholds: Array[GeneratedHandholdSocket], select_entry_ports: bool) -> PackedStringArray:
+	Validation.require_condition(handholds.size() > 0, "DailyChunkGenerator route ports require at least one handhold.")
+	var target_row_y: float = handholds[0].local_position.y
+	for handhold in handholds:
+		if select_entry_ports:
+			target_row_y = maxf(target_row_y, handhold.local_position.y)
+		else:
+			target_row_y = minf(target_row_y, handhold.local_position.y)
+
+	var route_port_hold_ids: PackedStringArray = PackedStringArray()
+	for handhold in handholds:
+		if absf(handhold.local_position.y - target_row_y) <= _tuning.route_port_row_tolerance_meters:
+			var _append_route_port_result: bool = route_port_hold_ids.append(String(handhold.hold_id))
+
+	Validation.require_condition(route_port_hold_ids.size() > 0, "DailyChunkGenerator route ports cannot be empty.")
+	return route_port_hold_ids
 
 func _build_route_path_validator(max_move_distance_meters: float) -> RefCounted:
 	var validator_variant: Variant = RoutePathValidatorScript.new(max_move_distance_meters)
@@ -103,13 +160,26 @@ func validate_chunk_seam(current_layout: GeneratedChunkLayout, next_layout: Gene
 	Validation.require_condition(_route_path_validator != null, "DailyChunkGenerator route path validator must be initialized.")
 	current_layout.assert_valid()
 	next_layout.assert_valid()
+	var seam_cache_key: String = _get_chunk_seam_cache_key(current_layout, next_layout)
+	if _chunk_seam_cache.has(seam_cache_key):
+		var cached_seam_result_variant: Variant = _chunk_seam_cache[seam_cache_key]
+		Validation.require_condition(cached_seam_result_variant is RefCounted, "DailyChunkGenerator seam cache must store RefCounted values.")
+		var cached_seam_result: RefCounted = cached_seam_result_variant
+		return cached_seam_result
 	var seam_result_variant: Variant = _route_path_validator.call("validate_chunk_seam", current_layout, next_layout)
 	Validation.require_condition(
 		seam_result_variant is RefCounted,
 		"DailyChunkGenerator seam validation must return a RefCounted result."
 	)
 	var seam_result: RefCounted = seam_result_variant
+	_chunk_seam_cache[seam_cache_key] = seam_result
 	return seam_result
+
+func _get_chunk_cache_key(seed_key: String, chunk_index: int) -> String:
+	return "%s|%d" % [seed_key, chunk_index]
+
+func _get_chunk_seam_cache_key(current_layout: GeneratedChunkLayout, next_layout: GeneratedChunkLayout) -> String:
+	return "%s|%d|%d" % [current_layout.seed_key, current_layout.chunk_index, next_layout.chunk_index]
 
 func get_difficulty_band_for_chunk(chunk_index: int) -> int:
 	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when calculating a difficulty band.")
@@ -151,9 +221,12 @@ func get_route_slot_for_chunk(chunk_index: int, difficulty_band: int) -> int:
 			Validation.require_condition(false, "DailyChunkGenerator route slot sequencing produced an unsupported index.")
 			return ChunkRouteSlot.Value.BASELINE
 
-func _build_chunk_rng(seed_key: String, chunk_index: int) -> RandomNumberGenerator:
+func _build_chunk_rng(seed_key: String, chunk_index: int, candidate_attempt_index: int = 0) -> RandomNumberGenerator:
 	var chunk_rng: RandomNumberGenerator = RandomNumberGenerator.new()
+	Validation.require_condition(candidate_attempt_index >= 0, "DailyChunkGenerator candidate attempt index cannot be negative when building an RNG.")
 	var chunk_seed_key: String = "%s:chunk:%d" % [seed_key, chunk_index]
+	if candidate_attempt_index > 0:
+		chunk_seed_key = "%s:candidate:%d" % [chunk_seed_key, candidate_attempt_index]
 	var chunk_seed_hash: int = chunk_seed_key.hash()
 
 	if chunk_seed_hash < 0:

@@ -86,28 +86,51 @@ func _ensure_chunk(chunk_index: int) -> void:
 
     var layout: GeneratedChunkLayout = _generator.build_chunk(_seed_key, chunk_index)
     var chunk_node: Node2D = _builder.build_chunk_node(layout)
+    chunk_node.set_meta(&"generated_chunk_layout", layout)
     add_child(chunk_node)
     chunk_spawned.emit(chunk_node)
 
 func _refresh_chunk_seam_metadata(min_chunk_index: int, max_chunk_index: int) -> void:
-    var active_children: Array[Node] = get_children()
-    for chunk_node in active_children:
-        chunk_node.remove_meta(&"next_chunk_seam_is_valid")
-        chunk_node.remove_meta(&"next_chunk_seam_failure_reason")
-        chunk_node.remove_meta(&"next_chunk_seam_target_chunk_index")
-        chunk_node.remove_meta(&"next_chunk_seam_from_hold_id")
-        chunk_node.remove_meta(&"next_chunk_seam_to_hold_id")
-
-    for chunk_index in range(min_chunk_index, max_chunk_index):
+    for chunk_index in range(min_chunk_index, max_chunk_index + 1):
         var current_chunk_node: Node2D = get_chunk_node(chunk_index)
-        var next_chunk_node: Node2D = get_chunk_node(chunk_index + 1)
-        if current_chunk_node == null or next_chunk_node == null:
+        if current_chunk_node == null:
             continue
 
-        var current_layout: GeneratedChunkLayout = _generator.build_chunk(_seed_key, chunk_index)
-        var next_layout: GeneratedChunkLayout = _generator.build_chunk(_seed_key, chunk_index + 1)
+        var next_chunk_node: Node2D = get_chunk_node(chunk_index + 1)
+        if next_chunk_node == null:
+            _clear_chunk_seam_metadata(current_chunk_node)
+            continue
+
+        if _has_current_seam_metadata_for_target(current_chunk_node, chunk_index + 1):
+            continue
+
+        var current_layout: GeneratedChunkLayout = _get_required_generated_layout(current_chunk_node)
+        var next_layout: GeneratedChunkLayout = _get_required_generated_layout(next_chunk_node)
         var seam_result: RefCounted = _generator.validate_chunk_seam(current_layout, next_layout)
         _apply_chunk_seam_metadata(current_chunk_node, seam_result)
+
+func _clear_chunk_seam_metadata(chunk_node: Node2D) -> void:
+    chunk_node.remove_meta(&"next_chunk_seam_is_valid")
+    chunk_node.remove_meta(&"next_chunk_seam_failure_reason")
+    chunk_node.remove_meta(&"next_chunk_seam_target_chunk_index")
+    chunk_node.remove_meta(&"next_chunk_seam_from_hold_id")
+    chunk_node.remove_meta(&"next_chunk_seam_to_hold_id")
+
+func _has_current_seam_metadata_for_target(chunk_node: Node2D, target_chunk_index: int) -> bool:
+    if not chunk_node.has_meta(&"next_chunk_seam_target_chunk_index"):
+        return false
+
+    var raw_target_chunk_index: Variant = chunk_node.get_meta(&"next_chunk_seam_target_chunk_index")
+    Validation.require_condition(raw_target_chunk_index is int, "GeneratedChunkCoordinator seam target metadata must be an int.")
+    var typed_target_chunk_index: int = raw_target_chunk_index
+    return typed_target_chunk_index == target_chunk_index
+
+func _get_required_generated_layout(chunk_node: Node2D) -> GeneratedChunkLayout:
+    Validation.require_condition(chunk_node.has_meta(&"generated_chunk_layout"), "GeneratedChunkCoordinator chunk node requires generated layout metadata.")
+    var raw_layout: Variant = chunk_node.get_meta(&"generated_chunk_layout")
+    Validation.require_condition(raw_layout is GeneratedChunkLayout, "GeneratedChunkCoordinator generated layout metadata must be a GeneratedChunkLayout.")
+    var layout: GeneratedChunkLayout = raw_layout
+    return layout
 
 func _apply_chunk_seam_metadata(chunk_node: Node2D, seam_result: RefCounted) -> void:
     Validation.require_condition(seam_result != null, "GeneratedChunkCoordinator seam metadata requires a validation result.")

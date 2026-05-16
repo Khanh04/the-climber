@@ -8,6 +8,7 @@ const GeneratedChunkLayoutScript = preload("res://src/gameplay/generation/genera
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const GeneratedRouteValidationResultScript: GDScript = preload("res://src/gameplay/generation/generated_route_validation_result.gd")
 const HandholdAssignmentRuleScript = preload("res://resources/config/handhold_assignment_rule.gd")
+const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_surface_profile.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
 const HandholdRowZoneScript = preload("res://src/gameplay/generation/handhold_row_zone.gd")
@@ -22,6 +23,16 @@ func test_build_chunk_is_stable_for_same_seed_and_index() -> void:
     var second_layout: RefCounted = generator.build_chunk(seed_key, 4)
 
     assert_eq(_layout_signature(first_layout), _layout_signature(second_layout))
+
+func test_build_chunk_reuses_cached_layout_for_same_seed_and_index() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var first_layout: RefCounted = generator.build_chunk(seed_key, 4)
+    var second_layout: RefCounted = generator.build_chunk(seed_key, 4)
+
+    assert_eq(first_layout.get_instance_id(), second_layout.get_instance_id())
 
 func test_build_chunk_varies_for_different_dates() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -116,10 +127,11 @@ func test_generated_handholds_resolve_type_specific_drain_and_size() -> void:
 
     for handhold in layout.handholds:
         var definition: HandholdTypeDefinitionScript = tuning.get_required_handhold_definition(handhold.handhold_type)
+        var surface_profile: HandholdSurfaceProfileScript = definition.surface_profile as HandholdSurfaceProfileScript
         assert_eq(handhold.definition_id, definition.definition_id)
         assert_eq(
             handhold.stamina_drain_multiplier,
-            definition.surface_profile.stamina_drain_multiplier
+            surface_profile.stamina_drain_multiplier
         )
         assert_true(
             handhold.physical_size_meters.is_equal_approx(
@@ -152,7 +164,7 @@ func test_generated_chunks_include_route_validation_metadata() -> void:
     assert_false(_require_route_validation_bool(validation_result, &"is_valid"))
     assert_eq(
         _require_route_validation_string(validation_result, &"failure_reason"),
-        "No path reaches the top-most generated handhold within the configured move envelope."
+        "No path reaches a generated route exit hold within the configured move envelope."
     )
     assert_eq(
         _require_route_validation_string_name(validation_result, &"target_hold_id"),
@@ -172,8 +184,30 @@ func test_generated_adjacent_chunks_include_seam_validation_result() -> void:
     assert_eq(_require_route_validation_int(seam_result, &"next_chunk_index"), 1)
     assert_eq(
         _require_route_validation_string(seam_result, &"failure_reason"),
-        "No reachable seam connects the current chunk exit hold to the next chunk entry row within the configured move envelope."
+        "No reachable seam connects the current chunk exit ports to the next chunk entry ports within the configured move envelope."
     )
+
+func test_generated_chunks_include_explicit_route_ports() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var opener_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
+
+    assert_gt(opener_layout.route_entry_hold_ids.size(), 0)
+    assert_gt(opener_layout.route_exit_hold_ids.size(), 0)
+    assert_true(opener_layout.route_entry_hold_ids.has(String(opener_layout.handholds[0].hold_id)) or opener_layout.route_entry_hold_ids.size() > 0)
+
+func test_custom_route_validation_candidate_attempt_count_stays_deterministic() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    tuning.route_validation_candidate_attempt_count = 3
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var first_layout: RefCounted = generator.build_chunk(seed_key, 4)
+    var second_layout: RefCounted = generator.build_chunk(seed_key, 4)
+
+    assert_eq(_layout_signature(first_layout), _layout_signature(second_layout))
 
 func test_generated_chunk_respects_total_placeholder_socket_budget() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -374,6 +408,9 @@ func _layout_signature(layout: RefCounted) -> String:
                 _require_route_validation_path(route_validation_result).size(),
             ]
         )
+
+    var _append_entry_ports_result: bool = signature_parts.append("entry_ports:%s" % ",".join(typed_layout.route_entry_hold_ids))
+    var _append_exit_ports_result: bool = signature_parts.append("exit_ports:%s" % ",".join(typed_layout.route_exit_hold_ids))
 
     for handhold in typed_layout.handholds:
         var _append_handhold_result: bool = signature_parts.append(

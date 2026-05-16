@@ -4,8 +4,6 @@ extends RefCounted
 const GeneratedChunkSeamValidationResultScript: GDScript = preload("res://src/gameplay/generation/generated_chunk_seam_validation_result.gd")
 const GeneratedRouteValidationResultScript: GDScript = preload("res://src/gameplay/generation/generated_route_validation_result.gd")
 
-const ENTRY_ROW_TOLERANCE_METERS: float = 0.3
-
 var _max_move_distance_meters: float
 var _max_downward_move_meters: float
 
@@ -37,8 +35,8 @@ func validate_layout(
     )
 
     var handholds: Array[RefCounted] = _require_handholds(layout)
-    var target_index: int = _find_target_hold_index(handholds)
-    var target_hold: RefCounted = handholds[target_index]
+    var exit_port_hold_ids: PackedStringArray = _require_route_port_hold_ids(layout, &"route_exit_hold_ids")
+    var preferred_exit_hold: RefCounted = _find_highest_route_port_handhold(handholds, exit_port_hold_ids)
     var predecessors: PackedInt32Array = PackedInt32Array()
     var visited: Array[bool] = []
     var frontier: Array[int] = []
@@ -57,18 +55,19 @@ func validate_layout(
         return GeneratedRouteValidationResultScript.new(
             false,
             "No handhold is reachable from the provided entry anchors.",
-            _require_hold_id(target_hold),
+            _require_hold_id(preferred_exit_hold),
             PackedStringArray()
         )
 
     while not frontier.is_empty():
         var current_index: int = frontier.pop_front()
-        if current_index == target_index:
+        var current_hold_id: StringName = _require_hold_id(handholds[current_index])
+        if exit_port_hold_ids.has(String(current_hold_id)):
             return GeneratedRouteValidationResultScript.new(
                 true,
                 "",
-                _require_hold_id(target_hold),
-                _build_path_hold_ids(handholds, predecessors, target_index)
+                current_hold_id,
+                _build_path_hold_ids(handholds, predecessors, current_index)
             )
 
         var current_handhold: RefCounted = handholds[current_index]
@@ -86,8 +85,8 @@ func validate_layout(
 
     return GeneratedRouteValidationResultScript.new(
         false,
-        "No path reaches the top-most generated handhold within the configured move envelope.",
-        _require_hold_id(target_hold),
+        "No path reaches a generated route exit hold within the configured move envelope.",
+        _require_hold_id(preferred_exit_hold),
         PackedStringArray()
     )
 
@@ -108,40 +107,44 @@ func validate_chunk_seam(current_layout: RefCounted, next_layout: RefCounted) ->
 
     var current_handholds: Array[RefCounted] = _require_handholds(current_layout)
     var next_handholds: Array[RefCounted] = _require_handholds(next_layout)
-    var exit_hold: RefCounted = current_handholds[_find_target_hold_index(current_handholds)]
-    var next_entry_indices: PackedInt32Array = _find_entry_candidate_indices(next_handholds)
+    var current_exit_hold_ids: PackedStringArray = _require_route_port_hold_ids(current_layout, &"route_exit_hold_ids")
+    var next_entry_hold_ids: PackedStringArray = _require_route_port_hold_ids(next_layout, &"route_entry_hold_ids")
     var current_start_height_meters: float = _require_start_height_meters(current_layout)
     var next_start_height_meters: float = _require_start_height_meters(next_layout)
-    var exit_world_position: Vector2 = _to_world_position(current_start_height_meters, _require_local_position(exit_hold))
-    var closest_entry_hold: RefCounted = next_handholds[next_entry_indices[0]]
+    var exit_hold: RefCounted = _find_handhold_by_hold_id(current_handholds, current_exit_hold_ids[0])
+    var closest_entry_hold: RefCounted = _find_handhold_by_hold_id(next_handholds, next_entry_hold_ids[0])
     var closest_gap_distance: float = INF
 
-    for entry_index in next_entry_indices:
-        var entry_hold: RefCounted = next_handholds[entry_index]
-        var entry_world_position: Vector2 = _to_world_position(next_start_height_meters, _require_local_position(entry_hold))
-        var gap_distance: float = _measure_gap_distance(
-            exit_world_position,
-            _require_physical_size(exit_hold),
-            entry_world_position,
-            _require_physical_size(entry_hold)
-        )
-        if gap_distance < closest_gap_distance:
-            closest_gap_distance = gap_distance
-            closest_entry_hold = entry_hold
-
-        if gap_distance <= _max_move_distance_meters:
-            return GeneratedChunkSeamValidationResultScript.new(
-                true,
-                "",
-                current_chunk_index,
-                next_chunk_index,
-                _require_hold_id(exit_hold),
-                _require_hold_id(entry_hold)
+    for current_exit_hold_id in current_exit_hold_ids:
+        var current_exit_hold: RefCounted = _find_handhold_by_hold_id(current_handholds, current_exit_hold_id)
+        var exit_world_position: Vector2 = _to_world_position(current_start_height_meters, _require_local_position(current_exit_hold))
+        for next_entry_hold_id in next_entry_hold_ids:
+            var entry_hold: RefCounted = _find_handhold_by_hold_id(next_handholds, next_entry_hold_id)
+            var entry_world_position: Vector2 = _to_world_position(next_start_height_meters, _require_local_position(entry_hold))
+            var gap_distance: float = _measure_gap_distance(
+                exit_world_position,
+                _require_physical_size(current_exit_hold),
+                entry_world_position,
+                _require_physical_size(entry_hold)
             )
+            if gap_distance < closest_gap_distance:
+                closest_gap_distance = gap_distance
+                exit_hold = current_exit_hold
+                closest_entry_hold = entry_hold
+
+            if gap_distance <= _max_move_distance_meters:
+                return GeneratedChunkSeamValidationResultScript.new(
+                    true,
+                    "",
+                    current_chunk_index,
+                    next_chunk_index,
+                    _require_hold_id(current_exit_hold),
+                    _require_hold_id(entry_hold)
+                )
 
     return GeneratedChunkSeamValidationResultScript.new(
         false,
-        "No reachable seam connects the current chunk exit hold to the next chunk entry row within the configured move envelope.",
+        "No reachable seam connects the current chunk exit ports to the next chunk entry ports within the configured move envelope.",
         current_chunk_index,
         next_chunk_index,
         _require_hold_id(exit_hold),
@@ -164,34 +167,29 @@ func _require_handholds(layout: RefCounted) -> Array[RefCounted]:
 
     return handholds
 
-func _find_target_hold_index(handholds: Array[RefCounted]) -> int:
-    Validation.require_condition(handholds.size() > 0, "RoutePathValidator requires at least one handhold.")
-
-    var target_index: int = 0
-    var target_position: Vector2 = _require_local_position(handholds[0])
-    for handhold_index in range(1, handholds.size()):
-        var candidate_position: Vector2 = _require_local_position(handholds[handhold_index])
-        if candidate_position.y < target_position.y:
-            target_index = handhold_index
-            target_position = candidate_position
-
-    return target_index
-
-func _find_entry_candidate_indices(handholds: Array[RefCounted]) -> PackedInt32Array:
-    Validation.require_condition(handholds.size() > 0, "RoutePathValidator requires at least one entry candidate handhold.")
-
-    var lowest_entry_y: float = _require_local_position(handholds[0]).y
+func _find_handhold_by_hold_id(handholds: Array[RefCounted], hold_id_text: String) -> RefCounted:
+    Validation.require_condition(hold_id_text != "", "RoutePathValidator hold lookup requires a non-empty hold id.")
     for handhold in handholds:
-        lowest_entry_y = maxf(lowest_entry_y, _require_local_position(handhold).y)
+        if String(_require_hold_id(handhold)) == hold_id_text:
+            return handhold
 
-    var entry_indices: PackedInt32Array = PackedInt32Array()
-    for handhold_index in range(handholds.size()):
-        var handhold_y: float = _require_local_position(handholds[handhold_index]).y
-        if handhold_y >= lowest_entry_y - ENTRY_ROW_TOLERANCE_METERS:
-            var _append_entry_index_result: bool = entry_indices.append(handhold_index)
+    Validation.require_condition(false, "RoutePathValidator could not find the requested hold id in the layout.")
+    return null
 
-    Validation.require_condition(entry_indices.size() > 0, "RoutePathValidator requires at least one entry row candidate.")
-    return entry_indices
+func _find_highest_route_port_handhold(handholds: Array[RefCounted], route_port_hold_ids: PackedStringArray) -> RefCounted:
+    Validation.require_condition(route_port_hold_ids.size() > 0, "RoutePathValidator requires at least one route port hold id.")
+
+    var selected_handhold: RefCounted = _find_handhold_by_hold_id(handholds, route_port_hold_ids[0])
+    var selected_position: Vector2 = _require_local_position(selected_handhold)
+
+    for route_port_hold_id in route_port_hold_ids:
+        var candidate_handhold: RefCounted = _find_handhold_by_hold_id(handholds, route_port_hold_id)
+        var candidate_position: Vector2 = _require_local_position(candidate_handhold)
+        if candidate_position.y < selected_position.y:
+            selected_handhold = candidate_handhold
+            selected_position = candidate_position
+
+    return selected_handhold
 
 func _is_reachable_from_any_anchor(handhold: RefCounted, entry_anchor_positions: Array[Vector2]) -> bool:
     var handhold_position: Vector2 = _require_local_position(handhold)
@@ -295,3 +293,10 @@ func _require_chunk_index(layout: RefCounted, property_name: StringName) -> int:
     Validation.require_condition(raw_chunk_index is int, "RoutePathValidator layouts must expose an int chunk_index.")
     var chunk_index: int = raw_chunk_index
     return chunk_index
+
+func _require_route_port_hold_ids(layout: RefCounted, property_name: StringName) -> PackedStringArray:
+    var raw_hold_ids: Variant = layout.get(property_name)
+    Validation.require_condition(raw_hold_ids is PackedStringArray, "RoutePathValidator layouts must expose PackedStringArray route ports.")
+    var hold_ids: PackedStringArray = raw_hold_ids
+    Validation.require_condition(hold_ids.size() > 0, "RoutePathValidator route ports cannot be empty.")
+    return hold_ids

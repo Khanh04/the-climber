@@ -27,6 +27,8 @@ const DefaultHandholdAssignmentRuleCatalogResource = preload("res://resources/co
 @export var opener_horizontal_jitter_meters: float = 0.08
 ## Maximum vertical jitter applied to opener handholds after row placement.
 @export var opener_vertical_jitter_meters: float = 0.08
+## Vertical tolerance used when grouping handholds into generated route entry and exit ports.
+@export var route_port_row_tolerance_meters: float = 0.3
 ## Portion of each chunk's placeholder sockets reserved for pickups before hazards take the remainder.
 @export var pickup_socket_ratio: float = 0.6
 ## Maximum lateral meters a generated pickup can drift from its anchor handhold.
@@ -45,6 +47,8 @@ const DefaultHandholdAssignmentRuleCatalogResource = preload("res://resources/co
 @export var chunk_keep_behind_count: int = 1
 ## Total placeholder sockets per chunk before pickup and hazard splits are applied.
 @export var socket_count_per_chunk: int = 12
+## Number of deterministic candidate attempts allowed before the generator accepts the first invalid route layout.
+@export var route_validation_candidate_attempt_count: int = 1
 ## Typed handhold definitions keyed by HandholdType for generation and runtime setup.
 @export var handhold_definitions: Array[Resource] = _duplicate_default_handhold_definitions()
 ## Ordered handhold assignment rules matched by route slot, difficulty band, and row zone.
@@ -161,6 +165,7 @@ func is_valid() -> bool:
         and opener_first_row_height_meters + opener_top_padding_meters < segment_height_meters \
         and opener_horizontal_jitter_meters >= 0.0 \
         and opener_vertical_jitter_meters >= 0.0 \
+        and route_port_row_tolerance_meters >= 0.0 \
         and pickup_socket_ratio > 0.0 \
         and pickup_socket_ratio < 1.0 \
         and pickup_lateral_offset_meters >= 0.0 \
@@ -172,6 +177,7 @@ func is_valid() -> bool:
         and baseline_band_max_height_meters > easy_band_max_height_meters \
         and chunk_spawn_ahead_count >= 1 \
         and chunk_keep_behind_count >= 0 \
+        and route_validation_candidate_attempt_count >= 1 \
         and _handhold_definitions_are_valid() \
         and _handhold_assignment_rules_are_valid() \
         and socket_count_per_chunk > 0 \
@@ -207,6 +213,7 @@ func assert_valid() -> void:
     )
     Validation.require_condition(opener_horizontal_jitter_meters >= 0.0, "Generation opener horizontal jitter cannot be negative.")
     Validation.require_condition(opener_vertical_jitter_meters >= 0.0, "Generation opener vertical jitter cannot be negative.")
+    Validation.require_condition(route_port_row_tolerance_meters >= 0.0, "Generation route port row tolerance cannot be negative.")
     Validation.require_condition(pickup_socket_ratio > 0.0, "Generation pickup socket ratio must be positive.")
     Validation.require_condition(pickup_socket_ratio < 1.0, "Generation pickup socket ratio must leave room for hazards.")
     Validation.require_condition(pickup_lateral_offset_meters >= 0.0, "Generation pickup lateral offset cannot be negative.")
@@ -233,6 +240,7 @@ func assert_valid() -> void:
     )
     Validation.require_condition(chunk_spawn_ahead_count >= 1, "Generation config must keep at least one chunk ahead of the camera.")
     Validation.require_condition(chunk_keep_behind_count >= 0, "Generation config cannot keep a negative number of chunks behind the camera.")
+    Validation.require_condition(route_validation_candidate_attempt_count >= 1, "Generation config must allow at least one route validation candidate attempt.")
     _assert_valid_handhold_definitions()
     _assert_valid_handhold_assignment_rules()
     Validation.require_condition(socket_count_per_chunk > 0, "Generation config must provide at least one socket per chunk.")
