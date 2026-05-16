@@ -2,6 +2,8 @@ class_name DailyChunkGenerator
 extends RefCounted
 
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
+const HandholdLifecycleRuleScript = preload("res://resources/config/handhold_lifecycle_rule.gd")
+const HandholdMovementRuleScript = preload("res://resources/config/handhold_movement_rule.gd")
 const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_surface_profile.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
@@ -465,7 +467,7 @@ func _select_handhold_type(
         "DailyChunkGenerator handhold type selection lane entry index is out of bounds."
 	)
 
-	var allowed_handhold_types: Array[int] = _get_allowed_handhold_types_for_row(route_slot, difficulty_band, row_index, row_count)
+	var allowed_handhold_types: Array[int] = _tuning.get_allowed_handhold_types(route_slot, difficulty_band, row_index, row_count)
 	Validation.require_condition(
 		allowed_handhold_types.size() > 0,
         "DailyChunkGenerator handhold type selection requires at least one allowed handhold type."
@@ -485,56 +487,14 @@ func _select_handhold_type(
 	HandholdTypeScript.assert_valid(handhold_type)
 	return handhold_type
 
-func _get_allowed_handhold_types_for_row(route_slot: int, difficulty_band: int, row_index: int, row_count: int) -> Array[int]:
-	ChunkRouteSlot.assert_valid(route_slot)
-	ChunkDifficultyBand.assert_valid(difficulty_band)
-	Validation.require_condition(row_count > 0, "DailyChunkGenerator allowed handhold type selection requires at least one row.")
-	Validation.require_condition(row_index >= 0 and row_index < row_count, "DailyChunkGenerator allowed handhold type selection row index is out of bounds.")
-
-	var is_lower_row: bool = row_index <= 1
-	var is_upper_row: bool = row_index >= maxi(0, row_count - 2)
-
-	match route_slot:
-		ChunkRouteSlot.Value.OPENER:
-			if is_lower_row:
-				return [HandholdTypeScript.Value.REST, HandholdTypeScript.Value.NORMAL]
-			return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST]
-		ChunkRouteSlot.Value.BASELINE:
-			if difficulty_band == ChunkDifficultyBand.Value.EASY:
-				return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST]
-			if is_upper_row:
-				return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST, HandholdTypeScript.Value.BURN]
-			return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST]
-		ChunkRouteSlot.Value.SKILL:
-			if difficulty_band == ChunkDifficultyBand.Value.EASY:
-				return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN]
-			if is_upper_row:
-				return [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BOOST, HandholdTypeScript.Value.NORMAL]
-			return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BOOST]
-		ChunkRouteSlot.Value.RECOVERY:
-			return [HandholdTypeScript.Value.REST, HandholdTypeScript.Value.NORMAL]
-		ChunkRouteSlot.Value.RISK:
-			if difficulty_band == ChunkDifficultyBand.Value.EASY:
-				return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN]
-			if is_lower_row:
-				return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK]
-			if is_upper_row:
-				return [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK, HandholdTypeScript.Value.BOOST]
-			return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK]
-		ChunkRouteSlot.Value.PRESSURE:
-			if is_lower_row:
-				return [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK]
-			return [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK, HandholdTypeScript.Value.BOOST]
-		_:
-			Validation.require_condition(false, "DailyChunkGenerator requires a supported route slot for handhold type selection.")
-			return []
-
 func _build_handhold_socket(hold_id: StringName, local_position: Vector2, handhold_type: int) -> GeneratedHandholdSocket:
 	Validation.require_condition(not String(hold_id).is_empty(), "DailyChunkGenerator handhold socket creation requires a hold id.")
 	HandholdTypeScript.assert_valid(handhold_type)
 
 	var definition: HandholdTypeDefinitionScript = _tuning.get_required_handhold_definition(handhold_type)
 	var surface_profile: HandholdSurfaceProfileScript = definition.surface_profile as HandholdSurfaceProfileScript
+	var lifecycle_rule: HandholdLifecycleRuleScript = definition.lifecycle_rule as HandholdLifecycleRuleScript
+	var movement_rule: HandholdMovementRuleScript = definition.movement_rule as HandholdMovementRuleScript
 	return GeneratedHandholdSocket.new(
 		hold_id,
 		definition.definition_id,
@@ -542,7 +502,10 @@ func _build_handhold_socket(hold_id: StringName, local_position: Vector2, handho
 		handhold_type,
 		surface_profile.stamina_drain_multiplier,
 		definition.physical_size_meters,
-		definition.visual_color
+		definition.visual_color,
+		lifecycle_rule.break_after_attach_seconds,
+		lifecycle_rule.breaks_on_release,
+		movement_rule.release_impulse_vector
 	)
 
 func _get_risky_lane_side_sign(seed_key: String, chunk_index: int, chunk_type: int) -> float:

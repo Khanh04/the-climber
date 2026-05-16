@@ -6,8 +6,10 @@ const ChunkTypeScript = preload("res://src/gameplay/generation/chunk_type.gd")
 const DailyChunkGeneratorScript = preload("res://src/gameplay/generation/daily_chunk_generator.gd")
 const GeneratedChunkLayoutScript = preload("res://src/gameplay/generation/generated_chunk_layout.gd")
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
+const HandholdAssignmentRuleScript = preload("res://resources/config/handhold_assignment_rule.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
+const HandholdRowZoneScript = preload("res://src/gameplay/generation/handhold_row_zone.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 
 func test_build_chunk_is_stable_for_same_seed_and_index() -> void:
@@ -260,6 +262,25 @@ func test_challenge_pressure_chunks_assign_break_or_boost_handholds() -> void:
 
     assert_true(has_special_pressure_hold)
 
+func test_custom_handhold_assignment_rules_drive_generated_types() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    tuning.handhold_assignment_rules = [
+        _build_assignment_rule(
+            ChunkRouteSlotScript.Value.BASELINE,
+            false,
+            ChunkDifficultyBandScript.Value.EASY,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.BOOST]
+        ),
+    ]
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 1))
+
+    for handhold in layout.handholds:
+        assert_eq(handhold.handhold_type, HandholdTypeScript.Value.BOOST)
+
 func test_custom_tuning_changes_fork_branch_shape_and_socket_split() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     tuning.pickup_socket_ratio = 0.75
@@ -422,6 +443,21 @@ func _hazard_side_score(hazard_sockets: Array[GeneratedHazardSocket], lane_choic
             side_score += 1
 
     return side_score
+
+func _build_assignment_rule(
+    route_slot: int,
+    applies_to_all_difficulty_bands: bool,
+    difficulty_band: int,
+    row_zone: int,
+    allowed_handhold_types: Array[int]
+) -> HandholdAssignmentRuleScript:
+    var assignment_rule: HandholdAssignmentRuleScript = HandholdAssignmentRuleScript.new()
+    assignment_rule.route_slot = route_slot
+    assignment_rule.applies_to_all_difficulty_bands = applies_to_all_difficulty_bands
+    assignment_rule.difficulty_band = difficulty_band
+    assignment_rule.row_zone = row_zone
+    assignment_rule.allowed_handhold_types = allowed_handhold_types
+    return assignment_rule
 
 func _get_lane_choice_threshold(tuning: GenerationTuningScript) -> float:
     return (tuning.chunk_width_meters * 0.5 * tuning.inner_lane_position_ratio) * 0.5

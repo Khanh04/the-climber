@@ -1,10 +1,12 @@
 class_name GenerationTuning
 extends Resource
 
+const HandholdAssignmentRuleScript = preload("res://resources/config/handhold_assignment_rule.gd")
 const HandholdLifecycleRuleScript = preload("res://resources/config/handhold_lifecycle_rule.gd")
 const HandholdMovementRuleScript = preload("res://resources/config/handhold_movement_rule.gd")
 const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_surface_profile.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
+const HandholdRowZoneScript = preload("res://src/gameplay/generation/handhold_row_zone.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 
 ## Generator version prefix embedded into daily seed keys and chunk metadata.
@@ -45,6 +47,8 @@ const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.
 @export var socket_count_per_chunk: int = 12
 ## Typed handhold definitions keyed by HandholdType for generation and runtime setup.
 @export var handhold_definitions: Array[Resource] = _build_default_handhold_definitions()
+## Ordered handhold assignment rules matched by route slot, difficulty band, and row zone.
+@export var handhold_assignment_rules: Array[Resource] = _build_default_handhold_assignment_rules()
 ## Handhold rows for LADDER chunks; each row lists the lane indices spawned at one vertical step.
 @export var ladder_hold_rows: Array[PackedInt32Array] = [
     PackedInt32Array([1, 2]),
@@ -169,6 +173,7 @@ func is_valid() -> bool:
         and chunk_spawn_ahead_count >= 1 \
         and chunk_keep_behind_count >= 0 \
         and _handhold_definitions_are_valid() \
+        and _handhold_assignment_rules_are_valid() \
         and socket_count_per_chunk > 0 \
         and _hold_rows_are_valid(ladder_hold_rows) \
         and _hold_rows_are_valid(zigzag_hold_rows) \
@@ -229,6 +234,7 @@ func assert_valid() -> void:
     Validation.require_condition(chunk_spawn_ahead_count >= 1, "Generation config must keep at least one chunk ahead of the camera.")
     Validation.require_condition(chunk_keep_behind_count >= 0, "Generation config cannot keep a negative number of chunks behind the camera.")
     _assert_valid_handhold_definitions()
+    _assert_valid_handhold_assignment_rules()
     Validation.require_condition(socket_count_per_chunk > 0, "Generation config must provide at least one socket per chunk.")
     _assert_valid_hold_rows("LADDER", ladder_hold_rows)
     _assert_valid_hold_rows("ZIGZAG", zigzag_hold_rows)
@@ -258,6 +264,29 @@ func get_required_handhold_definition(handhold_type: int) -> HandholdTypeDefinit
 
     Validation.require_condition(false, "Generation config requires a handhold definition for %s." % HandholdTypeScript.to_label(handhold_type))
     return null
+
+func get_allowed_handhold_types(route_slot: int, difficulty_band: int, row_index: int, row_count: int) -> Array[int]:
+    ChunkRouteSlot.assert_valid(route_slot)
+    ChunkDifficultyBand.assert_valid(difficulty_band)
+    Validation.require_condition(row_count > 0, "Generation config handhold assignment requires at least one row.")
+    Validation.require_condition(row_index >= 0 and row_index < row_count, "Generation config handhold assignment row index is out of bounds.")
+    assert_valid()
+
+    for assignment_rule_resource in handhold_assignment_rules:
+        var typed_rule: HandholdAssignmentRuleScript = assignment_rule_resource as HandholdAssignmentRuleScript
+        if typed_rule.matches(route_slot, difficulty_band, row_index, row_count):
+            return typed_rule.get_allowed_handhold_types_copy()
+
+    Validation.require_condition(
+        false,
+        "Generation config requires a handhold assignment rule for %s / %s at row %d of %d." % [
+            ChunkRouteSlot.to_label(route_slot),
+            ChunkDifficultyBand.to_label(difficulty_band),
+            row_index,
+            row_count,
+        ]
+    )
+    return []
 
 func get_hold_rows(chunk_type: int) -> Array[PackedInt32Array]:
     ChunkType.assert_valid(chunk_type)
@@ -340,6 +369,20 @@ func _handhold_definitions_are_valid() -> bool:
 
     return true
 
+func _handhold_assignment_rules_are_valid() -> bool:
+    if handhold_assignment_rules.is_empty():
+        return false
+
+    for assignment_rule_resource in handhold_assignment_rules:
+        if assignment_rule_resource == null or not assignment_rule_resource is HandholdAssignmentRuleScript:
+            return false
+
+        var typed_rule: HandholdAssignmentRuleScript = assignment_rule_resource as HandholdAssignmentRuleScript
+        if not typed_rule.is_valid():
+            return false
+
+    return true
+
 func _assert_valid_handhold_definitions() -> void:
     Validation.require_condition(not handhold_definitions.is_empty(), "Generation config requires at least one handhold definition.")
 
@@ -369,6 +412,24 @@ func _assert_valid_handhold_definitions() -> void:
             seen_handhold_types.has(handhold_type),
             "Generation config requires a handhold definition for %s." % HandholdTypeScript.to_label(handhold_type)
         )
+
+func _assert_valid_handhold_assignment_rules() -> void:
+    Validation.require_condition(
+        not handhold_assignment_rules.is_empty(),
+        "Generation config requires at least one handhold assignment rule."
+    )
+
+    for assignment_rule_resource in handhold_assignment_rules:
+        Validation.require_condition(
+            assignment_rule_resource != null,
+            "Generation config handhold assignment rules cannot contain null entries."
+        )
+        Validation.require_condition(
+            assignment_rule_resource is HandholdAssignmentRuleScript,
+            "Generation config handhold assignment rules must use HandholdAssignmentRule resources."
+        )
+        var typed_rule: HandholdAssignmentRuleScript = assignment_rule_resource as HandholdAssignmentRuleScript
+        typed_rule.assert_valid()
 
 func _assert_valid_hold_rows(label: String, hold_rows: Array[PackedInt32Array]) -> void:
     Validation.require_condition(hold_rows.size() > 0, "Generation %s hold rows must not be empty." % label)
@@ -446,6 +507,164 @@ static func _build_default_handhold_definitions() -> Array[Resource]:
         ),
     ]
 
+static func _build_default_handhold_assignment_rules() -> Array[Resource]:
+    return [
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.OPENER,
+            true,
+            ChunkDifficultyBand.Value.EASY,
+            HandholdRowZoneScript.Value.LOWER,
+            [HandholdTypeScript.Value.REST, HandholdTypeScript.Value.NORMAL]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.OPENER,
+            true,
+            ChunkDifficultyBand.Value.EASY,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.BASELINE,
+            false,
+            ChunkDifficultyBand.Value.EASY,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.BASELINE,
+            false,
+            ChunkDifficultyBand.Value.BASELINE,
+            HandholdRowZoneScript.Value.UPPER,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST, HandholdTypeScript.Value.BURN]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.BASELINE,
+            false,
+            ChunkDifficultyBand.Value.BASELINE,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.BASELINE,
+            false,
+            ChunkDifficultyBand.Value.CHALLENGE,
+            HandholdRowZoneScript.Value.UPPER,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST, HandholdTypeScript.Value.BURN]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.BASELINE,
+            false,
+            ChunkDifficultyBand.Value.CHALLENGE,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.SKILL,
+            false,
+            ChunkDifficultyBand.Value.EASY,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.SKILL,
+            false,
+            ChunkDifficultyBand.Value.BASELINE,
+            HandholdRowZoneScript.Value.UPPER,
+            [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BOOST, HandholdTypeScript.Value.NORMAL]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.SKILL,
+            false,
+            ChunkDifficultyBand.Value.BASELINE,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BOOST]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.SKILL,
+            false,
+            ChunkDifficultyBand.Value.CHALLENGE,
+            HandholdRowZoneScript.Value.UPPER,
+            [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BOOST, HandholdTypeScript.Value.NORMAL]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.SKILL,
+            false,
+            ChunkDifficultyBand.Value.CHALLENGE,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BOOST]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.RECOVERY,
+            true,
+            ChunkDifficultyBand.Value.EASY,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.REST, HandholdTypeScript.Value.NORMAL]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.RISK,
+            false,
+            ChunkDifficultyBand.Value.EASY,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.RISK,
+            false,
+            ChunkDifficultyBand.Value.BASELINE,
+            HandholdRowZoneScript.Value.LOWER,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.RISK,
+            false,
+            ChunkDifficultyBand.Value.BASELINE,
+            HandholdRowZoneScript.Value.UPPER,
+            [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK, HandholdTypeScript.Value.BOOST]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.RISK,
+            false,
+            ChunkDifficultyBand.Value.BASELINE,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.RISK,
+            false,
+            ChunkDifficultyBand.Value.CHALLENGE,
+            HandholdRowZoneScript.Value.LOWER,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.RISK,
+            false,
+            ChunkDifficultyBand.Value.CHALLENGE,
+            HandholdRowZoneScript.Value.UPPER,
+            [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK, HandholdTypeScript.Value.BOOST]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.RISK,
+            false,
+            ChunkDifficultyBand.Value.CHALLENGE,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.PRESSURE,
+            false,
+            ChunkDifficultyBand.Value.CHALLENGE,
+            HandholdRowZoneScript.Value.LOWER,
+            [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK]
+        ),
+        _create_handhold_assignment_rule(
+            ChunkRouteSlot.Value.PRESSURE,
+            false,
+            ChunkDifficultyBand.Value.CHALLENGE,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BREAK, HandholdTypeScript.Value.BOOST]
+        ),
+    ]
+
 static func _create_handhold_definition(
     definition_id: StringName,
     handhold_type: int,
@@ -477,3 +696,18 @@ static func _create_handhold_definition(
     definition.lifecycle_rule = lifecycle_rule
     definition.movement_rule = movement_rule
     return definition
+
+static func _create_handhold_assignment_rule(
+    route_slot: int,
+    applies_to_all_difficulty_bands: bool,
+    difficulty_band: int,
+    row_zone: int,
+    allowed_handhold_types: Array[int]
+) -> HandholdAssignmentRuleScript:
+    var assignment_rule: HandholdAssignmentRuleScript = HandholdAssignmentRuleScript.new()
+    assignment_rule.route_slot = route_slot
+    assignment_rule.applies_to_all_difficulty_bands = applies_to_all_difficulty_bands
+    assignment_rule.difficulty_band = difficulty_band
+    assignment_rule.row_zone = row_zone
+    assignment_rule.allowed_handhold_types = allowed_handhold_types
+    return assignment_rule

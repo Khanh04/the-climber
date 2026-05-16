@@ -285,9 +285,26 @@ func _physics_process(delta: float) -> void:
 		_refresh_ui()
 		return
 
+	_advance_generated_handhold_lifecycle(delta)
+	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
+	var left_was_attached: bool = attachment_state.is_attached(HandSideScript.Value.LEFT)
+	var left_previous_hold_path: NodePath = NodePath()
+	if left_was_attached:
+		left_previous_hold_path = attachment_state.get_hold_path(HandSideScript.Value.LEFT)
+	var right_was_attached: bool = attachment_state.is_attached(HandSideScript.Value.RIGHT)
+	var right_previous_hold_path: NodePath = NodePath()
+	if right_was_attached:
+		right_previous_hold_path = attachment_state.get_hold_path(HandSideScript.Value.RIGHT)
+
 	var left_target: RefCounted = _find_nearest_handhold(_player.get_left_hand_anchor_global_position())
 	var right_target: RefCounted = _find_nearest_handhold(_player.get_right_hand_anchor_global_position())
 	var result: ClimbPrototypeFrameResultScript = _controller.apply_input_frame(input_frame, left_target, right_target, delta)
+	_resolve_generated_handhold_attachment_changes(
+		left_was_attached,
+		left_previous_hold_path,
+		right_was_attached,
+		right_previous_hold_path
+	)
 
 	_player.apply_frame_motion(result, _controller.get_attachment_state())
 	_sync_aim_preview(input_frame)
@@ -300,6 +317,95 @@ func _physics_process(delta: float) -> void:
 		_trigger_haptic_feedback(HapticFeedbackTypeScript.Value.WARNING)
 
 	_refresh_ui()
+
+func _advance_generated_handhold_lifecycle(delta_seconds: float) -> void:
+	Validation.require_condition(delta_seconds >= 0.0, "RunScene generated handhold lifecycle advance cannot use a negative delta.")
+	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
+	if attachment_state.is_attached(HandSideScript.Value.LEFT):
+		var left_hold_path: NodePath = attachment_state.get_hold_path(HandSideScript.Value.LEFT)
+		_advance_generated_handhold_lifecycle_for_path(left_hold_path, delta_seconds)
+
+	if attachment_state.is_attached(HandSideScript.Value.RIGHT):
+		var right_hold_path: NodePath = attachment_state.get_hold_path(HandSideScript.Value.RIGHT)
+		if right_hold_path != attachment_state.get_hold_path(HandSideScript.Value.LEFT) or not attachment_state.is_attached(HandSideScript.Value.LEFT):
+			_advance_generated_handhold_lifecycle_for_path(right_hold_path, delta_seconds)
+
+func _advance_generated_handhold_lifecycle_for_path(hold_path: NodePath, delta_seconds: float) -> void:
+	var generated_handhold: GeneratedHandholdAdapterScript = _get_generated_handhold_adapter(hold_path)
+	if generated_handhold == null:
+		return
+
+	var broke_now: bool = generated_handhold.advance_attached_lifecycle(delta_seconds)
+	if not broke_now:
+		return
+
+	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
+	if attachment_state.is_attached(HandSideScript.Value.LEFT) and attachment_state.get_hold_path(HandSideScript.Value.LEFT) == hold_path:
+		attachment_state.release(HandSideScript.Value.LEFT)
+
+	if attachment_state.is_attached(HandSideScript.Value.RIGHT) and attachment_state.get_hold_path(HandSideScript.Value.RIGHT) == hold_path:
+		attachment_state.release(HandSideScript.Value.RIGHT)
+
+func _resolve_generated_handhold_attachment_changes(
+	left_was_attached: bool,
+	left_previous_hold_path: NodePath,
+	right_was_attached: bool,
+	right_previous_hold_path: NodePath
+) -> void:
+	_resolve_generated_handhold_attachment_change_for_hand(
+		HandSideScript.Value.LEFT,
+		left_was_attached,
+		left_previous_hold_path
+	)
+	_resolve_generated_handhold_attachment_change_for_hand(
+		HandSideScript.Value.RIGHT,
+		right_was_attached,
+		right_previous_hold_path
+	)
+
+func _resolve_generated_handhold_attachment_change_for_hand(
+	hand_side: int,
+	was_attached: bool,
+	previous_hold_path: NodePath
+) -> void:
+	HandSideScript.assert_valid(hand_side)
+	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
+	var is_attached_now: bool = attachment_state.is_attached(hand_side)
+	var current_hold_path: NodePath = NodePath()
+	if is_attached_now:
+		current_hold_path = attachment_state.get_hold_path(hand_side)
+
+	if was_attached and (not is_attached_now or current_hold_path != previous_hold_path):
+		_notify_generated_handhold_released(previous_hold_path)
+
+	if is_attached_now and (not was_attached or current_hold_path != previous_hold_path):
+		_notify_generated_handhold_attached(current_hold_path)
+
+func _notify_generated_handhold_attached(hold_path: NodePath) -> void:
+	var generated_handhold: GeneratedHandholdAdapterScript = _get_generated_handhold_adapter(hold_path)
+	if generated_handhold == null:
+		return
+
+	generated_handhold.notify_hand_attached()
+
+func _notify_generated_handhold_released(hold_path: NodePath) -> void:
+	var generated_handhold: GeneratedHandholdAdapterScript = _get_generated_handhold_adapter(hold_path)
+	if generated_handhold == null or generated_handhold.is_broken():
+		return
+
+	var release_impulse_pixels: Vector2 = generated_handhold.notify_hand_released()
+	if release_impulse_pixels != Vector2.ZERO:
+		_player.set_body_linear_velocity(_player.get_body_linear_velocity() + release_impulse_pixels)
+
+func _get_generated_handhold_adapter(hold_path: NodePath) -> GeneratedHandholdAdapterScript:
+	if hold_path.is_empty():
+		return null
+
+	var hold_node: Node = get_node_or_null(hold_path)
+	if hold_node == null or not hold_node is GeneratedHandholdAdapterScript:
+		return null
+
+	return hold_node as GeneratedHandholdAdapterScript
 
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"pause_menu"):
@@ -1399,6 +1505,8 @@ func _restore_rewarded_continue() -> void:
 	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
 	attachment_state.attach(HandSideScript.Value.LEFT, left_hold_target.hold_id, left_hold_target.attach_position, left_hold_target.hold_path)
 	attachment_state.attach(HandSideScript.Value.RIGHT, right_hold_target.hold_id, right_hold_target.attach_position, right_hold_target.hold_path)
+	_notify_generated_handhold_attached(left_hold_target.hold_path)
+	_notify_generated_handhold_attached(right_hold_target.hold_path)
 	_player.sync_runtime_grip_joints(attachment_state)
 	_player.sync_runtime_grip_links(attachment_state)
 	_camera.global_position = Vector2(

@@ -4,6 +4,7 @@ const EconomyTuningScript = preload("res://resources/config/economy_tuning.gd")
 const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
 const RewardedAdsTuningScript = preload("res://resources/config/rewarded_ads_tuning.gd")
 const ChaserThemeCatalogScript = preload("res://resources/config/chaser_theme_catalog.gd")
+const HandholdAssignmentRuleScript = preload("res://resources/config/handhold_assignment_rule.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 const ChaserThemeScript = preload("res://resources/config/chaser_theme.gd")
 const ChaserTuningScript = preload("res://resources/config/chaser_tuning.gd")
@@ -11,6 +12,10 @@ const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_
 const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
 const CosmeticsTuningScript = preload("res://resources/config/cosmetics_tuning.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
+const ChunkDifficultyBandScript = preload("res://src/gameplay/generation/chunk_difficulty_band.gd")
+const ChunkRouteSlotScript = preload("res://src/gameplay/generation/chunk_route_slot.gd")
+const HandholdRowZoneScript = preload("res://src/gameplay/generation/handhold_row_zone.gd")
+const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 
 func test_default_economy_tuning_is_valid() -> void:
     var tuning = EconomyTuningScript.new()
@@ -62,6 +67,49 @@ func test_invalid_generation_tuning_is_detected() -> void:
     tuning.generator_version = ""
 
     assert_false(tuning.is_valid())
+
+func test_generation_tuning_rejects_empty_handhold_assignment_rules() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    tuning.handhold_assignment_rules = []
+
+    assert_false(tuning.is_valid())
+
+func test_generation_tuning_matches_ordered_row_zone_assignment_rules() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    tuning.handhold_assignment_rules = [
+        _build_assignment_rule(
+            ChunkRouteSlotScript.Value.OPENER,
+            true,
+            ChunkDifficultyBandScript.Value.EASY,
+            HandholdRowZoneScript.Value.LOWER,
+            [HandholdTypeScript.Value.REST]
+        ),
+        _build_assignment_rule(
+            ChunkRouteSlotScript.Value.OPENER,
+            true,
+            ChunkDifficultyBandScript.Value.EASY,
+            HandholdRowZoneScript.Value.ANY,
+            [HandholdTypeScript.Value.NORMAL]
+        ),
+    ]
+
+    var lower_row_types: Array[int] = tuning.get_allowed_handhold_types(
+        ChunkRouteSlotScript.Value.OPENER,
+        ChunkDifficultyBandScript.Value.EASY,
+        0,
+        1
+    )
+    var upper_row_types: Array[int] = tuning.get_allowed_handhold_types(
+        ChunkRouteSlotScript.Value.OPENER,
+        ChunkDifficultyBandScript.Value.EASY,
+        3,
+        5
+    )
+
+    assert_eq(lower_row_types.size(), 1)
+    assert_eq(lower_row_types[0], HandholdTypeScript.Value.REST)
+    assert_eq(upper_row_types.size(), 1)
+    assert_eq(upper_row_types[0], HandholdTypeScript.Value.NORMAL)
 
 func test_generation_tuning_rejects_non_positive_chunk_width() -> void:
     var tuning = GenerationTuningScript.new()
@@ -232,3 +280,18 @@ func test_invalid_climb_prototype_tuning_is_detected() -> void:
     tuning.grip_velocity_damping = 1.5
 
     assert_false(tuning.is_valid())
+
+func _build_assignment_rule(
+    route_slot: int,
+    applies_to_all_difficulty_bands: bool,
+    difficulty_band: int,
+    row_zone: int,
+    allowed_handhold_types: Array[int]
+) -> HandholdAssignmentRuleScript:
+    var assignment_rule: HandholdAssignmentRuleScript = HandholdAssignmentRuleScript.new()
+    assignment_rule.route_slot = route_slot
+    assignment_rule.applies_to_all_difficulty_bands = applies_to_all_difficulty_bands
+    assignment_rule.difficulty_band = difficulty_band
+    assignment_rule.row_zone = row_zone
+    assignment_rule.allowed_handhold_types = allowed_handhold_types
+    return assignment_rule

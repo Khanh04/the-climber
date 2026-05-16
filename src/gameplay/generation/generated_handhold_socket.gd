@@ -10,6 +10,9 @@ var handhold_type: int
 var physical_size_meters: Vector2
 var stamina_drain_multiplier: float
 var visual_color: Color
+var break_after_attach_seconds: float
+var breaks_on_release: bool
+var release_impulse_vector_pixels: Vector2
 
 func _init(
 	hold_id_value: StringName,
@@ -18,7 +21,10 @@ func _init(
     handhold_type_value: int,
     stamina_drain_multiplier_value: float,
     physical_size_meters_value: Vector2,
-    visual_color_value: Color
+    visual_color_value: Color,
+    break_after_attach_seconds_value: float,
+    breaks_on_release_value: bool,
+    release_impulse_vector_pixels_value: Vector2
 ) -> void:
     hold_id = hold_id_value
     definition_id = definition_id_value
@@ -27,6 +33,9 @@ func _init(
     stamina_drain_multiplier = stamina_drain_multiplier_value
     physical_size_meters = physical_size_meters_value
     visual_color = visual_color_value
+    break_after_attach_seconds = break_after_attach_seconds_value
+    breaks_on_release = breaks_on_release_value
+    release_impulse_vector_pixels = release_impulse_vector_pixels_value
     assert_valid()
 
 func assert_valid() -> void:
@@ -38,3 +47,7 @@ func assert_valid() -> void:
         "GeneratedHandholdSocket physical size must be positive."
     )
     Validation.require_condition(stamina_drain_multiplier > 0.0, "GeneratedHandholdSocket stamina drain multiplier must be positive.")
+    Validation.require_condition(
+        break_after_attach_seconds >= 0.0,
+        "GeneratedHandholdSocket break-after-attach seconds cannot be negative."
+    )

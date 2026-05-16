@@ -149,7 +149,10 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
             HandholdTypeScript.Value.REST,
             rest_surface_profile.stamina_drain_multiplier,
             rest_definition.physical_size_meters,
-            rest_definition.visual_color
+            rest_definition.visual_color,
+            0.0,
+            false,
+            Vector2.ZERO
         ),
         GeneratedHandholdSocketScript.new(
             &"chunk_02_hold_01",
@@ -158,7 +161,10 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
             HandholdTypeScript.Value.BURN,
             burn_surface_profile.stamina_drain_multiplier,
             burn_definition.physical_size_meters,
-            burn_definition.visual_color
+            burn_definition.visual_color,
+            0.0,
+            false,
+            Vector2.ZERO
         ),
     ]
     var pickup_sockets: Array[GeneratedPickupSocketScript] = [
