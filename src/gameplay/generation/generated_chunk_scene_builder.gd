@@ -79,6 +79,40 @@ func _apply_chunk_metadata(chunk_root: Node2D, layout: GeneratedChunkLayout) -> 
     chunk_root.set_meta(&"route_slot", ChunkRouteSlot.to_label(layout.route_slot))
     chunk_root.set_meta(&"difficulty_band", ChunkDifficultyBand.to_label(layout.difficulty_band))
 
+    if layout.route_validation_result != null:
+        var route_validation_result: RefCounted = layout.route_validation_result
+        chunk_root.set_meta(&"route_validation_is_valid", _get_required_bool_property(route_validation_result, &"is_valid"))
+        chunk_root.set_meta(&"route_validation_target_hold_id", _get_required_string_name_property(route_validation_result, &"target_hold_id"))
+        chunk_root.set_meta(&"route_validation_failure_reason", _get_required_string_property(route_validation_result, &"failure_reason"))
+        chunk_root.set_meta(
+            &"route_validation_path_length",
+            _get_required_packed_string_array_property(route_validation_result, &"path_hold_ids").size()
+        )
+
+func _get_required_bool_property(source: Object, property_name: StringName) -> bool:
+    var raw_value: Variant = source.get(property_name)
+    Validation.require_condition(raw_value is bool, "GeneratedChunkSceneBuilder expected a bool property on route validation result.")
+    var typed_value: bool = raw_value
+    return typed_value
+
+func _get_required_string_property(source: Object, property_name: StringName) -> String:
+    var raw_value: Variant = source.get(property_name)
+    Validation.require_condition(raw_value is String, "GeneratedChunkSceneBuilder expected a String property on route validation result.")
+    var typed_value: String = raw_value
+    return typed_value
+
+func _get_required_string_name_property(source: Object, property_name: StringName) -> StringName:
+    var raw_value: Variant = source.get(property_name)
+    Validation.require_condition(raw_value is StringName, "GeneratedChunkSceneBuilder expected a StringName property on route validation result.")
+    var typed_value: StringName = raw_value
+    return typed_value
+
+func _get_required_packed_string_array_property(source: Object, property_name: StringName) -> PackedStringArray:
+    var raw_value: Variant = source.get(property_name)
+    Validation.require_condition(raw_value is PackedStringArray, "GeneratedChunkSceneBuilder expected a PackedStringArray property on route validation result.")
+    var typed_value: PackedStringArray = raw_value
+    return typed_value
+
 func _build_handhold_body(handhold_socket: GeneratedHandholdSocket) -> GeneratedHandholdAdapterScript:
     handhold_socket.assert_valid()
 

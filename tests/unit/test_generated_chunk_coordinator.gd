@@ -62,3 +62,32 @@ func test_sync_chunks_prunes_old_window_but_keeps_retained_chunk_paths() -> void
     assert_null(coordinator.get_chunk_node(1))
     assert_not_null(coordinator.get_chunk_node(min_chunk_index))
     assert_not_null(coordinator.get_chunk_node(max_chunk_index))
+
+func test_reset_chunks_records_next_chunk_seam_metadata() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var coordinator: GeneratedChunkCoordinatorScript = GeneratedChunkCoordinatorScript.new()
+    add_child_autofree(coordinator)
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(100.0)
+
+    coordinator.configure(
+        tuning,
+        generator,
+        builder,
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        Vector2(540.0, 240.0),
+        12.0
+    )
+    coordinator.reset_chunks()
+
+    var chunk_zero: Node2D = coordinator.get_chunk_node(0)
+    assert_not_null(chunk_zero)
+    assert_true(chunk_zero.has_meta(&"next_chunk_seam_is_valid"))
+    assert_true(chunk_zero.has_meta(&"next_chunk_seam_target_chunk_index"))
+    assert_true(chunk_zero.has_meta(&"next_chunk_seam_failure_reason"))
+    assert_eq(chunk_zero.get_meta(&"next_chunk_seam_is_valid"), false)
+    assert_eq(chunk_zero.get_meta(&"next_chunk_seam_target_chunk_index"), 1)
+    assert_eq(
+        chunk_zero.get_meta(&"next_chunk_seam_failure_reason"),
+        "No reachable seam connects the current chunk exit hold to the next chunk entry row within the configured move envelope."
+    )

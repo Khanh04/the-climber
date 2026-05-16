@@ -1,7 +1,10 @@
 class_name RoutePathValidator
 extends RefCounted
 
+const GeneratedChunkSeamValidationResultScript: GDScript = preload("res://src/gameplay/generation/generated_chunk_seam_validation_result.gd")
 const GeneratedRouteValidationResultScript: GDScript = preload("res://src/gameplay/generation/generated_route_validation_result.gd")
+
+const ENTRY_ROW_TOLERANCE_METERS: float = 0.3
 
 var _max_move_distance_meters: float
 var _max_downward_move_meters: float
@@ -88,6 +91,63 @@ func validate_layout(
         PackedStringArray()
     )
 
+func validate_chunk_seam(current_layout: RefCounted, next_layout: RefCounted) -> RefCounted:
+    Validation.require_condition(current_layout != null, "RoutePathValidator current layout cannot be null.")
+    Validation.require_condition(next_layout != null, "RoutePathValidator next layout cannot be null.")
+    Validation.require_condition(current_layout.has_method("assert_valid"), "RoutePathValidator current layout must expose assert_valid().")
+    Validation.require_condition(next_layout.has_method("assert_valid"), "RoutePathValidator next layout must expose assert_valid().")
+    current_layout.call("assert_valid")
+    next_layout.call("assert_valid")
+
+    var current_chunk_index: int = _require_chunk_index(current_layout, &"chunk_index")
+    var next_chunk_index: int = _require_chunk_index(next_layout, &"chunk_index")
+    Validation.require_condition(
+        next_chunk_index == current_chunk_index + 1,
+        "RoutePathValidator seam validation requires adjacent chunk indices."
+    )
+
+    var current_handholds: Array[RefCounted] = _require_handholds(current_layout)
+    var next_handholds: Array[RefCounted] = _require_handholds(next_layout)
+    var exit_hold: RefCounted = current_handholds[_find_target_hold_index(current_handholds)]
+    var next_entry_indices: PackedInt32Array = _find_entry_candidate_indices(next_handholds)
+    var current_start_height_meters: float = _require_start_height_meters(current_layout)
+    var next_start_height_meters: float = _require_start_height_meters(next_layout)
+    var exit_world_position: Vector2 = _to_world_position(current_start_height_meters, _require_local_position(exit_hold))
+    var closest_entry_hold: RefCounted = next_handholds[next_entry_indices[0]]
+    var closest_gap_distance: float = INF
+
+    for entry_index in next_entry_indices:
+        var entry_hold: RefCounted = next_handholds[entry_index]
+        var entry_world_position: Vector2 = _to_world_position(next_start_height_meters, _require_local_position(entry_hold))
+        var gap_distance: float = _measure_gap_distance(
+            exit_world_position,
+            _require_physical_size(exit_hold),
+            entry_world_position,
+            _require_physical_size(entry_hold)
+        )
+        if gap_distance < closest_gap_distance:
+            closest_gap_distance = gap_distance
+            closest_entry_hold = entry_hold
+
+        if gap_distance <= _max_move_distance_meters:
+            return GeneratedChunkSeamValidationResultScript.new(
+                true,
+                "",
+                current_chunk_index,
+                next_chunk_index,
+                _require_hold_id(exit_hold),
+                _require_hold_id(entry_hold)
+            )
+
+    return GeneratedChunkSeamValidationResultScript.new(
+        false,
+        "No reachable seam connects the current chunk exit hold to the next chunk entry row within the configured move envelope.",
+        current_chunk_index,
+        next_chunk_index,
+        _require_hold_id(exit_hold),
+        _require_hold_id(closest_entry_hold)
+    )
+
 func _require_handholds(layout: RefCounted) -> Array[RefCounted]:
     var raw_handholds: Variant = layout.get("handholds")
     Validation.require_condition(raw_handholds is Array, "RoutePathValidator layout handholds must be an Array.")
@@ -116,6 +176,22 @@ func _find_target_hold_index(handholds: Array[RefCounted]) -> int:
             target_position = candidate_position
 
     return target_index
+
+func _find_entry_candidate_indices(handholds: Array[RefCounted]) -> PackedInt32Array:
+    Validation.require_condition(handholds.size() > 0, "RoutePathValidator requires at least one entry candidate handhold.")
+
+    var lowest_entry_y: float = _require_local_position(handholds[0]).y
+    for handhold in handholds:
+        lowest_entry_y = maxf(lowest_entry_y, _require_local_position(handhold).y)
+
+    var entry_indices: PackedInt32Array = PackedInt32Array()
+    for handhold_index in range(handholds.size()):
+        var handhold_y: float = _require_local_position(handholds[handhold_index]).y
+        if handhold_y >= lowest_entry_y - ENTRY_ROW_TOLERANCE_METERS:
+            var _append_entry_index_result: bool = entry_indices.append(handhold_index)
+
+    Validation.require_condition(entry_indices.size() > 0, "RoutePathValidator requires at least one entry row candidate.")
+    return entry_indices
 
 func _is_reachable_from_any_anchor(handhold: RefCounted, entry_anchor_positions: Array[Vector2]) -> bool:
     var handhold_position: Vector2 = _require_local_position(handhold)
@@ -204,3 +280,18 @@ func _measure_downward_gap(
     to_size: Vector2
 ) -> float:
     return maxf(0.0, (to_position.y - from_position.y) - ((from_size.y + to_size.y) * 0.5))
+
+func _to_world_position(start_height_meters: float, local_position: Vector2) -> Vector2:
+    return Vector2(local_position.x, local_position.y - start_height_meters)
+
+func _require_start_height_meters(layout: RefCounted) -> float:
+    var raw_start_height: Variant = layout.get("start_height_meters")
+    Validation.require_condition(raw_start_height is float, "RoutePathValidator layouts must expose a float start_height_meters.")
+    var start_height_meters: float = raw_start_height
+    return start_height_meters
+
+func _require_chunk_index(layout: RefCounted, property_name: StringName) -> int:
+    var raw_chunk_index: Variant = layout.get(property_name)
+    Validation.require_condition(raw_chunk_index is int, "RoutePathValidator layouts must expose an int chunk_index.")
+    var chunk_index: int = raw_chunk_index
+    return chunk_index

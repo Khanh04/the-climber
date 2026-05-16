@@ -11,6 +11,7 @@ const GeneratedChunkLayoutScript = preload("res://src/gameplay/generation/genera
 const GeneratedChunkSceneBuilderScript = preload("res://src/gameplay/generation/generated_chunk_scene_builder.gd")
 const GeneratedHandholdSocketScript = preload("res://src/gameplay/generation/generated_handhold_socket.gd")
 const GeneratedHazardSocketScript = preload("res://src/gameplay/generation/generated_hazard_socket.gd")
+const GeneratedRouteValidationResultScript: GDScript = preload("res://src/gameplay/generation/generated_route_validation_result.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_surface_profile.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
@@ -30,6 +31,10 @@ func test_scene_builder_creates_chunk_root_with_metadata_and_scaled_position() -
     assert_eq(chunk_node.position, Vector2(0.0, -4800.0))
     assert_eq(seed_key, "generator_v1:2026-05-14")
     assert_eq(chunk_type_label, "ZIGZAG")
+    assert_eq(chunk_node.get_meta(&"route_validation_is_valid"), true)
+    assert_eq(_get_string_meta(chunk_node, &"route_validation_target_hold_id"), "chunk_02_hold_01")
+    assert_eq(_get_string_meta(chunk_node, &"route_validation_failure_reason"), "")
+    assert_eq(chunk_node.get_meta(&"route_validation_path_length"), 2)
     assert_not_null(chunk_node.get_node_or_null("Handholds"))
     assert_not_null(chunk_node.get_node_or_null("Pickups"))
     assert_not_null(chunk_node.get_node_or_null("Hazards"))
@@ -176,6 +181,14 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
         GeneratedHazardSocketScript.new(&"chunk_02_hazard_02", GeneratedHazardKindScript.Value.DOWNDRAFT, Vector2(0.1, -2.6)),
         GeneratedHazardSocketScript.new(&"chunk_02_hazard_03", GeneratedHazardKindScript.Value.UPDRAFT, Vector2(-1.1, -1.8)),
     ]
+    var route_validation_result_variant: Variant = GeneratedRouteValidationResultScript.new(
+        true,
+        "",
+        &"chunk_02_hold_01",
+        PackedStringArray(["chunk_02_hold_00", "chunk_02_hold_01"])
+    )
+    assert_true(route_validation_result_variant is RefCounted)
+    var route_validation_result: RefCounted = route_validation_result_variant
 
     return GeneratedChunkLayoutScript.new(
         "generator_v1:2026-05-14",
@@ -187,7 +200,8 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
         48.0,
         handholds,
         pickup_sockets,
-        hazard_sockets
+        hazard_sockets,
+        route_validation_result
     )
 
 func _get_string_meta(node: Node, key: StringName) -> String:

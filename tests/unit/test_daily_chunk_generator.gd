@@ -6,6 +6,7 @@ const ChunkTypeScript = preload("res://src/gameplay/generation/chunk_type.gd")
 const DailyChunkGeneratorScript = preload("res://src/gameplay/generation/daily_chunk_generator.gd")
 const GeneratedChunkLayoutScript = preload("res://src/gameplay/generation/generated_chunk_layout.gd")
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
+const GeneratedRouteValidationResultScript: GDScript = preload("res://src/gameplay/generation/generated_route_validation_result.gd")
 const HandholdAssignmentRuleScript = preload("res://resources/config/handhold_assignment_rule.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
@@ -139,6 +140,40 @@ func test_first_chunk_respects_tuned_segment_height_and_avoids_legacy_span() -> 
 
     assert_lte(furthest_upward_hold_height_meters, tuning.segment_height_meters)
     assert_lt(furthest_upward_hold_height_meters, 12.0)
+
+func test_generated_chunks_include_route_validation_metadata() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var opener_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
+    var validation_result: Object = _require_route_validation_result(opener_layout)
+
+    assert_false(_require_route_validation_bool(validation_result, &"is_valid"))
+    assert_eq(
+        _require_route_validation_string(validation_result, &"failure_reason"),
+        "No path reaches the top-most generated handhold within the configured move envelope."
+    )
+    assert_eq(
+        _require_route_validation_string_name(validation_result, &"target_hold_id"),
+        StringName(_get_top_hold_id(opener_layout))
+    )
+
+func test_generated_adjacent_chunks_include_seam_validation_result() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+    var current_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
+    var next_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 1))
+
+    var seam_result: Object = _require_seam_validation_result(generator.validate_chunk_seam(current_layout, next_layout))
+
+    assert_false(_require_route_validation_bool(seam_result, &"is_valid"))
+    assert_eq(_require_route_validation_int(seam_result, &"next_chunk_index"), 1)
+    assert_eq(
+        _require_route_validation_string(seam_result, &"failure_reason"),
+        "No reachable seam connects the current chunk exit hold to the next chunk entry row within the configured move envelope."
+    )
 
 func test_generated_chunk_respects_total_placeholder_socket_budget() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -329,6 +364,17 @@ func _layout_signature(layout: RefCounted) -> String:
         str(typed_layout.start_height_meters),
     ])
 
+    if typed_layout.route_validation_result != null:
+        var route_validation_result: Object = _require_route_validation_result(typed_layout)
+        var _append_validation_result: bool = signature_parts.append(
+            "validation:%s:%s:%s:%d" % [
+                str(_require_route_validation_bool(route_validation_result, &"is_valid")),
+                String(_require_route_validation_string_name(route_validation_result, &"target_hold_id")),
+                _require_route_validation_string(route_validation_result, &"failure_reason"),
+                _require_route_validation_path(route_validation_result).size(),
+            ]
+        )
+
     for handhold in typed_layout.handholds:
         var _append_handhold_result: bool = signature_parts.append(
             "%s:%s@%.3f,%.3f" % [
@@ -359,6 +405,60 @@ func _layout_signature(layout: RefCounted) -> String:
 func _require_chunk_layout(layout: RefCounted) -> GeneratedChunkLayoutScript:
     assert_true(layout is GeneratedChunkLayoutScript)
     return layout as GeneratedChunkLayoutScript
+
+func _require_route_validation_result(layout: GeneratedChunkLayoutScript) -> Object:
+    var validation_result: RefCounted = layout.route_validation_result
+    assert_not_null(validation_result)
+    assert_true(validation_result is Object)
+    var validation_object: Object = validation_result
+    return validation_object
+
+func _require_seam_validation_result(result: RefCounted) -> Object:
+    assert_not_null(result)
+    assert_true(result is Object)
+    var seam_object: Object = result
+    return seam_object
+
+func _require_route_validation_bool(result_object: Object, property_name: StringName) -> bool:
+    var raw_value: Variant = result_object.get(property_name)
+    assert_true(raw_value is bool)
+    var typed_value: bool = raw_value
+    return typed_value
+
+func _require_route_validation_string(result_object: Object, property_name: StringName) -> String:
+    var raw_value: Variant = result_object.get(property_name)
+    assert_true(raw_value is String)
+    var typed_value: String = raw_value
+    return typed_value
+
+func _require_route_validation_string_name(result_object: Object, property_name: StringName) -> StringName:
+    var raw_value: Variant = result_object.get(property_name)
+    assert_true(raw_value is StringName)
+    var typed_value: StringName = raw_value
+    return typed_value
+
+func _require_route_validation_int(result_object: Object, property_name: StringName) -> int:
+    var raw_value: Variant = result_object.get(property_name)
+    assert_true(raw_value is int)
+    var typed_value: int = raw_value
+    return typed_value
+
+func _require_route_validation_path(result_object: Object) -> PackedStringArray:
+    var raw_value: Variant = result_object.get(&"path_hold_ids")
+    assert_true(raw_value is PackedStringArray)
+    var typed_value: PackedStringArray = raw_value
+    return typed_value
+
+func _get_top_hold_id(layout: GeneratedChunkLayoutScript) -> String:
+    var top_hold_id: String = String(layout.handholds[0].hold_id)
+    var top_hold_y: float = layout.handholds[0].local_position.y
+
+    for handhold in layout.handholds:
+        if handhold.local_position.y < top_hold_y:
+            top_hold_id = String(handhold.hold_id)
+            top_hold_y = handhold.local_position.y
+
+    return top_hold_id
 
 func _find_layout_by_chunk_type(
     generator: DailyChunkGeneratorScript,

@@ -11,6 +11,7 @@ var start_height_meters: float
 var handholds: Array[GeneratedHandholdSocket]
 var pickup_sockets: Array[GeneratedPickupSocket]
 var hazard_sockets: Array[GeneratedHazardSocket]
+var route_validation_result: RefCounted
 
 func _init(
     seed_key_value: String,
@@ -22,7 +23,8 @@ func _init(
     start_height_meters_value: float,
     handholds_value: Array[GeneratedHandholdSocket],
     pickup_sockets_value: Array[GeneratedPickupSocket],
-    hazard_sockets_value: Array[GeneratedHazardSocket]
+    hazard_sockets_value: Array[GeneratedHazardSocket],
+    route_validation_result_value: RefCounted = null
 ) -> void:
     seed_key = seed_key_value
     generator_version = generator_version_value
@@ -34,6 +36,7 @@ func _init(
     handholds = handholds_value
     pickup_sockets = pickup_sockets_value
     hazard_sockets = hazard_sockets_value
+    route_validation_result = route_validation_result_value
     assert_valid()
 
 func assert_valid() -> void:
@@ -57,3 +60,10 @@ func assert_valid() -> void:
     for hazard_socket in hazard_sockets:
         Validation.require_condition(hazard_socket != null, "GeneratedChunkLayout hazard sockets cannot contain null entries.")
         hazard_socket.assert_valid()
+
+    if route_validation_result != null:
+        Validation.require_condition(
+            route_validation_result.has_method("assert_valid"),
+            "GeneratedChunkLayout route validation result must expose assert_valid()."
+        )
+        route_validation_result.call("assert_valid")

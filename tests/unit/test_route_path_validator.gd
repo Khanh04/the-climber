@@ -2,6 +2,7 @@ extends GutTest
 
 const DailyChunkGeneratorScript: GDScript = preload("res://src/gameplay/generation/daily_chunk_generator.gd")
 const GeneratedChunkLayoutScript: GDScript = preload("res://src/gameplay/generation/generated_chunk_layout.gd")
+const GeneratedChunkSeamValidationResultScript: GDScript = preload("res://src/gameplay/generation/generated_chunk_seam_validation_result.gd")
 const GeneratedHandholdSocketScript: GDScript = preload("res://src/gameplay/generation/generated_handhold_socket.gd")
 const GeneratedRouteValidationResultScript: GDScript = preload("res://src/gameplay/generation/generated_route_validation_result.gd")
 const GenerationTuningScript: GDScript = preload("res://resources/config/generation_tuning.gd")
@@ -103,6 +104,62 @@ func test_validator_returns_path_hold_sequence_for_simple_layout() -> void:
     assert_eq(path_hold_ids[path_hold_ids.size() - 1], "top")
     assert_true(path_hold_ids.has("second"))
 
+func test_validator_accepts_reachable_adjacent_chunk_seam() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var validator: RefCounted = _build_route_path_validator(1.0)
+    var current_layout: GeneratedChunkLayoutScript = _build_layout_fixture(
+        0,
+        0.0,
+        [
+            _build_handhold_socket(tuning, StringName("current_mid"), Vector2(-0.10, -0.80)),
+            _build_handhold_socket(tuning, StringName("current_top"), Vector2(0.05, -1.50)),
+        ]
+    )
+    var next_layout: GeneratedChunkLayoutScript = _build_layout_fixture(
+        1,
+        1.8,
+        [
+            _build_handhold_socket(tuning, StringName("next_entry"), Vector2(0.12, -0.18)),
+            _build_handhold_socket(tuning, StringName("next_upper"), Vector2(0.30, -0.92)),
+        ]
+    )
+
+    var seam_result: Object = _validate_chunk_seam(validator, current_layout, next_layout)
+
+    assert_true(_require_bool_property(seam_result, &"is_valid"))
+    assert_eq(_require_string_name_property(seam_result, &"from_hold_id"), StringName("current_top"))
+    assert_eq(_require_string_name_property(seam_result, &"to_hold_id"), StringName("next_entry"))
+
+func test_validator_rejects_unreachable_adjacent_chunk_seam() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var validator: RefCounted = _build_route_path_validator(1.0)
+    var current_layout: GeneratedChunkLayoutScript = _build_layout_fixture(
+        0,
+        0.0,
+        [
+            _build_handhold_socket(tuning, StringName("current_mid"), Vector2(-0.10, -0.80)),
+            _build_handhold_socket(tuning, StringName("current_top"), Vector2(0.05, -1.50)),
+        ]
+    )
+    var next_layout: GeneratedChunkLayoutScript = _build_layout_fixture(
+        1,
+        4.2,
+        [
+            _build_handhold_socket(tuning, StringName("next_entry"), Vector2(0.12, -0.18)),
+            _build_handhold_socket(tuning, StringName("next_upper"), Vector2(0.30, -0.92)),
+        ]
+    )
+
+    var seam_result: Object = _validate_chunk_seam(validator, current_layout, next_layout)
+
+    assert_false(_require_bool_property(seam_result, &"is_valid"))
+    assert_eq(
+        _require_string_property(seam_result, &"failure_reason"),
+        "No reachable seam connects the current chunk exit hold to the next chunk entry row within the configured move envelope."
+    )
+    assert_eq(_require_string_name_property(seam_result, &"from_hold_id"), StringName("current_top"))
+    assert_eq(_require_string_name_property(seam_result, &"to_hold_id"), StringName("next_entry"))
+
 func _default_entry_anchor_positions() -> Array[Vector2]:
     return [Vector2(-0.42, -0.24), Vector2(0.42, -0.24)]
 
@@ -128,6 +185,19 @@ func _validate_layout(
     var result_object: Object = result_variant
     return result_object
 
+func _validate_chunk_seam(
+    validator: RefCounted,
+    current_layout: GeneratedChunkLayoutScript,
+    next_layout: GeneratedChunkLayoutScript
+) -> Object:
+    var result_variant: Variant = validator.call("validate_chunk_seam", current_layout, next_layout)
+    if not result_variant is Object:
+        fail_test("RoutePathValidator returned an unexpected seam result type.")
+        return _build_invalid_seam_result_placeholder()
+
+    var result_object: Object = result_variant
+    return result_object
+
 func _build_invalid_result_placeholder() -> Object:
     var result_variant: Variant = GeneratedRouteValidationResultScript.new(
         false,
@@ -137,6 +207,22 @@ func _build_invalid_result_placeholder() -> Object:
     )
     if not result_variant is Object:
         fail_test("GeneratedRouteValidationResultScript did not create an Object instance.")
+        return RefCounted.new()
+
+    var result_object: Object = result_variant
+    return result_object
+
+func _build_invalid_seam_result_placeholder() -> Object:
+    var result_variant: Variant = GeneratedChunkSeamValidationResultScript.new(
+        false,
+        "RoutePathValidator returned an unexpected seam result type.",
+        0,
+        1,
+        StringName("invalid_from_hold"),
+        StringName("invalid_to_hold")
+    )
+    if not result_variant is Object:
+        fail_test("GeneratedChunkSeamValidationResultScript did not create an Object instance.")
         return RefCounted.new()
 
     var result_object: Object = result_variant
@@ -198,6 +284,26 @@ func _build_handhold_socket(
         lifecycle_rule.break_after_attach_seconds,
         lifecycle_rule.breaks_on_release,
         movement_rule.release_impulse_vector
+    )
+
+func _build_layout_fixture(
+    chunk_index: int,
+    start_height_meters: float,
+    handholds: Array[GeneratedHandholdSocket]
+) -> GeneratedChunkLayoutScript:
+    var pickup_sockets: Array[GeneratedPickupSocket] = []
+    var hazard_sockets: Array[GeneratedHazardSocket] = []
+    return GeneratedChunkLayoutScript.new(
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.GENERATOR_VERSION,
+        chunk_index,
+        ChunkType.Value.LADDER,
+        ChunkRouteSlot.Value.OPENER,
+        ChunkDifficultyBand.Value.EASY,
+        start_height_meters,
+        handholds,
+        pickup_sockets,
+        hazard_sockets
     )
 
 func _get_top_hold_id(layout: GeneratedChunkLayoutScript) -> String:

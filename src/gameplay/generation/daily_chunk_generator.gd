@@ -7,13 +7,20 @@ const HandholdMovementRuleScript = preload("res://resources/config/handhold_move
 const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_surface_profile.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
+const RoutePathValidatorScript: GDScript = preload("res://src/gameplay/generation/route_path_validator.gd")
+
+const ROUTE_VALIDATION_MAX_MOVE_DISTANCE_METERS: float = 1.2
 
 var _tuning: GenerationTuning
+var _route_path_validator: RefCounted
+var _route_entry_anchor_positions: Array[Vector2]
 
 func _init(tuning_value: GenerationTuning) -> void:
 	Validation.require_condition(tuning_value != null, "DailyChunkGenerator requires generation tuning.")
 	_tuning = tuning_value
 	_tuning.assert_valid()
+	_route_path_validator = _build_route_path_validator(ROUTE_VALIDATION_MAX_MOVE_DISTANCE_METERS)
+	_route_entry_anchor_positions = [Vector2(-0.42, -0.24), Vector2(0.42, -0.24)]
 
 func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative.")
@@ -46,7 +53,7 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 		chunk_rng
 	)
 
-	return GeneratedChunkLayout.new(
+	var preliminary_layout: GeneratedChunkLayout = GeneratedChunkLayout.new(
 		seed_key,
 		_tuning.generator_version,
 		chunk_index,
@@ -58,6 +65,51 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 		pickup_sockets,
 		hazard_sockets
 	)
+	var route_validation_result: RefCounted = _validate_generated_layout(preliminary_layout)
+
+	return GeneratedChunkLayout.new(
+		seed_key,
+		_tuning.generator_version,
+		chunk_index,
+		chunk_type,
+		route_slot,
+		difficulty_band,
+		start_height_meters,
+		handholds,
+		pickup_sockets,
+		hazard_sockets,
+		route_validation_result
+	)
+
+func _build_route_path_validator(max_move_distance_meters: float) -> RefCounted:
+	var validator_variant: Variant = RoutePathValidatorScript.new(max_move_distance_meters)
+	Validation.require_condition(validator_variant is RefCounted, "DailyChunkGenerator route path validator must be RefCounted.")
+	var validator: RefCounted = validator_variant
+	return validator
+
+func _validate_generated_layout(layout: GeneratedChunkLayout) -> RefCounted:
+	Validation.require_condition(_route_path_validator != null, "DailyChunkGenerator route path validator must be initialized.")
+	var validation_result_variant: Variant = _route_path_validator.call("validate_layout", layout, _route_entry_anchor_positions)
+	Validation.require_condition(
+		validation_result_variant is RefCounted,
+		"DailyChunkGenerator route validation must return a RefCounted result."
+	)
+	var validation_result: RefCounted = validation_result_variant
+	return validation_result
+
+func validate_chunk_seam(current_layout: GeneratedChunkLayout, next_layout: GeneratedChunkLayout) -> RefCounted:
+	Validation.require_condition(current_layout != null, "DailyChunkGenerator current seam layout cannot be null.")
+	Validation.require_condition(next_layout != null, "DailyChunkGenerator next seam layout cannot be null.")
+	Validation.require_condition(_route_path_validator != null, "DailyChunkGenerator route path validator must be initialized.")
+	current_layout.assert_valid()
+	next_layout.assert_valid()
+	var seam_result_variant: Variant = _route_path_validator.call("validate_chunk_seam", current_layout, next_layout)
+	Validation.require_condition(
+		seam_result_variant is RefCounted,
+		"DailyChunkGenerator seam validation must return a RefCounted result."
+	)
+	var seam_result: RefCounted = seam_result_variant
+	return seam_result
 
 func get_difficulty_band_for_chunk(chunk_index: int) -> int:
 	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when calculating a difficulty band.")

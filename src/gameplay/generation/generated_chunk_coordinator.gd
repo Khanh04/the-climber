@@ -56,6 +56,7 @@ func sync_chunks_for_height(current_height_meters: float, retained_hold_paths: A
         _ensure_chunk(chunk_index)
 
     _prune_chunks_outside_window(min_chunk_index, max_chunk_index, retained_hold_paths)
+    _refresh_chunk_seam_metadata(min_chunk_index, max_chunk_index)
 
 func get_active_chunk_count() -> int:
     return get_child_count()
@@ -87,6 +88,58 @@ func _ensure_chunk(chunk_index: int) -> void:
     var chunk_node: Node2D = _builder.build_chunk_node(layout)
     add_child(chunk_node)
     chunk_spawned.emit(chunk_node)
+
+func _refresh_chunk_seam_metadata(min_chunk_index: int, max_chunk_index: int) -> void:
+    var active_children: Array[Node] = get_children()
+    for chunk_node in active_children:
+        chunk_node.remove_meta(&"next_chunk_seam_is_valid")
+        chunk_node.remove_meta(&"next_chunk_seam_failure_reason")
+        chunk_node.remove_meta(&"next_chunk_seam_target_chunk_index")
+        chunk_node.remove_meta(&"next_chunk_seam_from_hold_id")
+        chunk_node.remove_meta(&"next_chunk_seam_to_hold_id")
+
+    for chunk_index in range(min_chunk_index, max_chunk_index):
+        var current_chunk_node: Node2D = get_chunk_node(chunk_index)
+        var next_chunk_node: Node2D = get_chunk_node(chunk_index + 1)
+        if current_chunk_node == null or next_chunk_node == null:
+            continue
+
+        var current_layout: GeneratedChunkLayout = _generator.build_chunk(_seed_key, chunk_index)
+        var next_layout: GeneratedChunkLayout = _generator.build_chunk(_seed_key, chunk_index + 1)
+        var seam_result: RefCounted = _generator.validate_chunk_seam(current_layout, next_layout)
+        _apply_chunk_seam_metadata(current_chunk_node, seam_result)
+
+func _apply_chunk_seam_metadata(chunk_node: Node2D, seam_result: RefCounted) -> void:
+    Validation.require_condition(seam_result != null, "GeneratedChunkCoordinator seam metadata requires a validation result.")
+    chunk_node.set_meta(&"next_chunk_seam_is_valid", _get_required_bool_property(seam_result, &"is_valid"))
+    chunk_node.set_meta(&"next_chunk_seam_failure_reason", _get_required_string_property(seam_result, &"failure_reason"))
+    chunk_node.set_meta(&"next_chunk_seam_target_chunk_index", _get_required_int_property(seam_result, &"next_chunk_index"))
+    chunk_node.set_meta(&"next_chunk_seam_from_hold_id", _get_required_string_name_property(seam_result, &"from_hold_id"))
+    chunk_node.set_meta(&"next_chunk_seam_to_hold_id", _get_required_string_name_property(seam_result, &"to_hold_id"))
+
+func _get_required_bool_property(source: Object, property_name: StringName) -> bool:
+    var raw_value: Variant = source.get(property_name)
+    Validation.require_condition(raw_value is bool, "GeneratedChunkCoordinator expected a bool seam property.")
+    var typed_value: bool = raw_value
+    return typed_value
+
+func _get_required_string_property(source: Object, property_name: StringName) -> String:
+    var raw_value: Variant = source.get(property_name)
+    Validation.require_condition(raw_value is String, "GeneratedChunkCoordinator expected a String seam property.")
+    var typed_value: String = raw_value
+    return typed_value
+
+func _get_required_int_property(source: Object, property_name: StringName) -> int:
+    var raw_value: Variant = source.get(property_name)
+    Validation.require_condition(raw_value is int, "GeneratedChunkCoordinator expected an int seam property.")
+    var typed_value: int = raw_value
+    return typed_value
+
+func _get_required_string_name_property(source: Object, property_name: StringName) -> StringName:
+    var raw_value: Variant = source.get(property_name)
+    Validation.require_condition(raw_value is StringName, "GeneratedChunkCoordinator expected a StringName seam property.")
+    var typed_value: StringName = raw_value
+    return typed_value
 
 func _prune_chunks_outside_window(min_chunk_index: int, max_chunk_index: int, retained_hold_paths: Array[NodePath]) -> void:
     var existing_children: Array[Node] = get_children()
