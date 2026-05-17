@@ -156,7 +156,7 @@ func test_run_scene_uses_extended_starting_stamina_for_playtesting() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    assert_eq(playground.stamina_tuning.one_hand_seconds, 20.0)
+    assert_eq(playground.stamina_tuning.one_hand_seconds, 100.0)
 
 func test_run_scene_applies_equipped_chaser_theme_from_cosmetic_loadout() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -1266,7 +1266,7 @@ func test_run_scene_hud_displays_initial_run_snapshot() -> void:
     assert_not_null(coins_value_label)
     assert_not_null(run_end_screen)
     assert_eq(height_value_label.text, "0.0 m")
-    assert_eq(stamina_value_label.text, "20.0 / 20.0")
+    assert_eq(stamina_value_label.text, "100.0 / 100.0")
     assert_eq(wallet_value_label.text, "0")
     assert_eq(coins_value_label.text, "0")
     assert_false(run_end_screen.visible)

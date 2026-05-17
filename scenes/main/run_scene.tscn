@@ -18,7 +18,7 @@ script = ExtResource("2_climb")
 
 [sub_resource type="Resource" id="Resource_stamina"]
 script = ExtResource("3_stamina")
-one_hand_seconds = 20.0
+one_hand_seconds = 100.0
 
 [sub_resource type="Resource" id="Resource_generation"]
 script = ExtResource("10_generation")

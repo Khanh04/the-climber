@@ -13,25 +13,92 @@ const RouteAnchorGraphBuilderScript = preload("res://src/gameplay/generation/rou
 const RouteAnchorGraphScript = preload("res://src/gameplay/generation/route_anchor_graph.gd")
 const RouteBranchSideScript = preload("res://src/gameplay/generation/route_branch_side.gd")
 const RouteLaneScript = preload("res://src/gameplay/generation/route_lane.gd")
+const RouteMovementStyleScript = preload("res://src/gameplay/generation/route_movement_style.gd")
 const RouteRoleScript = preload("res://src/gameplay/generation/route_role.gd")
+const RouteRowRoleScript = preload("res://src/gameplay/generation/route_row_role.gd")
 
 func test_easy_opener_population_adds_beginner_support_without_flat_bars() -> void:
     var plan: ChunkRoutePlanScript = _build_plan(0, ChunkRouteSlotScript.Value.OPENER, ChunkDifficultyBandScript.Value.EASY)
     var population: RefCounted = _build_population(plan)
+    var has_outer_support_hold: bool = false
+    var decision_and_catch_rows: int = plan.count_row_role(RouteRowRoleScript.Value.DECISION) + plan.count_row_role(RouteRowRoleScript.Value.CATCH)
 
     assert_eq(_call_int(population, &"count_safe_path_holds"), plan.get_row_count())
     assert_eq(_call_int(population, &"count_optional_path_holds"), 0)
-    assert_eq(_call_int(population, &"count_support_holds"), plan.get_row_count() + 2)
+    assert_eq(_call_int(population, &"count_support_holds"), plan.get_row_count() + 2 + decision_and_catch_rows)
 
     for row_index in range(plan.get_row_count()):
         assert_gte(_call_int_with_argument(population, &"count_holds_in_row", row_index), 2)
 
     assert_gte(_call_int_with_argument(population, &"count_holds_in_row", 0), 3)
     assert_gte(_call_int_with_argument(population, &"count_holds_in_row", plan.get_row_count() - 1), 3)
+    for row_index in range(plan.get_row_count()):
+        var row_role: int = plan.row_roles[row_index]
+        if row_role == RouteRowRoleScript.Value.DECISION or row_role == RouteRowRoleScript.Value.CATCH:
+            assert_gte(_call_int_with_argument(population, &"count_holds_in_row", row_index), 3)
 
     for hold in _require_ref_counted_array_property(population, &"holds"):
         if _require_bool_property(hold, &"is_safe_path"):
             assert_true(plan.safe_path_allows_handhold_type(_require_int_property(hold, &"handhold_type")))
+        if _require_bool_property(hold, &"is_support_hold") and RouteLaneScript.is_outer(_require_int_property(hold, &"lane")):
+            has_outer_support_hold = true
+
+    assert_true(has_outer_support_hold)
+
+func test_easy_opener_uses_mirrored_decision_supports_and_asymmetric_catch_supports() -> void:
+    var plan: ChunkRoutePlanScript = _build_plan(0, ChunkRouteSlotScript.Value.OPENER, ChunkDifficultyBandScript.Value.EASY)
+    var population: RefCounted = _build_population(plan)
+    var decision_row_index: int = 3
+    var catch_row_index: int = 5
+    var decision_support_lanes: Array[int] = _get_support_lanes_in_row(population, decision_row_index)
+    var catch_support_lanes: Array[int] = _get_support_lanes_in_row(population, catch_row_index)
+
+    assert_true(decision_support_lanes.has(RouteLaneScript.Value.OUTER_LEFT))
+    assert_true(decision_support_lanes.has(RouteLaneScript.Value.OUTER_RIGHT))
+    assert_eq(_count_outer_lanes(decision_support_lanes), 2)
+    assert_eq(_count_outer_lanes(catch_support_lanes), 1)
+    assert_eq(_count_inner_lanes(catch_support_lanes), 1)
+
+func test_easy_skill_uses_zigzag_decision_support_silhouette() -> void:
+    var plan: ChunkRoutePlanScript = _build_plan(2, ChunkRouteSlotScript.Value.SKILL, ChunkDifficultyBandScript.Value.EASY)
+    var population: RefCounted = _build_population(plan)
+    var decision_row_index: int = 2
+    var decision_support_lanes: Array[int] = _get_support_lanes_in_row(population, decision_row_index)
+
+    assert_eq(plan.movement_style, RouteMovementStyleScript.Value.ZIGZAG)
+    assert_eq(_count_outer_lanes(decision_support_lanes), 1)
+    assert_eq(_count_inner_lanes(decision_support_lanes), 1)
+    assert_false(decision_support_lanes.has(RouteLaneScript.Value.OUTER_LEFT) and decision_support_lanes.has(RouteLaneScript.Value.OUTER_RIGHT))
+
+func test_easy_opener_support_rows_keep_ladder_side_support_language() -> void:
+    var plan: ChunkRoutePlanScript = _build_plan(0, ChunkRouteSlotScript.Value.OPENER, ChunkDifficultyBandScript.Value.EASY)
+    var population: RefCounted = _build_population(plan)
+    var support_row_index: int = 1
+    var support_lanes: Array[int] = _get_support_lanes_in_row(population, support_row_index)
+
+    assert_eq(plan.movement_style, RouteMovementStyleScript.Value.LADDER)
+    assert_eq(_count_outer_lanes(support_lanes), 1)
+    assert_eq(_count_inner_lanes(support_lanes), 0)
+
+func test_easy_skill_support_rows_use_inner_zigzag_support_language() -> void:
+    var plan: ChunkRoutePlanScript = _build_plan(2, ChunkRouteSlotScript.Value.SKILL, ChunkDifficultyBandScript.Value.EASY)
+    var population: RefCounted = _build_population(plan)
+    var support_row_index: int = 1
+    var support_lanes: Array[int] = _get_support_lanes_in_row(population, support_row_index)
+
+    assert_eq(plan.movement_style, RouteMovementStyleScript.Value.ZIGZAG)
+    assert_eq(_count_outer_lanes(support_lanes), 0)
+    assert_eq(_count_inner_lanes(support_lanes), 1)
+
+func test_easy_recovery_support_rows_use_contained_recovery_support_language() -> void:
+    var plan: ChunkRoutePlanScript = _build_plan(3, ChunkRouteSlotScript.Value.RECOVERY, ChunkDifficultyBandScript.Value.EASY)
+    var population: RefCounted = _build_population(plan)
+    var support_row_index: int = 3
+    var support_lanes: Array[int] = _get_support_lanes_in_row(population, support_row_index)
+
+    assert_eq(plan.movement_style, RouteMovementStyleScript.Value.RECOVERY)
+    assert_eq(_count_outer_lanes(support_lanes), 0)
+    assert_eq(_count_inner_lanes(support_lanes), 1)
 
 func test_skill_population_marks_horizontal_branch_as_optional_beta() -> void:
     var plan: ChunkRoutePlanScript = _build_plan(2, ChunkRouteSlotScript.Value.SKILL, ChunkDifficultyBandScript.Value.EASY)
@@ -171,6 +238,30 @@ func _require_bool_property(source: RefCounted, property_name: StringName) -> bo
     assert_true(raw_value is bool)
     var typed_value: bool = raw_value
     return typed_value
+
+func _get_support_lanes_in_row(population: RefCounted, row_index: int) -> Array[int]:
+    var support_lanes: Array[int] = []
+    for hold in _require_ref_counted_array_property(population, &"holds"):
+        if _require_bool_property(hold, &"is_support_hold") and _require_int_property(hold, &"row_index") == row_index:
+            support_lanes.append(_require_int_property(hold, &"lane"))
+
+    return support_lanes
+
+func _count_outer_lanes(lanes: Array[int]) -> int:
+    var count: int = 0
+    for lane in lanes:
+        if RouteLaneScript.is_outer(lane):
+            count += 1
+
+    return count
+
+func _count_inner_lanes(lanes: Array[int]) -> int:
+    var count: int = 0
+    for lane in lanes:
+        if lane == RouteLaneScript.Value.INNER_LEFT or lane == RouteLaneScript.Value.INNER_RIGHT:
+            count += 1
+
+    return count
 
 func _get_outer_lane_for_branch_side(branch_side: int) -> int:
     RouteBranchSideScript.assert_valid(branch_side)
