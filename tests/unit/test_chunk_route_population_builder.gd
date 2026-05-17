@@ -15,16 +15,19 @@ const RouteBranchSideScript = preload("res://src/gameplay/generation/route_branc
 const RouteLaneScript = preload("res://src/gameplay/generation/route_lane.gd")
 const RouteRoleScript = preload("res://src/gameplay/generation/route_role.gd")
 
-func test_easy_opener_population_adds_beginner_support_on_every_row() -> void:
+func test_easy_opener_population_adds_beginner_support_without_flat_bars() -> void:
     var plan: ChunkRoutePlanScript = _build_plan(0, ChunkRouteSlotScript.Value.OPENER, ChunkDifficultyBandScript.Value.EASY)
     var population: RefCounted = _build_population(plan)
 
     assert_eq(_call_int(population, &"count_safe_path_holds"), plan.get_row_count())
     assert_eq(_call_int(population, &"count_optional_path_holds"), 0)
-    assert_eq(_call_int(population, &"count_support_holds"), plan.get_row_count() * 2)
+    assert_eq(_call_int(population, &"count_support_holds"), plan.get_row_count() + 2)
 
     for row_index in range(plan.get_row_count()):
-        assert_gte(_call_int_with_argument(population, &"count_holds_in_row", row_index), 3)
+        assert_gte(_call_int_with_argument(population, &"count_holds_in_row", row_index), 2)
+
+    assert_gte(_call_int_with_argument(population, &"count_holds_in_row", 0), 3)
+    assert_gte(_call_int_with_argument(population, &"count_holds_in_row", plan.get_row_count() - 1), 3)
 
     for hold in _require_ref_counted_array_property(population, &"holds"):
         if _require_bool_property(hold, &"is_safe_path"):

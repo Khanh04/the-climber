@@ -7,6 +7,7 @@ const RouteAnchorCandidateScript = preload("res://src/gameplay/generation/route_
 const RouteAnchorGraphScript = preload("res://src/gameplay/generation/route_anchor_graph.gd")
 const RouteBranchSideScript = preload("res://src/gameplay/generation/route_branch_side.gd")
 const RouteLaneScript = preload("res://src/gameplay/generation/route_lane.gd")
+const RouteMovementStyleScript = preload("res://src/gameplay/generation/route_movement_style.gd")
 const RoutePlannedPathScript = preload("res://src/gameplay/generation/route_planned_path.gd")
 
 func solve(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> ChunkRoutePathSolutionScript:
@@ -21,7 +22,7 @@ func solve(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> 
 
 	var safe_path: RoutePlannedPathScript = _build_safe_path(plan, anchor_graph)
 	if safe_path == null:
-		return ChunkRoutePathSolutionScript.new(false, "No safe center path can be built from the anchor graph.", null, null, 0, 0)
+		return ChunkRoutePathSolutionScript.new(false, "No safe path can be built from the anchor graph.", null, null, 0, 0)
 
 	if not plan.optional_route_required:
 		return ChunkRoutePathSolutionScript.new(true, "", safe_path, null, 0, 0)
@@ -63,9 +64,54 @@ func solve(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> 
 
 func _build_safe_path(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> RoutePlannedPathScript:
 	var lanes: Array[int] = []
-	for _row_index in range(plan.get_row_count()):
-		lanes.append(RouteLaneScript.Value.CENTER)
+	for row_index in range(plan.get_row_count()):
+		lanes.append(_select_safe_lane(plan, row_index))
 	return _build_path_from_lanes(&"safe_path", lanes, anchor_graph)
+
+func _select_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	Validation.require_condition(row_index >= 0, "ChunkRoutePathSolver safe lane row cannot be negative.")
+	Validation.require_condition(row_index < plan.get_row_count(), "ChunkRoutePathSolver safe lane row must exist in the plan.")
+	if row_index == 0 or row_index == plan.get_row_count() - 1:
+		return RouteLaneScript.Value.CENTER
+
+	if plan.optional_route_required:
+		return RouteLaneScript.Value.CENTER
+
+	match plan.movement_style:
+		RouteMovementStyleScript.Value.LADDER:
+			return _select_ladder_safe_lane(plan, row_index)
+		RouteMovementStyleScript.Value.ZIGZAG:
+			return _select_zigzag_safe_lane(plan, row_index)
+		RouteMovementStyleScript.Value.RECOVERY:
+			return _select_recovery_safe_lane(plan, row_index)
+		_:
+			RouteMovementStyleScript.assert_valid(plan.movement_style)
+			return RouteLaneScript.Value.CENTER
+
+func _select_ladder_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	if (row_index % 2) == 0:
+		return _get_alternating_inner_lane(plan, row_index)
+
+	return RouteLaneScript.Value.CENTER
+
+func _select_zigzag_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	if (row_index % 2) == 1:
+		return _get_alternating_inner_lane(plan, row_index)
+
+	return RouteLaneScript.Value.CENTER
+
+func _select_recovery_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	if (row_index % 3) == 0:
+		return _get_alternating_inner_lane(plan, row_index)
+
+	return RouteLaneScript.Value.CENTER
+
+func _get_alternating_inner_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	var lane_index: int = (floori(float(row_index) * 0.5) + plan.chunk_index) % 2
+	if lane_index == 0:
+		return RouteLaneScript.Value.INNER_LEFT
+
+	return RouteLaneScript.Value.INNER_RIGHT
 
 func _build_optional_path(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> RoutePlannedPathScript:
 	var lanes: Array[int] = []

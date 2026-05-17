@@ -44,7 +44,7 @@ func populate(
 	if path_solution.optional_path != null:
 		_add_path_holds(plan, anchor_graph, path_solution.optional_path, true, holds, optional_hold_ids)
 
-	_add_support_holds(plan, anchor_graph, holds, support_hold_ids)
+	_add_support_holds(plan, anchor_graph, path_solution, holds, support_hold_ids)
 
 	var reward_placements: Array[RefCounted] = _build_reward_placements(plan, anchor_graph, path_solution, holds)
 	var hazard_placements: Array[RefCounted] = _build_hazard_placements(plan, anchor_graph, path_solution, reward_placements)
@@ -98,11 +98,13 @@ func _add_path_holds(
 func _add_support_holds(
 	plan: ChunkRoutePlanScript,
 	anchor_graph: RouteAnchorGraphScript,
+	path_solution: ChunkRoutePathSolutionScript,
 	holds: Array[RefCounted],
 	support_hold_ids: PackedStringArray
 ) -> void:
+	Validation.require_condition(path_solution != null, "ChunkRoutePopulationBuilder support holds require a path solution.")
 	for row_index in range(plan.get_row_count()):
-		var support_lanes: Array[int] = _get_support_lanes_for_row(plan, row_index)
+		var support_lanes: Array[int] = _get_support_lanes_for_row(plan, path_solution, row_index)
 		for support_lane in support_lanes:
 			var support_anchor: RouteAnchorCandidateScript = anchor_graph.get_anchor_for_row_and_lane(row_index, support_lane)
 			Validation.require_condition(support_anchor != null, "ChunkRoutePopulationBuilder support anchor must exist in the graph.")
@@ -127,12 +129,16 @@ func _add_support_holds(
 			holds.append(support_hold)
 			_append_unique_hold_id(support_hold_ids, _require_string_name_property(support_hold, &"hold_id"))
 
-func _get_support_lanes_for_row(plan: ChunkRoutePlanScript, row_index: int) -> Array[int]:
+func _get_support_lanes_for_row(
+	plan: ChunkRoutePlanScript,
+	path_solution: ChunkRoutePathSolutionScript,
+	row_index: int
+) -> Array[int]:
 	var row_role: int = plan.row_roles[row_index]
 	match plan.difficulty_band:
 		ChunkDifficultyBandScript.Value.EASY:
 			if row_role == RouteRowRoleScript.Value.SUPPORT or row_role == RouteRowRoleScript.Value.DECISION or row_role == RouteRowRoleScript.Value.CATCH or row_role == RouteRowRoleScript.Value.TOP_OUT:
-				return [RouteLaneScript.Value.INNER_LEFT, RouteLaneScript.Value.INNER_RIGHT]
+				return _get_easy_support_lanes_for_row(plan, path_solution, row_index, row_role)
 		ChunkDifficultyBandScript.Value.BASELINE:
 			if row_role == RouteRowRoleScript.Value.SUPPORT or row_role == RouteRowRoleScript.Value.CATCH or row_role == RouteRowRoleScript.Value.TOP_OUT:
 				return [_get_support_lane_opposite_branch(plan, row_index)]
@@ -143,6 +149,51 @@ func _get_support_lanes_for_row(plan: ChunkRoutePlanScript, row_index: int) -> A
 			Validation.require_condition(false, "ChunkRoutePopulationBuilder support lanes require a supported difficulty band.")
 
 	return []
+
+func _get_easy_support_lanes_for_row(
+	plan: ChunkRoutePlanScript,
+	path_solution: ChunkRoutePathSolutionScript,
+	row_index: int,
+	row_role: int
+) -> Array[int]:
+	var safe_lane: int = path_solution.safe_path.get_lane_at_row(row_index)
+	var support_lanes: Array[int] = []
+	if row_index == 0 or row_index == plan.get_row_count() - 1:
+		_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
+		_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
+		return support_lanes
+
+	RouteRowRoleScript.assert_valid(row_role)
+	_append_unique_support_lane(support_lanes, _get_beginner_single_support_lane(plan, row_index, safe_lane), safe_lane)
+	return support_lanes
+
+func _get_beginner_single_support_lane(plan: ChunkRoutePlanScript, row_index: int, safe_lane: int) -> int:
+	RouteLaneScript.assert_valid(safe_lane)
+	if safe_lane == RouteLaneScript.Value.CENTER:
+		if plan.optional_route_required:
+			return _get_support_lane_opposite_branch(plan, row_index)
+
+		return _get_alternating_beginner_support_lane(plan, row_index)
+
+	return RouteLaneScript.Value.CENTER
+
+func _get_alternating_beginner_support_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	var lane_index: int = (row_index + plan.chunk_index) % 2
+	if lane_index == 0:
+		return RouteLaneScript.Value.INNER_LEFT
+
+	return RouteLaneScript.Value.INNER_RIGHT
+
+func _append_unique_support_lane(support_lanes: Array[int], candidate_lane: int, excluded_lane: int) -> void:
+	RouteLaneScript.assert_valid(candidate_lane)
+	RouteLaneScript.assert_valid(excluded_lane)
+	if candidate_lane == excluded_lane:
+		return
+
+	if support_lanes.has(candidate_lane):
+		return
+
+	support_lanes.append(candidate_lane)
 
 func _get_support_lane_opposite_branch(plan: ChunkRoutePlanScript, row_index: int) -> int:
 	if plan.optional_route_required:

@@ -172,6 +172,18 @@ func test_first_chunk_uses_configured_opener_first_row_height_for_route_start() 
     assert_gte(row_heights[row_heights.size() - 1], tuning.segment_height_meters - 1.0)
     assert_lte(_get_max_row_height_gap(row_heights), 1.2)
 
+func test_first_chunk_spreads_holds_without_flat_bars_on_every_row() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
+    var row_heights: Array[float] = _get_sorted_unique_row_heights(layout.handholds)
+
+    assert_true(_has_handhold_on_side(layout.handholds, -1))
+    assert_true(_has_handhold_on_side(layout.handholds, 1))
+    assert_lt(_count_rows_with_minimum_handholds(layout.handholds, row_heights, 3), row_heights.size())
+
 func test_generated_handholds_resolve_type_specific_drain_and_size() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
@@ -877,6 +889,35 @@ func _get_max_row_height_gap(row_heights: Array[float]) -> float:
         max_gap = maxf(max_gap, row_heights[row_index] - row_heights[row_index - 1])
 
     return max_gap
+
+func _has_handhold_on_side(handholds: Array[GeneratedHandholdSocket], side_sign: int) -> bool:
+    Validation.require_condition(side_sign == -1 or side_sign == 1, "Test side helper requires a left or right sign.")
+    for handhold in handholds:
+        if side_sign < 0 and handhold.local_position.x < -0.01:
+            return true
+
+        if side_sign > 0 and handhold.local_position.x > 0.01:
+            return true
+
+    return false
+
+func _count_rows_with_minimum_handholds(
+    handholds: Array[GeneratedHandholdSocket],
+    row_heights: Array[float],
+    minimum_handhold_count: int
+) -> int:
+    Validation.require_condition(minimum_handhold_count > 0, "Test row count helper requires a positive minimum.")
+    var matching_row_count: int = 0
+    for row_height in row_heights:
+        var handhold_count: int = 0
+        for handhold in handholds:
+            if is_equal_approx(-handhold.local_position.y, row_height):
+                handhold_count += 1
+
+        if handhold_count >= minimum_handhold_count:
+            matching_row_count += 1
+
+    return matching_row_count
 
 func _has_handhold_within_distance(
     handholds: Array[GeneratedHandholdSocket],

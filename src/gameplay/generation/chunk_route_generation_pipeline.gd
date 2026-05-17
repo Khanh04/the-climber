@@ -55,7 +55,10 @@ func build_layout(
 	var anchor_graph_builder: RouteAnchorGraphBuilderScript = RouteAnchorGraphBuilderScript.new(
 		_tuning.chunk_width_meters,
 		_calculate_route_row_step_height_meters(plan, first_row_height_meters),
-		first_row_height_meters
+		first_row_height_meters,
+		_tuning.handhold_horizontal_jitter_meters,
+		_tuning.handhold_vertical_jitter_meters,
+		seed_key
 	)
 	var anchor_graph: RouteAnchorGraphScript = anchor_graph_builder.build_graph(plan)
 	var path_solution: ChunkRoutePathSolutionScript = _path_solver.solve(plan, anchor_graph)

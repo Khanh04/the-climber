@@ -86,6 +86,18 @@ func test_default_handhold_type_definition_catalog_is_valid() -> void:
     assert_not_null(catalog)
     assert_true(catalog.is_valid())
 
+func test_default_handhold_widths_leave_visual_lane_gap() -> void:
+    var catalog: HandholdTypeDefinitionCatalogScript = load("res://resources/config/handhold_type_definition_catalog.tres") as HandholdTypeDefinitionCatalogScript
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var center_to_inner_lane_spacing_meters: float = tuning.chunk_width_meters * 0.25
+    var minimum_visual_gap_meters: float = 0.02
+
+    assert_not_null(catalog)
+    for definition_resource in catalog.definitions:
+        assert_true(definition_resource is HandholdTypeDefinitionScript)
+        var definition: HandholdTypeDefinitionScript = definition_resource as HandholdTypeDefinitionScript
+        assert_lte(definition.physical_size_meters.x, center_to_inner_lane_spacing_meters - minimum_visual_gap_meters)
+
 func test_default_handhold_assignment_rule_catalog_is_valid() -> void:
     var catalog: HandholdAssignmentRuleCatalogScript = load("res://resources/config/handhold_assignment_rule_catalog.tres") as HandholdAssignmentRuleCatalogScript
 
