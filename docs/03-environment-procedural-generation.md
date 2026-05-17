@@ -168,6 +168,13 @@ for mobile object budgets.
 - The first issue subset should prove passive drain tuning, readable
   timed failure, and release-triggered movement before adding reward,
   shield, linked-route, or moving-path holds.
+- The current implemented follow-up extends the active generator-backed
+  catalog with `GHOST` and `ROCKET`.
+- `GHOST` is currently a one-use hold that breaks on release, and
+  `ROCKET` is currently a stronger deterministic release-launch hold.
+- Active route-first generation now uses seeded weighted selection so
+  these new holds can appear deterministically in challenge optional
+  pressure and traverse contexts.
 
 #### Reference Hold Idea Catalog
 

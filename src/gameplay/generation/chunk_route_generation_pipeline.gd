@@ -67,7 +67,7 @@ func build_layout(
 	var path_solution: ChunkRoutePathSolutionScript = _path_solver.solve(plan, anchor_graph)
 	Validation.require_condition(path_solution.is_valid, path_solution.failure_reason)
 
-	var population_variant: Variant = _population_builder.call("populate", plan, anchor_graph, path_solution)
+	var population_variant: Variant = _population_builder.call("populate", plan, anchor_graph, path_solution, seed_key)
 	Validation.require_condition(population_variant is RefCounted, "ChunkRouteGenerationPipeline population builder must return a RefCounted population.")
 	var population: RefCounted = population_variant
 	var layout_variant: Variant = _layout_emitter.call(

@@ -24,7 +24,8 @@ const RouteRowRoleScript = preload("res://src/gameplay/generation/route_row_role
 func populate(
 	plan: ChunkRoutePlanScript,
 	anchor_graph: RouteAnchorGraphScript,
-	path_solution: ChunkRoutePathSolutionScript
+	path_solution: ChunkRoutePathSolutionScript,
+	selection_seed: String = ""
 ) -> RefCounted:
 	Validation.require_condition(plan != null, "ChunkRoutePopulationBuilder requires a route plan.")
 	Validation.require_condition(anchor_graph != null, "ChunkRoutePopulationBuilder requires an anchor graph.")
@@ -41,11 +42,11 @@ func populate(
 	var optional_hold_ids: PackedStringArray = PackedStringArray()
 	var support_hold_ids: PackedStringArray = PackedStringArray()
 
-	_add_path_holds(plan, anchor_graph, path_solution.safe_path, false, holds, safe_hold_ids)
+	_add_path_holds(plan, anchor_graph, path_solution.safe_path, false, selection_seed, holds, safe_hold_ids)
 	if path_solution.optional_path != null:
-		_add_path_holds(plan, anchor_graph, path_solution.optional_path, true, holds, optional_hold_ids)
+		_add_path_holds(plan, anchor_graph, path_solution.optional_path, true, selection_seed, holds, optional_hold_ids)
 
-	_add_support_holds(plan, anchor_graph, path_solution, holds, support_hold_ids)
+	_add_support_holds(plan, anchor_graph, path_solution, selection_seed, holds, support_hold_ids)
 
 	var reward_placements: Array[RefCounted] = _build_reward_placements(plan, anchor_graph, path_solution, holds)
 	var hazard_placements: Array[RefCounted] = _build_hazard_placements(plan, anchor_graph, path_solution, reward_placements)
@@ -60,6 +61,7 @@ func _add_path_holds(
 	anchor_graph: RouteAnchorGraphScript,
 	path: RoutePlannedPathScript,
 	is_optional_path: bool,
+	selection_seed: String,
 	holds: Array[RefCounted],
 	hold_ids: PackedStringArray
 ) -> void:
@@ -77,7 +79,17 @@ func _add_path_holds(
 
 		var anchor: RouteAnchorCandidateScript = _get_required_anchor_for_path_row(anchor_graph, path, row_index)
 		var route_role: int = _select_path_route_role(plan, anchor, is_optional_path)
-		var handhold_type: int = _select_path_handhold_type(plan, anchor.row_role, is_optional_path)
+		var handhold_selection_context: String = "%s:%d:%d:%d:%s:%d:%d:%d" % [
+			selection_seed,
+			plan.chunk_index,
+			plan.route_slot,
+			plan.difficulty_band,
+			String(anchor.anchor_id),
+			anchor.row_index,
+			anchor.lane,
+			int(is_optional_path)
+		]
+		var handhold_type: int = _select_path_handhold_type(plan, anchor.row_role, is_optional_path, handhold_selection_context)
 		var hold_variant: Variant = RoutePopulatedHoldScript.new(
 			anchor.anchor_id,
 			anchor.anchor_id,
@@ -100,6 +112,7 @@ func _add_support_holds(
 	plan: ChunkRoutePlanScript,
 	anchor_graph: RouteAnchorGraphScript,
 	path_solution: ChunkRoutePathSolutionScript,
+	selection_seed: String,
 	holds: Array[RefCounted],
 	support_hold_ids: PackedStringArray
 ) -> void:
@@ -112,6 +125,16 @@ func _add_support_holds(
 			if _find_hold_by_anchor_id(holds, support_anchor.anchor_id) != null:
 				continue
 
+			var handhold_selection_context: String = "%s:%d:%d:%d:%s:%d:%d:support" % [
+				selection_seed,
+				plan.chunk_index,
+				plan.route_slot,
+				plan.difficulty_band,
+				String(support_anchor.anchor_id),
+				support_anchor.row_index,
+				support_anchor.lane
+			]
+
 			var support_hold_variant: Variant = RoutePopulatedHoldScript.new(
 				support_anchor.anchor_id,
 				support_anchor.anchor_id,
@@ -120,7 +143,7 @@ func _add_support_holds(
 				support_anchor.local_position,
 				support_anchor.row_role,
 				_select_support_route_role(support_anchor.row_role),
-				_select_support_handhold_type(plan, support_anchor.row_role),
+				_select_support_handhold_type(plan, support_anchor.row_role, handhold_selection_context),
 				false,
 				false,
 				true
@@ -446,47 +469,62 @@ func _select_support_route_role(row_role: int) -> int:
 			RouteRowRoleScript.assert_valid(row_role)
 			return RouteRoleScript.Value.SETUP
 
-func _select_path_handhold_type(plan: ChunkRoutePlanScript, row_role: int, is_optional_path: bool) -> int:
+func _select_path_handhold_type(plan: ChunkRoutePlanScript, row_role: int, is_optional_path: bool, selection_context: String) -> int:
 	if is_optional_path:
 		match row_role:
 			RouteRowRoleScript.Value.CRUX, RouteRowRoleScript.Value.PRESSURE:
-				return _select_first_allowed_handhold_type([HandholdTypeScript.Value.BREAK, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.NORMAL], plan.optional_path_allowed_handhold_types)
+				if plan.difficulty_band == ChunkDifficultyBandScript.Value.CHALLENGE:
+					return _select_allowed_handhold_type([HandholdTypeScript.Value.GHOST, HandholdTypeScript.Value.BREAK, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.NORMAL], plan.optional_path_allowed_handhold_types, selection_context)
+				return _select_allowed_handhold_type([HandholdTypeScript.Value.BREAK, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.NORMAL], plan.optional_path_allowed_handhold_types, selection_context)
 			RouteRowRoleScript.Value.TRAVERSE:
-				return _select_first_allowed_handhold_type([HandholdTypeScript.Value.BOOST, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.NORMAL], plan.optional_path_allowed_handhold_types)
+				return _select_allowed_handhold_type([HandholdTypeScript.Value.ROCKET, HandholdTypeScript.Value.BOOST, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.NORMAL], plan.optional_path_allowed_handhold_types, selection_context)
 			RouteRowRoleScript.Value.CATCH:
-				return _select_first_allowed_handhold_type([HandholdTypeScript.Value.REST, HandholdTypeScript.Value.NORMAL], plan.optional_path_allowed_handhold_types)
+				return _select_allowed_handhold_type([HandholdTypeScript.Value.REST, HandholdTypeScript.Value.NORMAL], plan.optional_path_allowed_handhold_types, selection_context)
 			_:
 				RouteRowRoleScript.assert_valid(row_role)
-				return _select_first_allowed_handhold_type([HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN], plan.optional_path_allowed_handhold_types)
+				return _select_allowed_handhold_type([HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN], plan.optional_path_allowed_handhold_types, selection_context)
 
 	match row_role:
 		RouteRowRoleScript.Value.CATCH:
-			return _select_first_allowed_handhold_type([HandholdTypeScript.Value.REST, HandholdTypeScript.Value.NORMAL], plan.safe_path_allowed_handhold_types)
+			return _select_allowed_handhold_type([HandholdTypeScript.Value.REST, HandholdTypeScript.Value.NORMAL], plan.safe_path_allowed_handhold_types, selection_context)
 		RouteRowRoleScript.Value.CRUX:
-			return _select_first_allowed_handhold_type([HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.NORMAL], plan.safe_path_allowed_handhold_types)
+			return _select_allowed_handhold_type([HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.NORMAL], plan.safe_path_allowed_handhold_types, selection_context)
 		RouteRowRoleScript.Value.PRESSURE:
-			return _select_first_allowed_handhold_type([HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.NORMAL], plan.safe_path_allowed_handhold_types)
+			return _select_allowed_handhold_type([HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.NORMAL], plan.safe_path_allowed_handhold_types, selection_context)
 		_:
 			RouteRowRoleScript.assert_valid(row_role)
-			return _select_first_allowed_handhold_type([HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST], plan.safe_path_allowed_handhold_types)
+			return _select_allowed_handhold_type([HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST], plan.safe_path_allowed_handhold_types, selection_context)
 
-func _select_support_handhold_type(plan: ChunkRoutePlanScript, row_role: int) -> int:
+func _select_support_handhold_type(plan: ChunkRoutePlanScript, row_role: int, selection_context: String) -> int:
 	if row_role == RouteRowRoleScript.Value.CATCH or row_role == RouteRowRoleScript.Value.SUPPORT:
-		return _select_first_allowed_handhold_type([HandholdTypeScript.Value.REST, HandholdTypeScript.Value.NORMAL], plan.safe_path_allowed_handhold_types)
+		return _select_allowed_handhold_type([HandholdTypeScript.Value.REST, HandholdTypeScript.Value.NORMAL], plan.safe_path_allowed_handhold_types, selection_context)
 
 	RouteRowRoleScript.assert_valid(row_role)
-	return _select_first_allowed_handhold_type([HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST], plan.safe_path_allowed_handhold_types)
+	return _select_allowed_handhold_type([HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST], plan.safe_path_allowed_handhold_types, selection_context)
 
-func _select_first_allowed_handhold_type(preferred_types: Array[int], allowed_types: Array[int]) -> int:
+func _select_allowed_handhold_type(preferred_types: Array[int], allowed_types: Array[int], selection_context: String) -> int:
 	Validation.require_condition(not preferred_types.is_empty(), "ChunkRoutePopulationBuilder handhold type selection requires preferences.")
 	Validation.require_condition(not allowed_types.is_empty(), "ChunkRoutePopulationBuilder handhold type selection requires allowed types.")
+	var eligible_types: Array[int] = []
 	for preferred_type in preferred_types:
 		HandholdTypeScript.assert_valid(preferred_type)
 		if allowed_types.has(preferred_type):
-			return preferred_type
+			eligible_types.append(preferred_type)
 
-	Validation.require_condition(false, "ChunkRoutePopulationBuilder could not select an allowed handhold type.")
-	return HandholdTypeScript.Value.NORMAL
+	Validation.require_condition(not eligible_types.is_empty(), "ChunkRoutePopulationBuilder could not select an allowed handhold type.")
+	if selection_context == "" or eligible_types.size() == 1:
+		return eligible_types[0]
+
+	var weighted_types: Array[int] = []
+	var eligible_count: int = eligible_types.size()
+	for eligible_index in range(eligible_count):
+		var eligible_type: int = eligible_types[eligible_index]
+		var weight: int = (eligible_count - eligible_index) * (eligible_count - eligible_index)
+		for weight_index in range(weight):
+			weighted_types.append(eligible_type)
+
+	var selected_index: int = abs(selection_context.hash()) % weighted_types.size()
+	return weighted_types[selected_index]
 
 func _build_reward_placements(
 	plan: ChunkRoutePlanScript,

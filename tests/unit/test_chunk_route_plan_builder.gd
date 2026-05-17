@@ -64,6 +64,7 @@ func test_baseline_risk_plan_requires_sustained_outer_branch_and_risk_hazards() 
     assert_true(plan.safe_path_allows_handhold_type(HandholdTypeScript.Value.BURN))
     assert_false(plan.safe_path_allows_handhold_type(HandholdTypeScript.Value.BREAK))
     assert_true(plan.optional_path_allows_handhold_type(HandholdTypeScript.Value.BOOST))
+    assert_true(plan.optional_path_allows_handhold_type(HandholdTypeScript.Value.ROCKET))
     assert_true(plan.has_hazard_intent(GeneratedHazardIntentScript.Value.OPTIONAL_BRANCH_DENIAL))
     assert_true(plan.has_hazard_intent(GeneratedHazardIntentScript.Value.REWARD_GREED_PRESSURE))
 
@@ -79,6 +80,8 @@ func test_challenge_pressure_plan_allows_advanced_pressure_and_longer_branch() -
     assert_true(plan.safe_path_allows_handhold_type(HandholdTypeScript.Value.BREAK))
     assert_true(plan.safe_path_allows_handhold_type(HandholdTypeScript.Value.BOOST))
     assert_true(plan.optional_path_allows_handhold_type(HandholdTypeScript.Value.BREAK))
+    assert_true(plan.optional_path_allows_handhold_type(HandholdTypeScript.Value.GHOST))
+    assert_true(plan.optional_path_allows_handhold_type(HandholdTypeScript.Value.ROCKET))
     assert_true(plan.has_hazard_intent(GeneratedHazardIntentScript.Value.CRUX_PRESSURE))
     assert_true(plan.has_hazard_intent(GeneratedHazardIntentScript.Value.OPTIONAL_BRANCH_DENIAL))
 

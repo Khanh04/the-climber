@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted
 
 ## Context
 
@@ -79,6 +79,15 @@ The handhold model must:
   - This validates passive, punitive, timed, and release-triggered
     behaviors without requiring economy, shield, moving-path, or
     linked-route systems.
+- The current follow-up implementation extends the active catalog with
+  `GHOST` and `ROCKET` as the first post-baseline expansion.
+  - `GHOST` reuses the lifecycle seam as a one-use hold that breaks on
+    release.
+  - `ROCKET` reuses the movement seam as a stronger deterministic
+    release-launch hold.
+  - Route-first generation now uses a seeded weighted selection path so
+    these holds can appear deterministically in generated challenge and
+    optional-route contexts instead of remaining dead catalog entries.
 
 ## Consequences
 
@@ -95,3 +104,6 @@ The handhold model must:
   redesign.
 - The first issue should avoid linked, moving, or defensive holds
   until the adapter, trigger, and effect seams are stable.
+- The current implementation still stops short of reward, linked-route,
+  and rail-motion holds; `BATTERY`, `BUBBLE`, `MIRROR`, `KEY`, `ZIP`,
+  and `TETHER` still require new effect-spec implementations.

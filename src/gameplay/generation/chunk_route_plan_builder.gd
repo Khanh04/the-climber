@@ -366,13 +366,15 @@ func _build_optional_path_allowed_handhold_types(difficulty_band: int) -> Array[
 		ChunkDifficultyBandScript.Value.EASY:
 			return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.REST, HandholdTypeScript.Value.BURN]
 		ChunkDifficultyBandScript.Value.BASELINE:
-			return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BOOST]
+			return [HandholdTypeScript.Value.NORMAL, HandholdTypeScript.Value.BURN, HandholdTypeScript.Value.BOOST, HandholdTypeScript.Value.ROCKET]
 		ChunkDifficultyBandScript.Value.CHALLENGE:
 			return [
 				HandholdTypeScript.Value.NORMAL,
 				HandholdTypeScript.Value.BURN,
 				HandholdTypeScript.Value.BREAK,
 				HandholdTypeScript.Value.BOOST,
+				HandholdTypeScript.Value.GHOST,
+				HandholdTypeScript.Value.ROCKET,
 			]
 		_:
 			Validation.require_condition(false, "ChunkRoutePlanBuilder optional hold types require a supported difficulty band.")

@@ -559,6 +559,33 @@ func test_challenge_pressure_chunks_assign_break_or_boost_handholds() -> void:
 
     assert_true(has_special_pressure_hold)
 
+func test_challenge_generation_emits_ghost_and_rocket_holds() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var seed_keys: PackedStringArray = PackedStringArray([
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.from_utc_date(2026, 5, 15),
+    ])
+    var has_ghost_hold: bool = false
+    var has_rocket_hold: bool = false
+
+    for seed_key in seed_keys:
+        for chunk_index in range(1, 40):
+            var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, chunk_index))
+            if layout.difficulty_band != ChunkDifficultyBandScript.Value.CHALLENGE:
+                continue
+
+            has_ghost_hold = has_ghost_hold or _has_handhold_type(layout.handholds, HandholdTypeScript.Value.GHOST)
+            has_rocket_hold = has_rocket_hold or _has_handhold_type(layout.handholds, HandholdTypeScript.Value.ROCKET)
+            if has_ghost_hold and has_rocket_hold:
+                break
+
+        if has_ghost_hold and has_rocket_hold:
+            break
+
+    assert_true(has_ghost_hold)
+    assert_true(has_rocket_hold)
+
 func test_route_first_handhold_policy_ignores_legacy_assignment_rows() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     tuning.handhold_assignment_rules = [
@@ -806,6 +833,15 @@ func _has_hazard_kind(hazard_sockets: Array[GeneratedHazardSocket], hazard_kind:
 
     for hazard_socket in hazard_sockets:
         if hazard_socket.hazard_kind == hazard_kind:
+            return true
+
+    return false
+
+func _has_handhold_type(handholds: Array[GeneratedHandholdSocket], handhold_type: int) -> bool:
+    HandholdTypeScript.assert_valid(handhold_type)
+
+    for handhold in handholds:
+        if handhold.handhold_type == handhold_type:
             return true
 
     return false

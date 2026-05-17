@@ -1,47 +1,36 @@
-[gd_resource type="Resource" script_class="HandholdTypeDefinitionCatalog" load_steps=26 format=3]
+[gd_resource type="Resource" script_class="HandholdTypeDefinitionCatalog" format=3 uid="uid://b8fo4xqyk2ca8"]
 
-[ext_resource type="Script" path="res://resources/config/handhold_type_definition_catalog.gd" id="1_catalog"]
-[ext_resource type="Script" path="res://resources/config/handhold_type_definition.gd" id="2_definition"]
-[ext_resource type="Script" path="res://resources/config/handhold_surface_profile.gd" id="3_surface"]
-[ext_resource type="Script" path="res://resources/config/handhold_lifecycle_rule.gd" id="4_lifecycle"]
-[ext_resource type="Script" path="res://resources/config/handhold_movement_rule.gd" id="5_movement"]
-
-[sub_resource type="Resource" id="SurfaceProfile_normal"]
-script = ExtResource("3_surface")
-stamina_drain_multiplier = 1.0
+[ext_resource type="Script" uid="uid://dehgm7e3uth2t" path="res://resources/config/handhold_type_definition_catalog.gd" id="1_catalog"]
+[ext_resource type="Script" uid="uid://djyr5wg0ai4st" path="res://resources/config/handhold_type_definition.gd" id="2_definition"]
+[ext_resource type="Script" uid="uid://dmes0c6flv3yo" path="res://resources/config/handhold_surface_profile.gd" id="3_surface"]
+[ext_resource type="Script" uid="uid://clt2elggnkkbx" path="res://resources/config/handhold_lifecycle_rule.gd" id="4_lifecycle"]
+[ext_resource type="Script" uid="uid://br2fj18xmxqpi" path="res://resources/config/handhold_movement_rule.gd" id="5_movement"]
 
 [sub_resource type="Resource" id="LifecycleRule_normal"]
 script = ExtResource("4_lifecycle")
-break_after_attach_seconds = 0.0
-breaks_on_release = false
 
 [sub_resource type="Resource" id="MovementRule_normal"]
 script = ExtResource("5_movement")
-release_impulse_vector = Vector2(0, 0)
+
+[sub_resource type="Resource" id="SurfaceProfile_normal"]
+script = ExtResource("3_surface")
 
 [sub_resource type="Resource" id="Definition_normal"]
 script = ExtResource("2_definition")
-definition_id = &"NORMAL"
-handhold_type = 0
-display_name = "Normal"
 physical_size_meters = Vector2(0.18, 0.3)
-visual_color = Color(0.92, 0.72, 0.23, 1)
 surface_profile = SubResource("SurfaceProfile_normal")
 lifecycle_rule = SubResource("LifecycleRule_normal")
 movement_rule = SubResource("MovementRule_normal")
 
-[sub_resource type="Resource" id="SurfaceProfile_rest"]
-script = ExtResource("3_surface")
-stamina_drain_multiplier = 0.75
-
 [sub_resource type="Resource" id="LifecycleRule_rest"]
 script = ExtResource("4_lifecycle")
-break_after_attach_seconds = 0.0
-breaks_on_release = false
 
 [sub_resource type="Resource" id="MovementRule_rest"]
 script = ExtResource("5_movement")
-release_impulse_vector = Vector2(0, 0)
+
+[sub_resource type="Resource" id="SurfaceProfile_rest"]
+script = ExtResource("3_surface")
+stamina_drain_multiplier = 0.75
 
 [sub_resource type="Resource" id="Definition_rest"]
 script = ExtResource("2_definition")
@@ -54,18 +43,15 @@ surface_profile = SubResource("SurfaceProfile_rest")
 lifecycle_rule = SubResource("LifecycleRule_rest")
 movement_rule = SubResource("MovementRule_rest")
 
-[sub_resource type="Resource" id="SurfaceProfile_burn"]
-script = ExtResource("3_surface")
-stamina_drain_multiplier = 1.35
-
 [sub_resource type="Resource" id="LifecycleRule_burn"]
 script = ExtResource("4_lifecycle")
-break_after_attach_seconds = 0.0
-breaks_on_release = false
 
 [sub_resource type="Resource" id="MovementRule_burn"]
 script = ExtResource("5_movement")
-release_impulse_vector = Vector2(0, 0)
+
+[sub_resource type="Resource" id="SurfaceProfile_burn"]
+script = ExtResource("3_surface")
+stamina_drain_multiplier = 1.35
 
 [sub_resource type="Resource" id="Definition_burn"]
 script = ExtResource("2_definition")
@@ -78,10 +64,6 @@ surface_profile = SubResource("SurfaceProfile_burn")
 lifecycle_rule = SubResource("LifecycleRule_burn")
 movement_rule = SubResource("MovementRule_burn")
 
-[sub_resource type="Resource" id="SurfaceProfile_break"]
-script = ExtResource("3_surface")
-stamina_drain_multiplier = 1.0
-
 [sub_resource type="Resource" id="LifecycleRule_break"]
 script = ExtResource("4_lifecycle")
 break_after_attach_seconds = 0.6
@@ -89,7 +71,9 @@ breaks_on_release = true
 
 [sub_resource type="Resource" id="MovementRule_break"]
 script = ExtResource("5_movement")
-release_impulse_vector = Vector2(0, 0)
+
+[sub_resource type="Resource" id="SurfaceProfile_break"]
+script = ExtResource("3_surface")
 
 [sub_resource type="Resource" id="Definition_break"]
 script = ExtResource("2_definition")
@@ -102,18 +86,15 @@ surface_profile = SubResource("SurfaceProfile_break")
 lifecycle_rule = SubResource("LifecycleRule_break")
 movement_rule = SubResource("MovementRule_break")
 
-[sub_resource type="Resource" id="SurfaceProfile_boost"]
-script = ExtResource("3_surface")
-stamina_drain_multiplier = 1.0
-
 [sub_resource type="Resource" id="LifecycleRule_boost"]
 script = ExtResource("4_lifecycle")
-break_after_attach_seconds = 0.0
-breaks_on_release = false
 
 [sub_resource type="Resource" id="MovementRule_boost"]
 script = ExtResource("5_movement")
 release_impulse_vector = Vector2(0, -240)
+
+[sub_resource type="Resource" id="SurfaceProfile_boost"]
+script = ExtResource("3_surface")
 
 [sub_resource type="Resource" id="Definition_boost"]
 script = ExtResource("2_definition")
@@ -126,6 +107,49 @@ surface_profile = SubResource("SurfaceProfile_boost")
 lifecycle_rule = SubResource("LifecycleRule_boost")
 movement_rule = SubResource("MovementRule_boost")
 
+[sub_resource type="Resource" id="LifecycleRule_ghost"]
+script = ExtResource("4_lifecycle")
+breaks_on_release = true
+
+[sub_resource type="Resource" id="MovementRule_ghost"]
+script = ExtResource("5_movement")
+
+[sub_resource type="Resource" id="SurfaceProfile_ghost"]
+script = ExtResource("3_surface")
+
+[sub_resource type="Resource" id="Definition_ghost"]
+script = ExtResource("2_definition")
+definition_id = &"GHOST"
+handhold_type = 5
+display_name = "Ghost"
+physical_size_meters = Vector2(0.16, 0.28)
+visual_color = Color(0.73, 0.84, 0.95, 0.82)
+surface_profile = SubResource("SurfaceProfile_ghost")
+lifecycle_rule = SubResource("LifecycleRule_ghost")
+movement_rule = SubResource("MovementRule_ghost")
+
+[sub_resource type="Resource" id="LifecycleRule_rocket"]
+script = ExtResource("4_lifecycle")
+
+[sub_resource type="Resource" id="MovementRule_rocket"]
+script = ExtResource("5_movement")
+release_impulse_vector = Vector2(0, -360)
+
+[sub_resource type="Resource" id="SurfaceProfile_rocket"]
+script = ExtResource("3_surface")
+stamina_drain_multiplier = 1.1
+
+[sub_resource type="Resource" id="Definition_rocket"]
+script = ExtResource("2_definition")
+definition_id = &"ROCKET"
+handhold_type = 6
+display_name = "Rocket"
+physical_size_meters = Vector2(0.14, 0.28)
+visual_color = Color(0.99, 0.48, 0.14, 1)
+surface_profile = SubResource("SurfaceProfile_rocket")
+lifecycle_rule = SubResource("LifecycleRule_rocket")
+movement_rule = SubResource("MovementRule_rocket")
+
 [resource]
 script = ExtResource("1_catalog")
-definitions = [SubResource("Definition_normal"), SubResource("Definition_rest"), SubResource("Definition_burn"), SubResource("Definition_break"), SubResource("Definition_boost")]
+definitions = Array[Resource]([SubResource("Definition_normal"), SubResource("Definition_rest"), SubResource("Definition_burn"), SubResource("Definition_break"), SubResource("Definition_boost"), SubResource("Definition_ghost"), SubResource("Definition_rocket")])
