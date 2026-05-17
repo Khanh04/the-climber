@@ -85,11 +85,13 @@ func test_emitter_turns_hazard_placements_into_socket_kinds_and_offsets() -> voi
     for socket_index in range(layout.hazard_sockets.size()):
         var hazard_placement: RefCounted = hazard_placements[socket_index]
         var hazard_kind: int = _require_int_property(hazard_placement, &"hazard_kind")
+        var anchor_position: Vector2 = _require_vector2_property(hazard_placement, &"local_position")
         var expected_position: Vector2 = _expected_hazard_position(tuning, hazard_placement)
 
         assert_eq(layout.hazard_sockets[socket_index].hazard_kind, hazard_kind)
         assert_eq(String(layout.hazard_sockets[socket_index].socket_id), "chunk_12_hazard_%02d" % socket_index)
         assert_true(layout.hazard_sockets[socket_index].local_position.is_equal_approx(expected_position))
+        assert_gte(layout.hazard_sockets[socket_index].local_position.distance_to(anchor_position), 0.5)
 
 func test_emitter_maps_route_movement_styles_to_existing_chunk_type_metadata() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -175,13 +177,13 @@ func _expected_hazard_position(tuning: GenerationTuningScript, hazard_placement:
 
     match hazard_kind:
         GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
-            return Vector2(clamped_x, anchor_position.y + 0.4)
+            return Vector2(clamped_x, anchor_position.y + 0.5)
         GeneratedHazardKindScript.Value.WIND_GUST:
-            return Vector2(clamped_x, anchor_position.y - 0.15)
+            return Vector2(clamped_x, anchor_position.y - 0.65)
         GeneratedHazardKindScript.Value.DOWNDRAFT:
-            return Vector2(clamped_x, anchor_position.y - 0.55)
+            return Vector2(clamped_x, anchor_position.y - 0.85)
         GeneratedHazardKindScript.Value.UPDRAFT:
-            return Vector2(clamped_x, anchor_position.y - 0.9)
+            return Vector2(clamped_x, anchor_position.y - 1.05)
         _:
             Validation.require_condition(false, "Test helper requires a supported hazard kind.")
             return anchor_position

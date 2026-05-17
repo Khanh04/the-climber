@@ -178,13 +178,13 @@ func _build_hazard_position(hazard_placement: RefCounted) -> Vector2:
 	var anchor_position: Vector2 = _require_vector2_property(hazard_placement, &"local_position")
 	match hazard_kind:
 		GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
-			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y + 0.4)
+			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y + 0.5)
 		GeneratedHazardKindScript.Value.WIND_GUST:
-			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y - 0.15)
+			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y - 0.65)
 		GeneratedHazardKindScript.Value.DOWNDRAFT:
-			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y - 0.55)
+			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y - 0.85)
 		GeneratedHazardKindScript.Value.UPDRAFT:
-			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y - 0.9)
+			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y - 1.05)
 		_:
 			Validation.require_condition(false, "ChunkRouteLayoutEmitter requires a supported hazard kind.")
 			return anchor_position

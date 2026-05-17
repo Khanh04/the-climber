@@ -52,12 +52,14 @@ func build_layout(
 
 	var plan: ChunkRoutePlanScript = _plan_builder.build_plan(seed_key, chunk_index, route_slot, difficulty_band)
 	var first_row_height_meters: float = _calculate_route_first_row_height_meters(plan)
+	var route_row_step_height_meters: float = _calculate_route_row_step_height_meters(plan, first_row_height_meters)
+	var effective_vertical_jitter_meters: float = _calculate_reachable_vertical_jitter_meters(route_row_step_height_meters)
 	var anchor_graph_builder: RouteAnchorGraphBuilderScript = RouteAnchorGraphBuilderScript.new(
 		_tuning.chunk_width_meters,
-		_calculate_route_row_step_height_meters(plan, first_row_height_meters),
+		route_row_step_height_meters,
 		first_row_height_meters,
 		_tuning.handhold_horizontal_jitter_meters,
-		_tuning.handhold_vertical_jitter_meters,
+		effective_vertical_jitter_meters,
 		seed_key
 	)
 	var anchor_graph: RouteAnchorGraphScript = anchor_graph_builder.build_graph(plan)
@@ -115,6 +117,13 @@ func _calculate_route_top_padding_meters(first_row_height_meters: float) -> floa
 		"ChunkRouteGenerationPipeline route seam padding must leave a reachable next entry row."
 	)
 	return minf(_tuning.opener_top_padding_meters, reachable_top_padding_meters)
+
+func _calculate_reachable_vertical_jitter_meters(row_step_height_meters: float) -> float:
+	Validation.require_condition(row_step_height_meters > 0.0, "ChunkRouteGenerationPipeline reachable jitter requires a positive row step.")
+	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
+	var jitter_budget_meters: float = (route_validation_tuning.max_move_distance_meters - row_step_height_meters) * 0.5
+	var safe_jitter_meters: float = maxf(0.0, jitter_budget_meters - 0.02)
+	return minf(_tuning.handhold_vertical_jitter_meters, safe_jitter_meters)
 
 func _get_route_validation_tuning() -> RouteValidationTuningScript:
 	Validation.require_condition(_tuning.route_validation_tuning != null, "ChunkRouteGenerationPipeline requires route validation tuning.")

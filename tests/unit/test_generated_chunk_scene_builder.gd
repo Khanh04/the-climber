@@ -30,7 +30,7 @@ func test_scene_builder_creates_chunk_root_with_metadata_and_scaled_position() -
 
     assert_eq(chunk_node.name, &"GeneratedChunk_02_ZIGZAG")
     assert_eq(chunk_node.position, Vector2(0.0, -4800.0))
-    assert_eq(seed_key, "generator_v4:2026-05-14")
+    assert_eq(seed_key, "generator_v1:2026-05-14")
     assert_eq(chunk_type_label, "ZIGZAG")
     var route_entry_hold_ids_meta: Variant = chunk_node.get_meta(&"route_entry_hold_ids")
     var route_exit_hold_ids_meta: Variant = chunk_node.get_meta(&"route_exit_hold_ids")
@@ -40,30 +40,19 @@ func test_scene_builder_creates_chunk_root_with_metadata_and_scaled_position() -
     var typed_route_exit_hold_ids: PackedStringArray = route_exit_hold_ids_meta
     var route_validation_is_valid: bool = _get_bool_meta(chunk_node, &"route_validation_is_valid")
     var route_validation_path_length: int = _get_int_meta(chunk_node, &"route_validation_path_length")
-    var selected_candidate_attempt_index: int = _get_int_meta(chunk_node, &"selected_candidate_attempt_index")
-    var candidate_score: float = _get_float_meta(chunk_node, &"candidate_score")
-    var route_validation_path_hold_ids_meta: Variant = chunk_node.get_meta(&"route_validation_path_hold_ids")
-    assert_true(route_validation_path_hold_ids_meta is PackedStringArray)
-    var typed_route_validation_path_hold_ids: PackedStringArray = route_validation_path_hold_ids_meta
     assert_eq(typed_route_entry_hold_ids, PackedStringArray(["chunk_02_hold_00"]))
     assert_eq(typed_route_exit_hold_ids, PackedStringArray(["chunk_02_hold_01"]))
     assert_eq(route_validation_is_valid, true)
     assert_eq(_get_string_meta(chunk_node, &"route_validation_target_hold_id"), "chunk_02_hold_01")
     assert_eq(_get_string_meta(chunk_node, &"route_validation_failure_reason"), "")
-    assert_eq(typed_route_validation_path_hold_ids, PackedStringArray(["chunk_02_hold_00", "chunk_02_hold_01"]))
     assert_eq(route_validation_path_length, 2)
-    assert_eq(selected_candidate_attempt_index, 1)
-    assert_eq(candidate_score, 1234.5)
     assert_not_null(chunk_node.get_node_or_null("Handholds"))
     assert_not_null(chunk_node.get_node_or_null("Pickups"))
     assert_not_null(chunk_node.get_node_or_null("Hazards"))
 
-func test_scene_builder_creates_non_blocking_handholds_and_runtime_spawn_adapters() -> void:
+func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_spawn_adapters() -> void:
     var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(100.0)
     var layout: GeneratedChunkLayoutScript = _build_layout_fixture()
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    var rest_definition: HandholdTypeDefinitionScript = tuning.get_required_handhold_definition(HandholdTypeScript.Value.REST)
-    var expected_rest_size_pixels: Vector2 = rest_definition.physical_size_meters * 100.0
 
     var chunk_node: Node2D = builder.build_chunk_node(layout)
     add_child_autofree(chunk_node)
@@ -104,7 +93,7 @@ func test_scene_builder_creates_non_blocking_handholds_and_runtime_spawn_adapter
     assert_eq(handhold.definition_id, &"REST")
     assert_not_null(collision_shape)
     assert_not_null(rectangle_shape)
-    assert_true(rectangle_shape.size.is_equal_approx(expected_rest_size_pixels))
+    assert_true(rectangle_shape.size.is_equal_approx(Vector2(18.0, 30.0)))
     var handhold_type_meta: Variant = handhold.get_meta(&"handhold_type")
     var handhold_route_role_meta: Variant = handhold.get_meta(&"route_role")
     assert_true(handhold_type_meta is String)
@@ -219,8 +208,8 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
     var route_validation_result: RefCounted = route_validation_result_variant
 
     return GeneratedChunkLayoutScript.new(
-        "generator_v4:2026-05-14",
-        "generator_v4",
+        "generator_v1:2026-05-14",
+        "generator_v1",
         2,
         ChunkTypeScript.Value.ZIGZAG,
         ChunkRouteSlotScript.Value.SKILL,
@@ -231,9 +220,7 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
         hazard_sockets,
         PackedStringArray(["chunk_02_hold_00"]),
         PackedStringArray(["chunk_02_hold_01"]),
-        route_validation_result,
-        1,
-        1234.5
+        route_validation_result
     )
 
 func _get_string_meta(node: Node, key: StringName) -> String:
@@ -266,13 +253,4 @@ func _get_int_meta(node: Node, key: StringName) -> int:
         return 0
 
     var typed_value: int = raw_value
-    return typed_value
-
-func _get_float_meta(node: Node, key: StringName) -> float:
-    var raw_value: Variant = node.get_meta(key)
-    if not raw_value is float:
-        fail_test("Expected float metadata for %s." % String(key))
-        return 0.0
-
-    var typed_value: float = raw_value
     return typed_value

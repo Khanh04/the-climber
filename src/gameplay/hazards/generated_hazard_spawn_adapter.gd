@@ -15,8 +15,6 @@ var socket_id: StringName = StringName()
 var hazard_kind: int = -1
 var impulse_vector_pixels: Vector2 = Vector2.ZERO
 
-var _has_triggered: bool = false
-
 func configure_hazard(
 	socket_id_value: StringName,
 	hazard_kind_value: int,
@@ -187,9 +185,4 @@ func _ensure_presentation() -> void:
 
 func _on_body_entered(body: Node) -> void:
 	Validation.require_condition(body != null, "GeneratedHazardSpawnAdapter body_entered requires a body.")
-	if _has_triggered:
-		return
-
-	_has_triggered = true
-	monitoring = false
 	triggered.emit(body)

@@ -99,7 +99,9 @@ func _build_signed_jitter(jitter_key: String, maximum_abs_jitter_meters: float) 
 	return normalized_jitter * maximum_abs_jitter_meters
 
 func _hash_int(seed_text: String) -> int:
-	var seed_hash: int = seed_text.hash()
-	if seed_hash < 0:
-		seed_hash = -seed_hash
-	return seed_hash
+	var hash_value: int = 2166136261
+	for character_index in range(seed_text.length()):
+		hash_value = hash_value ^ seed_text.unicode_at(character_index)
+		hash_value = (hash_value * 16777619) & 0x7fffffff
+
+	return hash_value

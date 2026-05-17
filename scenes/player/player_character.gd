@@ -10,6 +10,9 @@ const PlayerMotionControllerScript = preload("res://src/gameplay/player/player_m
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
 const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
 
+const CONTROLLED_COLLISION_MASK: int = 1
+const FALLING_COLLISION_MASK: int = 3
+
 @export var climb_tuning: ClimbPrototypeTuningScript
 
 var _base_skeleton: Skeleton2D
@@ -49,6 +52,7 @@ func _ready() -> void:
 	_capture_hand_visual_offsets()
 	_reset_hand_visual_anchors()
 	_physics_mode = PlayerPhysicsModeScript.controlled_climb()
+	_sync_body_collision_mask_for_mode()
 
 func _physics_process(delta: float) -> void:
 	Validation.require_condition(_hand_visual_follow_controller != null, "PlayerCharacter requires a hand visual follow controller.")
@@ -75,6 +79,7 @@ func apply_frame_motion(frame_result: RefCounted, attachment_state: RefCounted) 
 	var typed_attachment_state: HandAttachmentStateScript = attachment_state
 
 	_physics_mode = PlayerPhysicsModeTransitionsScript.mode_after_frame(_physics_mode, frame_result)
+	_sync_body_collision_mask_for_mode()
 	if _physics_mode != PlayerPhysicsModeScript.controlled_climb():
 		clear_runtime_grip_joints()
 		clear_runtime_grip_links()
@@ -135,11 +140,13 @@ func clear_runtime_grip_links() -> void:
 func enter_falling(reason: int) -> void:
 	PlayerPhysicsModeTransitionsScript.assert_transition_allowed(_physics_mode, PlayerPhysicsModeScript.falling_ragdoll(), reason)
 	_physics_mode = PlayerPhysicsModeScript.falling_ragdoll()
+	_sync_body_collision_mask_for_mode()
 	clear_runtime_grip_joints()
 	clear_runtime_grip_links()
 
 func reset_physics(global_position_value: Vector2) -> void:
 	_physics_mode = PlayerPhysicsModeTransitionsScript.reset_mode(_physics_mode)
+	_sync_body_collision_mask_for_mode()
 	clear_runtime_grip_joints()
 	clear_runtime_grip_links()
 	_player_body.global_position = global_position_value
@@ -228,6 +235,14 @@ func assert_visual_roots_physics_neutral() -> void:
 	_assert_node_tree_has_no_physics_nodes(_cosmetic_visual_root)
 	_assert_node_tree_has_no_physics_nodes(_left_hand_cosmetic_root)
 	_assert_node_tree_has_no_physics_nodes(_right_hand_cosmetic_root)
+
+func _sync_body_collision_mask_for_mode() -> void:
+	Validation.require_condition(_player_body != null, "PlayerCharacter requires PlayerBody before syncing collision masks.")
+	if _physics_mode == PlayerPhysicsModeScript.falling_ragdoll():
+		_player_body.collision_mask = FALLING_COLLISION_MASK
+		return
+
+	_player_body.collision_mask = CONTROLLED_COLLISION_MASK
 
 func _validate_required_state() -> void:
 	Validation.require_condition(climb_tuning != null, "PlayerCharacter requires climb tuning.")

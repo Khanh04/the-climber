@@ -81,19 +81,15 @@ func _apply_chunk_metadata(chunk_root: Node2D, layout: GeneratedChunkLayout) -> 
     chunk_root.set_meta(&"difficulty_band", ChunkDifficultyBand.to_label(layout.difficulty_band))
     chunk_root.set_meta(&"route_entry_hold_ids", layout.route_entry_hold_ids)
     chunk_root.set_meta(&"route_exit_hold_ids", layout.route_exit_hold_ids)
-    chunk_root.set_meta(&"selected_candidate_attempt_index", layout.selected_candidate_attempt_index)
-    chunk_root.set_meta(&"candidate_score", layout.candidate_score)
 
     if layout.route_validation_result != null:
         var route_validation_result: RefCounted = layout.route_validation_result
-        var route_validation_path_hold_ids: PackedStringArray = _get_required_packed_string_array_property(route_validation_result, &"path_hold_ids")
         chunk_root.set_meta(&"route_validation_is_valid", _get_required_bool_property(route_validation_result, &"is_valid"))
         chunk_root.set_meta(&"route_validation_target_hold_id", _get_required_string_name_property(route_validation_result, &"target_hold_id"))
         chunk_root.set_meta(&"route_validation_failure_reason", _get_required_string_property(route_validation_result, &"failure_reason"))
-        chunk_root.set_meta(&"route_validation_path_hold_ids", route_validation_path_hold_ids)
         chunk_root.set_meta(
             &"route_validation_path_length",
-            route_validation_path_hold_ids.size()
+            _get_required_packed_string_array_property(route_validation_result, &"path_hold_ids").size()
         )
 
 func _get_required_bool_property(source: Object, property_name: StringName) -> bool:

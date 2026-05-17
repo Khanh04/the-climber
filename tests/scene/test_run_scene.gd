@@ -17,6 +17,7 @@ const AppLifecycleEventScript = preload("res://src/platform/lifecycle/app_lifecy
 const AppLifecycleStateScript = preload("res://src/platform/lifecycle/app_lifecycle_state.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
+const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
 const RewardedAdOutcomeScript = preload("res://src/platform/ads/rewarded_ad_outcome.gd")
 const RewardedAdPlacementScript = preload("res://src/platform/ads/rewarded_ad_placement.gd")
 const RewardedAdResultScript = preload("res://src/platform/ads/rewarded_ad_result.gd")
@@ -237,7 +238,7 @@ func test_run_scene_generated_opener_holds_are_in_initial_grip_range() -> void:
     assert_lte(left_anchor.global_position.distance_to(left_hold.global_position), playground.climb_tuning.handhold_detection_radius_pixels)
     assert_lte(right_anchor.global_position.distance_to(right_hold.global_position), playground.climb_tuning.handhold_detection_radius_pixels)
 
-func test_run_scene_climb_holds_do_not_block_player_body() -> void:
+func test_run_scene_climb_holds_collide_with_player_body_only_while_falling() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
@@ -260,7 +261,13 @@ func test_run_scene_climb_holds_do_not_block_player_body() -> void:
     assert_false((player_body.collision_mask & right_hold.collision_layer) != 0)
     assert_true((player_body.collision_mask & safe_platform.collision_layer) != 0)
 
-func test_run_scene_has_tall_non_blocking_test_route() -> void:
+    playground.get_player_for_test().enter_falling(PlayerPhysicsModeTransitionsScript.Reason.FALL_DETECTED)
+
+    assert_true((player_body.collision_mask & left_hold.collision_layer) != 0)
+    assert_true((player_body.collision_mask & right_hold.collision_layer) != 0)
+    assert_true((player_body.collision_mask & safe_platform.collision_layer) != 0)
+
+func test_run_scene_has_tall_generated_route_that_collides_while_falling() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
@@ -270,20 +277,22 @@ func test_run_scene_has_tall_non_blocking_test_route() -> void:
     await get_tree().process_frame
 
     var player_body: RigidBody2D = playground.get_player_body_for_test()
-    var non_blocking_hold_count: int = 0
+    var collidable_generated_hold_count: int = 0
     var highest_hold_y: float = INF
     var lowest_hold_y: float = -INF
 
     assert_not_null(player_body)
+    playground.get_player_for_test().enter_falling(PlayerPhysicsModeTransitionsScript.Reason.FALL_DETECTED)
+
     for handhold in playground.get_tree().get_nodes_in_group(&"handhold"):
         assert_true(handhold is StaticBody2D)
         var handhold_body: StaticBody2D = handhold
-        if (player_body.collision_mask & handhold_body.collision_layer) == 0:
-            non_blocking_hold_count += 1
+        if handhold_body is GeneratedHandholdAdapterScript and (player_body.collision_mask & handhold_body.collision_layer) != 0:
+            collidable_generated_hold_count += 1
             highest_hold_y = minf(highest_hold_y, handhold_body.global_position.y)
             lowest_hold_y = maxf(lowest_hold_y, handhold_body.global_position.y)
 
-    assert_gte(non_blocking_hold_count, 18)
+    assert_gte(collidable_generated_hold_count, 18)
     assert_gt(lowest_hold_y - highest_hold_y, 1200.0)
 
 func test_run_scene_starts_generated_chunks_from_reset_anchor_without_authored_starter_route_nodes() -> void:
