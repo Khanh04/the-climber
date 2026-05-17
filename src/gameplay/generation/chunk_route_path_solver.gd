@@ -75,7 +75,7 @@ func _select_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
 		return RouteLaneScript.Value.CENTER
 
 	if plan.optional_route_required:
-		return RouteLaneScript.Value.CENTER
+		return _select_branch_safe_lane(plan, row_index)
 
 	match plan.movement_style:
 		RouteMovementStyleScript.Value.LADDER:
@@ -89,22 +89,51 @@ func _select_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
 			return RouteLaneScript.Value.CENTER
 
 func _select_ladder_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	return _select_wide_safe_lane(plan, row_index)
+
+func _select_zigzag_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	return _select_wide_safe_lane(plan, row_index)
+
+func _select_recovery_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	if (row_index % 4) == 1:
+		return _get_alternating_outer_lane(plan, row_index)
+
 	if (row_index % 2) == 0:
 		return _get_alternating_inner_lane(plan, row_index)
 
 	return RouteLaneScript.Value.CENTER
 
-func _select_zigzag_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	if (row_index % 2) == 1:
-		return _get_alternating_inner_lane(plan, row_index)
+func _select_wide_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	var sequence_index: int = (row_index - 1) % 8
+	var primary_side: int = _get_alternating_branch_side(plan, row_index)
+	var secondary_side: int = _get_opposite_branch_side(primary_side)
+	match sequence_index:
+		0:
+			return _get_inner_lane_for_side(primary_side)
+		1:
+			return _get_outer_lane_for_side(primary_side)
+		2:
+			return _get_inner_lane_for_side(primary_side)
+		3:
+			return RouteLaneScript.Value.CENTER
+		4:
+			return _get_inner_lane_for_side(secondary_side)
+		5:
+			return _get_outer_lane_for_side(secondary_side)
+		6:
+			return _get_inner_lane_for_side(secondary_side)
+		_:
+			return RouteLaneScript.Value.CENTER
 
-	return RouteLaneScript.Value.CENTER
+func _select_branch_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	Validation.require_condition(plan.optional_route_required, "ChunkRoutePathSolver branch safe lanes require an optional route plan.")
+	if row_index <= plan.split_row_index or row_index >= plan.merge_row_index:
+		return RouteLaneScript.Value.CENTER
 
-func _select_recovery_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	if (row_index % 3) == 0:
-		return _get_alternating_inner_lane(plan, row_index)
-
-	return RouteLaneScript.Value.CENTER
+	var branch_side: int = _get_opposite_branch_side(plan.route_branch_side)
+	var branch_row_index: int = row_index - plan.split_row_index - 1
+	var branch_span: int = plan.merge_row_index - plan.split_row_index - 1
+	return _select_branch_lane(branch_side, branch_row_index, branch_span)
 
 func _get_alternating_inner_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
 	var lane_index: int = (floori(float(row_index) * 0.5) + plan.chunk_index) % 2
@@ -113,34 +142,71 @@ func _get_alternating_inner_lane(plan: ChunkRoutePlanScript, row_index: int) -> 
 
 	return RouteLaneScript.Value.INNER_RIGHT
 
+func _get_alternating_outer_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	var lane_index: int = (floori(float(row_index) * 0.5) + plan.chunk_index) % 2
+	if lane_index == 0:
+		return RouteLaneScript.Value.OUTER_LEFT
+
+	return RouteLaneScript.Value.OUTER_RIGHT
+
+func _get_alternating_branch_side(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	var side_index: int = (floori(float(row_index - 1) / 8.0) + plan.chunk_index) % 2
+	if side_index == 0:
+		return RouteBranchSideScript.Value.LEFT
+
+	return RouteBranchSideScript.Value.RIGHT
+
 func _build_optional_path(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> RoutePlannedPathScript:
 	var lanes: Array[int] = []
 	var branch_span: int = plan.merge_row_index - plan.split_row_index - 1
-	var outer_start_branch_index: int = maxi(0, branch_span - plan.minimum_outer_lane_rows)
 
 	for row_index in range(plan.get_row_count()):
 		var lane: int = RouteLaneScript.Value.CENTER
 		if row_index > plan.split_row_index and row_index < plan.merge_row_index:
 			var branch_row_index: int = row_index - plan.split_row_index - 1
-			var use_outer_lane: bool = branch_row_index >= outer_start_branch_index
-			lane = _get_branch_lane(plan.route_branch_side, use_outer_lane)
+			lane = _select_branch_lane(plan.route_branch_side, branch_row_index, branch_span)
 
 		lanes.append(lane)
 
 	return _build_path_from_lanes(&"optional_path", lanes, anchor_graph)
 
-func _get_branch_lane(branch_side: int, use_outer_lane: bool) -> int:
+func _select_branch_lane(branch_side: int, branch_row_index: int, branch_span: int) -> int:
+	Validation.require_condition(branch_row_index >= 0, "ChunkRoutePathSolver branch row index cannot be negative.")
+	Validation.require_condition(branch_span > 0, "ChunkRoutePathSolver branch span must be positive.")
+	Validation.require_condition(branch_row_index < branch_span, "ChunkRoutePathSolver branch row index must be inside the branch span.")
+	if branch_row_index == 0 or branch_row_index == branch_span - 1:
+		return _get_inner_lane_for_side(branch_side)
+
+	if (branch_row_index % 2) == 1:
+		return _get_outer_lane_for_side(branch_side)
+
+	return _get_inner_lane_for_side(branch_side)
+
+func _get_inner_lane_for_side(branch_side: int) -> int:
 	RouteBranchSideScript.assert_valid(branch_side)
 	Validation.require_condition(branch_side != RouteBranchSideScript.Value.NONE, "ChunkRoutePathSolver branch lane requires a branch side.")
 
 	if branch_side == RouteBranchSideScript.Value.LEFT:
-		if use_outer_lane:
-			return RouteLaneScript.Value.OUTER_LEFT
 		return RouteLaneScript.Value.INNER_LEFT
 
-	if use_outer_lane:
-		return RouteLaneScript.Value.OUTER_RIGHT
 	return RouteLaneScript.Value.INNER_RIGHT
+
+func _get_outer_lane_for_side(branch_side: int) -> int:
+	RouteBranchSideScript.assert_valid(branch_side)
+	Validation.require_condition(branch_side != RouteBranchSideScript.Value.NONE, "ChunkRoutePathSolver outer lane requires a branch side.")
+
+	if branch_side == RouteBranchSideScript.Value.LEFT:
+		return RouteLaneScript.Value.OUTER_LEFT
+
+	return RouteLaneScript.Value.OUTER_RIGHT
+
+func _get_opposite_branch_side(branch_side: int) -> int:
+	RouteBranchSideScript.assert_valid(branch_side)
+	Validation.require_condition(branch_side != RouteBranchSideScript.Value.NONE, "ChunkRoutePathSolver opposite side requires a branch side.")
+	if branch_side == RouteBranchSideScript.Value.LEFT:
+		return RouteBranchSideScript.Value.RIGHT
+
+	return RouteBranchSideScript.Value.LEFT
 
 func _build_path_from_lanes(path_id: StringName, lanes: Array[int], anchor_graph: RouteAnchorGraphScript) -> RoutePlannedPathScript:
 	var anchor_ids: PackedStringArray = PackedStringArray()

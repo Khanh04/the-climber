@@ -81,7 +81,7 @@ func test_pressure_population_maps_crux_and_branch_hazard_intents_to_specific_ki
     assert_not_null(denial_hazard)
     assert_eq(_require_int_property(crux_hazard, &"hazard_kind"), GeneratedHazardKindScript.Value.DOWNDRAFT)
     assert_eq(_require_int_property(denial_hazard, &"hazard_kind"), GeneratedHazardKindScript.Value.SPIKE_CLUSTER)
-    assert_eq(_require_int_property(crux_hazard, &"lane"), RouteLaneScript.Value.CENTER)
+    assert_eq(RouteLaneScript.to_branch_side(_require_int_property(crux_hazard, &"lane")), _get_opposite_branch_side(plan.route_branch_side))
     assert_eq(RouteLaneScript.to_branch_side(_require_int_property(denial_hazard, &"lane")), plan.route_branch_side)
 
 func test_recovery_population_places_reward_and_updraft_relief_on_safe_route() -> void:
@@ -104,7 +104,7 @@ func test_recovery_population_places_reward_and_updraft_relief_on_safe_route() -
     assert_not_null(safe_relief_hazard)
     assert_eq(_require_int_property(recovery_lift_hazard, &"hazard_kind"), GeneratedHazardKindScript.Value.UPDRAFT)
     assert_eq(_require_int_property(safe_relief_hazard, &"hazard_kind"), GeneratedHazardKindScript.Value.UPDRAFT)
-    assert_eq(_require_int_property(recovery_lift_hazard, &"lane"), RouteLaneScript.Value.CENTER)
+    assert_false(RouteLaneScript.is_outer(_require_int_property(recovery_lift_hazard, &"lane")))
 
 func _build_plan(chunk_index: int, route_slot: int, difficulty_band: int) -> ChunkRoutePlanScript:
     var builder: ChunkRoutePlanBuilderScript = ChunkRoutePlanBuilderScript.new()
@@ -179,3 +179,11 @@ func _get_outer_lane_for_branch_side(branch_side: int) -> int:
         return RouteLaneScript.Value.OUTER_LEFT
 
     return RouteLaneScript.Value.OUTER_RIGHT
+
+func _get_opposite_branch_side(branch_side: int) -> int:
+    RouteBranchSideScript.assert_valid(branch_side)
+    Validation.require_condition(branch_side != RouteBranchSideScript.Value.NONE, "Test helper requires a branch side.")
+    if branch_side == RouteBranchSideScript.Value.LEFT:
+        return RouteBranchSideScript.Value.RIGHT
+
+    return RouteBranchSideScript.Value.LEFT

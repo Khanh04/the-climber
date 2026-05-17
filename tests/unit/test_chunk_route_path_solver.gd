@@ -27,6 +27,9 @@ func test_anchor_graph_builder_creates_five_lane_rows_from_plan() -> void:
     assert_not_null(inner_left_anchor)
     assert_not_null(outer_right_anchor)
     assert_true(center_anchor.local_position.is_equal_approx(Vector2(0.0, -0.8)))
+    assert_almost_eq(inner_left_anchor.local_position.x, -2.0 * RouteAnchorGraphBuilderScript.DEFAULT_INNER_LANE_POSITION_RATIO, 0.001)
+    assert_almost_eq(outer_left_anchor.local_position.x, -2.0 * RouteAnchorGraphBuilderScript.DEFAULT_OUTER_LANE_POSITION_RATIO, 0.001)
+    assert_almost_eq(outer_right_anchor.local_position.x, 2.0 * RouteAnchorGraphBuilderScript.DEFAULT_OUTER_LANE_POSITION_RATIO, 0.001)
     assert_lt(outer_left_anchor.local_position.x, inner_left_anchor.local_position.x)
     assert_gt(outer_right_anchor.local_position.x, center_anchor.local_position.x)
 
@@ -72,6 +75,8 @@ func test_solver_accepts_non_branch_opener_with_gentle_safe_path_spread() -> voi
     assert_eq(solution.safe_path.get_lane_at_row(plan.get_row_count() - 1), RouteLaneScript.Value.CENTER)
     assert_true(_path_has_lane(solution.safe_path, RouteLaneScript.Value.INNER_LEFT))
     assert_true(_path_has_lane(solution.safe_path, RouteLaneScript.Value.INNER_RIGHT))
+    assert_true(_path_has_lane(solution.safe_path, RouteLaneScript.Value.OUTER_LEFT))
+    assert_true(_path_has_lane(solution.safe_path, RouteLaneScript.Value.OUTER_RIGHT))
 
 func test_solver_builds_branch_path_with_required_separation_and_outer_lane_rows() -> void:
     var plan: ChunkRoutePlanScript = _build_plan(7, ChunkRouteSlotScript.Value.RISK, ChunkDifficultyBandScript.Value.BASELINE)
@@ -82,11 +87,11 @@ func test_solver_builds_branch_path_with_required_separation_and_outer_lane_rows
     assert_not_null(solution.optional_path)
     assert_gte(solution.branch_separation_rows, plan.minimum_branch_separation_rows)
     assert_gte(solution.optional_outer_lane_rows, plan.minimum_outer_lane_rows)
-    assert_gt(solution.optional_path.total_lateral_lane_steps, solution.safe_path.total_lateral_lane_steps)
     assert_eq(solution.optional_path.get_lane_at_row(plan.split_row_index), RouteLaneScript.Value.CENTER)
     assert_eq(solution.optional_path.get_lane_at_row(plan.merge_row_index), RouteLaneScript.Value.CENTER)
 
     var branch_outer_lane: int = _get_outer_lane_for_branch_side(plan.route_branch_side)
+    var safe_outer_lane: int = _get_outer_lane_for_branch_side(_get_opposite_branch_side(plan.route_branch_side))
     var outer_lane_rows: int = solution.optional_path.count_outer_lane_rows_for_side(
         plan.route_branch_side,
         plan.split_row_index + 1,
@@ -94,7 +99,10 @@ func test_solver_builds_branch_path_with_required_separation_and_outer_lane_rows
     )
 
     assert_eq(outer_lane_rows, solution.optional_outer_lane_rows)
-    assert_eq(solution.optional_path.get_lane_at_row(plan.merge_row_index - 1), branch_outer_lane)
+    assert_true(_path_has_lane(solution.optional_path, branch_outer_lane))
+    assert_true(_path_has_lane(solution.safe_path, safe_outer_lane))
+    assert_eq(RouteLaneScript.to_branch_side(solution.optional_path.get_lane_at_row(plan.split_row_index + 1)), plan.route_branch_side)
+    assert_eq(RouteLaneScript.to_branch_side(solution.safe_path.get_lane_at_row(plan.split_row_index + 1)), _get_opposite_branch_side(plan.route_branch_side))
 
 func test_solver_rejects_graph_without_required_safe_path_lane() -> void:
     var plan: ChunkRoutePlanScript = _build_plan(3, ChunkRouteSlotScript.Value.BASELINE, ChunkDifficultyBandScript.Value.EASY)
@@ -151,6 +159,14 @@ func _get_outer_lane_for_branch_side(branch_side: int) -> int:
         return RouteLaneScript.Value.OUTER_LEFT
 
     return RouteLaneScript.Value.OUTER_RIGHT
+
+func _get_opposite_branch_side(branch_side: int) -> int:
+    RouteBranchSideScript.assert_valid(branch_side)
+    Validation.require_condition(branch_side != RouteBranchSideScript.Value.NONE, "Test helper requires a branch side.")
+    if branch_side == RouteBranchSideScript.Value.LEFT:
+        return RouteBranchSideScript.Value.RIGHT
+
+    return RouteBranchSideScript.Value.LEFT
 
 func _get_float_range(values: Array[float]) -> float:
     Validation.require_condition(not values.is_empty(), "Test float range helper requires at least one value.")

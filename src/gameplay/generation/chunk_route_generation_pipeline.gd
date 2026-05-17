@@ -62,6 +62,7 @@ func build_layout(
 		effective_vertical_jitter_meters,
 		seed_key
 	)
+	anchor_graph_builder.set_lane_position_ratios(_tuning.inner_lane_position_ratio, _tuning.outer_lane_position_ratio)
 	var anchor_graph: RouteAnchorGraphScript = anchor_graph_builder.build_graph(plan)
 	var path_solution: ChunkRoutePathSolutionScript = _path_solver.solve(plan, anchor_graph)
 	Validation.require_condition(path_solution.is_valid, path_solution.failure_reason)

@@ -89,7 +89,7 @@ func test_default_handhold_type_definition_catalog_is_valid() -> void:
 func test_default_handhold_widths_leave_visual_lane_gap() -> void:
     var catalog: HandholdTypeDefinitionCatalogScript = load("res://resources/config/handhold_type_definition_catalog.tres") as HandholdTypeDefinitionCatalogScript
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    var center_to_inner_lane_spacing_meters: float = tuning.chunk_width_meters * 0.25
+    var center_to_inner_lane_spacing_meters: float = tuning.chunk_width_meters * 0.5 * tuning.inner_lane_position_ratio
     var minimum_visual_gap_meters: float = 0.02
 
     assert_not_null(catalog)

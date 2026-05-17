@@ -338,7 +338,7 @@ func _select_reward_anchor(
 	path_solution: ChunkRoutePathSolutionScript
 ) -> RouteAnchorCandidateScript:
 	if path_solution.optional_path != null:
-		var branch_row_index: int = plan.merge_row_index - 1
+		var branch_row_index: int = _find_last_outer_lane_row_for_path(plan, path_solution.optional_path, plan.route_branch_side)
 		return _get_required_anchor_for_path_row(anchor_graph, path_solution.optional_path, branch_row_index)
 
 	var catch_row_index: int = _find_first_row_with_role(plan, RouteRowRoleScript.Value.CATCH)
@@ -355,7 +355,11 @@ func _select_hazard_anchor(
 	match hazard_intent:
 		GeneratedHazardIntentScript.Value.OPTIONAL_BRANCH_DENIAL:
 			Validation.require_condition(path_solution.optional_path != null, "Optional branch denial requires an optional path.")
-			return _get_required_anchor_for_path_row(anchor_graph, path_solution.optional_path, plan.merge_row_index - 1)
+			return _get_required_anchor_for_path_row(
+				anchor_graph,
+				path_solution.optional_path,
+				_find_last_outer_lane_row_for_path(plan, path_solution.optional_path, plan.route_branch_side)
+			)
 		GeneratedHazardIntentScript.Value.REWARD_GREED_PRESSURE:
 			Validation.require_condition(not reward_placements.is_empty(), "Reward greed pressure requires a reward placement.")
 			var reward_placement: RefCounted = reward_placements[0]
@@ -367,7 +371,11 @@ func _select_hazard_anchor(
 			return _get_required_anchor_for_path_row(anchor_graph, path_solution.safe_path, _find_pressure_row(plan))
 		GeneratedHazardIntentScript.Value.TRAVERSE_FORCE:
 			if path_solution.optional_path != null:
-				return _get_required_anchor_for_path_row(anchor_graph, path_solution.optional_path, plan.split_row_index + 1)
+				return _get_required_anchor_for_path_row(
+					anchor_graph,
+					path_solution.optional_path,
+					_find_first_outer_lane_row_for_path(plan, path_solution.optional_path, plan.route_branch_side)
+				)
 			return _get_required_anchor_for_path_row(anchor_graph, path_solution.safe_path, _find_traverse_force_row(plan))
 		GeneratedHazardIntentScript.Value.RECOVERY_LIFT, GeneratedHazardIntentScript.Value.SAFE_ROUTE_RELIEF:
 			return _get_required_anchor_for_path_row(anchor_graph, path_solution.safe_path, _find_first_row_with_role(plan, RouteRowRoleScript.Value.CATCH))
@@ -402,6 +410,35 @@ func _find_traverse_force_row(plan: ChunkRoutePlanScript) -> int:
 		return traverse_row_index
 
 	return _find_first_row_with_role(plan, RouteRowRoleScript.Value.DECISION)
+
+func _find_first_outer_lane_row_for_path(plan: ChunkRoutePlanScript, path: RoutePlannedPathScript, branch_side: int) -> int:
+	Validation.require_condition(plan.optional_route_required, "ChunkRoutePopulationBuilder outer branch rows require an optional route plan.")
+	Validation.require_condition(path != null, "ChunkRoutePopulationBuilder outer branch rows require a path.")
+	RouteBranchSideScript.assert_valid(branch_side)
+	Validation.require_condition(branch_side != RouteBranchSideScript.Value.NONE, "ChunkRoutePopulationBuilder outer branch rows require a branch side.")
+	for row_index in range(plan.split_row_index + 1, plan.merge_row_index):
+		if _path_row_uses_outer_side(path, row_index, branch_side):
+			return row_index
+
+	Validation.require_condition(false, "ChunkRoutePopulationBuilder could not find an outer branch row.")
+	return plan.split_row_index + 1
+
+func _find_last_outer_lane_row_for_path(plan: ChunkRoutePlanScript, path: RoutePlannedPathScript, branch_side: int) -> int:
+	Validation.require_condition(plan.optional_route_required, "ChunkRoutePopulationBuilder outer branch rows require an optional route plan.")
+	Validation.require_condition(path != null, "ChunkRoutePopulationBuilder outer branch rows require a path.")
+	RouteBranchSideScript.assert_valid(branch_side)
+	Validation.require_condition(branch_side != RouteBranchSideScript.Value.NONE, "ChunkRoutePopulationBuilder outer branch rows require a branch side.")
+	for row_index in range(plan.merge_row_index - 1, plan.split_row_index, -1):
+		if _path_row_uses_outer_side(path, row_index, branch_side):
+			return row_index
+
+	Validation.require_condition(false, "ChunkRoutePopulationBuilder could not find an outer branch row.")
+	return plan.merge_row_index - 1
+
+func _path_row_uses_outer_side(path: RoutePlannedPathScript, row_index: int, branch_side: int) -> bool:
+	RouteBranchSideScript.assert_valid(branch_side)
+	var lane: int = path.get_lane_at_row(row_index)
+	return RouteLaneScript.is_outer(lane) and RouteLaneScript.to_branch_side(lane) == branch_side
 
 func _find_first_row_with_role(plan: ChunkRoutePlanScript, row_role: int) -> int:
 	var row_index: int = _try_find_first_row_with_role(plan, row_role)

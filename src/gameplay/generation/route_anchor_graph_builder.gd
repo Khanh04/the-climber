@@ -6,12 +6,17 @@ const RouteAnchorCandidateScript = preload("res://src/gameplay/generation/route_
 const RouteAnchorGraphScript = preload("res://src/gameplay/generation/route_anchor_graph.gd")
 const RouteLaneScript = preload("res://src/gameplay/generation/route_lane.gd")
 
+const DEFAULT_INNER_LANE_POSITION_RATIO: float = 0.28
+const DEFAULT_OUTER_LANE_POSITION_RATIO: float = 0.82
+
 var chunk_width_meters: float
 var row_step_height_meters: float
 var first_row_height_meters: float
 var horizontal_jitter_meters: float
 var vertical_jitter_meters: float
 var seed_key: String
+var inner_lane_position_ratio: float
+var outer_lane_position_ratio: float
 
 func _init(
 	chunk_width_meters_value: float,
@@ -19,7 +24,9 @@ func _init(
 	first_row_height_meters_value: float = -1.0,
 	horizontal_jitter_meters_value: float = 0.0,
 	vertical_jitter_meters_value: float = 0.0,
-	seed_key_value: String = ""
+	seed_key_value: String = "",
+	inner_lane_position_ratio_value: float = DEFAULT_INNER_LANE_POSITION_RATIO,
+	outer_lane_position_ratio_value: float = DEFAULT_OUTER_LANE_POSITION_RATIO
 ) -> void:
 	chunk_width_meters = chunk_width_meters_value
 	row_step_height_meters = row_step_height_meters_value
@@ -27,6 +34,8 @@ func _init(
 	horizontal_jitter_meters = horizontal_jitter_meters_value
 	vertical_jitter_meters = vertical_jitter_meters_value
 	seed_key = seed_key_value
+	inner_lane_position_ratio = inner_lane_position_ratio_value
+	outer_lane_position_ratio = outer_lane_position_ratio_value
 	if first_row_height_meters < 0.0:
 		first_row_height_meters = row_step_height_meters
 	assert_valid()
@@ -37,6 +46,14 @@ func assert_valid() -> void:
 	Validation.require_condition(first_row_height_meters > 0.0, "RouteAnchorGraphBuilder first row height must be positive.")
 	Validation.require_condition(horizontal_jitter_meters >= 0.0, "RouteAnchorGraphBuilder horizontal jitter cannot be negative.")
 	Validation.require_condition(vertical_jitter_meters >= 0.0, "RouteAnchorGraphBuilder vertical jitter cannot be negative.")
+	Validation.require_condition(inner_lane_position_ratio > 0.0, "RouteAnchorGraphBuilder inner lane ratio must be positive.")
+	Validation.require_condition(outer_lane_position_ratio > inner_lane_position_ratio, "RouteAnchorGraphBuilder outer lane ratio must exceed the inner lane ratio.")
+	Validation.require_condition(outer_lane_position_ratio < 1.0, "RouteAnchorGraphBuilder outer lane ratio must stay inside the chunk width.")
+
+func set_lane_position_ratios(inner_lane_position_ratio_value: float, outer_lane_position_ratio_value: float) -> void:
+	inner_lane_position_ratio = inner_lane_position_ratio_value
+	outer_lane_position_ratio = outer_lane_position_ratio_value
+	assert_valid()
 
 func build_graph(plan: ChunkRoutePlanScript) -> RouteAnchorGraphScript:
 	Validation.require_condition(plan != null, "RouteAnchorGraphBuilder requires a route plan.")
@@ -67,15 +84,30 @@ func _build_anchor_id(chunk_index: int, row_index: int, lane: int) -> StringName
 func _build_local_position(row_index: int, lane: int, row_count: int) -> Vector2:
 	Validation.require_condition(row_count > 0, "RouteAnchorGraphBuilder local positions require a positive row count.")
 	var half_width_meters: float = chunk_width_meters * 0.5
-	var lane_offset: float = float(RouteLaneScript.to_offset(lane)) * 0.5
 	var row_height_meters: float = first_row_height_meters + (row_step_height_meters * float(row_index))
-	var base_position: Vector2 = Vector2(half_width_meters * lane_offset, -row_height_meters)
+	var base_position: Vector2 = Vector2(half_width_meters * _get_lane_position_ratio(lane), -row_height_meters)
 	var jittered_x: float = clampf(
 		base_position.x + _build_horizontal_jitter(row_index, lane),
 		-half_width_meters,
 		half_width_meters
 	)
 	return Vector2(jittered_x, base_position.y + _build_vertical_jitter(row_index, lane, row_count))
+
+func _get_lane_position_ratio(lane: int) -> float:
+	match lane:
+		RouteLaneScript.Value.OUTER_LEFT:
+			return -outer_lane_position_ratio
+		RouteLaneScript.Value.INNER_LEFT:
+			return -inner_lane_position_ratio
+		RouteLaneScript.Value.CENTER:
+			return 0.0
+		RouteLaneScript.Value.INNER_RIGHT:
+			return inner_lane_position_ratio
+		RouteLaneScript.Value.OUTER_RIGHT:
+			return outer_lane_position_ratio
+		_:
+			Validation.require_condition(false, "RouteAnchorGraphBuilder lane positions require a supported lane.")
+			return 0.0
 
 func _build_horizontal_jitter(row_index: int, lane: int) -> float:
 	if horizontal_jitter_meters == 0.0 or seed_key == "":

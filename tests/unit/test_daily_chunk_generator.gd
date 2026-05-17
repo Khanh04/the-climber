@@ -182,6 +182,7 @@ func test_first_chunk_spreads_holds_without_flat_bars_on_every_row() -> void:
 
     assert_true(_has_handhold_on_side(layout.handholds, -1))
     assert_true(_has_handhold_on_side(layout.handholds, 1))
+    assert_gte(_get_horizontal_span(layout.handholds), tuning.chunk_width_meters * 0.65)
     assert_lt(_count_rows_with_minimum_handholds(layout.handholds, row_heights, 3), row_heights.size())
 
 func test_generated_handholds_resolve_type_specific_drain_and_size() -> void:
@@ -306,6 +307,7 @@ func test_risk_lane_chunks_align_hazard_denial_holds_to_one_outer_side() -> void
         DailySeedKey.from_utc_date(2026, 5, 15),
     ])
     var lane_choice_threshold: float = _get_lane_choice_threshold(tuning)
+    var outer_lane_threshold: float = (tuning.chunk_width_meters * 0.5 * tuning.outer_lane_position_ratio) - tuning.handhold_horizontal_jitter_meters - 0.05
 
     var risk_layout: GeneratedChunkLayoutScript = _find_layout_by_chunk_type(generator, seed_keys, ChunkTypeScript.Value.RISK_LANE)
     var hazard_denial_side_score: int = _route_role_side_score(
@@ -313,18 +315,15 @@ func test_risk_lane_chunks_align_hazard_denial_holds_to_one_outer_side() -> void
         RouteRoleScript.Value.HAZARD_DENIAL,
         lane_choice_threshold
     )
-    var hazard_denial_average_abs_x: float = _average_abs_x_for_route_role(
+    var outer_hazard_denial_count: int = _count_route_role_handholds_beyond_abs_x(
         risk_layout.handholds,
-        RouteRoleScript.Value.HAZARD_DENIAL
-    )
-    var setup_average_abs_x: float = _average_abs_x_for_route_role(
-        risk_layout.handholds,
-        RouteRoleScript.Value.SETUP
+        RouteRoleScript.Value.HAZARD_DENIAL,
+        outer_lane_threshold
     )
 
     assert_true(hazard_denial_side_score != 0)
     assert_eq(absi(hazard_denial_side_score), _count_handholds_with_route_role(risk_layout.handholds, RouteRoleScript.Value.HAZARD_DENIAL))
-    assert_gt(hazard_denial_average_abs_x, setup_average_abs_x)
+    assert_gte(outer_hazard_denial_count, 1)
 
 func test_custom_route_validation_candidate_attempt_count_stays_deterministic() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -504,6 +503,7 @@ func test_skill_chunks_preserve_horizontal_branch_options_across_rows() -> void:
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
     var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
     var lane_choice_threshold: float = _get_lane_choice_threshold(tuning)
+    var outer_lane_threshold: float = (tuning.chunk_width_meters * 0.5 * tuning.outer_lane_position_ratio) - tuning.handhold_horizontal_jitter_meters - 0.05
     var skill_chunk_index: int = _find_first_chunk_index_with_route_slot_and_band(
         generator,
         seed_key,
@@ -514,6 +514,8 @@ func test_skill_chunks_preserve_horizontal_branch_options_across_rows() -> void:
     var skill_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, skill_chunk_index))
 
     assert_gte(_count_rows_with_dual_side_options(skill_layout.handholds, lane_choice_threshold), 3)
+    assert_gte(_get_horizontal_span(skill_layout.handholds), tuning.chunk_width_meters * 0.65)
+    assert_gte(_count_handholds_beyond_abs_x(skill_layout.handholds, outer_lane_threshold), 2)
 
 func test_risk_lane_chunks_bias_hazards_and_pickups_to_shared_risky_side() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -864,6 +866,39 @@ func _build_assignment_rule(
 
 func _get_lane_choice_threshold(tuning: GenerationTuningScript) -> float:
     return (tuning.chunk_width_meters * 0.5 * tuning.inner_lane_position_ratio) * 0.5
+
+func _get_horizontal_span(handholds: Array[GeneratedHandholdSocket]) -> float:
+    Validation.require_condition(not handholds.is_empty(), "Test horizontal span helper requires at least one handhold.")
+    var minimum_x: float = handholds[0].local_position.x
+    var maximum_x: float = handholds[0].local_position.x
+    for handhold in handholds:
+        minimum_x = minf(minimum_x, handhold.local_position.x)
+        maximum_x = maxf(maximum_x, handhold.local_position.x)
+
+    return maximum_x - minimum_x
+
+func _count_handholds_beyond_abs_x(handholds: Array[GeneratedHandholdSocket], minimum_abs_x: float) -> int:
+    Validation.require_condition(minimum_abs_x >= 0.0, "Test outer handhold helper requires a non-negative threshold.")
+    var count: int = 0
+    for handhold in handholds:
+        if absf(handhold.local_position.x) >= minimum_abs_x:
+            count += 1
+
+    return count
+
+func _count_route_role_handholds_beyond_abs_x(
+    handholds: Array[GeneratedHandholdSocket],
+    route_role: int,
+    minimum_abs_x: float
+) -> int:
+    RouteRoleScript.assert_valid(route_role)
+    Validation.require_condition(minimum_abs_x >= 0.0, "Test outer route-role helper requires a non-negative threshold.")
+    var count: int = 0
+    for handhold in handholds:
+        if handhold.route_role == route_role and absf(handhold.local_position.x) >= minimum_abs_x:
+            count += 1
+
+    return count
 
 func _get_sorted_unique_row_heights(handholds: Array[GeneratedHandholdSocket]) -> Array[float]:
     var row_heights: Array[float] = []
