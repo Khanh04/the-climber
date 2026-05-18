@@ -141,7 +141,7 @@ var _active_touch_contacts: Array[RefCounted] = []
 var _left_aim_preview: Line2D = null
 var _right_aim_preview: Line2D = null
 var _aim_target_marker: Polygon2D = null
-var _debug_reset_pressed: bool = false
+var _restart_requested: bool = false
 var _app_settings_snapshot: AppSettingsSnapshotScript = null
 var _app_settings_storage: AppSettingsStorageScript = null
 var _save_snapshot: SaveSnapshotScript = null
@@ -261,13 +261,11 @@ func set_utc_date_provider(date_provider: RefCounted) -> void:
 
 func _physics_process(delta: float) -> void:
 	_consume_app_lifecycle_events()
-
-	if _pause_menu_visible:
+	if _restart_requested:
+		_perform_requested_restart()
 		return
 
-	if _consume_debug_reset_input():
-		_reset_playground()
-		_refresh_ui()
+	if _pause_menu_visible:
 		return
 
 	var input_frame: PlayerInputFrameScript = _create_input_frame()
@@ -415,8 +413,7 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if event.is_action_pressed(&"debug_reset_run"):
-		_reset_playground()
-		_refresh_ui()
+		_request_restart()
 		get_viewport().set_input_as_handled()
 		return
 
@@ -676,12 +673,6 @@ func _create_input_frame() -> PlayerInputFrameScript:
 		false
 	)
 
-func _consume_debug_reset_input() -> bool:
-	var reset_pressed_now: bool = Input.is_action_pressed(&"debug_reset_run")
-	var should_reset: bool = reset_pressed_now and not _debug_reset_pressed
-	_debug_reset_pressed = reset_pressed_now
-	return should_reset
-
 func _get_debug_aim_vector() -> Vector2:
 	var aim_vector: Vector2 = Vector2.ZERO
 
@@ -718,12 +709,15 @@ func _update_chaser(delta: float) -> void:
 	)
 
 func _update_camera_follow() -> void:
-	_camera.global_position.y = _run_loop_coordinator.calculate_camera_target_y(
+	var player_position: Vector2 = _player.get_body_global_position()
+	var target_y: float = _run_loop_coordinator.calculate_camera_target_y(
 		_camera.global_position.y,
-		_player.get_body_global_position().y,
+		player_position.y,
 		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
+		_get_climb_tuning_float(&"camera_vertical_dead_zone_pixels"),
 		_run_session.get_state()
 	)
+	_camera.global_position = Vector2(player_position.x, target_y)
 
 func _resolve_bottom_screen_fall_if_needed() -> bool:
 	var run_loop_coordinator: Object = _run_loop_coordinator
@@ -1027,6 +1021,24 @@ func _reset_playground() -> void:
 			_camera.global_position.x,
 			get_viewport_rect().size.x
 		)
+
+func _request_restart() -> void:
+	_hide_settings_menu()
+	if _pause_menu_visible:
+		_pause_menu_visible = false
+		if _pause_menu != null:
+			_refresh_pause_menu_ui()
+	if get_tree().paused:
+		get_tree().paused = false
+	# Replay the reset on the next physics tick so restart from death/pause UI settles the same way as debug reset.
+	_reset_playground()
+	_refresh_ui()
+	_restart_requested = true
+
+func _perform_requested_restart() -> void:
+	_restart_requested = false
+	_reset_playground()
+	_refresh_ui()
 
 func _apply_equipped_chaser_theme() -> void:
 	if _chaser_kill_zone == null or chaser_theme_catalog == null or cosmetic_loadout == null:
@@ -1341,8 +1353,7 @@ func _format_cosmetic_purchase_result(result: CosmeticPurchaseResultScript) -> S
 			return ""
 
 func _on_run_end_restart_requested() -> void:
-	_reset_playground()
-	_refresh_ui()
+	_request_restart()
 
 func _on_pause_requested() -> void:
 	_show_pause_menu()
@@ -1351,11 +1362,7 @@ func _on_pause_resume_requested() -> void:
 	_resume_from_pause_menu()
 
 func _on_pause_restart_requested() -> void:
-	_hide_settings_menu()
-	_pause_menu_visible = false
-	get_tree().paused = false
-	_reset_playground()
-	_refresh_ui()
+	_request_restart()
 
 func _on_pause_settings_requested() -> void:
 	_show_settings_menu()

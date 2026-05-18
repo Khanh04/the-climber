@@ -188,6 +188,7 @@ var route_validation_candidate_attempt_count: int:
 		_get_required_route_validation_tuning().candidate_attempt_count = value
 
 func is_valid() -> bool:
+	_ensure_required_default_backing_resources()
 	return generator_version != "" \
 		and segment_height_meters > 0.0 \
 		and chunk_width_meters > 0.0 \
@@ -235,6 +236,7 @@ func validate() -> void:
 	assert_valid()
 
 func assert_valid() -> void:
+	_ensure_required_default_backing_resources()
 	Validation.require_condition(generator_version != "", "Generation config requires a generator version.")
 	Validation.require_condition(segment_height_meters > 0.0, "Generation segment height must be positive.")
 	Validation.require_condition(chunk_width_meters > 0.0, "Generation chunk width must be positive.")
@@ -664,6 +666,13 @@ func _assert_valid_opener_row_steps() -> void:
 func _max_lane_alignment_meters() -> float:
 	return (chunk_width_meters * 0.5) * outer_lane_position_ratio
 
+func _ensure_required_default_backing_resources() -> void:
+	if route_validation_tuning == null:
+		route_validation_tuning = _duplicate_default_route_validation_tuning()
+
+	if route_profile_tuning == null:
+		route_profile_tuning = _duplicate_default_route_profile_tuning()
+
 static func _duplicate_default_handhold_definitions() -> Array[Resource]:
 	Validation.require_condition(
 		DefaultHandholdTypeDefinitionCatalogResource != null,
@@ -727,6 +736,7 @@ static func _duplicate_default_route_profile_tuning() -> Resource:
 	return duplicated_resource
 
 func _get_required_route_validation_tuning() -> RouteValidationTuningScript:
+	_ensure_required_default_backing_resources()
 	Validation.require_condition(route_validation_tuning != null, "Generation config requires route validation tuning before access.")
 	Validation.require_condition(
 		route_validation_tuning is RouteValidationTuningScript,

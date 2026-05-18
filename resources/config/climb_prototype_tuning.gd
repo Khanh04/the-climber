@@ -12,10 +12,10 @@ extends Resource
 @export var grip_hang_offset_pixels: float = 92.0
 # Debug-only distance the grip target shifts toward the aim direction while attached.
 # Higher values make aiming reshape the body position more aggressively.
-@export var grip_aim_target_offset_pixels: float = 72.0
+@export var grip_aim_target_offset_pixels: float = 100.0
 # Strength of the spring-like pull that moves the body toward the grip target.
 # Higher values keep one-hand swing radius and two-hand support targets tighter; lower values feel looser.
-@export var grip_pull_stiffness: float = 42.0
+@export var grip_pull_stiffness: float = 80.0
 # Per-frame retention applied to the one-hand radial velocity component.
 # Higher values preserve more line tension bounce; lower values settle swing radius faster.
 @export var grip_velocity_damping: float = 0.96
@@ -49,6 +49,9 @@ extends Resource
 # Vertical offset used to keep the player below the camera center while climbing upward.
 # Higher values show more space above the player; lower values center them more.
 @export var camera_player_lower_screen_offset_pixels: float = 160.0
+# Vertical dead-zone around the preferred camera offset before the camera moves again.
+# Higher values reduce small follow adjustments; lower values make the camera feel tighter.
+@export var camera_vertical_dead_zone_pixels: float = 72.0
 # Extra distance below the visible bottom edge before a fall is resolved.
 # Higher values are more forgiving; lower values end the run sooner when dropping.
 @export var bottom_fall_margin_pixels: float = 160.0
@@ -79,6 +82,7 @@ func is_valid() -> bool:
         and two_hand_velocity_damping <= 1.0 \
         and max_player_speed_pixels_per_second > 0.0 \
         and camera_player_lower_screen_offset_pixels >= 0.0 \
+        and camera_vertical_dead_zone_pixels >= 0.0 \
         and bottom_fall_margin_pixels >= 0.0 \
         and pixels_per_meter > 0.0 \
         and not String(handhold_group_name).is_empty()
@@ -88,6 +92,9 @@ func validate() -> void:
 
 func get_camera_player_lower_screen_offset_pixels() -> float:
     return camera_player_lower_screen_offset_pixels
+
+func get_camera_vertical_dead_zone_pixels() -> float:
+    return camera_vertical_dead_zone_pixels
 
 func get_bottom_fall_margin_pixels() -> float:
     return bottom_fall_margin_pixels
@@ -109,6 +116,7 @@ func assert_valid() -> void:
     Validation.require_condition(two_hand_velocity_damping >= 0.0 and two_hand_velocity_damping <= 1.0, "Two-hand velocity damping must be between 0 and 1.")
     Validation.require_condition(max_player_speed_pixels_per_second > 0.0, "Max player speed must be positive.")
     Validation.require_condition(camera_player_lower_screen_offset_pixels >= 0.0, "Camera player lower-screen offset cannot be negative.")
+    Validation.require_condition(camera_vertical_dead_zone_pixels >= 0.0, "Camera vertical dead-zone cannot be negative.")
     Validation.require_condition(bottom_fall_margin_pixels >= 0.0, "Bottom fall margin cannot be negative.")
     Validation.require_condition(pixels_per_meter > 0.0, "Pixels-per-meter conversion must be positive.")
     Validation.require_condition(not String(handhold_group_name).is_empty(), "Handhold group name cannot be empty.")
