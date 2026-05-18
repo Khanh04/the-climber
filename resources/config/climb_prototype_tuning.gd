@@ -14,14 +14,17 @@ extends Resource
 # Higher values make aiming reshape the body position more aggressively.
 @export var grip_aim_target_offset_pixels: float = 72.0
 # Strength of the spring-like pull that moves the body toward the grip target.
-# Higher values feel snappier and more controlled; lower values feel looser.
+# Higher values keep one-hand swing radius and two-hand support targets tighter; lower values feel looser.
 @export var grip_pull_stiffness: float = 42.0
-# Per-frame velocity retention while attached.
-# Higher values preserve momentum; lower values bleed speed faster.
+# Per-frame retention applied to the one-hand radial velocity component.
+# Higher values preserve more line tension bounce; lower values settle swing radius faster.
 @export var grip_velocity_damping: float = 0.96
-# Upward force that offsets gravity while attached.
-# Higher values reduce sag and falling; lower values make hanging heavier.
+# Upward force budget applied while attached.
+# Two-hand support uses the full value; one-hand swing uses the configured ratio below.
 @export var attached_gravity_compensation_force: float = 980.0
+# Fraction of attached gravity compensation applied while only one hand is attached.
+# Lower values make one-hand hangs feel heavier and more pendulum-like.
+@export var one_hand_gravity_compensation_ratio: float = 0.2
 # Speed at which hand visuals catch up to their visual target positions.
 # Higher values reduce visible lag; lower values make hands feel sloppier.
 @export var hand_visual_follow_speed_pixels_per_second: float = 240.0
@@ -64,6 +67,8 @@ func is_valid() -> bool:
         and grip_velocity_damping >= 0.0 \
         and grip_velocity_damping <= 1.0 \
         and attached_gravity_compensation_force >= 0.0 \
+        and one_hand_gravity_compensation_ratio >= 0.0 \
+        and one_hand_gravity_compensation_ratio <= 1.0 \
         and hand_visual_follow_speed_pixels_per_second > 0.0 \
         and hand_visual_velocity_lag_seconds >= 0.0 \
         and hand_visual_max_lag_pixels >= 0.0 \
@@ -95,6 +100,7 @@ func assert_valid() -> void:
     Validation.require_condition(grip_pull_stiffness > 0.0, "Grip pull stiffness must be positive.")
     Validation.require_condition(grip_velocity_damping >= 0.0 and grip_velocity_damping <= 1.0, "Grip velocity damping must be between 0 and 1.")
     Validation.require_condition(attached_gravity_compensation_force >= 0.0, "Attached gravity compensation force cannot be negative.")
+    Validation.require_condition(one_hand_gravity_compensation_ratio >= 0.0 and one_hand_gravity_compensation_ratio <= 1.0, "One-hand gravity compensation ratio must be between 0 and 1.")
     Validation.require_condition(hand_visual_follow_speed_pixels_per_second > 0.0, "Hand visual follow speed must be positive.")
     Validation.require_condition(hand_visual_velocity_lag_seconds >= 0.0, "Hand visual velocity lag seconds cannot be negative.")
     Validation.require_condition(hand_visual_max_lag_pixels >= 0.0, "Hand visual max lag pixels cannot be negative.")

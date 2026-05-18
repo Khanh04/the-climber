@@ -37,6 +37,64 @@ func calculate_grip_target_position(attachment_state: RefCounted, control_force:
 
 	return average_hold_position + Vector2.DOWN * _tuning.grip_hang_offset_pixels + aim_offset
 
+func calculate_one_hand_attachment_force(
+	body_position: Vector2,
+	body_velocity: Vector2,
+	attach_position: Vector2,
+	control_force: Vector2,
+	body_mass: float,
+	gravity_scale: float
+) -> Vector2:
+	Validation.require_condition(body_mass > 0.0, "One-hand attachment force requires a positive body mass.")
+	Validation.require_condition(gravity_scale >= 0.0, "One-hand attachment force requires a non-negative gravity scale.")
+
+	var radial_vector: Vector2 = body_position - attach_position
+	if radial_vector == Vector2.ZERO:
+		radial_vector = Vector2.DOWN * _tuning.grip_hang_offset_pixels
+
+	var radial_direction: Vector2 = radial_vector.normalized()
+	var desired_radial_vector: Vector2 = radial_direction * _tuning.grip_hang_offset_pixels
+	var radial_error: Vector2 = desired_radial_vector - radial_vector
+	var radial_force: Vector2 = radial_direction * radial_error.dot(radial_direction) * _tuning.grip_pull_stiffness
+	var tangential_control_force: Vector2 = control_force - (radial_direction * control_force.dot(radial_direction))
+	var gravity_compensation_force: Vector2 = Vector2.UP \
+		* _tuning.attached_gravity_compensation_force \
+		* _tuning.one_hand_gravity_compensation_ratio \
+		* body_mass \
+		* gravity_scale
+
+	return radial_force + tangential_control_force + gravity_compensation_force
+
+func calculate_two_hand_attachment_force(
+	body_position: Vector2,
+	body_velocity: Vector2,
+	attachment_state: RefCounted,
+	control_force: Vector2,
+	body_mass: float,
+	gravity_scale: float
+) -> Vector2:
+	Validation.require_condition(attachment_state != null, "Two-hand attachment force requires hand attachment state.")
+	Validation.require_condition(attachment_state is HandAttachmentStateScript, "Two-hand attachment force requires HandAttachmentState.")
+	Validation.require_condition(body_mass > 0.0, "Two-hand attachment force requires a positive body mass.")
+	Validation.require_condition(gravity_scale >= 0.0, "Two-hand attachment force requires a non-negative gravity scale.")
+
+	var target_position: Vector2 = calculate_grip_target_position(attachment_state, control_force)
+	var displacement: Vector2 = target_position - body_position
+	var gravity_compensation_force: Vector2 = Vector2.UP * _tuning.attached_gravity_compensation_force * body_mass * gravity_scale
+
+	return (displacement * _tuning.grip_pull_stiffness) + gravity_compensation_force
+
+func calculate_one_hand_damped_velocity(body_position: Vector2, velocity: Vector2, attach_position: Vector2) -> Vector2:
+	var radial_vector: Vector2 = body_position - attach_position
+	if radial_vector == Vector2.ZERO:
+		return velocity
+
+	var radial_direction: Vector2 = radial_vector.normalized()
+	var radial_velocity: Vector2 = radial_direction * velocity.dot(radial_direction)
+	var tangential_velocity: Vector2 = velocity - radial_velocity
+
+	return tangential_velocity + (radial_velocity * _tuning.grip_velocity_damping)
+
 func calculate_clamped_velocity(velocity: Vector2) -> Vector2:
 	if velocity.length() <= _tuning.max_player_speed_pixels_per_second:
 		return velocity
@@ -64,17 +122,44 @@ func apply_frame_motion(player_body: RigidBody2D, attachment_state: RefCounted, 
 
 	if typed_frame_result.attached_hand_count > 0:
 		_apply_virtual_grip_forces(player_body, typed_attachment_state, typed_frame_result)
-
-	if typed_frame_result.control_force != Vector2.ZERO:
-		player_body.apply_central_force(typed_frame_result.control_force)
+		if typed_frame_result.attached_hand_count == 1:
+			player_body.linear_velocity = calculate_one_hand_damped_velocity(
+				player_body.global_position,
+				player_body.linear_velocity,
+				typed_attachment_state.get_attach_position(_get_single_attached_hand_side(typed_attachment_state))
+			)
 
 	player_body.linear_velocity = calculate_clamped_velocity(player_body.linear_velocity)
 	player_body.linear_velocity = calculate_damped_velocity(player_body.linear_velocity, typed_frame_result.attached_hand_count)
 
 func _apply_virtual_grip_forces(player_body: RigidBody2D, attachment_state: HandAttachmentStateScript, frame_result: ClimbPrototypeFrameResultScript) -> void:
-	var target_position: Vector2 = calculate_grip_target_position(attachment_state, frame_result.control_force)
-	var displacement: Vector2 = target_position - player_body.global_position
+	var attached_hand_count: int = attachment_state.get_attached_hand_count()
+	Validation.require_condition(attached_hand_count > 0, "Virtual grip forces require at least one attached hand.")
 
-	player_body.apply_central_force(Vector2.UP * _tuning.attached_gravity_compensation_force * player_body.mass * player_body.gravity_scale)
-	player_body.apply_central_force(displacement * _tuning.grip_pull_stiffness)
-	player_body.linear_velocity *= _tuning.grip_velocity_damping
+	if attached_hand_count == 1:
+		player_body.apply_central_force(calculate_one_hand_attachment_force(
+			player_body.global_position,
+			player_body.linear_velocity,
+			attachment_state.get_attach_position(_get_single_attached_hand_side(attachment_state)),
+			frame_result.control_force,
+			player_body.mass,
+			player_body.gravity_scale
+		))
+		return
+
+	player_body.apply_central_force(calculate_two_hand_attachment_force(
+		player_body.global_position,
+		player_body.linear_velocity,
+		attachment_state,
+		frame_result.control_force,
+		player_body.mass,
+		player_body.gravity_scale
+	))
+
+func _get_single_attached_hand_side(attachment_state: HandAttachmentStateScript) -> int:
+	Validation.require_condition(attachment_state.get_attached_hand_count() == 1, "Single attached hand lookup requires exactly one attached hand.")
+
+	if attachment_state.is_attached(HandSideScript.Value.LEFT):
+		return HandSideScript.Value.LEFT
+
+	return HandSideScript.Value.RIGHT
