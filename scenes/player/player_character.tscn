@@ -50,11 +50,6 @@ position = Vector2(-24, 10)
 unique_name_in_owner = true
 position = Vector2(-30, 14)
 
-[node name="LeftHandCosmeticRoot" type="Node2D" parent="BaseSkeleton/PlayerBody/LeftShoulderSocket/LeftHandVisualAnchor" unique_id=862418928]
-unique_name_in_owner = true
-
-[node name="LeftHandVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/LeftShoulderSocket/LeftHandVisualAnchor/LeftHandCosmeticRoot" unique_id=1625410914]
-
 [node name="RightShoulderSocket" type="Marker2D" parent="BaseSkeleton/PlayerBody" unique_id=1904973315]
 unique_name_in_owner = true
 position = Vector2(18, -34)
@@ -67,11 +62,6 @@ position = Vector2(24, 10)
 unique_name_in_owner = true
 position = Vector2(30, 14)
 
-[node name="RightHandCosmeticRoot" type="Node2D" parent="BaseSkeleton/PlayerBody/RightShoulderSocket/RightHandVisualAnchor" unique_id=901338481]
-unique_name_in_owner = true
-
-[node name="RightHandVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/RightShoulderSocket/RightHandVisualAnchor/RightHandCosmeticRoot" unique_id=2123890837]
-
 [node name="VisualRoot" type="Node2D" parent="BaseSkeleton/PlayerBody" unique_id=1112647151]
 unique_name_in_owner = true
 
@@ -79,8 +69,97 @@ unique_name_in_owner = true
 color = Color(0.165, 0.56, 0.72, 1)
 polygon = PackedVector2Array(-30, -40, 30, -40, 40, 20, 0, 48, -40, 20)
 
+[node name="BodyVisualSprite" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot" unique_id=688623486]
+
+[node name="FaceOverlay" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot" unique_id=688623487]
+position = Vector2(0, -18)
+
 [node name="CosmeticVisualRoot" type="Node2D" parent="BaseSkeleton/PlayerBody/VisualRoot" unique_id=1739338781]
 unique_name_in_owner = true
+
+[node name="VisualSkeleton" type="Skeleton2D" parent="BaseSkeleton/PlayerBody/VisualRoot" unique_id=1739338782]
+unique_name_in_owner = true
+
+[node name="LeftUpperArmBone" type="Bone2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton" unique_id=1739338783]
+unique_name_in_owner = true
+position = Vector2(-18, -34)
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+auto_calculate_length_and_angle = false
+length = 28.0
+bone_angle = 1.5707964
+
+[node name="LeftUpperArmVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone" unique_id=1739338784]
+position = Vector2(0, 14)
+
+[node name="LeftForearmBone" type="Bone2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone" unique_id=1739338785]
+unique_name_in_owner = true
+position = Vector2(0, 28)
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+auto_calculate_length_and_angle = false
+length = 24.0
+bone_angle = 1.5707964
+
+[node name="LeftForearmVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone" unique_id=1739338786]
+position = Vector2(0, 12)
+
+[node name="LeftHandBone" type="Bone2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone" unique_id=1739338787]
+unique_name_in_owner = true
+position = Vector2(0, 24)
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+auto_calculate_length_and_angle = false
+length = 8.0
+bone_angle = 1.5707964
+
+[node name="LeftHandCosmeticRoot" type="Node2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone/LeftHandBone" unique_id=862418928]
+unique_name_in_owner = true
+
+[node name="LeftHandVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone/LeftHandBone/LeftHandCosmeticRoot" unique_id=1625410914]
+
+[node name="RightUpperArmBone" type="Bone2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton" unique_id=1739338788]
+unique_name_in_owner = true
+position = Vector2(18, -34)
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+auto_calculate_length_and_angle = false
+length = 28.0
+bone_angle = 1.5707964
+
+[node name="RightUpperArmVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone" unique_id=1739338789]
+position = Vector2(0, 14)
+
+[node name="RightForearmBone" type="Bone2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone" unique_id=1739338790]
+unique_name_in_owner = true
+position = Vector2(0, 28)
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+auto_calculate_length_and_angle = false
+length = 24.0
+bone_angle = 1.5707964
+
+[node name="RightForearmVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone" unique_id=1739338791]
+position = Vector2(0, 12)
+
+[node name="RightHandBone" type="Bone2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone" unique_id=1739338792]
+unique_name_in_owner = true
+position = Vector2(0, 24)
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+auto_calculate_length_and_angle = false
+length = 8.0
+bone_angle = 1.5707964
+
+[node name="RightHandCosmeticRoot" type="Node2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone/RightHandBone" unique_id=901338481]
+unique_name_in_owner = true
+
+[node name="RightHandVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone/RightHandBone/RightHandCosmeticRoot" unique_id=2123890837]
+
+[node name="LowerBodyBone" type="Bone2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton" unique_id=1739338793]
+unique_name_in_owner = true
+position = Vector2(0, 30)
+rest = Transform2D(1, 0, 0, 1, 0, 0)
+auto_calculate_length_and_angle = false
+length = 26.0
+bone_angle = 1.5707964
+
+[node name="LowerBodyVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone" unique_id=1739338794]
+position = Vector2(0, 18)
 
 [node name="GripJoints" type="Node2D" parent="." unique_id=1061541967]
 unique_name_in_owner = true

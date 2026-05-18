@@ -14,6 +14,17 @@ func test_player_character_scene_wires_required_nodes() -> void:
 
     assert_not_null(player.get_node_or_null("BaseSkeleton"))
     assert_not_null(player.get_node_or_null("BaseSkeleton/TorsoBone"))
+    assert_not_null(player.get_visual_skeleton())
+    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/BodyVisualSprite"))
+    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/FaceOverlay"))
+    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone"))
+    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone"))
+    assert_not_null(player.get_left_hand_bone())
+    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone"))
+    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone"))
+    assert_not_null(player.get_right_hand_bone())
+    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone"))
+    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone/LowerBodyVisual"))
     assert_not_null(player.get_player_body())
     assert_not_null(player.get_body_collision_shape())
     assert_not_null(player.get_left_shoulder_socket())
@@ -62,15 +73,15 @@ func test_player_character_visual_roots_are_physics_neutral() -> void:
 
 func test_player_character_hand_geometry_separates_reach_and_visual_anchors() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
-    var left_placeholder: Node2D = player.get_node("BaseSkeleton/PlayerBody/LeftShoulderSocket/LeftHandVisualAnchor/LeftHandCosmeticRoot/LeftHandVisual") as Node2D
-    var right_placeholder: Node2D = player.get_node("BaseSkeleton/PlayerBody/RightShoulderSocket/RightHandVisualAnchor/RightHandCosmeticRoot/RightHandVisual") as Node2D
+    var left_placeholder: Node2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone/LeftHandBone/LeftHandCosmeticRoot/LeftHandVisual") as Node2D
+    var right_placeholder: Node2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone/RightHandBone/RightHandCosmeticRoot/RightHandVisual") as Node2D
 
     assert_eq(player.get_left_hand_anchor().get_parent(), player.get_left_shoulder_socket())
     assert_eq(player.get_right_hand_anchor().get_parent(), player.get_right_shoulder_socket())
     assert_eq(player.get_left_hand_visual_anchor().get_parent(), player.get_left_shoulder_socket())
     assert_eq(player.get_right_hand_visual_anchor().get_parent(), player.get_right_shoulder_socket())
-    assert_eq(player.get_left_hand_cosmetic_root().get_parent(), player.get_left_hand_visual_anchor())
-    assert_eq(player.get_right_hand_cosmetic_root().get_parent(), player.get_right_hand_visual_anchor())
+    assert_eq(player.get_left_hand_cosmetic_root().get_parent(), player.get_left_hand_bone())
+    assert_eq(player.get_right_hand_cosmetic_root().get_parent(), player.get_right_hand_bone())
     assert_not_null(left_placeholder)
     assert_not_null(right_placeholder)
     assert_eq(left_placeholder.get_parent(), player.get_left_hand_cosmetic_root())
@@ -120,6 +131,28 @@ func test_player_character_attached_visual_hand_biases_toward_hold() -> void:
     player._physics_process(1.0 / 60.0)
 
     assert_lt(left_visual_anchor.global_position.distance_to(hold.global_position), starting_distance_to_hold)
+
+func test_player_character_visual_arm_bones_follow_hand_targets() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var left_hand_bone: Bone2D = player.get_left_hand_bone()
+    var starting_position: Vector2 = left_hand_bone.global_position
+
+    player.set_body_linear_velocity(Vector2(300.0, 0.0))
+    player._physics_process(1.0 / 60.0)
+
+    assert_lt(left_hand_bone.global_position.x, starting_position.x)
+
+func test_player_character_grip_pose_targets_visual_hand_bone_toward_hold() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var hold: StaticBody2D = _create_hold(&"LeftHold", Vector2(180.0, 260.0))
+    var attachment_state := HandAttachmentStateScript.new()
+    var left_hand_bone: Bone2D = player.get_left_hand_bone()
+    var starting_distance_to_hold: float = left_hand_bone.global_position.distance_to(hold.global_position)
+
+    attachment_state.attach(HandSideScript.Value.LEFT, &"left_hold", hold.global_position, hold.get_path())
+    player.apply_frame_motion(ClimbPrototypeFrameResultScript.new(Vector2.ZERO, false, 1), attachment_state)
+
+    assert_lt(left_hand_bone.global_position.distance_to(hold.global_position), starting_distance_to_hold)
 
 func test_player_cosmetic_applicator_adds_visuals_without_changing_physics() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()

@@ -12,11 +12,21 @@ const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/pl
 
 const CONTROLLED_COLLISION_MASK: int = 1
 const FALLING_COLLISION_MASK: int = 3
+const BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = PI / 2.0
+const MIN_ARM_TARGET_DISTANCE_PIXELS: float = 4.0
 
 @export var climb_tuning: ClimbPrototypeTuningScript
 
 var _base_skeleton: Skeleton2D
 var _torso_bone: Bone2D
+var _visual_skeleton: Skeleton2D
+var _left_upper_arm_bone: Bone2D
+var _left_forearm_bone: Bone2D
+var _left_hand_bone: Bone2D
+var _right_upper_arm_bone: Bone2D
+var _right_forearm_bone: Bone2D
+var _right_hand_bone: Bone2D
+var _lower_body_bone: Bone2D
 var _player_body: RigidBody2D
 var _body_collision_shape: CollisionShape2D
 var _left_shoulder_socket: Marker2D
@@ -53,10 +63,12 @@ func _ready() -> void:
 	_reset_hand_visual_anchors()
 	_physics_mode = PlayerPhysicsModeScript.controlled_climb()
 	_sync_body_collision_mask_for_mode()
+	_sync_visual_bones()
 
 func _physics_process(delta: float) -> void:
 	Validation.require_condition(_hand_visual_follow_controller != null, "PlayerCharacter requires a hand visual follow controller.")
 	_sync_hand_visual_anchors(delta)
+	_sync_visual_bones()
 
 func set_climb_tuning(tuning: Resource) -> void:
 	Validation.require_condition(tuning != null, "PlayerCharacter requires climb tuning.")
@@ -68,6 +80,7 @@ func set_climb_tuning(tuning: Resource) -> void:
 	_motion_controller = PlayerMotionControllerScript.new(climb_tuning)
 	if is_node_ready():
 		_reset_hand_visual_anchors()
+		_sync_visual_bones()
 
 func apply_frame_motion(frame_result: RefCounted, attachment_state: RefCounted) -> void:
 	Validation.require_condition(frame_result != null, "PlayerCharacter requires a frame result.")
@@ -83,11 +96,13 @@ func apply_frame_motion(frame_result: RefCounted, attachment_state: RefCounted) 
 	if _physics_mode != PlayerPhysicsModeScript.controlled_climb():
 		clear_runtime_grip_joints()
 		clear_runtime_grip_links()
+		_sync_visual_bones()
 		return
 
 	sync_runtime_grip_joints(typed_attachment_state)
 	sync_runtime_grip_links(typed_attachment_state)
 	_motion_controller.apply_frame_motion(_player_body, typed_attachment_state, frame_result)
+	_sync_visual_bones()
 
 func sync_runtime_grip_joints(attachment_state: RefCounted) -> void:
 	Validation.require_condition(attachment_state != null, "PlayerCharacter requires hand attachment state to sync runtime grip joints.")
@@ -143,6 +158,7 @@ func enter_falling(reason: int) -> void:
 	_sync_body_collision_mask_for_mode()
 	clear_runtime_grip_joints()
 	clear_runtime_grip_links()
+	_sync_visual_bones()
 
 func reset_physics(global_position_value: Vector2) -> void:
 	_physics_mode = PlayerPhysicsModeTransitionsScript.reset_mode(_physics_mode)
@@ -154,6 +170,7 @@ func reset_physics(global_position_value: Vector2) -> void:
 	_player_body.linear_velocity = Vector2.ZERO
 	_player_body.angular_velocity = 0.0
 	_reset_hand_visual_anchors()
+	_sync_visual_bones()
 
 func get_physics_mode() -> int:
 	return _physics_mode
@@ -212,6 +229,15 @@ func get_cosmetic_visual_root() -> Node2D:
 func get_body_collision_shape() -> CollisionShape2D:
 	return _body_collision_shape
 
+func get_visual_skeleton() -> Skeleton2D:
+	return _visual_skeleton
+
+func get_left_hand_bone() -> Bone2D:
+	return _left_hand_bone
+
+func get_right_hand_bone() -> Bone2D:
+	return _right_hand_bone
+
 func get_left_grip_joint_anchor() -> Marker2D:
 	return _left_grip_joint_anchor
 
@@ -250,6 +276,14 @@ func _validate_required_state() -> void:
 
 	_base_skeleton = _require_skeleton_2d("BaseSkeleton", "PlayerCharacter requires BaseSkeleton.")
 	_torso_bone = _require_bone_2d("BaseSkeleton/TorsoBone", "PlayerCharacter requires TorsoBone.")
+	_visual_skeleton = _require_skeleton_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton", "PlayerCharacter requires VisualSkeleton.")
+	_left_upper_arm_bone = _require_bone_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone", "PlayerCharacter requires LeftUpperArmBone.")
+	_left_forearm_bone = _require_bone_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone", "PlayerCharacter requires LeftForearmBone.")
+	_left_hand_bone = _require_bone_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone/LeftHandBone", "PlayerCharacter requires LeftHandBone.")
+	_right_upper_arm_bone = _require_bone_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone", "PlayerCharacter requires RightUpperArmBone.")
+	_right_forearm_bone = _require_bone_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone", "PlayerCharacter requires RightForearmBone.")
+	_right_hand_bone = _require_bone_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone/RightHandBone", "PlayerCharacter requires RightHandBone.")
+	_lower_body_bone = _require_bone_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone", "PlayerCharacter requires LowerBodyBone.")
 	_player_body = _require_rigid_body_2d("BaseSkeleton/PlayerBody", "PlayerCharacter requires PlayerBody.")
 	_body_collision_shape = _require_collision_shape_2d("BaseSkeleton/PlayerBody/BodyCollisionShape", "PlayerCharacter requires BodyCollisionShape.")
 	_left_shoulder_socket = _require_marker_2d("BaseSkeleton/PlayerBody/LeftShoulderSocket", "PlayerCharacter requires LeftShoulderSocket.")
@@ -258,26 +292,52 @@ func _validate_required_state() -> void:
 	_right_hand_anchor = _require_marker_2d("BaseSkeleton/PlayerBody/RightShoulderSocket/RightHandAnchor", "PlayerCharacter requires RightHandAnchor.")
 	_left_hand_visual_anchor = _require_marker_2d("BaseSkeleton/PlayerBody/LeftShoulderSocket/LeftHandVisualAnchor", "PlayerCharacter requires LeftHandVisualAnchor.")
 	_right_hand_visual_anchor = _require_marker_2d("BaseSkeleton/PlayerBody/RightShoulderSocket/RightHandVisualAnchor", "PlayerCharacter requires RightHandVisualAnchor.")
-	_left_hand_cosmetic_root = _require_node_2d("BaseSkeleton/PlayerBody/LeftShoulderSocket/LeftHandVisualAnchor/LeftHandCosmeticRoot", "PlayerCharacter requires LeftHandCosmeticRoot.")
-	_right_hand_cosmetic_root = _require_node_2d("BaseSkeleton/PlayerBody/RightShoulderSocket/RightHandVisualAnchor/RightHandCosmeticRoot", "PlayerCharacter requires RightHandCosmeticRoot.")
+	_left_hand_cosmetic_root = _require_node_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone/LeftHandBone/LeftHandCosmeticRoot", "PlayerCharacter requires LeftHandCosmeticRoot.")
+	_right_hand_cosmetic_root = _require_node_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone/RightHandBone/RightHandCosmeticRoot", "PlayerCharacter requires RightHandCosmeticRoot.")
 	_left_grip_joint_anchor = _require_marker_2d("GripJoints/LeftGripJointAnchor", "PlayerCharacter requires LeftGripJointAnchor.")
 	_right_grip_joint_anchor = _require_marker_2d("GripJoints/RightGripJointAnchor", "PlayerCharacter requires RightGripJointAnchor.")
 	_debug_anchors = _require_node_2d("DebugAnchors", "PlayerCharacter requires DebugAnchors.")
 	_visual_root = _require_node_2d("BaseSkeleton/PlayerBody/VisualRoot", "PlayerCharacter requires VisualRoot.")
 	_cosmetic_visual_root = _require_node_2d("BaseSkeleton/PlayerBody/VisualRoot/CosmeticVisualRoot", "PlayerCharacter requires CosmeticVisualRoot.")
+	var body_visual_sprite: Sprite2D = _require_sprite_2d("BaseSkeleton/PlayerBody/VisualRoot/BodyVisualSprite", "PlayerCharacter requires BodyVisualSprite.")
+	var face_overlay: Sprite2D = _require_sprite_2d("BaseSkeleton/PlayerBody/VisualRoot/FaceOverlay", "PlayerCharacter requires FaceOverlay.")
+	var left_upper_arm_visual: Sprite2D = _require_sprite_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftUpperArmVisual", "PlayerCharacter requires LeftUpperArmVisual.")
+	var left_forearm_visual: Sprite2D = _require_sprite_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone/LeftForearmVisual", "PlayerCharacter requires LeftForearmVisual.")
+	var left_hand_visual: Sprite2D = _require_sprite_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone/LeftHandBone/LeftHandCosmeticRoot/LeftHandVisual", "PlayerCharacter requires LeftHandVisual.")
+	var right_upper_arm_visual: Sprite2D = _require_sprite_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightUpperArmVisual", "PlayerCharacter requires RightUpperArmVisual.")
+	var right_forearm_visual: Sprite2D = _require_sprite_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone/RightForearmVisual", "PlayerCharacter requires RightForearmVisual.")
+	var right_hand_visual: Sprite2D = _require_sprite_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone/RightHandBone/RightHandCosmeticRoot/RightHandVisual", "PlayerCharacter requires RightHandVisual.")
+	var lower_body_visual: Sprite2D = _require_sprite_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone/LowerBodyVisual", "PlayerCharacter requires LowerBodyVisual.")
 
 	Validation.require_condition(_body_collision_shape.shape != null, "PlayerCharacter BodyCollisionShape requires a shape.")
 	Validation.require_condition(_body_collision_shape.get_parent() == _player_body, "PlayerCharacter gameplay collision must belong to PlayerBody.")
 	Validation.require_condition(_player_body.get_parent() == _base_skeleton, "PlayerCharacter PlayerBody must belong to BaseSkeleton.")
 	Validation.require_condition(_torso_bone.get_parent() == _base_skeleton, "PlayerCharacter TorsoBone must belong to BaseSkeleton.")
+	Validation.require_condition(_visual_skeleton.get_parent() == _visual_root, "PlayerCharacter VisualSkeleton must belong to VisualRoot.")
+	Validation.require_condition(_left_upper_arm_bone.get_parent() == _visual_skeleton, "PlayerCharacter LeftUpperArmBone must belong to VisualSkeleton.")
+	Validation.require_condition(_left_forearm_bone.get_parent() == _left_upper_arm_bone, "PlayerCharacter LeftForearmBone must belong to LeftUpperArmBone.")
+	Validation.require_condition(_left_hand_bone.get_parent() == _left_forearm_bone, "PlayerCharacter LeftHandBone must belong to LeftForearmBone.")
+	Validation.require_condition(_right_upper_arm_bone.get_parent() == _visual_skeleton, "PlayerCharacter RightUpperArmBone must belong to VisualSkeleton.")
+	Validation.require_condition(_right_forearm_bone.get_parent() == _right_upper_arm_bone, "PlayerCharacter RightForearmBone must belong to RightUpperArmBone.")
+	Validation.require_condition(_right_hand_bone.get_parent() == _right_forearm_bone, "PlayerCharacter RightHandBone must belong to RightForearmBone.")
+	Validation.require_condition(_lower_body_bone.get_parent() == _visual_skeleton, "PlayerCharacter LowerBodyBone must belong to VisualSkeleton.")
 	Validation.require_condition(_left_shoulder_socket.get_parent() == _player_body, "PlayerCharacter LeftShoulderSocket must belong to PlayerBody.")
 	Validation.require_condition(_right_shoulder_socket.get_parent() == _player_body, "PlayerCharacter RightShoulderSocket must belong to PlayerBody.")
 	Validation.require_condition(_left_hand_anchor.get_parent() == _left_shoulder_socket, "PlayerCharacter LeftHandAnchor must belong to LeftShoulderSocket.")
 	Validation.require_condition(_right_hand_anchor.get_parent() == _right_shoulder_socket, "PlayerCharacter RightHandAnchor must belong to RightShoulderSocket.")
 	Validation.require_condition(_left_hand_visual_anchor.get_parent() == _left_shoulder_socket, "PlayerCharacter LeftHandVisualAnchor must belong to LeftShoulderSocket.")
 	Validation.require_condition(_right_hand_visual_anchor.get_parent() == _right_shoulder_socket, "PlayerCharacter RightHandVisualAnchor must belong to RightShoulderSocket.")
-	Validation.require_condition(_left_hand_cosmetic_root.get_parent() == _left_hand_visual_anchor, "PlayerCharacter LeftHandCosmeticRoot must belong to LeftHandVisualAnchor.")
-	Validation.require_condition(_right_hand_cosmetic_root.get_parent() == _right_hand_visual_anchor, "PlayerCharacter RightHandCosmeticRoot must belong to RightHandVisualAnchor.")
+	Validation.require_condition(_left_hand_cosmetic_root.get_parent() == _left_hand_bone, "PlayerCharacter LeftHandCosmeticRoot must belong to LeftHandBone.")
+	Validation.require_condition(_right_hand_cosmetic_root.get_parent() == _right_hand_bone, "PlayerCharacter RightHandCosmeticRoot must belong to RightHandBone.")
+	Validation.require_condition(body_visual_sprite.get_parent() == _visual_root, "PlayerCharacter BodyVisualSprite must belong to VisualRoot.")
+	Validation.require_condition(face_overlay.get_parent() == _visual_root, "PlayerCharacter FaceOverlay must belong to VisualRoot.")
+	Validation.require_condition(left_upper_arm_visual.get_parent() == _left_upper_arm_bone, "PlayerCharacter LeftUpperArmVisual must belong to LeftUpperArmBone.")
+	Validation.require_condition(left_forearm_visual.get_parent() == _left_forearm_bone, "PlayerCharacter LeftForearmVisual must belong to LeftForearmBone.")
+	Validation.require_condition(left_hand_visual.get_parent() == _left_hand_cosmetic_root, "PlayerCharacter LeftHandVisual must belong to LeftHandCosmeticRoot.")
+	Validation.require_condition(right_upper_arm_visual.get_parent() == _right_upper_arm_bone, "PlayerCharacter RightUpperArmVisual must belong to RightUpperArmBone.")
+	Validation.require_condition(right_forearm_visual.get_parent() == _right_forearm_bone, "PlayerCharacter RightForearmVisual must belong to RightForearmBone.")
+	Validation.require_condition(right_hand_visual.get_parent() == _right_hand_cosmetic_root, "PlayerCharacter RightHandVisual must belong to RightHandCosmeticRoot.")
+	Validation.require_condition(lower_body_visual.get_parent() == _lower_body_bone, "PlayerCharacter LowerBodyVisual must belong to LowerBodyBone.")
 	assert_visual_roots_physics_neutral()
 
 func _capture_hand_visual_offsets() -> void:
@@ -318,6 +378,78 @@ func _sync_hand_visual_anchors(delta: float) -> void:
 		right_attached_to_hold
 	)
 
+func _sync_visual_bones() -> void:
+	_sync_arm_bone_chain(
+		_left_upper_arm_bone,
+		_left_forearm_bone,
+		_left_hand_bone,
+		_left_shoulder_socket.global_position,
+		_get_hand_pose_target_global_position(HandSideScript.Value.LEFT),
+		true
+	)
+	_sync_arm_bone_chain(
+		_right_upper_arm_bone,
+		_right_forearm_bone,
+		_right_hand_bone,
+		_right_shoulder_socket.global_position,
+		_get_hand_pose_target_global_position(HandSideScript.Value.RIGHT),
+		false
+	)
+	_sync_lower_body_bone()
+
+func _get_hand_pose_target_global_position(hand_side: int) -> Vector2:
+	if hand_side == HandSideScript.Value.LEFT:
+		if _left_runtime_grip_joint != null:
+			return _left_runtime_grip_joint.global_position
+		return _left_hand_visual_anchor.global_position
+
+	if hand_side == HandSideScript.Value.RIGHT:
+		if _right_runtime_grip_joint != null:
+			return _right_runtime_grip_joint.global_position
+		return _right_hand_visual_anchor.global_position
+
+	Validation.require_condition(false, "PlayerCharacter received unsupported hand side for pose target.")
+	return Vector2.ZERO
+
+func _sync_arm_bone_chain(
+	upper_arm_bone: Bone2D,
+	forearm_bone: Bone2D,
+	hand_bone: Bone2D,
+	shoulder_global_position: Vector2,
+	target_global_position: Vector2,
+	bend_left: bool
+) -> void:
+	Validation.require_condition(upper_arm_bone != null, "PlayerCharacter requires an upper arm bone to sync arm visuals.")
+	Validation.require_condition(forearm_bone != null, "PlayerCharacter requires a forearm bone to sync arm visuals.")
+	Validation.require_condition(hand_bone != null, "PlayerCharacter requires a hand bone to sync arm visuals.")
+
+	var upper_length: float = forearm_bone.position.length()
+	var forearm_length: float = hand_bone.position.length()
+	var target_vector: Vector2 = target_global_position - shoulder_global_position
+	var target_distance: float = target_vector.length()
+	var target_direction: Vector2 = Vector2.DOWN if target_distance <= 0.001 else target_vector / target_distance
+	var minimum_distance: float = maxf(MIN_ARM_TARGET_DISTANCE_PIXELS, absf(upper_length - forearm_length) + 0.001)
+	var maximum_distance: float = maxf(minimum_distance, upper_length + forearm_length - 0.001)
+	var clamped_distance: float = clampf(target_distance, minimum_distance, maximum_distance)
+	var clamped_target_global_position: Vector2 = shoulder_global_position + (target_direction * clamped_distance)
+	var base_angle: float = target_direction.angle()
+	var shoulder_angle_offset: float = acos(clampf((pow(clamped_distance, 2.0) + pow(upper_length, 2.0) - pow(forearm_length, 2.0)) / (2.0 * clamped_distance * upper_length), -1.0, 1.0))
+	var upper_global_angle: float = base_angle + (shoulder_angle_offset if bend_left else -shoulder_angle_offset)
+	var elbow_global_position: Vector2 = shoulder_global_position + (Vector2.RIGHT.rotated(upper_global_angle) * upper_length)
+	var forearm_direction: Vector2 = (clamped_target_global_position - elbow_global_position).normalized()
+	if forearm_direction == Vector2.ZERO:
+		forearm_direction = target_direction
+	var forearm_global_angle: float = forearm_direction.angle()
+
+	upper_arm_bone.global_position = shoulder_global_position
+	upper_arm_bone.global_rotation = upper_global_angle - BONE_FORWARD_ANGLE_OFFSET_RADIANS
+	forearm_bone.global_rotation = forearm_global_angle - BONE_FORWARD_ANGLE_OFFSET_RADIANS
+	hand_bone.global_rotation = forearm_global_angle - BONE_FORWARD_ANGLE_OFFSET_RADIANS
+
+func _sync_lower_body_bone() -> void:
+	var lower_body_sway: float = clampf(-_player_body.linear_velocity.x / 1200.0, -0.28, 0.28)
+	_lower_body_bone.rotation = lower_body_sway
+
 func _require_skeleton_2d(node_path: NodePath, message: String) -> Skeleton2D:
 	var node: Node = get_node_or_null(node_path)
 	Validation.require_condition(node != null, message)
@@ -353,6 +485,12 @@ func _require_node_2d(node_path: NodePath, message: String) -> Node2D:
 	Validation.require_condition(node != null, message)
 	Validation.require_condition(node is Node2D, "%s Expected Node2D." % message)
 	return node as Node2D
+
+func _require_sprite_2d(node_path: NodePath, message: String) -> Sprite2D:
+	var node: Node = get_node_or_null(node_path)
+	Validation.require_condition(node != null, message)
+	Validation.require_condition(node is Sprite2D, "%s Expected Sprite2D." % message)
+	return node as Sprite2D
 
 func _sync_runtime_grip_joint(
 	hand_side: int,
