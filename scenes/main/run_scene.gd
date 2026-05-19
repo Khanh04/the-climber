@@ -55,6 +55,7 @@ const RewardedAdResultScript = preload("res://src/platform/ads/rewarded_ad_resul
 const RewardedAdsAdapterScript = preload("res://src/platform/ads/rewarded_ads_adapter.gd")
 const RewardedAdsAdapterFactoryScript = preload("res://src/platform/ads/rewarded_ads_adapter_factory.gd")
 const RewardedContinueServiceScript = preload("res://src/gameplay/run/rewarded_continue_service.gd")
+const RunEconomyRuntimeScript = preload("res://src/gameplay/run/run_economy_runtime.gd")
 const RunFrameRuntimeScript = preload("res://src/gameplay/run/run_frame_runtime.gd")
 const RunGeneratedHandholdRuntimeScript = preload("res://src/gameplay/run/run_generated_handhold_runtime.gd")
 const RunGameplayNodeRefsScript = preload("res://src/gameplay/run/run_gameplay_node_refs.gd")
@@ -140,6 +141,7 @@ var _lethal_hazard_contact_service: LethalHazardContactServiceScript = LethalHaz
 var _normal_coin_pickup_service: NormalCoinPickupServiceScript = NormalCoinPickupServiceScript.new()
 var _run_loop_coordinator: RunLoopCoordinatorScript = RunLoopCoordinatorScript.new()
 var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop_coordinator)
+var _run_economy_runtime: RunEconomyRuntimeScript = RunEconomyRuntimeScript.new()
 var _run_frame_runtime: RunFrameRuntimeScript = RunFrameRuntimeScript.new()
 var _run_generated_handhold_runtime: RunGeneratedHandholdRuntimeScript = RunGeneratedHandholdRuntimeScript.new()
 var _run_handhold_targeting_runtime: RunHandholdTargetingRuntimeScript = RunHandholdTargetingRuntimeScript.new()
@@ -171,11 +173,8 @@ var _left_aim_preview: Line2D = null
 var _right_aim_preview: Line2D = null
 var _aim_target_marker: Polygon2D = null
 var _restart_requested: bool = false
-var _app_settings_snapshot: AppSettingsSnapshotScript = null
-var _app_settings_storage: AppSettingsStorageScript = null
-var _save_snapshot: SaveSnapshotScript = null
-var _local_storage_adapter: LocalStorageAdapterScript = null
-var _save_storage: SaveStorageScript = null
+const AppSettingsAndSaveStorageRuntimeScript = preload("res://src/platform/storage/app_settings_and_save_storage_runtime.gd")
+var _storage_runtime: AppSettingsAndSaveStorageRuntime = AppSettingsAndSaveStorageRuntimeScript.new()
 var _settings_menu: SettingsMenuScript = null
 var _settings_presenter: SettingsPresenterScript = SettingsPresenterScript.new()
 var _store_shell: StoreShellScript = null
@@ -201,11 +200,12 @@ func _ready() -> void:
 		generation_tuning,
 		TUTORIAL_HANDHOLD_GROUP_NAME
 	)
-	_initialize_save_storage()
-	_initialize_app_settings_storage()
-	_load_or_create_app_settings()
+	_storage_runtime.initialize_save_storage()
+	_storage_runtime.initialize_app_settings_storage()
+	_storage_runtime.load_or_create_app_settings()
 	_apply_app_settings()
-	_load_or_create_save_state()
+	_storage_runtime.load_or_create_save_state(cosmetic_loadout, cosmetic_item_catalog)
+	_hydrate_runtime_save_state_from_snapshot()
 	cosmetic_loadout = _duplicate_cosmetic_loadout(cosmetic_loadout)
 	_apply_saved_cosmetic_selection()
 	var _connect_result: int = _run_end_screen.connect(&"restart_requested", _on_run_end_restart_requested)
@@ -225,22 +225,36 @@ func _ready() -> void:
 	_reset_playground()
 	_refresh_ui()
 
+
+func _resolve_launch_mode() -> int:
+	if _has_launch_mode_override:
+		return _launch_mode_override
+	return RunLaunchModeScript.Value.NORMAL
+
+func _validate_required_state() -> void:
+	Validation.require_condition(climb_tuning != null, "RunScene requires climb tuning before ready.")
+	Validation.require_condition(stamina_tuning != null, "RunScene requires stamina tuning before ready.")
+	Validation.require_condition(generation_tuning != null, "RunScene requires generation tuning before ready.")
+	Validation.require_condition(cosmetic_loadout != null, "RunScene requires a cosmetic loadout before ready.")
+	Validation.require_condition(chaser_theme_catalog != null, "RunScene requires a chaser theme catalog before ready.")
+	Validation.require_condition(cosmetic_item_catalog != null, "RunScene requires a cosmetic item catalog before ready.")
+
 func set_local_storage_adapter(local_storage_adapter: RefCounted) -> void:
 	Validation.require_condition(local_storage_adapter != null, "RunScene requires a local storage adapter.")
 	Validation.require_condition(local_storage_adapter is LocalStorageAdapterScript, "RunScene requires a LocalStorageAdapter implementation.")
-	_local_storage_adapter = local_storage_adapter as LocalStorageAdapterScript
+	var typed_local_storage_adapter: LocalStorageAdapterScript = local_storage_adapter as LocalStorageAdapterScript
+	_storage_runtime.set_local_storage_adapter(typed_local_storage_adapter)
 	if not is_node_ready():
 		return
-
-	_initialize_save_storage()
-	_initialize_app_settings_storage()
-	_load_or_create_app_settings()
+	_storage_runtime.initialize_save_storage()
+	_storage_runtime.initialize_app_settings_storage()
+	_storage_runtime.load_or_create_app_settings()
 	_apply_app_settings()
-	if _save_snapshot == null:
-		_load_or_create_save_state()
-		_apply_saved_cosmetic_selection()
-		_apply_cosmetic_loadout()
-		_refresh_ui()
+	_storage_runtime.load_or_create_save_state(cosmetic_loadout, cosmetic_item_catalog)
+	_hydrate_runtime_save_state_from_snapshot()
+	_apply_saved_cosmetic_selection()
+	_apply_cosmetic_loadout()
+	_refresh_ui()
 	_refresh_settings_menu()
 
 func set_rewarded_ads_adapter(rewarded_ads_adapter: RefCounted) -> void:
@@ -273,7 +287,6 @@ func set_audio_settings_adapter(audio_settings_adapter: RefCounted) -> void:
 	_audio_settings_adapter = audio_settings_adapter as AudioSettingsAdapterScript
 	if not is_node_ready():
 		return
-
 	_apply_app_settings()
 
 func set_haptics_adapter(haptics_adapter: RefCounted) -> void:
@@ -285,12 +298,10 @@ func set_save_snapshot(snapshot: RefCounted) -> void:
 	Validation.require_condition(snapshot != null, "RunScene requires a save snapshot.")
 	Validation.require_condition(snapshot is SaveSnapshotScript, "RunScene requires a SaveSnapshot implementation.")
 	var typed_snapshot: SaveSnapshotScript = snapshot as SaveSnapshotScript
-	typed_snapshot.assert_valid()
-	_save_snapshot = typed_snapshot
+	_storage_runtime.set_save_snapshot(typed_snapshot)
 	_hydrate_runtime_save_state_from_snapshot()
 	if not is_node_ready():
 		return
-
 	_apply_saved_cosmetic_selection()
 	_apply_cosmetic_loadout()
 	_refresh_ui()
@@ -519,11 +530,12 @@ func consume_app_lifecycle_events_for_test() -> void:
 	_consume_app_lifecycle_events()
 
 func apply_persistent_coin_transaction(transaction_id: String, source: int, coin_delta: int) -> bool:
-	Validation.require_condition(_save_storage != null, "RunScene requires save storage before applying persistent coin transactions.")
-	var transaction_applied: bool = _persistent_coin_transaction_service.apply_persistent_transaction(
+	Validation.require_condition(_storage_runtime.save_storage != null, "RunScene requires save storage before applying persistent coin transactions.")
+	var transaction_applied: bool = _run_economy_runtime.apply_persistent_coin_transaction(
 		_wallet,
 		_persistent_transaction_ledger,
 		_wallet_transaction_service,
+		_persistent_coin_transaction_service,
 		transaction_id,
 		source,
 		coin_delta
@@ -537,14 +549,15 @@ func apply_persistent_coin_transaction(transaction_id: String, source: int, coin
 
 func purchase_cosmetic_item(item_id: StringName) -> CosmeticPurchaseResultScript:
 	Validation.require_condition(not item_id.is_empty(), "RunScene cosmetic purchase item id cannot be empty.")
-	Validation.require_condition(_save_storage != null, "RunScene requires save storage before purchasing cosmetics.")
-	var result: CosmeticPurchaseResultScript = _cosmetic_unlock_purchase_service.purchase_item(
+	Validation.require_condition(_storage_runtime.save_storage != null, "RunScene requires save storage before purchasing cosmetics.")
+	var result: CosmeticPurchaseResultScript = _run_economy_runtime.purchase_cosmetic_item(
 		_wallet,
 		_cosmetic_inventory,
 		cosmetic_item_catalog,
 		_persistent_transaction_ledger,
 		_wallet_transaction_service,
 		_persistent_coin_transaction_service,
+		_cosmetic_unlock_purchase_service,
 		item_id
 	)
 	_store_selected_item_id = result.item_id
@@ -557,8 +570,14 @@ func purchase_cosmetic_item(item_id: StringName) -> CosmeticPurchaseResultScript
 
 func equip_cosmetic_item(item_id: StringName) -> void:
 	Validation.require_condition(not item_id.is_empty(), "RunScene cosmetic equip item id cannot be empty.")
-	Validation.require_condition(_save_storage != null, "RunScene requires save storage before equipping cosmetics.")
-	_cosmetic_loadout_service.equip_item(cosmetic_loadout, _cosmetic_inventory, cosmetic_item_catalog, item_id)
+	Validation.require_condition(_storage_runtime.save_storage != null, "RunScene requires save storage before equipping cosmetics.")
+	_run_economy_runtime.equip_cosmetic_item(
+		cosmetic_loadout,
+		_cosmetic_inventory,
+		cosmetic_item_catalog,
+		_cosmetic_loadout_service,
+		item_id
+	)
 	_store_selected_item_id = item_id
 	_store_feedback_message = "Equipped %s." % cosmetic_item_catalog.get_required_item_by_id(item_id).display_name
 	_apply_cosmetic_loadout()
@@ -607,99 +626,20 @@ func get_controller_for_test() -> ClimbPrototypeControllerScript:
 func get_player_for_test() -> PlayerCharacterScript:
 	return _gameplay_nodes.player
 
-func get_player_body_for_test() -> RigidBody2D:
-	return _gameplay_nodes.player.get_player_body()
-
-func get_left_hand_anchor_for_test() -> Marker2D:
-	return _gameplay_nodes.player.get_left_hand_anchor()
-
-func get_right_hand_anchor_for_test() -> Marker2D:
-	return _gameplay_nodes.player.get_right_hand_anchor()
-
-func get_chaser_for_test() -> ChaserKillZoneScript:
-	return _gameplay_nodes.chaser_kill_zone
-
-func get_generated_chunk_coordinator_for_test() -> GeneratedChunkCoordinatorScript:
-	return _gameplay_nodes.generated_chunk_coordinator
-
-func get_chaser_feedback_snapshot_for_test() -> ChaserFeedbackSnapshotScript:
-	Validation.require_condition(_chaser_pacing_model != null, "RunScene requires a chaser pacing model for feedback snapshots.")
-	return _chaser_pacing_model.get_current_feedback_snapshot()
-
-func get_chaser_feedback_intensity_ratio_for_test() -> float:
-	Validation.require_condition(_chaser_kill_zone != null, "RunScene requires a chaser kill zone for feedback intensity.")
-	return _chaser_kill_zone.get_feedback_intensity_ratio()
-
-func resolve_chaser_contact_for_test() -> void:
-	_on_chaser_contacted(_player.get_player_body())
-
-func sync_grip_links_for_test() -> void:
-	_player.sync_runtime_grip_links(_controller.get_attachment_state())
-
-func sync_aim_preview_for_test(input_frame: PlayerInputFrameScript) -> void:
-	_sync_aim_preview(input_frame)
-
-func get_camera_player_lower_screen_offset_for_test() -> float:
-	return _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
-
-func get_bottom_fall_margin_for_test() -> float:
-	return _get_climb_tuning_float(&"bottom_fall_margin_pixels")
-
-func _validate_required_state() -> void:
-	Validation.require_condition(climb_tuning != null, "RunScene requires climb tuning.")
-	Validation.require_condition(stamina_tuning != null, "RunScene requires stamina tuning.")
-	Validation.require_condition(generation_tuning != null, "RunScene requires generation tuning.")
-	Validation.require_condition(cosmetic_loadout != null, "RunScene requires a cosmetic loadout.")
-	Validation.require_condition(chaser_theme_catalog != null, "RunScene requires a chaser theme catalog.")
-	Validation.require_condition(cosmetic_item_catalog != null, "RunScene requires a cosmetic item catalog.")
-	Validation.require_condition(utc_date_provider != null, "RunScene requires a UTC date provider.")
-	climb_tuning.assert_valid()
-	stamina_tuning.assert_valid()
-	generation_tuning.assert_valid()
-	cosmetic_loadout.assert_valid()
-	chaser_theme_catalog.assert_valid()
-	cosmetic_item_catalog.assert_valid()
-	_cosmetic_loadout_service.assert_loadout_matches_catalog(cosmetic_loadout, cosmetic_item_catalog)
-	var _equipped_theme = chaser_theme_catalog.get_required_theme_by_id(cosmetic_loadout.chaser_theme_id)
-	if _save_snapshot != null:
-		_save_snapshot.assert_valid()
-		var _saved_theme = chaser_theme_catalog.get_required_theme_by_id(_save_snapshot.chaser_theme_id)
-		var _saved_body_item = cosmetic_item_catalog.get_required_item_by_id(_save_snapshot.body_cosmetic_id)
-		var _saved_left_hand_item = cosmetic_item_catalog.get_required_item_by_id(_save_snapshot.left_hand_cosmetic_id)
-		var _saved_right_hand_item = cosmetic_item_catalog.get_required_item_by_id(_save_snapshot.right_hand_cosmetic_id)
-		var _saved_chaser_item = cosmetic_item_catalog.get_required_chaser_item_by_theme_id(_save_snapshot.chaser_theme_id)
-	_gameplay_nodes.assert_valid()
-	Validation.require_condition(_world_surface_configurator != null, "RunScene requires a world surface configurator.")
-	Validation.require_condition(_run_hud != null, "RunScene requires RunHud.")
-	Validation.require_condition(_run_end_screen != null, "RunScene requires RunEndScreen.")
-	Validation.require_condition(_ui_layer != null, "RunScene requires UiLayer.")
-	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "RunScene requires at least one handhold.")
-
-func _resolve_launch_mode() -> int:
-	if _has_launch_mode_override:
-		RunLaunchModeScript.assert_valid(_launch_mode_override)
-		return _launch_mode_override
-
-	return RunLaunchModeScript.Value.NORMAL
-
 func _emit_tutorial_observation(
 	left_was_attached: bool,
 	right_was_attached: bool,
-	attachment_state: RefCounted,
+	attachment_state: HandAttachmentState,
 	frame_result: ClimbPrototypeFrameResultScript
 ) -> void:
-	if _launch_mode != RunLaunchModeScript.Value.TUTORIAL:
-		return
-
 	Validation.require_condition(attachment_state != null, "RunScene requires an attachment state before emitting tutorial observations.")
-	Validation.require_condition(attachment_state is HandAttachmentState, "RunScene requires a HandAttachmentState before emitting tutorial observations.")
-	var typed_attachment_state: HandAttachmentState = attachment_state as HandAttachmentState
+	Validation.require_condition(frame_result != null, "RunScene requires a frame result before emitting tutorial observations.")
 	var observation: TutorialRunObservationScript = TutorialRunObservationScript.new(
 		left_was_attached,
 		right_was_attached,
-		typed_attachment_state.is_attached(HandSideScript.Value.LEFT),
-		typed_attachment_state.is_attached(HandSideScript.Value.RIGHT),
-		typed_attachment_state.get_attached_hand_count(),
+		attachment_state.is_attached(HandSideScript.Value.LEFT),
+		attachment_state.is_attached(HandSideScript.Value.RIGHT),
+		attachment_state.get_attached_hand_count(),
 		frame_result.control_force
 	)
 	observation.assert_valid()
@@ -707,11 +647,12 @@ func _emit_tutorial_observation(
 
 func _create_input_frame() -> PlayerInputFrameScript:
 	if _active_touch_contacts.size() > 0 or _mobile_input.has_held_grip_state():
-		Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before creating mobile input frames.")
+		var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
+		Validation.require_condition(app_settings_snapshot != null, "RunScene requires app settings before creating mobile input frames.")
 		return _mobile_input.create_input_frame_from_contacts(
 			get_viewport_rect().size,
 			_active_touch_contacts,
-			_app_settings_snapshot.to_touch_input_settings(),
+			app_settings_snapshot.to_touch_input_settings(),
 			_controller.get_attachment_state()
 		)
 
@@ -978,14 +919,14 @@ func _apply_cosmetic_loadout() -> void:
 	_apply_equipped_chaser_theme()
 
 func _apply_saved_cosmetic_selection() -> void:
-	if _save_snapshot == null:
+	if not _storage_runtime.has_save_snapshot():
 		return
-
 	Validation.require_condition(cosmetic_loadout != null, "RunScene requires a cosmetic loadout before applying saved selection.")
-	cosmetic_loadout.chaser_theme_id = _save_snapshot.chaser_theme_id
-	cosmetic_loadout.body_cosmetic_id = _save_snapshot.body_cosmetic_id
-	cosmetic_loadout.left_hand_cosmetic_id = _save_snapshot.left_hand_cosmetic_id
-	cosmetic_loadout.right_hand_cosmetic_id = _save_snapshot.right_hand_cosmetic_id
+	var snapshot: SaveSnapshotScript = _storage_runtime.get_save_snapshot()
+	cosmetic_loadout.chaser_theme_id = snapshot.chaser_theme_id
+	cosmetic_loadout.body_cosmetic_id = snapshot.body_cosmetic_id
+	cosmetic_loadout.left_hand_cosmetic_id = snapshot.left_hand_cosmetic_id
+	cosmetic_loadout.right_hand_cosmetic_id = snapshot.right_hand_cosmetic_id
 	cosmetic_loadout.assert_valid()
 	_cosmetic_loadout_service.assert_loadout_matches_catalog(cosmetic_loadout, cosmetic_item_catalog)
 	_cosmetic_loadout_service.assert_loadout_owned(cosmetic_loadout, _cosmetic_inventory, cosmetic_item_catalog)
@@ -999,107 +940,44 @@ func _duplicate_cosmetic_loadout(loadout: Resource) -> CosmeticLoadoutScript:
 	typed_duplicated_loadout.assert_valid()
 	return typed_duplicated_loadout
 
-func _initialize_save_storage() -> void:
-	if _local_storage_adapter == null:
-		_local_storage_adapter = JsonFileLocalStorageAdapterScript.new()
-	_save_storage = SaveStorageScript.new(_local_storage_adapter)
-
-func _initialize_app_settings_storage() -> void:
-	if _local_storage_adapter == null:
-		_local_storage_adapter = JsonFileLocalStorageAdapterScript.new()
-	_app_settings_storage = AppSettingsStorageScript.new(_local_storage_adapter)
-
-func _load_or_create_app_settings() -> void:
-	Validation.require_condition(_app_settings_storage != null, "RunScene requires app settings storage before loading app settings.")
-	if _app_settings_storage.has_snapshot():
-		_app_settings_snapshot = _app_settings_storage.load_snapshot()
-	else:
-		_app_settings_snapshot = AppSettingsSnapshotScript.new()
-
 func _apply_app_settings() -> void:
-	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before applying them.")
+	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
 	Validation.require_condition(_audio_settings_adapter != null, "RunScene requires an audio settings adapter before applying app settings.")
-	_audio_settings_adapter.apply_master_settings(_app_settings_snapshot.master_volume_ratio, _app_settings_snapshot.audio_muted)
-
-func _trigger_haptic_feedback(feedback_type: int) -> void:
-	HapticFeedbackTypeScript.assert_valid(feedback_type)
-	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before triggering haptic feedback.")
-	Validation.require_condition(_haptics_adapter != null, "RunScene requires a haptics adapter before triggering haptic feedback.")
-	if not _app_settings_snapshot.haptics_enabled:
-		return
-
-	if not _haptics_adapter.supports_feedback(feedback_type):
-		return
-
-	_haptics_adapter.trigger_feedback(feedback_type)
+	_audio_settings_adapter.apply_master_settings(app_settings_snapshot.master_volume_ratio, app_settings_snapshot.audio_muted)
 
 func _persist_app_settings() -> void:
-	Validation.require_condition(_app_settings_storage != null, "RunScene requires app settings storage before saving app settings.")
-	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before saving app settings.")
-	_app_settings_snapshot.assert_valid()
-	_app_settings_storage.save_snapshot(_app_settings_snapshot)
+	_storage_runtime.persist_app_settings()
 	_apply_app_settings()
 	_refresh_settings_menu(true)
 
-func _load_or_create_save_state() -> void:
-	Validation.require_condition(_save_storage != null, "RunScene requires save storage before loading save state.")
-	if _save_snapshot == null:
-		if _save_storage.has_snapshot():
-			_save_snapshot = _save_storage.load_snapshot()
-		else:
-			_save_snapshot = SaveSnapshotScript.new(
-				0,
-				SaveSchemaScript.VERSION,
-				cosmetic_loadout.chaser_theme_id,
-				PackedStringArray(),
-				_get_owned_item_ids_for_new_save(),
-				cosmetic_loadout.body_cosmetic_id,
-				cosmetic_loadout.left_hand_cosmetic_id,
-				cosmetic_loadout.right_hand_cosmetic_id
-			)
-
-	_hydrate_runtime_save_state_from_snapshot()
-
 func _hydrate_runtime_save_state_from_snapshot() -> void:
-	if _save_snapshot == null:
+	if not _storage_runtime.has_save_snapshot():
 		return
-
-	_save_snapshot.assert_valid()
-	_wallet = WalletScript.new(_save_snapshot.wallet_coins)
-	_persistent_transaction_ledger = CoinTransactionLedgerScript.new(_save_snapshot.applied_persistent_transaction_ids)
-	_cosmetic_inventory = CosmeticInventoryScript.new(_save_snapshot.owned_cosmetic_ids, cosmetic_item_catalog.get_default_unlocked_item_ids())
-
-func _get_owned_item_ids_for_new_save() -> PackedStringArray:
-	var owned_item_ids: PackedStringArray = cosmetic_item_catalog.get_default_unlocked_item_ids()
-	_append_unique_owned_item_id(owned_item_ids, cosmetic_loadout.body_cosmetic_id)
-	_append_unique_owned_item_id(owned_item_ids, cosmetic_loadout.left_hand_cosmetic_id)
-	_append_unique_owned_item_id(owned_item_ids, cosmetic_loadout.right_hand_cosmetic_id)
-	var chaser_item: CosmeticItemScript = cosmetic_item_catalog.get_required_chaser_item_by_theme_id(cosmetic_loadout.chaser_theme_id)
-	_append_unique_owned_item_id(owned_item_ids, chaser_item.item_id)
-	return owned_item_ids
-
-func _append_unique_owned_item_id(owned_item_ids: PackedStringArray, item_id: StringName) -> void:
-	Validation.require_condition(not item_id.is_empty(), "RunScene new save owned item id cannot be empty.")
-	var item_id_string: String = String(item_id)
-	if not owned_item_ids.has(item_id_string):
-		var _append_result: bool = owned_item_ids.append(item_id_string)
+	var snapshot: SaveSnapshotScript = _storage_runtime.get_save_snapshot()
+	snapshot.assert_valid()
+	_wallet = WalletScript.new(snapshot.wallet_coins)
+	_persistent_transaction_ledger = CoinTransactionLedgerScript.new(snapshot.applied_persistent_transaction_ids)
+	_cosmetic_inventory = CosmeticInventoryScript.new(snapshot.owned_cosmetic_ids, cosmetic_item_catalog.get_default_unlocked_item_ids())
 
 func _persist_save_state() -> void:
-	Validation.require_condition(_save_storage != null, "RunScene requires save storage before persisting save state.")
-	Validation.require_condition(_cosmetic_inventory != null, "RunScene requires cosmetic inventory before persisting save state.")
-	_cosmetic_loadout_service.assert_loadout_owned(cosmetic_loadout, _cosmetic_inventory, cosmetic_item_catalog)
-	var snapshot: SaveSnapshotScript = SaveSnapshotScript.new(
-		_wallet.get_coins(),
-		SaveSchemaScript.VERSION,
-		cosmetic_loadout.chaser_theme_id,
-		_persistent_transaction_ledger.get_transaction_ids(),
-		_cosmetic_inventory.get_owned_item_ids(),
-		cosmetic_loadout.body_cosmetic_id,
-		cosmetic_loadout.left_hand_cosmetic_id,
-		cosmetic_loadout.right_hand_cosmetic_id
+	_storage_runtime.persist_save_state(
+		_wallet,
+		_persistent_transaction_ledger,
+		_cosmetic_inventory,
+		cosmetic_loadout,
+		cosmetic_item_catalog
 	)
-	_save_storage.save_snapshot(snapshot)
-	_save_snapshot = snapshot
+
+func _trigger_haptic_feedback(feedback_type: int) -> void:
+	HapticFeedbackTypeScript.assert_valid(feedback_type)
+	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
+	Validation.require_condition(_haptics_adapter != null, "RunScene requires a haptics adapter before triggering haptic feedback.")
+	if not app_settings_snapshot.haptics_enabled:
+		return
+	if not _haptics_adapter.supports_feedback(feedback_type):
+		return
+	_haptics_adapter.trigger_feedback(feedback_type)
+
 
 func _refresh_ui() -> void:
 	if _stamina == null or _run_ui_view == null:
@@ -1224,12 +1102,11 @@ func _ensure_settings_menu() -> void:
 	var _touch_split_connect_result: int = _settings_menu.connect(&"touch_split_changed", _on_settings_touch_split_changed)
 	var _touch_dead_zone_connect_result: int = _settings_menu.connect(&"touch_center_dead_zone_changed", _on_settings_touch_center_dead_zone_changed)
 
-func _refresh_settings_menu(visible: bool = false) -> void:
+func _refresh_settings_menu(settings_visible: bool = false) -> void:
 	if _settings_menu == null:
 		return
-
-	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before refreshing settings UI.")
-	_settings_menu.apply_state(_settings_presenter.build_state(_app_settings_snapshot, visible))
+	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
+	_settings_menu.apply_state(_settings_presenter.build_state(app_settings_snapshot, settings_visible))
 
 func _ensure_store_shell() -> void:
 	if _store_shell != null:
@@ -1292,28 +1169,28 @@ func _on_settings_closed() -> void:
 	_hide_settings_menu()
 
 func _on_settings_audio_muted_changed(audio_muted: bool) -> void:
-	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before changing audio mute.")
-	_app_settings_snapshot.audio_muted = audio_muted
+	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
+	app_settings_snapshot.audio_muted = audio_muted
 	_persist_app_settings()
 
 func _on_settings_master_volume_changed(master_volume_ratio: float) -> void:
-	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before changing master volume.")
-	_app_settings_snapshot.master_volume_ratio = master_volume_ratio
+	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
+	app_settings_snapshot.master_volume_ratio = master_volume_ratio
 	_persist_app_settings()
 
 func _on_settings_haptics_enabled_changed(haptics_enabled: bool) -> void:
-	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before changing haptics.")
-	_app_settings_snapshot.haptics_enabled = haptics_enabled
+	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
+	app_settings_snapshot.haptics_enabled = haptics_enabled
 	_persist_app_settings()
 
 func _on_settings_touch_split_changed(touch_split_ratio: float) -> void:
-	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before changing touch split.")
-	_app_settings_snapshot.touch_split_ratio = touch_split_ratio
+	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
+	app_settings_snapshot.touch_split_ratio = touch_split_ratio
 	_persist_app_settings()
 
 func _on_settings_touch_center_dead_zone_changed(touch_center_dead_zone_ratio: float) -> void:
-	Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before changing touch center dead zone.")
-	_app_settings_snapshot.touch_center_dead_zone_ratio = touch_center_dead_zone_ratio
+	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
+	app_settings_snapshot.touch_center_dead_zone_ratio = touch_center_dead_zone_ratio
 	_persist_app_settings()
 
 func _on_rewarded_continue_requested() -> void:
@@ -1502,9 +1379,9 @@ func _update_touch_drag(event: InputEventScreenDrag) -> void:
 
 	touch_contact.update_current_position(event.position)
 
-func _begin_touch_contact(index: int, position: Vector2) -> void:
+func _begin_touch_contact(index: int, touch_position: Vector2) -> void:
 	_end_touch_contact(index)
-	_active_touch_contacts.append(MobileTouchContactScript.new(index, position, position))
+	_active_touch_contacts.append(MobileTouchContactScript.new(index, touch_position, touch_position))
 
 func _end_touch_contact(index: int) -> void:
 	var remaining_touch_contacts: Array[RefCounted] = []
