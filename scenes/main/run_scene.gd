@@ -141,7 +141,7 @@ var _lethal_hazard_contact_service: LethalHazardContactServiceScript = LethalHaz
 var _normal_coin_pickup_service: NormalCoinPickupServiceScript = NormalCoinPickupServiceScript.new()
 var _run_loop_coordinator: RunLoopCoordinatorScript = RunLoopCoordinatorScript.new()
 var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop_coordinator)
-var _run_economy_runtime: RunEconomyRuntimeScript = RunEconomyRuntimeScript.new()
+var _run_economy_runtime: RunEconomyRuntime = RunEconomyRuntimeScript.new()
 var _run_frame_runtime: RunFrameRuntimeScript = RunFrameRuntimeScript.new()
 var _run_generated_handhold_runtime: RunGeneratedHandholdRuntimeScript = RunGeneratedHandholdRuntimeScript.new()
 var _run_handhold_targeting_runtime: RunHandholdTargetingRuntimeScript = RunHandholdTargetingRuntimeScript.new()
@@ -543,10 +543,13 @@ func consume_app_lifecycle_events_for_test() -> void:
 	_consume_app_lifecycle_events()
 
 func apply_persistent_coin_transaction(transaction_id: String, source: int, coin_delta: int) -> bool:
-	Validation.require_condition(_storage_runtime.save_storage != null, "RunScene requires save storage before applying persistent coin transactions.")
-	var transaction_applied: bool = _run_economy_runtime.apply_persistent_coin_transaction(
+	var transaction_applied: bool = _run_economy_runtime.apply_persistent_coin_transaction_and_persist(
+		_storage_runtime,
 		_wallet,
 		_persistent_transaction_ledger,
+		_cosmetic_inventory,
+		cosmetic_loadout,
+		cosmetic_item_catalog,
 		_wallet_transaction_service,
 		_persistent_coin_transaction_service,
 		transaction_id,
@@ -556,18 +559,18 @@ func apply_persistent_coin_transaction(transaction_id: String, source: int, coin
 	if not transaction_applied:
 		return false
 
-	_persist_save_state()
 	_refresh_ui()
 	return true
 
 func purchase_cosmetic_item(item_id: StringName) -> CosmeticPurchaseResultScript:
 	Validation.require_condition(not item_id.is_empty(), "RunScene cosmetic purchase item id cannot be empty.")
-	Validation.require_condition(_storage_runtime.save_storage != null, "RunScene requires save storage before purchasing cosmetics.")
-	var result: CosmeticPurchaseResultScript = _run_economy_runtime.purchase_cosmetic_item(
+	var result: CosmeticPurchaseResultScript = _run_economy_runtime.purchase_cosmetic_item_and_persist(
+		_storage_runtime,
 		_wallet,
 		_cosmetic_inventory,
 		cosmetic_item_catalog,
 		_persistent_transaction_ledger,
+		cosmetic_loadout,
 		_wallet_transaction_service,
 		_persistent_coin_transaction_service,
 		_cosmetic_unlock_purchase_service,
@@ -575,18 +578,17 @@ func purchase_cosmetic_item(item_id: StringName) -> CosmeticPurchaseResultScript
 	)
 	_store_selected_item_id = result.item_id
 	_store_feedback_message = _format_cosmetic_purchase_result(result)
-	if result.outcome == CosmeticPurchaseOutcomeScript.Value.PURCHASED:
-		_persist_save_state()
-
 	_refresh_ui()
 	return result
 
 func equip_cosmetic_item(item_id: StringName) -> void:
 	Validation.require_condition(not item_id.is_empty(), "RunScene cosmetic equip item id cannot be empty.")
-	Validation.require_condition(_storage_runtime.save_storage != null, "RunScene requires save storage before equipping cosmetics.")
-	_run_economy_runtime.equip_cosmetic_item(
-		cosmetic_loadout,
+	_run_economy_runtime.equip_cosmetic_item_and_persist(
+		_storage_runtime,
+		_wallet,
+		_persistent_transaction_ledger,
 		_cosmetic_inventory,
+		cosmetic_loadout,
 		cosmetic_item_catalog,
 		_cosmetic_loadout_service,
 		item_id
@@ -594,7 +596,6 @@ func equip_cosmetic_item(item_id: StringName) -> void:
 	_store_selected_item_id = item_id
 	_store_feedback_message = "Equipped %s." % cosmetic_item_catalog.get_required_item_by_id(item_id).display_name
 	_apply_cosmetic_loadout()
-	_persist_save_state()
 	_refresh_ui()
 
 func apply_post_run_coin_doubler_reward(rewarded_ad_result: RefCounted, reward_id: String) -> bool:
@@ -604,11 +605,16 @@ func apply_post_run_coin_doubler_reward(rewarded_ad_result: RefCounted, reward_i
 	Validation.require_condition(_run_session.get_run_earned_coins() > 0, "RunScene requires positive run-earned coins before applying post-run coin doubler rewards.")
 	var bound_reward_id: String = _bind_post_run_coin_doubler_reward_id(reward_id)
 
-	var reward_applied: bool = _post_run_coin_doubler_grant_service.apply_reward(
+	var reward_applied: bool = _run_economy_runtime.apply_post_run_coin_doubler_reward_and_persist(
+		_storage_runtime,
 		_wallet,
 		_persistent_transaction_ledger,
+		_cosmetic_inventory,
+		cosmetic_loadout,
+		cosmetic_item_catalog,
 		_wallet_transaction_service,
 		_persistent_coin_transaction_service,
+		_post_run_coin_doubler_grant_service,
 		rewarded_ad_result,
 		bound_reward_id,
 		_run_session.get_run_earned_coins()
@@ -616,7 +622,6 @@ func apply_post_run_coin_doubler_reward(rewarded_ad_result: RefCounted, reward_i
 	if not reward_applied:
 		return false
 
-	_persist_save_state()
 	_refresh_ui()
 	return true
 
