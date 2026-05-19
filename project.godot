@@ -18,6 +18,10 @@ config/name="The Climber"
 run/main_scene="res://scenes/main/main_menu_scene.tscn"
 config/features=PackedStringArray("4.6", "Mobile")
 
+[autoload]
+
+RunLaunchIntent="*res://src/core/run_launch_intent.gd"
+
 [debug]
 
 gdscript/warnings/unused_variable=2

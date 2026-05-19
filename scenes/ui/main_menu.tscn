@@ -31,7 +31,7 @@ grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="PanelContainer" parent="CenterContainer"]
-custom_minimum_size = Vector2(360, 430)
+custom_minimum_size = Vector2(360, 526)
 layout_mode = 2
 
 [node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel"]
@@ -60,6 +60,12 @@ custom_minimum_size = Vector2(0, 84)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Start Climb"
+
+[node name="TutorialButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+custom_minimum_size = Vector2(0, 84)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Tutorial"
 
 [node name="SettingsButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
 custom_minimum_size = Vector2(0, 84)

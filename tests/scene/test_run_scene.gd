@@ -15,6 +15,8 @@ const InMemoryLocalStorageAdapterScript = preload("res://src/platform/storage/in
 const AppLifecycleAdapterScript = preload("res://src/platform/lifecycle/app_lifecycle_adapter.gd")
 const AppLifecycleEventScript = preload("res://src/platform/lifecycle/app_lifecycle_event.gd")
 const AppLifecycleStateScript = preload("res://src/platform/lifecycle/app_lifecycle_state.gd")
+const RunLaunchIntentScript = preload("res://src/core/run_launch_intent.gd")
+const RunLaunchModeScript = preload("res://src/core/run_launch_mode.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
 const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
@@ -157,6 +159,25 @@ func test_run_scene_uses_extended_starting_stamina_for_playtesting() -> void:
     await get_tree().process_frame
 
     assert_eq(playground.stamina_tuning.one_hand_seconds, 100.0)
+
+func test_run_scene_consumes_staged_tutorial_launch_mode() -> void:
+    var launch_intent_node: Node = get_tree().root.get_node("RunLaunchIntent")
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(launch_intent_node)
+    assert_true(launch_intent_node is RunLaunchIntentScript)
+    var launch_intent: RunLaunchIntentScript = launch_intent_node as RunLaunchIntentScript
+    launch_intent.reset_to_default()
+    launch_intent.set_next_mode(RunLaunchModeScript.Value.TUTORIAL)
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    assert_eq(playground.get_launch_mode_for_test(), RunLaunchModeScript.Value.TUTORIAL)
+    assert_eq(launch_intent.get_next_mode(), RunLaunchModeScript.Value.NORMAL)
 
 func test_run_scene_applies_equipped_chaser_theme_from_cosmetic_loadout() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")

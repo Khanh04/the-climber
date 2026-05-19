@@ -7,11 +7,14 @@ const AudioSettingsAdapterScript = preload("res://src/platform/audio/audio_setti
 const GodotAudioSettingsAdapterScript = preload("res://src/platform/audio/godot_audio_settings_adapter.gd")
 const JsonFileLocalStorageAdapterScript = preload("res://src/platform/storage/json_file_local_storage_adapter.gd")
 const LocalStorageAdapterScript = preload("res://src/platform/storage/local_storage_adapter.gd")
+const RunLaunchIntentScript = preload("res://src/core/run_launch_intent.gd")
+const RunLaunchModeScript = preload("res://src/core/run_launch_mode.gd")
 const MainMenuScript = preload("res://scenes/ui/main_menu.gd")
 const SettingsMenuScript = preload("res://scenes/ui/settings_menu.gd")
 const SettingsMenuScene = preload("res://scenes/ui/settings_menu.tscn")
 const SettingsPresenterScript = preload("res://src/ui/settings_presenter.gd")
 const RUN_SCENE_PATH: String = "res://scenes/main/run_scene.tscn"
+const TUTORIAL_SCENE_PATH: String = "res://scenes/main/tutorial_scene.tscn"
 
 @onready var _main_menu: MainMenuScript = %MainMenu
 
@@ -28,6 +31,7 @@ func _ready() -> void:
 	_load_or_create_app_settings()
 	_apply_app_settings()
 	var _start_connect_result: int = _main_menu.connect(&"start_requested", Callable(self, "_on_start_requested"))
+	var _tutorial_connect_result: int = _main_menu.connect(&"tutorial_requested", Callable(self, "_on_tutorial_requested"))
 	var _settings_connect_result: int = _main_menu.connect(&"settings_requested", Callable(self, "_on_settings_requested"))
 
 func set_local_storage_adapter(local_storage_adapter: RefCounted) -> void:
@@ -55,11 +59,23 @@ func get_settings_menu_for_test() -> SettingsMenuScript:
 	return _settings_menu
 
 func _on_start_requested() -> void:
-	var change_result: Error = get_tree().change_scene_to_file(RUN_SCENE_PATH)
-	Validation.require_condition(change_result == OK, "MainMenuScene could not load RunScene.")
+	_stage_run_launch_mode(RunLaunchModeScript.Value.NORMAL)
+	_change_to_scene(RUN_SCENE_PATH)
+
+func _on_tutorial_requested() -> void:
+	_change_to_scene(TUTORIAL_SCENE_PATH)
+
+func _change_to_scene(scene_path: String) -> void:
+	Validation.require_condition(not scene_path.is_empty(), "MainMenuScene scene path cannot be empty.")
+	var change_result: Error = get_tree().change_scene_to_file(scene_path)
+	Validation.require_condition(change_result == OK, "MainMenuScene could not load the requested scene.")
 
 func _on_settings_requested() -> void:
 	_show_settings_menu()
+
+func _stage_run_launch_mode(launch_mode: int) -> void:
+	var run_launch_intent: RunLaunchIntentScript = _get_run_launch_intent()
+	run_launch_intent.set_next_mode(launch_mode)
 
 func _initialize_app_settings_storage() -> void:
 	Validation.require_condition(_local_storage_adapter != null, "MainMenuScene requires local storage before initializing app settings.")
@@ -138,3 +154,9 @@ func _on_settings_touch_center_dead_zone_changed(touch_center_dead_zone_ratio: f
 func _validate_required_nodes() -> void:
 	Validation.require_condition(_main_menu != null, "MainMenuScene requires MainMenu.")
 	Validation.require_condition(_main_menu is MainMenuScript, "MainMenuScene requires a MainMenu implementation.")
+
+func _get_run_launch_intent() -> RunLaunchIntentScript:
+	Validation.require_condition(has_node("/root/RunLaunchIntent"), "MainMenuScene requires the RunLaunchIntent autoload.")
+	var run_launch_intent_node: Node = get_node("/root/RunLaunchIntent")
+	Validation.require_condition(run_launch_intent_node is RunLaunchIntentScript, "MainMenuScene requires a RunLaunchIntent implementation.")
+	return run_launch_intent_node as RunLaunchIntentScript

@@ -56,7 +56,10 @@ const RewardedAdsAdapterScript = preload("res://src/platform/ads/rewarded_ads_ad
 const RewardedAdsAdapterFactoryScript = preload("res://src/platform/ads/rewarded_ads_adapter_factory.gd")
 const RewardedContinueServiceScript = preload("res://src/gameplay/run/rewarded_continue_service.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
+const RunLaunchIntentScript = preload("res://src/core/run_launch_intent.gd")
+const RunLaunchModeScript = preload("res://src/core/run_launch_mode.gd")
 const BottomScreenFallServiceScript = preload("res://src/gameplay/run/bottom_screen_fall_service.gd")
+const TutorialRunObservationScript = preload("res://src/gameplay/run/tutorial_run_observation.gd")
 const JsonFileLocalStorageAdapterScript = preload("res://src/platform/storage/json_file_local_storage_adapter.gd")
 const LocalStorageAdapterScript = preload("res://src/platform/storage/local_storage_adapter.gd")
 const AppLifecycleAdapterScript = preload("res://src/platform/lifecycle/app_lifecycle_adapter.gd")
@@ -105,6 +108,8 @@ const WindGustHazardContactServiceScript = preload("res://src/gameplay/hazards/w
 @onready var _run_end_screen: Control = %RunEndScreen
 @onready var _ui_layer: CanvasLayer = get_node("UiLayer") as CanvasLayer
 @onready var _run_ui_view = RunUiViewScript.new(_run_hud, _run_end_screen)
+
+signal tutorial_observation_recorded(observation: TutorialRunObservationScript)
 
 var _run_session: RunSessionScript = RunSessionScript.new()
 var _stamina: StaminaRuntimeScript
@@ -156,9 +161,11 @@ var _pause_menu: PauseMenuScript = null
 var _pause_menu_visible: bool = false
 var _post_run_coin_doubler_reward_id: String = ""
 var _start_y: float = 0.0
+var _launch_mode: int = RunLaunchModeScript.Value.NORMAL
 var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
 
 func _ready() -> void:
+	_launch_mode = _consume_run_launch_mode()
 	_validate_required_state()
 	_configure_authored_handholds()
 	_initialize_save_storage()
@@ -297,6 +304,7 @@ func _physics_process(delta: float) -> void:
 	var left_target: RefCounted = _find_nearest_handhold(_player.get_left_hand_anchor_global_position())
 	var right_target: RefCounted = _find_nearest_handhold(_player.get_right_hand_anchor_global_position())
 	var result: ClimbPrototypeFrameResultScript = _controller.apply_input_frame(input_frame, left_target, right_target, delta)
+	var current_attachment_state: HandAttachmentState = _controller.get_attachment_state()
 	_resolve_generated_handhold_attachment_changes(
 		left_was_attached,
 		left_previous_hold_path,
@@ -304,9 +312,10 @@ func _physics_process(delta: float) -> void:
 		right_previous_hold_path
 	)
 
-	_player.apply_frame_motion(result, _controller.get_attachment_state())
+	_player.apply_frame_motion(result, current_attachment_state)
 	_sync_aim_preview(input_frame)
 	_record_height()
+	_emit_tutorial_observation(left_was_attached, right_was_attached, current_attachment_state, result)
 
 	if result.stamina_depleted_now:
 		var stamina_fall_service: Object = _stamina_fall_service
@@ -433,6 +442,9 @@ func _notification(notification_id: int) -> void:
 
 func reset_for_test() -> void:
 	_reset_playground()
+
+func get_launch_mode_for_test() -> int:
+	return _launch_mode
 
 func get_run_session_for_test() -> RunSessionScript:
 	return _run_session
@@ -630,6 +642,38 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_run_end_screen != null, "RunScene requires RunEndScreen.")
 	Validation.require_condition(_ui_layer != null, "RunScene requires UiLayer.")
 	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "RunScene requires at least one handhold.")
+
+func _consume_run_launch_mode() -> int:
+	Validation.require_condition(has_node("/root/RunLaunchIntent"), "RunScene requires the RunLaunchIntent autoload.")
+	var run_launch_intent_node: Node = get_node("/root/RunLaunchIntent")
+	Validation.require_condition(run_launch_intent_node is RunLaunchIntentScript, "RunScene requires a RunLaunchIntent implementation.")
+	var run_launch_intent: RunLaunchIntentScript = run_launch_intent_node as RunLaunchIntentScript
+	var launch_mode: int = run_launch_intent.consume_next_mode()
+	RunLaunchModeScript.assert_valid(launch_mode)
+	return launch_mode
+
+func _emit_tutorial_observation(
+	left_was_attached: bool,
+	right_was_attached: bool,
+	attachment_state: RefCounted,
+	frame_result: ClimbPrototypeFrameResultScript
+) -> void:
+	if _launch_mode != RunLaunchModeScript.Value.TUTORIAL:
+		return
+
+	Validation.require_condition(attachment_state != null, "RunScene requires an attachment state before emitting tutorial observations.")
+	Validation.require_condition(attachment_state is HandAttachmentState, "RunScene requires a HandAttachmentState before emitting tutorial observations.")
+	var typed_attachment_state: HandAttachmentState = attachment_state as HandAttachmentState
+	var observation: TutorialRunObservationScript = TutorialRunObservationScript.new(
+		left_was_attached,
+		right_was_attached,
+		typed_attachment_state.is_attached(HandSideScript.Value.LEFT),
+		typed_attachment_state.is_attached(HandSideScript.Value.RIGHT),
+		typed_attachment_state.get_attached_hand_count(),
+		frame_result.control_force
+	)
+	observation.assert_valid()
+	tutorial_observation_recorded.emit(observation)
 
 func _configure_authored_handholds() -> void:
 	Validation.require_condition(_starter_handholds_root != null, "RunScene requires Handholds before configuring authored handholds.")

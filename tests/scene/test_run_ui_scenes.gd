@@ -4,6 +4,7 @@ const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
 const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
+const TutorialOverlayStateScript = preload("res://src/ui/tutorial_overlay_state.gd")
 const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
 const SettingsStateScript = preload("res://src/ui/settings_state.gd")
 const StoreItemStateScript = preload("res://src/ui/store_item_state.gd")
@@ -13,6 +14,7 @@ const PauseMenuStateScript = preload("res://src/ui/pause_menu_state.gd")
 
 var _restart_requested: bool = false
 var _start_requested: bool = false
+var _tutorial_requested: bool = false
 var _rewarded_continue_requested: bool = false
 var _post_run_coin_doubler_requested: bool = false
 var _store_requested: bool = false
@@ -48,9 +50,10 @@ func test_main_menu_scene_wires_required_nodes() -> void:
 
 	assert_not_null(menu_scene.get_node_or_null("MainMenu"))
 	assert_not_null(menu_scene.get_node_or_null("MainMenu/CenterContainer/Panel/ContentMargin/Content/StartButton"))
+	assert_not_null(menu_scene.get_node_or_null("MainMenu/CenterContainer/Panel/ContentMargin/Content/TutorialButton"))
 	assert_not_null(menu_scene.get_node_or_null("MainMenu/CenterContainer/Panel/ContentMargin/Content/SettingsButton"))
 
-func test_main_menu_emits_start_and_settings_requests() -> void:
+func test_main_menu_emits_start_tutorial_and_settings_requests() -> void:
 	var scene: PackedScene = load("res://scenes/ui/main_menu.tscn")
 	var menu_node: Node = scene.instantiate()
 
@@ -62,19 +65,26 @@ func test_main_menu_emits_start_and_settings_requests() -> void:
 	await get_tree().process_frame
 
 	_start_requested = false
+	_tutorial_requested = false
 	_settings_requested = false
 	var _start_connect_result: int = menu.connect(&"start_requested", Callable(self, "_mark_start_requested"))
+	var _tutorial_connect_result: int = menu.connect(&"tutorial_requested", Callable(self, "_mark_tutorial_requested"))
 	var _settings_connect_result: int = menu.connect(&"settings_requested", Callable(self, "_mark_settings_requested"))
 	var start_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/StartButton") as Button
+	var tutorial_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/TutorialButton") as Button
 	var settings_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
 
 	assert_not_null(start_button)
+	assert_not_null(tutorial_button)
 	assert_not_null(settings_button)
+	assert_false(tutorial_button.disabled)
 	assert_false(settings_button.disabled)
 	var _start_emit_result: int = start_button.emit_signal("pressed")
+	var _tutorial_emit_result: int = tutorial_button.emit_signal("pressed")
 	var _settings_emit_result: int = settings_button.emit_signal("pressed")
 
 	assert_true(_start_requested)
+	assert_true(_tutorial_requested)
 	assert_true(_settings_requested)
 
 func test_menu_buttons_use_mobile_sized_touch_targets() -> void:
@@ -103,6 +113,7 @@ func test_menu_buttons_use_mobile_sized_touch_targets() -> void:
 	await get_tree().process_frame
 
 	var start_button: Button = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content/StartButton") as Button
+	var tutorial_button: Button = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content/TutorialButton") as Button
 	var main_settings_button: Button = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
 	var resume_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/ResumeButton") as Button
 	var restart_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
@@ -111,6 +122,7 @@ func test_menu_buttons_use_mobile_sized_touch_targets() -> void:
 	var back_button: Button = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/BackButton") as Button
 
 	assert_not_null(start_button)
+	assert_not_null(tutorial_button)
 	assert_not_null(main_settings_button)
 	assert_not_null(resume_button)
 	assert_not_null(restart_button)
@@ -118,12 +130,14 @@ func test_menu_buttons_use_mobile_sized_touch_targets() -> void:
 	assert_not_null(close_button)
 	assert_not_null(back_button)
 	assert_eq(start_button.size_flags_horizontal, 3)
+	assert_eq(tutorial_button.size_flags_horizontal, 3)
 	assert_eq(main_settings_button.size_flags_horizontal, 3)
 	assert_eq(resume_button.size_flags_horizontal, 3)
 	assert_eq(restart_button.size_flags_horizontal, 3)
 	assert_eq(pause_settings_button.size_flags_horizontal, 3)
 	assert_eq(back_button.size_flags_horizontal, 3)
 	assert_gte(start_button.custom_minimum_size.y, 84.0)
+	assert_gte(tutorial_button.custom_minimum_size.y, 84.0)
 	assert_gte(main_settings_button.custom_minimum_size.y, 84.0)
 	assert_gte(resume_button.custom_minimum_size.y, 72.0)
 	assert_gte(restart_button.custom_minimum_size.y, 72.0)
@@ -255,6 +269,38 @@ func test_run_hud_emits_pause_request() -> void:
 	var _emit_result: int = pause_button.emit_signal("pressed")
 
 	assert_true(_pause_requested)
+
+func test_tutorial_overlay_scene_wires_required_nodes() -> void:
+	var scene: PackedScene = load("res://scenes/ui/tutorial_overlay.tscn")
+	var overlay_node: Node = scene.instantiate()
+
+	assert_not_null(overlay_node)
+	assert_true(overlay_node is Control)
+	var overlay: Control = overlay_node as Control
+	assert_not_null(overlay)
+	add_child_autofree(overlay)
+	await get_tree().process_frame
+
+	assert_not_null(overlay.get_node_or_null("Panel/PromptLabel"))
+
+func test_tutorial_overlay_scene_displays_prompt_when_present() -> void:
+	var scene: PackedScene = load("res://scenes/ui/tutorial_overlay.tscn")
+	var overlay_node: Node = scene.instantiate()
+
+	assert_not_null(overlay_node)
+	assert_true(overlay_node is Control)
+	var overlay: Control = overlay_node as Control
+	assert_not_null(overlay)
+	add_child_autofree(overlay)
+	await get_tree().process_frame
+
+	overlay.call("apply_state", TutorialOverlayStateScript.new("Drag while holding to move your free hand", true))
+
+	var prompt_label: Label = overlay.get_node("Panel/PromptLabel") as Label
+
+	assert_not_null(prompt_label)
+	assert_true(overlay.visible)
+	assert_eq(prompt_label.text, "Drag while holding to move your free hand")
 
 func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	var scene: PackedScene = load("res://scenes/ui/run_end_screen.tscn")
@@ -658,6 +704,9 @@ func _mark_restart_requested() -> void:
 
 func _mark_start_requested() -> void:
 	_start_requested = true
+
+func _mark_tutorial_requested() -> void:
+	_tutorial_requested = true
 
 func _mark_rewarded_continue_requested() -> void:
 	_rewarded_continue_requested = true
