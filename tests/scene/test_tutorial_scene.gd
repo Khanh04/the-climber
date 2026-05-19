@@ -3,9 +3,13 @@ extends GutTest
 const RunLaunchModeScript = preload("res://src/core/run_launch_mode.gd")
 const TutorialRunObservationScript = preload("res://src/gameplay/run/tutorial_run_observation.gd")
 const RunSceneScript = preload("res://scenes/main/run_scene.gd")
+const RunSceneTestAdapterScript = preload("res://src/debug/run_scene_test_adapter.gd")
 const TutorialSceneScript = preload("res://scenes/main/tutorial_scene.gd")
 
 var _requested_scene_path: String = ""
+
+func _test_adapter(run_scene: RunSceneScript) -> RunSceneTestAdapterScript:
+	return run_scene.get_test_adapter_for_test()
 
 func test_tutorial_scene_instantiates_run_scene_in_tutorial_mode() -> void:
 	var scene: PackedScene = load("res://scenes/main/tutorial_scene.tscn")
@@ -23,12 +27,12 @@ func test_tutorial_scene_instantiates_run_scene_in_tutorial_mode() -> void:
 	assert_not_null(run_scene)
 	assert_not_null(tutorial_scene.get_node_or_null("RunScene"))
 	assert_not_null(tutorial_scene.get_node_or_null("TutorialOverlayLayer/TutorialOverlay"))
-	assert_eq(run_scene.get_launch_mode_for_test(), RunLaunchModeScript.Value.TUTORIAL)
+	assert_eq(_test_adapter(run_scene).get_launch_mode_for_test(), RunLaunchModeScript.Value.TUTORIAL)
 	var run_hud: Control = run_scene.get_node("UiLayer/RunHud") as Control
 	assert_not_null(run_hud)
 	assert_false(run_hud.visible)
-	assert_false(run_scene.get_generated_chunk_coordinator_for_test().visible)
-	assert_eq(run_scene.get_generated_chunk_coordinator_for_test().get_child_count(), 0)
+	assert_false(_test_adapter(run_scene).get_generated_chunk_coordinator_for_test().visible)
+	assert_eq(_test_adapter(run_scene).get_generated_chunk_coordinator_for_test().get_child_count(), 0)
 	var tutorial_hold_names: PackedStringArray = PackedStringArray([
 		"TutorialHoldStartLeft",
 		"TutorialHoldStartRight",

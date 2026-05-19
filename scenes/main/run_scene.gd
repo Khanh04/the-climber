@@ -58,6 +58,8 @@ const RewardedContinueServiceScript = preload("res://src/gameplay/run/rewarded_c
 const RunEconomyRuntimeScript = preload("res://src/gameplay/run/run_economy_runtime.gd")
 const RunFrameRuntimeScript = preload("res://src/gameplay/run/run_frame_runtime.gd")
 const RunGeneratedHandholdRuntimeScript = preload("res://src/gameplay/run/run_generated_handhold_runtime.gd")
+const RunGeneratedSpawnHookupRuntimeScript = preload("res://src/gameplay/run/run_generated_spawn_hookup_runtime.gd")
+const RunSceneTestAdapterScript = preload("res://src/debug/run_scene_test_adapter.gd")
 const RunGameplayNodeRefsScript = preload("res://src/gameplay/run/run_gameplay_node_refs.gd")
 const RunHandholdTargetingRuntimeScript = preload("res://src/gameplay/run/run_handhold_targeting_runtime.gd")
 const RunRewardOfferRuntimeScript = preload("res://src/gameplay/run/run_reward_offer_runtime.gd")
@@ -145,6 +147,7 @@ var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop
 var _run_economy_runtime: RunEconomyRuntime = RunEconomyRuntimeScript.new()
 var _run_frame_runtime: RunFrameRuntimeScript = RunFrameRuntimeScript.new()
 var _run_generated_handhold_runtime: RunGeneratedHandholdRuntimeScript = RunGeneratedHandholdRuntimeScript.new()
+var _run_generated_spawn_hookup_runtime: RunGeneratedSpawnHookupRuntimeScript = RunGeneratedSpawnHookupRuntimeScript.new()
 var _run_handhold_targeting_runtime: RunHandholdTargetingRuntimeScript = RunHandholdTargetingRuntimeScript.new()
 var _run_reward_offer_runtime: RunRewardOfferRuntimeScript = RunRewardOfferRuntimeScript.new()
 var _run_rescue_runtime: RunRescueRuntimeScript = RunRescueRuntimeScript.new()
@@ -177,6 +180,7 @@ var _restart_requested: bool = false
 const AppSettingsAndSaveStorageRuntimeScript = preload("res://src/platform/storage/app_settings_and_save_storage_runtime.gd")
 var _storage_runtime: AppSettingsAndSaveStorageRuntime = AppSettingsAndSaveStorageRuntimeScript.new()
 var _overlay_runtime: RunOverlayRuntimeScript = RunOverlayRuntimeScript.new()
+var _test_adapter: RunSceneTestAdapterScript = null
 var _settings_menu: SettingsMenuScript = null
 var _settings_presenter: SettingsPresenterScript = SettingsPresenterScript.new()
 var _store_shell: StoreShellScript = null
@@ -227,6 +231,7 @@ func _ready() -> void:
 	if _uses_generated_chunks():
 		_configure_generated_chunks()
 	_reset_playground()
+	_test_adapter = _build_test_adapter()
 	_refresh_ui()
 
 
@@ -499,47 +504,51 @@ func _notification(notification_id: int) -> void:
 		if notification_recorded and is_node_ready():
 			_consume_app_lifecycle_events()
 
-func reset_for_test() -> void:
-	_reset_playground()
+func get_test_adapter_for_test() -> RunSceneTestAdapterScript:
+	Validation.require_condition(_test_adapter != null, "RunScene test adapter requires the scene to be ready.")
+	return _test_adapter
 
-func get_launch_mode_for_test() -> int:
-	return _launch_mode
+func _build_test_adapter() -> RunSceneTestAdapterScript:
+	return RunSceneTestAdapterScript.new(
+		_gameplay_nodes.player,
+		_controller,
+		_gameplay_nodes.chaser_kill_zone,
+		_generated_chunk_coordinator,
+		_overlay_runtime,
+		_wallet,
+		_cosmetic_inventory,
+		cosmetic_loadout,
+		_chaser_pacing_model,
+		_launch_mode,
+		_get_climb_tuning_float(&"bottom_fall_margin_pixels"),
+		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
+		Callable(self, "_get_run_session_for_test_adapter"),
+		Callable(self, "_get_store_shell_for_test_adapter"),
+		Callable(self, "_show_store"),
+		Callable(self, "_get_pause_menu_for_test_adapter"),
+		Callable(self, "_get_settings_menu_for_test_adapter"),
+		Callable(self, "_show_pause_menu"),
+		Callable(self, "_show_settings_menu"),
+		Callable(self, "_consume_app_lifecycle_events"),
+		Callable(self, "_reset_playground"),
+		Callable(self, "_resolve_chaser_contact_for_test_adapter"),
+		Callable(self, "_sync_aim_preview")
+	)
 
-func get_run_session_for_test() -> RunSessionScript:
+func _get_run_session_for_test_adapter() -> RunSessionScript:
 	return _run_session
 
-func get_wallet_for_test() -> WalletScript:
-	return _wallet
-
-func get_cosmetic_inventory_for_test() -> CosmeticInventoryScript:
-	return _cosmetic_inventory
-
-func get_cosmetic_loadout_for_test() -> CosmeticLoadoutScript:
-	return cosmetic_loadout
-
-func get_store_shell_for_test() -> StoreShellScript:
+func _get_store_shell_for_test_adapter() -> StoreShellScript:
 	return _store_shell
 
-func show_store_for_test() -> void:
-	_show_store()
-
-func get_pause_menu_for_test() -> PauseMenuScript:
+func _get_pause_menu_for_test_adapter() -> PauseMenuScript:
 	return _pause_menu
 
-func get_settings_menu_for_test() -> SettingsMenuScript:
+func _get_settings_menu_for_test_adapter() -> SettingsMenuScript:
 	return _settings_menu
 
-func show_pause_menu_for_test() -> void:
-	_show_pause_menu()
-
-func show_settings_menu_for_test() -> void:
-	_show_settings_menu()
-
-func is_pause_menu_visible_for_test() -> bool:
-	return _overlay_runtime.is_pause_menu_visible()
-
-func consume_app_lifecycle_events_for_test() -> void:
-	_consume_app_lifecycle_events()
+func _resolve_chaser_contact_for_test_adapter() -> void:
+	_on_chaser_contacted(_gameplay_nodes.player.get_player_body())
 
 func apply_persistent_coin_transaction(transaction_id: String, source: int, coin_delta: int) -> bool:
 	var transaction_applied: bool = _run_economy_runtime.apply_persistent_coin_transaction_and_persist(
@@ -776,8 +785,7 @@ func _configure_generated_chunks() -> void:
 		generated_world_origin,
 		chunk_start_height_offset_meters
 	)
-	if not _generated_chunk_coordinator.chunk_spawned.is_connected(_on_generated_chunk_spawned):
-		var _chunk_spawn_connect_result: int = _generated_chunk_coordinator.chunk_spawned.connect(_on_generated_chunk_spawned)
+	_run_generated_spawn_hookup_runtime.ensure_chunk_spawn_signal_connected(_generated_chunk_coordinator, _on_generated_chunk_spawned)
 
 func _sync_generated_chunks() -> void:
 	if not _uses_generated_chunks():
@@ -798,23 +806,11 @@ func _sync_generated_chunks() -> void:
 	)
 
 func _on_generated_chunk_spawned(chunk_node: Node2D) -> void:
-	Validation.require_condition(chunk_node != null, "RunScene generated chunk hookup requires a chunk node.")
-	_connect_generated_pickups(chunk_node)
-	_connect_generated_hazards(chunk_node)
-
-func _connect_generated_pickups(chunk_node: Node2D) -> void:
-	var pickup_root: Node = chunk_node.get_node("Pickups")
-	for pickup_child in pickup_root.get_children():
-		Validation.require_condition(pickup_child is GeneratedCoinPickupSpawnAdapterScript, "RunScene generated pickups must use GeneratedCoinPickupSpawnAdapter.")
-		var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = pickup_child as GeneratedCoinPickupSpawnAdapterScript
-		var _connect_result: int = pickup_spawn.collected.connect(_on_generated_coin_pickup_collected)
-
-func _connect_generated_hazards(chunk_node: Node2D) -> void:
-	var hazard_root: Node = chunk_node.get_node("Hazards")
-	for hazard_child in hazard_root.get_children():
-		Validation.require_condition(hazard_child is GeneratedHazardSpawnAdapterScript, "RunScene generated hazards must use GeneratedHazardSpawnAdapter.")
-		var hazard_spawn: GeneratedHazardSpawnAdapterScript = hazard_child as GeneratedHazardSpawnAdapterScript
-		var _connect_result: int = hazard_spawn.triggered.connect(_on_generated_hazard_triggered.bind(hazard_spawn))
+	_run_generated_spawn_hookup_runtime.connect_generated_chunk(
+		chunk_node,
+		_on_generated_coin_pickup_collected,
+		_on_generated_hazard_triggered
+	)
 
 func _on_generated_coin_pickup_collected(socket_id: StringName, coin_amount: int, body: Node) -> void:
 	Validation.require_condition(not String(socket_id).is_empty(), "RunScene generated coin pickup requires a socket id.")
