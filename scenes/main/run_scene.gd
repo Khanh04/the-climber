@@ -88,6 +88,7 @@ const PauseMenuScene = preload("res://scenes/ui/pause_menu.tscn")
 const SettingsMenuScript = preload("res://scenes/ui/settings_menu.gd")
 const SettingsMenuScene = preload("res://scenes/ui/settings_menu.tscn")
 const SettingsPresenterScript = preload("res://src/ui/settings_presenter.gd")
+const RunOverlayRuntimeScript = preload("res://src/ui/run_overlay_runtime.gd")
 const StorePresenterScript = preload("res://src/ui/store_presenter.gd")
 const StoreShellScript = preload("res://scenes/ui/store_shell.gd")
 const StoreShellScene = preload("res://scenes/ui/store_shell.tscn")
@@ -175,13 +176,11 @@ var _aim_target_marker: Polygon2D = null
 var _restart_requested: bool = false
 const AppSettingsAndSaveStorageRuntimeScript = preload("res://src/platform/storage/app_settings_and_save_storage_runtime.gd")
 var _storage_runtime: AppSettingsAndSaveStorageRuntime = AppSettingsAndSaveStorageRuntimeScript.new()
+var _overlay_runtime: RunOverlayRuntimeScript = RunOverlayRuntimeScript.new()
 var _settings_menu: SettingsMenuScript = null
 var _settings_presenter: SettingsPresenterScript = SettingsPresenterScript.new()
 var _store_shell: StoreShellScript = null
-var _store_selected_item_id: StringName = StringName()
-var _store_feedback_message: String = ""
 var _pause_menu: PauseMenuScript = null
-var _pause_menu_visible: bool = false
 var _post_run_coin_doubler_reward_id: String = ""
 var _start_y: float = 0.0
 var _launch_mode: int = RunLaunchModeScript.Value.NORMAL
@@ -337,7 +336,7 @@ func _physics_process(delta: float) -> void:
 		_perform_requested_restart()
 		return
 
-	if _pause_menu_visible:
+	if _overlay_runtime.is_pause_menu_visible():
 		return
 
 	var input_frame: PlayerInputFrameScript = _create_input_frame()
@@ -537,7 +536,7 @@ func show_settings_menu_for_test() -> void:
 	_show_settings_menu()
 
 func is_pause_menu_visible_for_test() -> bool:
-	return _pause_menu_visible
+	return _overlay_runtime.is_pause_menu_visible()
 
 func consume_app_lifecycle_events_for_test() -> void:
 	_consume_app_lifecycle_events()
@@ -576,8 +575,7 @@ func purchase_cosmetic_item(item_id: StringName) -> CosmeticPurchaseResultScript
 		_cosmetic_unlock_purchase_service,
 		item_id
 	)
-	_store_selected_item_id = result.item_id
-	_store_feedback_message = _format_cosmetic_purchase_result(result)
+	_overlay_runtime.record_purchase_result(result, cosmetic_item_catalog)
 	_refresh_ui()
 	return result
 
@@ -593,8 +591,7 @@ func equip_cosmetic_item(item_id: StringName) -> void:
 		_cosmetic_loadout_service,
 		item_id
 	)
-	_store_selected_item_id = item_id
-	_store_feedback_message = "Equipped %s." % cosmetic_item_catalog.get_required_item_by_id(item_id).display_name
+	_overlay_runtime.record_equipped_item(item_id, cosmetic_item_catalog)
 	_apply_cosmetic_loadout()
 	_refresh_ui()
 
@@ -904,8 +901,8 @@ func _reset_playground() -> void:
 
 func _request_restart() -> void:
 	_hide_settings_menu()
-	if _pause_menu_visible:
-		_pause_menu_visible = false
+	if _overlay_runtime.is_pause_menu_visible():
+		_overlay_runtime.hide_pause_menu()
 		if _pause_menu != null:
 			_refresh_pause_menu_ui()
 	if get_tree().paused:
@@ -986,20 +983,17 @@ func _refresh_ui() -> void:
 		_refresh_settings_menu(_settings_menu.visible)
 
 func _show_pause_menu() -> void:
-	if _run_session.get_state() == RunStateScript.Value.ENDED:
+	if not _overlay_runtime.show_pause_menu(_run_session.get_state()):
 		return
-
 	_ensure_pause_menu()
-	_pause_menu_visible = true
 	get_tree().paused = true
 	_refresh_pause_menu_ui()
 
 func _resume_from_pause_menu() -> void:
-	if not _pause_menu_visible:
+	if not _overlay_runtime.resume_from_pause_menu():
 		return
 
 	_hide_settings_menu()
-	_pause_menu_visible = false
 	get_tree().paused = false
 	_refresh_pause_menu_ui()
 	_refresh_ui()
@@ -1020,16 +1014,11 @@ func _ensure_pause_menu() -> void:
 
 func _refresh_pause_menu_ui() -> void:
 	Validation.require_condition(_pause_menu != null, "RunScene requires PauseMenu before refreshing pause UI.")
-	var pause_state: PauseMenuStateScript = PauseMenuStateScript.new(
-		_pause_menu_visible,
-		_run_session.get_height_meters(),
-		_wallet.get_coins(),
-		_run_session.get_run_earned_coins()
-	)
+	var pause_state: PauseMenuStateScript = _overlay_runtime.build_pause_menu_state(_run_session, _wallet)
 	_pause_menu.apply_state(pause_state)
 
 func _toggle_pause_requested() -> void:
-	if _pause_menu_visible:
+	if _overlay_runtime.is_pause_menu_visible():
 		_resume_from_pause_menu()
 		return
 
@@ -1092,7 +1081,7 @@ func _refresh_settings_menu(settings_visible: bool = false) -> void:
 	if _settings_menu == null:
 		return
 	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
-	_settings_menu.apply_state(_settings_presenter.build_state(app_settings_snapshot, settings_visible))
+	_settings_menu.apply_state(_overlay_runtime.build_settings_state(_settings_presenter, app_settings_snapshot, settings_visible))
 
 func _ensure_store_shell() -> void:
 	if _store_shell != null:
@@ -1111,30 +1100,14 @@ func _ensure_store_shell() -> void:
 
 func _refresh_store_ui() -> void:
 	Validation.require_condition(_store_shell != null, "RunScene requires StoreShell before refreshing store UI.")
-	var store_state: RefCounted = _store_presenter.build_state(
+	var store_state: RefCounted = _overlay_runtime.build_store_state(
+		_store_presenter,
 		cosmetic_item_catalog,
 		_cosmetic_inventory,
 		cosmetic_loadout,
-		_wallet,
-		_store_selected_item_id,
-		_store_feedback_message
+		_wallet
 	)
 	_store_shell.apply_state(store_state)
-
-func _format_cosmetic_purchase_result(result: CosmeticPurchaseResultScript) -> String:
-	Validation.require_condition(result != null, "RunScene requires a cosmetic purchase result to format feedback.")
-	result.assert_valid()
-	var item_display_name: String = cosmetic_item_catalog.get_required_item_by_id(result.item_id).display_name
-	match result.outcome:
-		CosmeticPurchaseOutcomeScript.Value.PURCHASED:
-			return "Unlocked %s." % item_display_name
-		CosmeticPurchaseOutcomeScript.Value.ALREADY_OWNED:
-			return "%s is already owned." % item_display_name
-		CosmeticPurchaseOutcomeScript.Value.INSUFFICIENT_FUNDS:
-			return "Not enough coins for %s." % item_display_name
-		_:
-			Validation.require_condition(false, "RunScene requires a supported cosmetic purchase outcome.")
-			return ""
 
 func _on_run_end_restart_requested() -> void:
 	_request_restart()
@@ -1212,8 +1185,7 @@ func _on_store_requested() -> void:
 
 func _on_store_item_selected(item_id: StringName) -> void:
 	Validation.require_condition(not item_id.is_empty(), "RunScene store selected item id cannot be empty.")
-	_store_selected_item_id = item_id
-	_store_feedback_message = ""
+	_overlay_runtime.select_store_item(item_id)
 	_refresh_store_ui()
 
 func _on_store_purchase_requested(item_id: StringName) -> void:
@@ -1226,7 +1198,7 @@ func _on_store_equip_requested(item_id: StringName) -> void:
 	_trigger_haptic_feedback(HapticFeedbackTypeScript.Value.LIGHT_IMPACT)
 
 func _on_store_closed() -> void:
-	_store_feedback_message = ""
+	_overlay_runtime.clear_store_feedback()
 
 func _on_chaser_contacted(body: Node) -> void:
 	Validation.require_condition(body != null, "RunScene chaser contact requires a body.")
