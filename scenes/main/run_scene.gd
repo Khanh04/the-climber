@@ -203,11 +203,16 @@ func _ready() -> void:
 	_storage_runtime.initialize_save_storage()
 	_storage_runtime.initialize_app_settings_storage()
 	_storage_runtime.load_or_create_app_settings()
-	_apply_app_settings()
+	_storage_runtime.apply_app_settings(_audio_settings_adapter)
 	_storage_runtime.load_or_create_save_state(cosmetic_loadout, cosmetic_item_catalog)
-	_hydrate_runtime_save_state_from_snapshot()
+	_sync_save_backed_runtime_models()
 	cosmetic_loadout = _duplicate_cosmetic_loadout(cosmetic_loadout)
-	_apply_saved_cosmetic_selection()
+	_storage_runtime.apply_saved_cosmetic_selection(
+		cosmetic_loadout,
+		_cosmetic_inventory,
+		cosmetic_item_catalog,
+		_cosmetic_loadout_service
+	)
 	var _connect_result: int = _run_end_screen.connect(&"restart_requested", _on_run_end_restart_requested)
 	var _rewarded_continue_connect_result: int = _run_end_screen.connect(&"rewarded_continue_requested", _on_rewarded_continue_requested)
 	var _post_run_coin_doubler_connect_result: int = _run_end_screen.connect(&"post_run_coin_doubler_requested", _on_post_run_coin_doubler_requested)
@@ -246,13 +251,16 @@ func set_local_storage_adapter(local_storage_adapter: RefCounted) -> void:
 	_storage_runtime.set_local_storage_adapter(typed_local_storage_adapter)
 	if not is_node_ready():
 		return
-	_storage_runtime.initialize_save_storage()
-	_storage_runtime.initialize_app_settings_storage()
 	_storage_runtime.load_or_create_app_settings()
-	_apply_app_settings()
+	_storage_runtime.apply_app_settings(_audio_settings_adapter)
 	_storage_runtime.load_or_create_save_state(cosmetic_loadout, cosmetic_item_catalog)
-	_hydrate_runtime_save_state_from_snapshot()
-	_apply_saved_cosmetic_selection()
+	_sync_save_backed_runtime_models()
+	_storage_runtime.apply_saved_cosmetic_selection(
+		cosmetic_loadout,
+		_cosmetic_inventory,
+		cosmetic_item_catalog,
+		_cosmetic_loadout_service
+	)
 	_apply_cosmetic_loadout()
 	_refresh_ui()
 	_refresh_settings_menu()
@@ -287,7 +295,7 @@ func set_audio_settings_adapter(audio_settings_adapter: RefCounted) -> void:
 	_audio_settings_adapter = audio_settings_adapter as AudioSettingsAdapterScript
 	if not is_node_ready():
 		return
-	_apply_app_settings()
+	_storage_runtime.apply_app_settings(_audio_settings_adapter)
 
 func set_haptics_adapter(haptics_adapter: RefCounted) -> void:
 	Validation.require_condition(haptics_adapter != null, "RunScene requires a haptics adapter.")
@@ -299,10 +307,15 @@ func set_save_snapshot(snapshot: RefCounted) -> void:
 	Validation.require_condition(snapshot is SaveSnapshotScript, "RunScene requires a SaveSnapshot implementation.")
 	var typed_snapshot: SaveSnapshotScript = snapshot as SaveSnapshotScript
 	_storage_runtime.set_save_snapshot(typed_snapshot)
-	_hydrate_runtime_save_state_from_snapshot()
+	_sync_save_backed_runtime_models()
 	if not is_node_ready():
 		return
-	_apply_saved_cosmetic_selection()
+	_storage_runtime.apply_saved_cosmetic_selection(
+		cosmetic_loadout,
+		_cosmetic_inventory,
+		cosmetic_item_catalog,
+		_cosmetic_loadout_service
+	)
 	_apply_cosmetic_loadout()
 	_refresh_ui()
 
@@ -918,19 +931,6 @@ func _apply_cosmetic_loadout() -> void:
 	_player_cosmetic_applicator.apply_loadout(_player, cosmetic_loadout, cosmetic_item_catalog)
 	_apply_equipped_chaser_theme()
 
-func _apply_saved_cosmetic_selection() -> void:
-	if not _storage_runtime.has_save_snapshot():
-		return
-	Validation.require_condition(cosmetic_loadout != null, "RunScene requires a cosmetic loadout before applying saved selection.")
-	var snapshot: SaveSnapshotScript = _storage_runtime.get_save_snapshot()
-	cosmetic_loadout.chaser_theme_id = snapshot.chaser_theme_id
-	cosmetic_loadout.body_cosmetic_id = snapshot.body_cosmetic_id
-	cosmetic_loadout.left_hand_cosmetic_id = snapshot.left_hand_cosmetic_id
-	cosmetic_loadout.right_hand_cosmetic_id = snapshot.right_hand_cosmetic_id
-	cosmetic_loadout.assert_valid()
-	_cosmetic_loadout_service.assert_loadout_matches_catalog(cosmetic_loadout, cosmetic_item_catalog)
-	_cosmetic_loadout_service.assert_loadout_owned(cosmetic_loadout, _cosmetic_inventory, cosmetic_item_catalog)
-
 func _duplicate_cosmetic_loadout(loadout: Resource) -> CosmeticLoadoutScript:
 	Validation.require_condition(loadout != null, "RunScene requires a cosmetic loadout resource.")
 	Validation.require_condition(loadout is CosmeticLoadoutScript, "RunScene requires a CosmeticLoadout resource.")
@@ -940,24 +940,12 @@ func _duplicate_cosmetic_loadout(loadout: Resource) -> CosmeticLoadoutScript:
 	typed_duplicated_loadout.assert_valid()
 	return typed_duplicated_loadout
 
-func _apply_app_settings() -> void:
-	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
-	Validation.require_condition(_audio_settings_adapter != null, "RunScene requires an audio settings adapter before applying app settings.")
-	_audio_settings_adapter.apply_master_settings(app_settings_snapshot.master_volume_ratio, app_settings_snapshot.audio_muted)
-
-func _persist_app_settings() -> void:
-	_storage_runtime.persist_app_settings()
-	_apply_app_settings()
-	_refresh_settings_menu(true)
-
-func _hydrate_runtime_save_state_from_snapshot() -> void:
+func _sync_save_backed_runtime_models() -> void:
 	if not _storage_runtime.has_save_snapshot():
 		return
-	var snapshot: SaveSnapshotScript = _storage_runtime.get_save_snapshot()
-	snapshot.assert_valid()
-	_wallet = WalletScript.new(snapshot.wallet_coins)
-	_persistent_transaction_ledger = CoinTransactionLedgerScript.new(snapshot.applied_persistent_transaction_ids)
-	_cosmetic_inventory = CosmeticInventoryScript.new(snapshot.owned_cosmetic_ids, cosmetic_item_catalog.get_default_unlocked_item_ids())
+	_wallet = _storage_runtime.create_wallet_from_save_snapshot()
+	_persistent_transaction_ledger = _storage_runtime.create_persistent_transaction_ledger_from_save_snapshot()
+	_cosmetic_inventory = _storage_runtime.create_cosmetic_inventory_from_save_snapshot(cosmetic_item_catalog)
 
 func _persist_save_state() -> void:
 	_storage_runtime.persist_save_state(
@@ -969,14 +957,7 @@ func _persist_save_state() -> void:
 	)
 
 func _trigger_haptic_feedback(feedback_type: int) -> void:
-	HapticFeedbackTypeScript.assert_valid(feedback_type)
-	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
-	Validation.require_condition(_haptics_adapter != null, "RunScene requires a haptics adapter before triggering haptic feedback.")
-	if not app_settings_snapshot.haptics_enabled:
-		return
-	if not _haptics_adapter.supports_feedback(feedback_type):
-		return
-	_haptics_adapter.trigger_feedback(feedback_type)
+	_storage_runtime.trigger_haptic_feedback(feedback_type, _haptics_adapter)
 
 
 func _refresh_ui() -> void:
@@ -1169,29 +1150,24 @@ func _on_settings_closed() -> void:
 	_hide_settings_menu()
 
 func _on_settings_audio_muted_changed(audio_muted: bool) -> void:
-	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
-	app_settings_snapshot.audio_muted = audio_muted
-	_persist_app_settings()
+	_storage_runtime.set_audio_muted(audio_muted, _audio_settings_adapter)
+	_refresh_settings_menu(true)
 
 func _on_settings_master_volume_changed(master_volume_ratio: float) -> void:
-	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
-	app_settings_snapshot.master_volume_ratio = master_volume_ratio
-	_persist_app_settings()
+	_storage_runtime.set_master_volume_ratio(master_volume_ratio, _audio_settings_adapter)
+	_refresh_settings_menu(true)
 
 func _on_settings_haptics_enabled_changed(haptics_enabled: bool) -> void:
-	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
-	app_settings_snapshot.haptics_enabled = haptics_enabled
-	_persist_app_settings()
+	_storage_runtime.set_haptics_enabled(haptics_enabled)
+	_refresh_settings_menu(true)
 
 func _on_settings_touch_split_changed(touch_split_ratio: float) -> void:
-	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
-	app_settings_snapshot.touch_split_ratio = touch_split_ratio
-	_persist_app_settings()
+	_storage_runtime.set_touch_split_ratio(touch_split_ratio)
+	_refresh_settings_menu(true)
 
 func _on_settings_touch_center_dead_zone_changed(touch_center_dead_zone_ratio: float) -> void:
-	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
-	app_settings_snapshot.touch_center_dead_zone_ratio = touch_center_dead_zone_ratio
-	_persist_app_settings()
+	_storage_runtime.set_touch_center_dead_zone_ratio(touch_center_dead_zone_ratio)
+	_refresh_settings_menu(true)
 
 func _on_rewarded_continue_requested() -> void:
 	if not _can_offer_rewarded_continue():
