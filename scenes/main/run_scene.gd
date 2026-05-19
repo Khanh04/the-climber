@@ -55,6 +55,9 @@ const RewardedAdResultScript = preload("res://src/platform/ads/rewarded_ad_resul
 const RewardedAdsAdapterScript = preload("res://src/platform/ads/rewarded_ads_adapter.gd")
 const RewardedAdsAdapterFactoryScript = preload("res://src/platform/ads/rewarded_ads_adapter_factory.gd")
 const RewardedContinueServiceScript = preload("res://src/gameplay/run/rewarded_continue_service.gd")
+const RunFrameRuntimeScript = preload("res://src/gameplay/run/run_frame_runtime.gd")
+const RunGameplayNodeRefsScript = preload("res://src/gameplay/run/run_gameplay_node_refs.gd")
+const RunWorldSurfaceConfiguratorScript = preload("res://src/gameplay/run/run_world_surface_configurator.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunLaunchModeScript = preload("res://src/core/run_launch_mode.gd")
 const BottomScreenFallServiceScript = preload("res://src/gameplay/run/bottom_screen_fall_service.gd")
@@ -105,6 +108,14 @@ const TUTORIAL_HANDHOLD_GROUP_NAME: StringName = &"tutorial_handhold"
 @onready var _reset_anchor: Marker2D = %ResetAnchor
 @onready var _camera: Camera2D = %DevCamera
 @onready var _starter_handholds_root: Node2D = get_node("Handholds") as Node2D
+@onready var _gameplay_nodes: RunGameplayNodeRefsScript = RunGameplayNodeRefsScript.new(
+	_player,
+	_chaser_kill_zone,
+	_generated_chunk_coordinator,
+	_reset_anchor,
+	_camera,
+	_starter_handholds_root
+)
 @onready var _run_hud: Control = %RunHud
 @onready var _run_end_screen: Control = %RunEndScreen
 @onready var _ui_layer: CanvasLayer = get_node("UiLayer") as CanvasLayer
@@ -124,9 +135,11 @@ var _lethal_hazard_contact_service: LethalHazardContactServiceScript = LethalHaz
 var _normal_coin_pickup_service: NormalCoinPickupServiceScript = NormalCoinPickupServiceScript.new()
 var _run_loop_coordinator: RunLoopCoordinatorScript = RunLoopCoordinatorScript.new()
 var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop_coordinator)
+var _run_frame_runtime: RunFrameRuntimeScript = RunFrameRuntimeScript.new()
 var _stamina_fall_service: StaminaFallServiceScript = StaminaFallServiceScript.new()
 var _wind_gust_hazard_contact_service: WindGustHazardContactServiceScript = WindGustHazardContactServiceScript.new()
 var _wallet: WalletScript = WalletScript.new()
+var _world_surface_configurator: RunWorldSurfaceConfiguratorScript = RunWorldSurfaceConfiguratorScript.new()
 var _cosmetic_inventory: CosmeticInventoryScript = CosmeticInventoryScript.new()
 var _cosmetic_loadout_service: CosmeticLoadoutServiceScript = CosmeticLoadoutServiceScript.new()
 var _cosmetic_unlock_purchase_service: CosmeticUnlockPurchaseServiceScript = CosmeticUnlockPurchaseServiceScript.new()
@@ -170,8 +183,14 @@ var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
 func _ready() -> void:
 	_launch_mode = _resolve_launch_mode()
 	_validate_required_state()
-	_configure_tutorial_surface()
-	_configure_authored_handholds()
+	_world_surface_configurator.configure_surface(
+		_gameplay_nodes,
+		_run_hud,
+		_launch_mode,
+		climb_tuning,
+		generation_tuning,
+		TUTORIAL_HANDHOLD_GROUP_NAME
+	)
 	_initialize_save_storage()
 	_initialize_app_settings_storage()
 	_load_or_create_app_settings()
@@ -184,13 +203,13 @@ func _ready() -> void:
 	var _post_run_coin_doubler_connect_result: int = _run_end_screen.connect(&"post_run_coin_doubler_requested", _on_post_run_coin_doubler_requested)
 	var _store_connect_result: int = _run_end_screen.connect(&"store_requested", _on_store_requested)
 	var _pause_connect_result: int = _run_hud.connect(&"pause_requested", _on_pause_requested)
-	var _chaser_connect_result: int = _chaser_kill_zone.connect(&"chaser_contacted", _on_chaser_contacted)
-	_player.set_climb_tuning(climb_tuning)
+	var _chaser_connect_result: int = _gameplay_nodes.chaser_kill_zone.connect(&"chaser_contacted", _on_chaser_contacted)
+	_gameplay_nodes.player.set_climb_tuning(climb_tuning)
 	_stamina = StaminaRuntimeScript.new(stamina_tuning)
 	_controller = ClimbPrototypeControllerScript.new(climb_tuning, _stamina)
-	_chaser_pacing_model = ChaserPacingModelScript.new(_chaser_kill_zone.chaser_tuning)
+	_chaser_pacing_model = ChaserPacingModelScript.new(_gameplay_nodes.chaser_kill_zone.chaser_tuning)
 	_apply_cosmetic_loadout()
-	_start_y = _reset_anchor.global_position.y
+	_start_y = _gameplay_nodes.reset_anchor.global_position.y
 	if _uses_generated_chunks():
 		_configure_generated_chunks()
 	_reset_playground()
@@ -288,11 +307,43 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var input_frame: PlayerInputFrameScript = _create_input_frame()
-	_update_camera_follow()
-	_sync_generated_chunks()
-	_update_chaser(delta)
+	var current_height_meters_before_input: float = _run_frame_runtime.calculate_current_height_meters(
+		_gameplay_nodes,
+		_start_y,
+		_get_climb_tuning_float(&"pixels_per_meter")
+	)
+	_run_frame_runtime.update_camera_follow(
+		_gameplay_nodes,
+		_run_loop_coordinator,
+		_run_session,
+		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
+		_get_climb_tuning_float(&"camera_vertical_dead_zone_pixels"),
+		_get_climb_tuning_float(&"camera_horizontal_dead_zone_pixels")
+	)
+	_run_frame_runtime.sync_generated_chunks(
+		_gameplay_nodes,
+		_controller,
+		current_height_meters_before_input,
+		_uses_generated_chunks()
+	)
+	_run_frame_runtime.update_chaser(
+		_gameplay_nodes,
+		_run_session,
+		_chaser_pacing_model,
+		_get_climb_tuning_float(&"pixels_per_meter"),
+		current_height_meters_before_input,
+		delta
+	)
 
-	if _resolve_bottom_screen_fall_if_needed():
+	if _run_frame_runtime.resolve_bottom_screen_fall_if_needed(
+		_gameplay_nodes,
+		_run_loop_coordinator,
+		_bottom_screen_fall_service,
+		_controller,
+		_run_session,
+		get_viewport_rect().size.y,
+		_get_climb_tuning_float(&"bottom_fall_margin_pixels")
+	):
 		_clear_aim_preview()
 		_refresh_ui()
 		return
@@ -326,7 +377,14 @@ func _physics_process(delta: float) -> void:
 
 	_player.apply_frame_motion(result, current_attachment_state)
 	_sync_aim_preview(input_frame)
-	_record_height()
+	_run_frame_runtime.record_height(
+		_run_session,
+		_run_frame_runtime.calculate_current_height_meters(
+			_gameplay_nodes,
+			_start_y,
+			_get_climb_tuning_float(&"pixels_per_meter")
+		)
+	)
 	_emit_tutorial_observation(left_was_attached, right_was_attached, current_attachment_state, result)
 
 	if result.stamina_depleted_now:
@@ -581,22 +639,22 @@ func get_controller_for_test() -> ClimbPrototypeControllerScript:
 	return _controller
 
 func get_player_for_test() -> PlayerCharacterScript:
-	return _player
+	return _gameplay_nodes.player
 
 func get_player_body_for_test() -> RigidBody2D:
-	return _player.get_player_body()
+	return _gameplay_nodes.player.get_player_body()
 
 func get_left_hand_anchor_for_test() -> Marker2D:
-	return _player.get_left_hand_anchor()
+	return _gameplay_nodes.player.get_left_hand_anchor()
 
 func get_right_hand_anchor_for_test() -> Marker2D:
-	return _player.get_right_hand_anchor()
+	return _gameplay_nodes.player.get_right_hand_anchor()
 
 func get_chaser_for_test() -> ChaserKillZoneScript:
-	return _chaser_kill_zone
+	return _gameplay_nodes.chaser_kill_zone
 
 func get_generated_chunk_coordinator_for_test() -> GeneratedChunkCoordinatorScript:
-	return _generated_chunk_coordinator
+	return _gameplay_nodes.generated_chunk_coordinator
 
 func get_chaser_feedback_snapshot_for_test() -> ChaserFeedbackSnapshotScript:
 	Validation.require_condition(_chaser_pacing_model != null, "RunScene requires a chaser pacing model for feedback snapshots.")
@@ -644,12 +702,8 @@ func _validate_required_state() -> void:
 		var _saved_left_hand_item = cosmetic_item_catalog.get_required_item_by_id(_save_snapshot.left_hand_cosmetic_id)
 		var _saved_right_hand_item = cosmetic_item_catalog.get_required_item_by_id(_save_snapshot.right_hand_cosmetic_id)
 		var _saved_chaser_item = cosmetic_item_catalog.get_required_chaser_item_by_theme_id(_save_snapshot.chaser_theme_id)
-	Validation.require_condition(_player != null, "RunScene requires PlayerCharacter.")
-	Validation.require_condition(_chaser_kill_zone != null, "RunScene requires ChaserKillZone.")
-	Validation.require_condition(_generated_chunk_coordinator != null, "RunScene requires GeneratedChunks coordinator.")
-	Validation.require_condition(_reset_anchor != null, "RunScene requires ResetAnchor.")
-	Validation.require_condition(_camera != null, "RunScene requires DevCamera.")
-	Validation.require_condition(_starter_handholds_root != null, "RunScene requires Handholds.")
+	_gameplay_nodes.assert_valid()
+	Validation.require_condition(_world_surface_configurator != null, "RunScene requires a world surface configurator.")
 	Validation.require_condition(_run_hud != null, "RunScene requires RunHud.")
 	Validation.require_condition(_run_end_screen != null, "RunScene requires RunEndScreen.")
 	Validation.require_condition(_ui_layer != null, "RunScene requires UiLayer.")
@@ -685,68 +739,6 @@ func _emit_tutorial_observation(
 	observation.assert_valid()
 	tutorial_observation_recorded.emit(observation)
 
-func _configure_authored_handholds() -> void:
-	Validation.require_condition(_starter_handholds_root != null, "RunScene requires Handholds before configuring authored handholds.")
-
-	for child in _starter_handholds_root.get_children():
-		Validation.require_condition(child is Node, "RunScene starter handhold roots must contain nodes.")
-		var handhold_node: Node = child
-		if not handhold_node.is_in_group(climb_tuning.handhold_group_name):
-			continue
-
-		Validation.require_condition(
-			handhold_node is StaticBody2D,
-			"RunScene authored handholds must be StaticBody2D instances."
-		)
-		if handhold_node is GeneratedHandholdAdapterScript:
-			continue
-
-		var normal_definition: HandholdTypeDefinitionScript = generation_tuning.get_required_handhold_definition(HandholdTypeScript.Value.NORMAL)
-		var normal_surface_profile: HandholdSurfaceProfileScript = normal_definition.surface_profile as HandholdSurfaceProfileScript
-		handhold_node.set_meta(
-			&"stamina_drain_multiplier",
-			normal_surface_profile.stamina_drain_multiplier
-		)
-		handhold_node.set_meta(&"handhold_type", HandholdTypeScript.to_label(HandholdTypeScript.Value.NORMAL))
-		handhold_node.set_meta(&"definition_id", String(normal_definition.definition_id))
-
-func _configure_tutorial_surface() -> void:
-	var tutorial_mode_enabled: bool = _launch_mode == RunLaunchModeScript.Value.TUTORIAL
-	Validation.require_condition(_generated_chunk_coordinator != null, "RunScene requires GeneratedChunks before configuring the tutorial surface.")
-	Validation.require_condition(_run_hud != null, "RunScene requires RunHud before configuring the tutorial surface.")
-	_generated_chunk_coordinator.visible = not tutorial_mode_enabled
-	_run_hud.visible = not tutorial_mode_enabled
-	_set_tutorial_handholds_enabled(tutorial_mode_enabled)
-
-func _set_tutorial_handholds_enabled(enabled: bool) -> void:
-	Validation.require_condition(_starter_handholds_root != null, "RunScene requires Handholds before toggling tutorial handholds.")
-
-	for child in _starter_handholds_root.get_children():
-		Validation.require_condition(child is Node, "RunScene handhold roots must contain nodes when toggling tutorial handholds.")
-		var handhold_node: Node = child
-		if not handhold_node.is_in_group(TUTORIAL_HANDHOLD_GROUP_NAME):
-			continue
-
-		Validation.require_condition(handhold_node is StaticBody2D, "RunScene tutorial handholds must be StaticBody2D instances.")
-		var tutorial_handhold: StaticBody2D = handhold_node as StaticBody2D
-		if enabled:
-			if not tutorial_handhold.is_in_group(climb_tuning.handhold_group_name):
-				tutorial_handhold.add_to_group(climb_tuning.handhold_group_name)
-		else:
-			if tutorial_handhold.is_in_group(climb_tuning.handhold_group_name):
-				tutorial_handhold.remove_from_group(climb_tuning.handhold_group_name)
-
-		tutorial_handhold.visible = enabled
-		_set_handhold_collision_enabled(tutorial_handhold, enabled)
-
-func _set_handhold_collision_enabled(handhold_body: StaticBody2D, enabled: bool) -> void:
-	Validation.require_condition(handhold_body != null, "RunScene requires a handhold body before toggling collisions.")
-
-	for child in handhold_body.get_children():
-		if child is CollisionShape2D:
-			var collision_shape: CollisionShape2D = child as CollisionShape2D
-			collision_shape.disabled = not enabled
-
 func _create_input_frame() -> PlayerInputFrameScript:
 	if _active_touch_contacts.size() > 0 or _mobile_input.has_held_grip_state():
 		Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before creating mobile input frames.")
@@ -777,60 +769,6 @@ func _get_debug_aim_vector() -> Vector2:
 		aim_vector.y -= 1.0
 
 	return aim_vector
-
-func _update_chaser(delta: float) -> void:
-	if _chaser_kill_zone == null or _chaser_pacing_model == null:
-		return
-
-	var run_state: int = _run_session.get_state()
-	if run_state == RunStateScript.Value.READY or run_state == RunStateScript.Value.ENDED:
-		return
-
-	_chaser_pacing_model.record_height(_calculate_current_height_meters(), delta)
-	var feedback_snapshot: ChaserFeedbackSnapshotScript = _chaser_pacing_model.get_current_feedback_snapshot()
-	_chaser_kill_zone.sync_feedback(
-		feedback_snapshot,
-		_player.get_body_global_position().y,
-		_get_climb_tuning_float(&"pixels_per_meter")
-	)
-	_chaser_kill_zone.advance_rise(
-		feedback_snapshot.rise_speed_meters_per_second,
-		_get_climb_tuning_float(&"pixels_per_meter"),
-		delta
-	)
-
-func _update_camera_follow() -> void:
-	var player_position: Vector2 = _player.get_body_global_position()
-	var target_x: float = _run_loop_coordinator.calculate_camera_target_x(
-		_camera.global_position.x,
-		player_position.x,
-		_get_climb_tuning_float(&"camera_horizontal_dead_zone_pixels")
-	)
-	var target_y: float = _run_loop_coordinator.calculate_camera_target_y(
-		_camera.global_position.y,
-		player_position.y,
-		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
-		_get_climb_tuning_float(&"camera_vertical_dead_zone_pixels"),
-		_run_session.get_state()
-	)
-	_camera.global_position = Vector2(target_x, target_y)
-
-func _resolve_bottom_screen_fall_if_needed() -> bool:
-	var run_loop_coordinator: Object = _run_loop_coordinator
-	var should_resolve_bottom_fall: bool = run_loop_coordinator.call(
-		"should_resolve_bottom_screen_fall",
-		_run_session.get_state(),
-		_player.get_body_global_position().y,
-		_camera.global_position.y,
-		get_viewport_rect().size.y,
-		_get_climb_tuning_float(&"bottom_fall_margin_pixels")
-	)
-	if not should_resolve_bottom_fall:
-		return false
-
-	var bottom_screen_fall_service: Object = _bottom_screen_fall_service
-	bottom_screen_fall_service.call("resolve", _controller, _player, _run_session)
-	return true
 
 func _find_nearest_handhold(anchor_position: Vector2) -> RefCounted:
 	var nearest_target: HandholdTargetScript = null
@@ -963,13 +901,6 @@ func _sync_aim_target_marker(current_marker: Polygon2D, should_show: bool, targe
 	active_marker.global_position = target_position
 	return active_marker
 
-func _calculate_current_height_meters() -> float:
-	var height_pixels: float = maxf(0.0, _start_y - _player.get_body_global_position().y)
-	return height_pixels / _get_climb_tuning_float(&"pixels_per_meter")
-
-func _record_height() -> void:
-	_run_session.record_height(_calculate_current_height_meters())
-
 func _configure_generated_chunks() -> void:
 	if not _uses_generated_chunks():
 		return
@@ -1005,21 +936,16 @@ func _sync_generated_chunks() -> void:
 	if _generated_chunk_coordinator == null:
 		return
 
-	_generated_chunk_coordinator.sync_chunks_for_height(_calculate_current_height_meters(), _collect_attached_hold_paths())
-
-func _collect_attached_hold_paths() -> Array[NodePath]:
-	var hold_paths: Array[NodePath] = []
-	if _controller == null:
-		return hold_paths
-
-	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
-	if attachment_state.is_attached(HandSideScript.Value.LEFT):
-		hold_paths.append(attachment_state.get_hold_path(HandSideScript.Value.LEFT))
-
-	if attachment_state.is_attached(HandSideScript.Value.RIGHT):
-		hold_paths.append(attachment_state.get_hold_path(HandSideScript.Value.RIGHT))
-
-	return hold_paths
+	_run_frame_runtime.sync_generated_chunks(
+		_gameplay_nodes,
+		_controller,
+		_run_frame_runtime.calculate_current_height_meters(
+			_gameplay_nodes,
+			_start_y,
+			_get_climb_tuning_float(&"pixels_per_meter")
+		),
+		_uses_generated_chunks()
+	)
 
 func _on_generated_chunk_spawned(chunk_node: Node2D) -> void:
 	Validation.require_condition(chunk_node != null, "RunScene generated chunk hookup requires a chunk node.")
@@ -1629,7 +1555,16 @@ func _restore_rewarded_continue() -> void:
 		_camera.global_position.x,
 		rescue_body_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 	)
-	_sync_generated_chunks()
+	_run_frame_runtime.sync_generated_chunks(
+		_gameplay_nodes,
+		_controller,
+		_run_frame_runtime.calculate_current_height_meters(
+			_gameplay_nodes,
+			_start_y,
+			_get_climb_tuning_float(&"pixels_per_meter")
+		),
+		_uses_generated_chunks()
+	)
 
 func _find_rewarded_continue_hold_targets() -> Array[HandholdTargetScript]:
 	var handholds: Array[StaticBody2D] = []
