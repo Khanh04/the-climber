@@ -56,7 +56,6 @@ const RewardedAdsAdapterScript = preload("res://src/platform/ads/rewarded_ads_ad
 const RewardedAdsAdapterFactoryScript = preload("res://src/platform/ads/rewarded_ads_adapter_factory.gd")
 const RewardedContinueServiceScript = preload("res://src/gameplay/run/rewarded_continue_service.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
-const RunLaunchIntentScript = preload("res://src/core/run_launch_intent.gd")
 const RunLaunchModeScript = preload("res://src/core/run_launch_mode.gd")
 const BottomScreenFallServiceScript = preload("res://src/gameplay/run/bottom_screen_fall_service.gd")
 const TutorialRunObservationScript = preload("res://src/gameplay/run/tutorial_run_observation.gd")
@@ -162,10 +161,12 @@ var _pause_menu_visible: bool = false
 var _post_run_coin_doubler_reward_id: String = ""
 var _start_y: float = 0.0
 var _launch_mode: int = RunLaunchModeScript.Value.NORMAL
+var _launch_mode_override: int = RunLaunchModeScript.Value.NORMAL
+var _has_launch_mode_override: bool = false
 var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
 
 func _ready() -> void:
-	_launch_mode = _consume_run_launch_mode()
+	_launch_mode = _resolve_launch_mode()
 	_validate_required_state()
 	_configure_authored_handholds()
 	_initialize_save_storage()
@@ -217,6 +218,12 @@ func set_rewarded_ads_adapter(rewarded_ads_adapter: RefCounted) -> void:
 		return
 
 	_refresh_ui()
+
+func set_launch_mode_override(launch_mode: int) -> void:
+	RunLaunchModeScript.assert_valid(launch_mode)
+	Validation.require_condition(not is_node_ready(), "RunScene launch mode override must be set before the scene is ready.")
+	_has_launch_mode_override = true
+	_launch_mode_override = launch_mode
 
 func set_app_lifecycle_adapter(app_lifecycle_adapter: RefCounted) -> void:
 	Validation.require_condition(app_lifecycle_adapter != null, "RunScene requires an app lifecycle adapter.")
@@ -643,14 +650,12 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_ui_layer != null, "RunScene requires UiLayer.")
 	Validation.require_condition(get_tree().get_nodes_in_group(climb_tuning.handhold_group_name).size() > 0, "RunScene requires at least one handhold.")
 
-func _consume_run_launch_mode() -> int:
-	Validation.require_condition(has_node("/root/RunLaunchIntent"), "RunScene requires the RunLaunchIntent autoload.")
-	var run_launch_intent_node: Node = get_node("/root/RunLaunchIntent")
-	Validation.require_condition(run_launch_intent_node is RunLaunchIntentScript, "RunScene requires a RunLaunchIntent implementation.")
-	var run_launch_intent: RunLaunchIntentScript = run_launch_intent_node as RunLaunchIntentScript
-	var launch_mode: int = run_launch_intent.consume_next_mode()
-	RunLaunchModeScript.assert_valid(launch_mode)
-	return launch_mode
+func _resolve_launch_mode() -> int:
+	if _has_launch_mode_override:
+		RunLaunchModeScript.assert_valid(_launch_mode_override)
+		return _launch_mode_override
+
+	return RunLaunchModeScript.Value.NORMAL
 
 func _emit_tutorial_observation(
 	left_was_attached: bool,

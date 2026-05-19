@@ -7,8 +7,6 @@ const AudioSettingsAdapterScript = preload("res://src/platform/audio/audio_setti
 const GodotAudioSettingsAdapterScript = preload("res://src/platform/audio/godot_audio_settings_adapter.gd")
 const JsonFileLocalStorageAdapterScript = preload("res://src/platform/storage/json_file_local_storage_adapter.gd")
 const LocalStorageAdapterScript = preload("res://src/platform/storage/local_storage_adapter.gd")
-const RunLaunchIntentScript = preload("res://src/core/run_launch_intent.gd")
-const RunLaunchModeScript = preload("res://src/core/run_launch_mode.gd")
 const MainMenuScript = preload("res://scenes/ui/main_menu.gd")
 const SettingsMenuScript = preload("res://scenes/ui/settings_menu.gd")
 const SettingsMenuScene = preload("res://scenes/ui/settings_menu.tscn")
@@ -59,7 +57,6 @@ func get_settings_menu_for_test() -> SettingsMenuScript:
 	return _settings_menu
 
 func _on_start_requested() -> void:
-	_stage_run_launch_mode(RunLaunchModeScript.Value.NORMAL)
 	_change_to_scene(RUN_SCENE_PATH)
 
 func _on_tutorial_requested() -> void:
@@ -72,10 +69,6 @@ func _change_to_scene(scene_path: String) -> void:
 
 func _on_settings_requested() -> void:
 	_show_settings_menu()
-
-func _stage_run_launch_mode(launch_mode: int) -> void:
-	var run_launch_intent: RunLaunchIntentScript = _get_run_launch_intent()
-	run_launch_intent.set_next_mode(launch_mode)
 
 func _initialize_app_settings_storage() -> void:
 	Validation.require_condition(_local_storage_adapter != null, "MainMenuScene requires local storage before initializing app settings.")
@@ -154,9 +147,3 @@ func _on_settings_touch_center_dead_zone_changed(touch_center_dead_zone_ratio: f
 func _validate_required_nodes() -> void:
 	Validation.require_condition(_main_menu != null, "MainMenuScene requires MainMenu.")
 	Validation.require_condition(_main_menu is MainMenuScript, "MainMenuScene requires a MainMenu implementation.")
-
-func _get_run_launch_intent() -> RunLaunchIntentScript:
-	Validation.require_condition(has_node("/root/RunLaunchIntent"), "MainMenuScene requires the RunLaunchIntent autoload.")
-	var run_launch_intent_node: Node = get_node("/root/RunLaunchIntent")
-	Validation.require_condition(run_launch_intent_node is RunLaunchIntentScript, "MainMenuScene requires a RunLaunchIntent implementation.")
-	return run_launch_intent_node as RunLaunchIntentScript
