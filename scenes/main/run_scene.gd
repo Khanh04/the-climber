@@ -58,6 +58,8 @@ const RewardedContinueServiceScript = preload("res://src/gameplay/run/rewarded_c
 const RunFrameRuntimeScript = preload("res://src/gameplay/run/run_frame_runtime.gd")
 const RunGeneratedHandholdRuntimeScript = preload("res://src/gameplay/run/run_generated_handhold_runtime.gd")
 const RunGameplayNodeRefsScript = preload("res://src/gameplay/run/run_gameplay_node_refs.gd")
+const RunHandholdTargetingRuntimeScript = preload("res://src/gameplay/run/run_handhold_targeting_runtime.gd")
+const RunRewardOfferRuntimeScript = preload("res://src/gameplay/run/run_reward_offer_runtime.gd")
 const RunRescueRuntimeScript = preload("res://src/gameplay/run/run_rescue_runtime.gd")
 const RunResetRuntimeScript = preload("res://src/gameplay/run/run_reset_runtime.gd")
 const RunWorldSurfaceConfiguratorScript = preload("res://src/gameplay/run/run_world_surface_configurator.gd")
@@ -140,6 +142,8 @@ var _run_loop_coordinator: RunLoopCoordinatorScript = RunLoopCoordinatorScript.n
 var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop_coordinator)
 var _run_frame_runtime: RunFrameRuntimeScript = RunFrameRuntimeScript.new()
 var _run_generated_handhold_runtime: RunGeneratedHandholdRuntimeScript = RunGeneratedHandholdRuntimeScript.new()
+var _run_handhold_targeting_runtime: RunHandholdTargetingRuntimeScript = RunHandholdTargetingRuntimeScript.new()
+var _run_reward_offer_runtime: RunRewardOfferRuntimeScript = RunRewardOfferRuntimeScript.new()
 var _run_rescue_runtime: RunRescueRuntimeScript = RunRescueRuntimeScript.new()
 var _run_reset_runtime: RunResetRuntimeScript = RunResetRuntimeScript.new()
 var _stamina_fall_service: StaminaFallServiceScript = StaminaFallServiceScript.new()
@@ -370,8 +374,21 @@ func _physics_process(delta: float) -> void:
 	if right_was_attached:
 		right_previous_hold_path = attachment_state.get_hold_path(HandSideScript.Value.RIGHT)
 
-	var left_target: RefCounted = _find_nearest_handhold(_player.get_left_hand_anchor_global_position())
-	var right_target: RefCounted = _find_nearest_handhold(_player.get_right_hand_anchor_global_position())
+	var handholds: Array = get_tree().get_nodes_in_group(climb_tuning.handhold_group_name)
+	var left_target: RefCounted = _run_handhold_targeting_runtime.find_nearest_handhold(
+		_player.get_left_hand_anchor_global_position(),
+		handholds,
+		climb_tuning.handhold_detection_radius_pixels,
+		_starter_handholds_root,
+		generation_tuning
+	)
+	var right_target: RefCounted = _run_handhold_targeting_runtime.find_nearest_handhold(
+		_player.get_right_hand_anchor_global_position(),
+		handholds,
+		climb_tuning.handhold_detection_radius_pixels,
+		_starter_handholds_root,
+		generation_tuning
+	)
 	var result: ClimbPrototypeFrameResultScript = _controller.apply_input_frame(input_frame, left_target, right_target, delta)
 	var current_attachment_state: HandAttachmentState = _controller.get_attachment_state()
 	_resolve_generated_handhold_attachment_changes(
@@ -718,78 +735,6 @@ func _get_debug_aim_vector() -> Vector2:
 		aim_vector.y -= 1.0
 
 	return aim_vector
-
-func _find_nearest_handhold(anchor_position: Vector2) -> RefCounted:
-	var nearest_target: HandholdTargetScript = null
-	var nearest_distance: float = climb_tuning.handhold_detection_radius_pixels
-
-	for handhold in get_tree().get_nodes_in_group(climb_tuning.handhold_group_name):
-		Validation.require_condition(handhold is Node2D, "RunScene handholds must be Node2D instances.")
-		var handhold_node: Node2D = handhold
-		var distance: float = anchor_position.distance_to(handhold_node.global_position)
-
-		if distance <= nearest_distance:
-			nearest_target = HandholdTargetScript.new(
-				StringName(handhold_node.name),
-				handhold_node.global_position,
-				handhold_node.get_path(),
-				_require_handhold_drain_multiplier(handhold_node),
-				_require_handhold_type(handhold_node)
-			)
-			nearest_distance = distance
-
-	return nearest_target
-
-func _require_handhold_drain_multiplier(handhold_node: Node2D) -> float:
-	Validation.require_condition(handhold_node != null, "RunScene requires a handhold node when reading drain multiplier.")
-
-	if handhold_node is GeneratedHandholdAdapterScript:
-		var typed_handhold: GeneratedHandholdAdapterScript = handhold_node
-		return typed_handhold.stamina_drain_multiplier
-
-	if _is_authored_starter_handhold(handhold_node):
-		var normal_definition: HandholdTypeDefinitionScript = generation_tuning.get_required_handhold_definition(HandholdTypeScript.Value.NORMAL)
-		var normal_surface_profile: HandholdSurfaceProfileScript = normal_definition.surface_profile as HandholdSurfaceProfileScript
-		return normal_surface_profile.stamina_drain_multiplier
-
-	Validation.require_condition(handhold_node.has_meta(&"stamina_drain_multiplier"), "RunScene handholds must provide a stamina drain multiplier.")
-	var raw_drain_multiplier: Variant = handhold_node.get_meta(&"stamina_drain_multiplier")
-	Validation.require_condition(
-		raw_drain_multiplier is float or raw_drain_multiplier is int,
-		"RunScene handhold stamina drain multiplier metadata must be numeric."
-	)
-	var drain_multiplier: float = 0.0
-	if raw_drain_multiplier is float:
-		drain_multiplier = raw_drain_multiplier
-	else:
-		var typed_drain_multiplier_int: int = raw_drain_multiplier
-		drain_multiplier = float(typed_drain_multiplier_int)
-	Validation.require_condition(drain_multiplier > 0.0, "RunScene handhold stamina drain multiplier must be positive.")
-	return drain_multiplier
-
-func _require_handhold_type(handhold_node: Node2D) -> int:
-	Validation.require_condition(handhold_node != null, "RunScene requires a handhold node when reading handhold type.")
-
-	if handhold_node is GeneratedHandholdAdapterScript:
-		var typed_handhold: GeneratedHandholdAdapterScript = handhold_node
-		return typed_handhold.handhold_type
-
-	if _is_authored_starter_handhold(handhold_node):
-		return HandholdTypeScript.Value.NORMAL
-
-	Validation.require_condition(handhold_node.has_meta(&"handhold_type"), "RunScene handholds must provide a handhold type.")
-	var raw_handhold_type: Variant = handhold_node.get_meta(&"handhold_type")
-	Validation.require_condition(raw_handhold_type is String, "RunScene handhold type metadata must be a string label.")
-	var handhold_type_label: String = raw_handhold_type
-	var handhold_type: int = HandholdTypeScript.from_label(handhold_type_label)
-	HandholdTypeScript.assert_valid(handhold_type)
-	return handhold_type
-
-func _is_authored_starter_handhold(handhold_node: Node2D) -> bool:
-	Validation.require_condition(handhold_node != null, "RunScene requires a handhold node when checking starter-handhold ownership.")
-	return handhold_node is StaticBody2D \
-		and not handhold_node is GeneratedHandholdAdapterScript \
-		and handhold_node.get_parent() == _starter_handholds_root
 
 func _sync_aim_preview(input_frame: PlayerInputFrameScript) -> void:
 	if not input_frame.has_aim_intent():
@@ -1440,40 +1385,28 @@ func _on_chaser_contacted(body: Node) -> void:
 	_refresh_ui()
 
 func _can_offer_rewarded_continue() -> bool:
-	Validation.require_condition(_rewarded_ads_adapter != null, "RunScene requires a rewarded ads adapter before checking rewarded continue availability.")
-	if _run_session.get_state() != RunStateScript.Value.RESCUE_OFFERED:
-		return false
-
-	return _rewarded_ads_adapter.can_show(RewardedAdPlacementScript.Value.CONTINUE)
+	return _run_reward_offer_runtime.can_offer_rewarded_continue(_run_session, _rewarded_ads_adapter)
 
 func _can_offer_post_run_coin_doubler() -> bool:
-	Validation.require_condition(_rewarded_ads_adapter != null, "RunScene requires a rewarded ads adapter before checking post-run doubler availability.")
-	if _run_session.get_state() != RunStateScript.Value.ENDED:
-		return false
-
-	if _run_session.get_run_earned_coins() <= 0:
-		return false
-
-	if not _rewarded_ads_adapter.can_show(RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER):
-		return false
-
-	var reward_id: String = _get_or_create_post_run_coin_doubler_reward_id()
-	var transaction_id: String = _post_run_coin_doubler_grant_service.build_transaction_id(reward_id)
-	return not _persistent_transaction_ledger.has_transaction_id(transaction_id)
+	return _run_reward_offer_runtime.can_offer_post_run_coin_doubler(
+		_run_session,
+		_rewarded_ads_adapter,
+		_persistent_transaction_ledger,
+		_post_run_coin_doubler_grant_service,
+		_post_run_coin_doubler_reward_id
+	)
 
 func _get_or_create_post_run_coin_doubler_reward_id() -> String:
-	Validation.require_condition(_run_session.get_state() == RunStateScript.Value.ENDED, "RunScene can only build a post-run coin doubler reward id after the run has ended.")
-	if _post_run_coin_doubler_reward_id.is_empty():
-		_post_run_coin_doubler_reward_id = "run_summary_%s" % str(_run_session.get_instance_id())
+	_post_run_coin_doubler_reward_id = _run_reward_offer_runtime.get_or_create_post_run_coin_doubler_reward_id(
+		_run_session,
+		_post_run_coin_doubler_reward_id
+	)
 	return _post_run_coin_doubler_reward_id
 
 func _bind_post_run_coin_doubler_reward_id(reward_id: String) -> String:
-	Validation.require_condition(not reward_id.is_empty(), "RunScene post-run coin doubler reward id cannot be empty.")
-	if _post_run_coin_doubler_reward_id.is_empty():
-		_post_run_coin_doubler_reward_id = reward_id
-	Validation.require_condition(
-		_post_run_coin_doubler_reward_id == reward_id,
-		"RunScene post-run coin doubler reward id must remain stable for the current run summary."
+	_post_run_coin_doubler_reward_id = _run_reward_offer_runtime.bind_post_run_coin_doubler_reward_id(
+		_post_run_coin_doubler_reward_id,
+		reward_id
 	)
 	return _post_run_coin_doubler_reward_id
 
@@ -1526,8 +1459,8 @@ func _find_rewarded_continue_hold_targets() -> Array[HandholdTargetScript]:
 		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
 		_get_climb_tuning_float(&"grip_hang_offset_pixels"),
 		_player.get_left_hand_anchor_global_position().distance_to(_player.get_right_hand_anchor_global_position()),
-		Callable(self, "_require_handhold_drain_multiplier"),
-		Callable(self, "_require_handhold_type")
+		Callable(_run_handhold_targeting_runtime, "require_handhold_drain_multiplier").bind(_starter_handholds_root, generation_tuning),
+		Callable(_run_handhold_targeting_runtime, "require_handhold_type").bind(_starter_handholds_root)
 	)
 
 func _get_climb_tuning_float(property_name: StringName) -> float:
