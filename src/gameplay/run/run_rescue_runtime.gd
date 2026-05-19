@@ -5,7 +5,42 @@ const ClimbPrototypeControllerScript = preload("res://src/gameplay/player/climb_
 const HandAttachmentStateScript = preload("res://src/gameplay/player/hand_attachment_state.gd")
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.gd")
+const RewardedContinueRescuePlanScript = preload("res://src/gameplay/run/rewarded_continue_rescue_plan.gd")
 const RunGameplayNodeRefsScript = preload("res://src/gameplay/run/run_gameplay_node_refs.gd")
+
+func build_rewarded_continue_rescue_plan(
+	handholds: Array[StaticBody2D],
+	camera_position: Vector2,
+	camera_player_lower_screen_offset_pixels: float,
+	grip_hang_offset_pixels: float,
+	target_anchor_spacing: float,
+	require_handhold_drain_multiplier: Callable,
+	require_handhold_type: Callable
+) -> RewardedContinueRescuePlanScript:
+	var rescue_hold_targets: Array[HandholdTargetScript] = find_rewarded_continue_hold_targets(
+		handholds,
+		camera_position,
+		camera_player_lower_screen_offset_pixels,
+		grip_hang_offset_pixels,
+		target_anchor_spacing,
+		require_handhold_drain_multiplier,
+		require_handhold_type
+	)
+	Validation.require_condition(rescue_hold_targets.size() == 2, "RunRescueRuntime rewarded continue requires exactly two rescue hold targets.")
+	var left_hold_target: HandholdTargetScript = rescue_hold_targets[0]
+	var right_hold_target: HandholdTargetScript = rescue_hold_targets[1]
+	var rescue_body_position: Vector2 = calculate_rewarded_continue_body_position(
+		left_hold_target,
+		right_hold_target,
+		grip_hang_offset_pixels
+	)
+	var rescue_plan: RewardedContinueRescuePlanScript = RewardedContinueRescuePlanScript.new(
+		left_hold_target,
+		right_hold_target,
+		rescue_body_position
+	)
+	rescue_plan.assert_valid()
+	return rescue_plan
 
 func find_rewarded_continue_hold_targets(
 	handholds: Array[StaticBody2D],
@@ -94,6 +129,25 @@ func restore_rewarded_continue(
 		rescue_body_position.y - camera_player_lower_screen_offset_pixels
 	)
 	return attachment_state
+
+func restore_rewarded_continue_from_plan(
+	gameplay_nodes: RefCounted,
+	controller: RefCounted,
+	rescue_plan: RefCounted,
+	camera_player_lower_screen_offset_pixels: float
+) -> HandAttachmentStateScript:
+	Validation.require_condition(rescue_plan != null, "RunRescueRuntime requires a rescue plan.")
+	Validation.require_condition(rescue_plan is RewardedContinueRescuePlanScript, "RunRescueRuntime requires RewardedContinueRescuePlan.")
+	var typed_rescue_plan: RewardedContinueRescuePlanScript = rescue_plan as RewardedContinueRescuePlanScript
+	typed_rescue_plan.assert_valid()
+	return restore_rewarded_continue(
+		gameplay_nodes,
+		controller,
+		typed_rescue_plan.left_hold_target,
+		typed_rescue_plan.right_hold_target,
+		typed_rescue_plan.rescue_body_position,
+		camera_player_lower_screen_offset_pixels
+	)
 
 func _build_handhold_target(
 	handhold: StaticBody2D,

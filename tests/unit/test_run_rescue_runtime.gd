@@ -2,6 +2,7 @@ extends GutTest
 
 const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
+const RewardedContinueRescuePlanScript = preload("res://src/gameplay/run/rewarded_continue_rescue_plan.gd")
 const RunRescueRuntimeScript = preload("res://src/gameplay/run/run_rescue_runtime.gd")
 
 func test_find_rewarded_continue_hold_targets_prefers_best_pair_for_camera_and_anchor_spacing() -> void:
@@ -67,6 +68,31 @@ func test_calculate_rewarded_continue_body_position_uses_average_hold_position_a
 	)
 
 	assert_eq(rescue_body_position, Vector2(200.0, 436.0))
+
+func test_build_rewarded_continue_rescue_plan_returns_targets_and_body_position() -> void:
+	var root: Node2D = Node2D.new()
+	add_child_autofree(root)
+
+	var left_handhold: StaticBody2D = _add_handhold(root, "LeftHold", Vector2(160.0, 340.0), 1.3, HandholdTypeScript.Value.BOOST)
+	var right_handhold: StaticBody2D = _add_handhold(root, "RightHold", Vector2(240.0, 340.0), 1.4, HandholdTypeScript.Value.NORMAL)
+	var runtime: RunRescueRuntimeScript = RunRescueRuntimeScript.new()
+
+	var rescue_plan: RewardedContinueRescuePlanScript = runtime.build_rewarded_continue_rescue_plan(
+		[left_handhold, right_handhold],
+		Vector2(200.0, 300.0),
+		160.0,
+		120.0,
+		80.0,
+		Callable(self, "_require_handhold_drain_multiplier"),
+		Callable(self, "_require_handhold_type")
+	)
+
+	assert_not_null(rescue_plan)
+	assert_eq(rescue_plan.left_hold_target.hold_id, &"LeftHold")
+	assert_eq(rescue_plan.right_hold_target.hold_id, &"RightHold")
+	assert_eq(rescue_plan.left_hold_target.hold_path, left_handhold.get_path())
+	assert_eq(rescue_plan.right_hold_target.hold_path, right_handhold.get_path())
+	assert_eq(rescue_plan.rescue_body_position, Vector2(200.0, 460.0))
 
 func _add_handhold(
 	parent: Node,

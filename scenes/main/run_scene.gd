@@ -55,6 +55,7 @@ const RewardedAdResultScript = preload("res://src/platform/ads/rewarded_ad_resul
 const RewardedAdsAdapterScript = preload("res://src/platform/ads/rewarded_ads_adapter.gd")
 const RewardedAdsAdapterFactoryScript = preload("res://src/platform/ads/rewarded_ads_adapter_factory.gd")
 const RewardedContinueServiceScript = preload("res://src/gameplay/run/rewarded_continue_service.gd")
+const RewardedContinueRescuePlanScript = preload("res://src/gameplay/run/rewarded_continue_rescue_plan.gd")
 const RunEconomyRuntimeScript = preload("res://src/gameplay/run/run_economy_runtime.gd")
 const RunFrameRuntimeScript = preload("res://src/gameplay/run/run_frame_runtime.gd")
 const RunGeneratedHandholdRuntimeScript = preload("res://src/gameplay/run/run_generated_handhold_runtime.gd")
@@ -1237,29 +1238,27 @@ func _bind_post_run_coin_doubler_reward_id(reward_id: String) -> String:
 	return _post_run_coin_doubler_reward_id
 
 func _restore_rewarded_continue() -> void:
-	var rescue_hold_targets: Array[HandholdTargetScript] = _find_rewarded_continue_hold_targets()
-	Validation.require_condition(rescue_hold_targets.size() == 2, "RunScene rewarded continue requires exactly two rescue hold targets.")
-	var left_hold_target: HandholdTargetScript = rescue_hold_targets[0]
-	var right_hold_target: HandholdTargetScript = rescue_hold_targets[1]
-	var rescue_body_position: Vector2 = _run_rescue_runtime.calculate_rewarded_continue_body_position(
-		left_hold_target,
-		right_hold_target,
-		_get_climb_tuning_float(&"grip_hang_offset_pixels")
+	var rescue_plan: RewardedContinueRescuePlanScript = _run_rescue_runtime.build_rewarded_continue_rescue_plan(
+		_collect_rewarded_continue_handholds(),
+		_camera.global_position,
+		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
+		_get_climb_tuning_float(&"grip_hang_offset_pixels"),
+		_player.get_left_hand_anchor_global_position().distance_to(_player.get_right_hand_anchor_global_position()),
+		Callable(_run_handhold_targeting_runtime, "require_handhold_drain_multiplier").bind(_starter_handholds_root, generation_tuning),
+		Callable(_run_handhold_targeting_runtime, "require_handhold_type").bind(_starter_handholds_root)
 	)
-	var _attachment_state: HandAttachmentState = _run_rescue_runtime.restore_rewarded_continue(
+	var _attachment_state: HandAttachmentState = _run_rescue_runtime.restore_rewarded_continue_from_plan(
 		_gameplay_nodes,
 		_controller,
-		left_hold_target,
-		right_hold_target,
-		rescue_body_position,
+		rescue_plan,
 		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 	)
 	_run_generated_handhold_runtime.notify_hand_attached_for_path(
-		left_hold_target.hold_path,
+		rescue_plan.left_hold_target.hold_path,
 		Callable(self, "_get_generated_handhold_adapter")
 	)
 	_run_generated_handhold_runtime.notify_hand_attached_for_path(
-		right_hold_target.hold_path,
+		rescue_plan.right_hold_target.hold_path,
 		Callable(self, "_get_generated_handhold_adapter")
 	)
 	_run_frame_runtime.sync_generated_chunks(
@@ -1270,24 +1269,16 @@ func _restore_rewarded_continue() -> void:
 			_start_y,
 			_get_climb_tuning_float(&"pixels_per_meter")
 		),
-		_uses_generated_chunks()
-	)
+			_uses_generated_chunks()
+		)
 
-func _find_rewarded_continue_hold_targets() -> Array[HandholdTargetScript]:
+func _collect_rewarded_continue_handholds() -> Array[StaticBody2D]:
 	var handholds: Array[StaticBody2D] = []
 	for handhold in get_tree().get_nodes_in_group(climb_tuning.handhold_group_name):
 		Validation.require_condition(handhold is StaticBody2D, "RunScene rescue handholds must be StaticBody2D instances.")
 		handholds.append(handhold as StaticBody2D)
 
-	return _run_rescue_runtime.find_rewarded_continue_hold_targets(
-		handholds,
-		_camera.global_position,
-		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
-		_get_climb_tuning_float(&"grip_hang_offset_pixels"),
-		_player.get_left_hand_anchor_global_position().distance_to(_player.get_right_hand_anchor_global_position()),
-		Callable(_run_handhold_targeting_runtime, "require_handhold_drain_multiplier").bind(_starter_handholds_root, generation_tuning),
-		Callable(_run_handhold_targeting_runtime, "require_handhold_type").bind(_starter_handholds_root)
-	)
+	return handholds
 
 func _get_climb_tuning_float(property_name: StringName) -> float:
 	var property_value: Variant = climb_tuning.get(property_name)
