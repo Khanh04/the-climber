@@ -36,6 +36,14 @@ func calculate_camera_target_y(
 
 	return current_camera_y
 
+func calculate_camera_target_x(current_camera_x: float, player_body_x: float, camera_horizontal_dead_zone_pixels: float) -> float:
+	Validation.require_condition(camera_horizontal_dead_zone_pixels >= 0.0, "RunLoopCoordinator camera horizontal dead-zone cannot be negative.")
+	if player_body_x < current_camera_x - camera_horizontal_dead_zone_pixels:
+		return player_body_x + camera_horizontal_dead_zone_pixels
+	if player_body_x > current_camera_x + camera_horizontal_dead_zone_pixels:
+		return player_body_x - camera_horizontal_dead_zone_pixels
+	return current_camera_x
+
 func should_follow_descending_camera(run_state: int) -> bool:
 	RunStateScript.assert_valid(run_state)
 	return run_state == RunStateScript.Value.FALLING \

@@ -83,6 +83,7 @@ func configure_handhold(
 
 func _ready() -> void:
 	_validate_required_state()
+	_ensure_presentation()
 
 func get_body_size_pixels() -> Vector2:
 	return body_size_pixels
@@ -159,6 +160,7 @@ func _ensure_presentation() -> void:
 	visual.color = visual_color
 	visual.polygon = _build_rectangle_polygon(body_size_pixels)
 	visual.visible = not _is_broken
+	visual.queue_redraw()
 
 func _break_handhold() -> void:
 	if _is_broken:

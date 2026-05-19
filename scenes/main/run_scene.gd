@@ -710,6 +710,11 @@ func _update_chaser(delta: float) -> void:
 
 func _update_camera_follow() -> void:
 	var player_position: Vector2 = _player.get_body_global_position()
+	var target_x: float = _run_loop_coordinator.calculate_camera_target_x(
+		_camera.global_position.x,
+		player_position.x,
+		_get_climb_tuning_float(&"camera_horizontal_dead_zone_pixels")
+	)
 	var target_y: float = _run_loop_coordinator.calculate_camera_target_y(
 		_camera.global_position.y,
 		player_position.y,
@@ -717,7 +722,7 @@ func _update_camera_follow() -> void:
 		_get_climb_tuning_float(&"camera_vertical_dead_zone_pixels"),
 		_run_session.get_state()
 	)
-	_camera.global_position = Vector2(player_position.x, target_y)
+	_camera.global_position = Vector2(target_x, target_y)
 
 func _resolve_bottom_screen_fall_if_needed() -> bool:
 	var run_loop_coordinator: Object = _run_loop_coordinator

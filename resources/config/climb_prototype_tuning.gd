@@ -52,6 +52,9 @@ extends Resource
 # Vertical dead-zone around the preferred camera offset before the camera moves again.
 # Higher values reduce small follow adjustments; lower values make the camera feel tighter.
 @export var camera_vertical_dead_zone_pixels: float = 72.0
+# Horizontal dead-zone around the player before the camera recenters.
+# Higher values reduce side-to-side camera motion; lower values keep the player more centered.
+@export var camera_horizontal_dead_zone_pixels: float = 72.0
 # Extra distance below the visible bottom edge before a fall is resolved.
 # Higher values are more forgiving; lower values end the run sooner when dropping.
 @export var bottom_fall_margin_pixels: float = 160.0
@@ -83,6 +86,7 @@ func is_valid() -> bool:
         and max_player_speed_pixels_per_second > 0.0 \
         and camera_player_lower_screen_offset_pixels >= 0.0 \
         and camera_vertical_dead_zone_pixels >= 0.0 \
+        and camera_horizontal_dead_zone_pixels >= 0.0 \
         and bottom_fall_margin_pixels >= 0.0 \
         and pixels_per_meter > 0.0 \
         and not String(handhold_group_name).is_empty()
@@ -95,6 +99,9 @@ func get_camera_player_lower_screen_offset_pixels() -> float:
 
 func get_camera_vertical_dead_zone_pixels() -> float:
     return camera_vertical_dead_zone_pixels
+
+func get_camera_horizontal_dead_zone_pixels() -> float:
+    return camera_horizontal_dead_zone_pixels
 
 func get_bottom_fall_margin_pixels() -> float:
     return bottom_fall_margin_pixels
@@ -117,6 +124,7 @@ func assert_valid() -> void:
     Validation.require_condition(max_player_speed_pixels_per_second > 0.0, "Max player speed must be positive.")
     Validation.require_condition(camera_player_lower_screen_offset_pixels >= 0.0, "Camera player lower-screen offset cannot be negative.")
     Validation.require_condition(camera_vertical_dead_zone_pixels >= 0.0, "Camera vertical dead-zone cannot be negative.")
+    Validation.require_condition(camera_horizontal_dead_zone_pixels >= 0.0, "Camera horizontal dead-zone cannot be negative.")
     Validation.require_condition(bottom_fall_margin_pixels >= 0.0, "Bottom fall margin cannot be negative.")
     Validation.require_condition(pixels_per_meter > 0.0, "Pixels-per-meter conversion must be positive.")
     Validation.require_condition(not String(handhold_group_name).is_empty(), "Handhold group name cannot be empty.")

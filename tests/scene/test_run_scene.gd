@@ -513,6 +513,12 @@ func test_run_scene_pause_menu_pauses_resumes_and_restarts() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var reset_anchor: Marker2D = playground.get_node("ResetAnchor") as Marker2D
+
+    assert_not_null(player_body)
+    assert_not_null(reset_anchor)
+
     playground.show_pause_menu_for_test()
 
     var pause_menu: Control = playground.get_pause_menu_for_test()
@@ -529,6 +535,10 @@ func test_run_scene_pause_menu_pauses_resumes_and_restarts() -> void:
     assert_false(pause_menu.visible)
 
     playground.show_pause_menu_for_test()
+    player_body.global_position = Vector2(100.0, 100.0)
+    player_body.global_rotation = 0.65
+    player_body.linear_velocity = Vector2(200.0, 50.0)
+    player_body.angular_velocity = 4.0
     var restart_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
     var _restart_emit_result: int = restart_button.emit_signal("pressed")
 
@@ -536,6 +546,15 @@ func test_run_scene_pause_menu_pauses_resumes_and_restarts() -> void:
     assert_false(get_tree().paused)
     assert_false(pause_menu.visible)
     assert_eq(playground.get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_eq(player_body.global_position, reset_anchor.global_position)
+    assert_eq(player_body.global_rotation, 0.0)
+    assert_eq(player_body.linear_velocity, Vector2.ZERO)
+    assert_eq(player_body.angular_velocity, 0.0)
+
+    await get_tree().process_frame
+
+    assert_lte(player_body.global_position.distance_to(reset_anchor.global_position), 2.0)
+    assert_eq(player_body.global_rotation, 0.0)
 
 func test_run_scene_lifecycle_background_event_opens_pause_menu() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -1186,7 +1205,56 @@ func test_run_scene_camera_follows_player_upward() -> void:
     playground._physics_process(0.0)
 
     assert_lt(camera.global_position.y, starting_camera_y)
-    assert_eq(camera.global_position.y, player_body.global_position.y - playground.get_camera_player_lower_screen_offset_for_test())
+    assert_eq(
+        camera.global_position.y,
+        player_body.global_position.y - playground.get_camera_player_lower_screen_offset_for_test() + playground.climb_tuning.camera_vertical_dead_zone_pixels
+    )
+
+func test_run_scene_camera_follows_player_horizontally() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+
+    assert_not_null(player_body)
+    assert_not_null(camera)
+
+    var starting_camera_x: float = camera.global_position.x
+    player_body.global_position = Vector2(player_body.global_position.x + 180.0, player_body.global_position.y)
+    playground._physics_process(0.0)
+
+    assert_gt(camera.global_position.x, starting_camera_x)
+    assert_eq(
+        camera.global_position.x,
+        player_body.global_position.x - playground.climb_tuning.camera_horizontal_dead_zone_pixels
+    )
+
+func test_run_scene_camera_holds_horizontal_position_within_dead_zone() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = playground.get_player_body_for_test()
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+
+    assert_not_null(player_body)
+    assert_not_null(camera)
+
+    var starting_camera_x: float = camera.global_position.x
+    player_body.global_position = Vector2(player_body.global_position.x + 48.0, player_body.global_position.y)
+    playground._physics_process(0.0)
+
+    assert_eq(camera.global_position.x, starting_camera_x)
 
 func _wire_generated_hazard_for_test(
     playground: RunSceneScript,

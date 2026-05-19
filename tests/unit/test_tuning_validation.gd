@@ -247,6 +247,16 @@ func test_generation_tuning_rejects_invalid_route_validation_tuning() -> void:
 
     assert_false(tuning.is_valid())
 
+func test_generation_tuning_restores_missing_default_route_tunings_before_validation() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+
+    tuning.route_validation_tuning = null
+    tuning.route_profile_tuning = null
+
+    assert_true(tuning.is_valid())
+    assert_true(tuning.route_validation_tuning is RouteValidationTuningScript)
+    assert_true(tuning.route_profile_tuning is RouteProfileTuningScript)
+
 func test_generation_tuning_rejects_invalid_route_profile_tuning() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var route_profile_tuning: RouteProfileTuningScript = tuning.route_profile_tuning as RouteProfileTuningScript
