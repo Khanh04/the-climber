@@ -90,6 +90,8 @@ const WalletScript = preload("res://src/economy/wallet.gd")
 const WalletTransactionServiceScript = preload("res://src/economy/wallet_transaction_service.gd")
 const WindGustHazardContactServiceScript = preload("res://src/gameplay/hazards/wind_gust_hazard_contact_service.gd")
 
+const TUTORIAL_HANDHOLD_GROUP_NAME: StringName = &"tutorial_handhold"
+
 @export var climb_tuning: ClimbPrototypeTuningScript
 @export var stamina_tuning: StaminaTuningScript
 @export var generation_tuning: GenerationTuningScript
@@ -168,6 +170,7 @@ var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
 func _ready() -> void:
 	_launch_mode = _resolve_launch_mode()
 	_validate_required_state()
+	_configure_tutorial_surface()
 	_configure_authored_handholds()
 	_initialize_save_storage()
 	_initialize_app_settings_storage()
@@ -188,7 +191,8 @@ func _ready() -> void:
 	_chaser_pacing_model = ChaserPacingModelScript.new(_chaser_kill_zone.chaser_tuning)
 	_apply_cosmetic_loadout()
 	_start_y = _reset_anchor.global_position.y
-	_configure_generated_chunks()
+	if _uses_generated_chunks():
+		_configure_generated_chunks()
 	_reset_playground()
 	_refresh_ui()
 
@@ -269,7 +273,8 @@ func set_utc_date_provider(date_provider: RefCounted) -> void:
 	if not is_node_ready():
 		return
 
-	_configure_generated_chunks()
+	if _uses_generated_chunks():
+		_configure_generated_chunks()
 	_reset_playground()
 	_refresh_ui()
 
@@ -705,6 +710,43 @@ func _configure_authored_handholds() -> void:
 		handhold_node.set_meta(&"handhold_type", HandholdTypeScript.to_label(HandholdTypeScript.Value.NORMAL))
 		handhold_node.set_meta(&"definition_id", String(normal_definition.definition_id))
 
+func _configure_tutorial_surface() -> void:
+	var tutorial_mode_enabled: bool = _launch_mode == RunLaunchModeScript.Value.TUTORIAL
+	Validation.require_condition(_generated_chunk_coordinator != null, "RunScene requires GeneratedChunks before configuring the tutorial surface.")
+	Validation.require_condition(_run_hud != null, "RunScene requires RunHud before configuring the tutorial surface.")
+	_generated_chunk_coordinator.visible = not tutorial_mode_enabled
+	_run_hud.visible = not tutorial_mode_enabled
+	_set_tutorial_handholds_enabled(tutorial_mode_enabled)
+
+func _set_tutorial_handholds_enabled(enabled: bool) -> void:
+	Validation.require_condition(_starter_handholds_root != null, "RunScene requires Handholds before toggling tutorial handholds.")
+
+	for child in _starter_handholds_root.get_children():
+		Validation.require_condition(child is Node, "RunScene handhold roots must contain nodes when toggling tutorial handholds.")
+		var handhold_node: Node = child
+		if not handhold_node.is_in_group(TUTORIAL_HANDHOLD_GROUP_NAME):
+			continue
+
+		Validation.require_condition(handhold_node is StaticBody2D, "RunScene tutorial handholds must be StaticBody2D instances.")
+		var tutorial_handhold: StaticBody2D = handhold_node as StaticBody2D
+		if enabled:
+			if not tutorial_handhold.is_in_group(climb_tuning.handhold_group_name):
+				tutorial_handhold.add_to_group(climb_tuning.handhold_group_name)
+		else:
+			if tutorial_handhold.is_in_group(climb_tuning.handhold_group_name):
+				tutorial_handhold.remove_from_group(climb_tuning.handhold_group_name)
+
+		tutorial_handhold.visible = enabled
+		_set_handhold_collision_enabled(tutorial_handhold, enabled)
+
+func _set_handhold_collision_enabled(handhold_body: StaticBody2D, enabled: bool) -> void:
+	Validation.require_condition(handhold_body != null, "RunScene requires a handhold body before toggling collisions.")
+
+	for child in handhold_body.get_children():
+		if child is CollisionShape2D:
+			var collision_shape: CollisionShape2D = child as CollisionShape2D
+			collision_shape.disabled = not enabled
+
 func _create_input_frame() -> PlayerInputFrameScript:
 	if _active_touch_contacts.size() > 0 or _mobile_input.has_held_grip_state():
 		Validation.require_condition(_app_settings_snapshot != null, "RunScene requires app settings before creating mobile input frames.")
@@ -929,6 +971,9 @@ func _record_height() -> void:
 	_run_session.record_height(_calculate_current_height_meters())
 
 func _configure_generated_chunks() -> void:
+	if not _uses_generated_chunks():
+		return
+
 	Validation.require_condition(_generated_chunk_coordinator != null, "RunScene requires GeneratedChunks before configuring generated chunks.")
 	var pixels_per_meter: float = _get_climb_tuning_float(&"pixels_per_meter")
 	var generated_world_origin: Vector2 = _reset_anchor.global_position
@@ -954,6 +999,9 @@ func _configure_generated_chunks() -> void:
 		var _chunk_spawn_connect_result: int = _generated_chunk_coordinator.chunk_spawned.connect(_on_generated_chunk_spawned)
 
 func _sync_generated_chunks() -> void:
+	if not _uses_generated_chunks():
+		return
+
 	if _generated_chunk_coordinator == null:
 		return
 
@@ -1041,8 +1089,14 @@ func _on_generated_hazard_triggered(body: Node, hazard_spawn: GeneratedHazardSpa
 	_refresh_ui()
 
 func _is_run_active_for_generated_spawns() -> bool:
+	if not _uses_generated_chunks():
+		return false
+
 	var run_state: int = _run_session.get_state()
 	return run_state == RunStateScript.Value.CLIMBING or run_state == RunStateScript.Value.FALLING or run_state == RunStateScript.Value.RESCUE_OFFERED
+
+func _uses_generated_chunks() -> bool:
+	return _launch_mode != RunLaunchModeScript.Value.TUTORIAL
 
 func _reset_playground() -> void:
 	_clear_aim_preview()
@@ -1060,7 +1114,7 @@ func _reset_playground() -> void:
 	_run_session.start_run()
 	if _chaser_pacing_model != null:
 		_chaser_pacing_model.reset()
-	if _generated_chunk_coordinator != null:
+	if _uses_generated_chunks() and _generated_chunk_coordinator != null:
 		_generated_chunk_coordinator.reset_chunks()
 	_player.reset_physics(_reset_anchor.global_position)
 	_camera.global_position = Vector2(

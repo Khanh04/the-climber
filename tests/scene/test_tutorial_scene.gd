@@ -22,12 +22,30 @@ func test_tutorial_scene_instantiates_run_scene_in_tutorial_mode() -> void:
 
 	assert_not_null(run_scene)
 	assert_not_null(tutorial_scene.get_node_or_null("RunScene"))
-	assert_not_null(tutorial_scene.get_node_or_null("TutorialOverlay"))
+	assert_not_null(tutorial_scene.get_node_or_null("TutorialOverlayLayer/TutorialOverlay"))
 	assert_eq(run_scene.get_launch_mode_for_test(), RunLaunchModeScript.Value.TUTORIAL)
+	var run_hud: Control = run_scene.get_node("UiLayer/RunHud") as Control
+	assert_not_null(run_hud)
+	assert_false(run_hud.visible)
+	assert_false(run_scene.get_generated_chunk_coordinator_for_test().visible)
+	assert_eq(run_scene.get_generated_chunk_coordinator_for_test().get_child_count(), 0)
+	var tutorial_hold_names: PackedStringArray = PackedStringArray([
+		"TutorialHoldStartLeft",
+		"TutorialHoldStartRight",
+		"TutorialHoldMidCenter",
+		"TutorialHoldUpperLeft",
+		"TutorialHoldUpperRight",
+		"TutorialHoldTopCenter"
+	])
+	for tutorial_hold_name in tutorial_hold_names:
+		var tutorial_hold: StaticBody2D = run_scene.get_node("Handholds/%s" % tutorial_hold_name) as StaticBody2D
+		assert_not_null(tutorial_hold)
+		assert_true(tutorial_hold.visible)
+		assert_true(tutorial_hold.is_in_group(&"handhold"))
 	assert_eq(tutorial_scene.get_tutorial_prompt_text_for_test(), "Hold left side to grip with your left hand")
 	var tutorial_overlay: Control = tutorial_scene.get_tutorial_overlay_for_test()
 	assert_not_null(tutorial_overlay)
-	var overlay_prompt_label: Label = tutorial_scene.get_node("TutorialOverlay/Panel/PromptLabel") as Label
+	var overlay_prompt_label: Label = tutorial_scene.get_node("TutorialOverlayLayer/TutorialOverlay/Panel/PromptLabel") as Label
 	assert_not_null(overlay_prompt_label)
 	assert_true(tutorial_overlay.visible)
 	assert_eq(overlay_prompt_label.text, "Hold left side to grip with your left hand")

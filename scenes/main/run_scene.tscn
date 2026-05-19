@@ -98,6 +98,78 @@ shape = SubResource("RectangleShape2D_hold")
 color = Color(0.34, 0.78, 0.48, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
+[node name="TutorialHoldStartLeft" type="StaticBody2D" parent="Handholds" unique_id=1900181001 groups=["tutorial_handhold"]]
+visible = false
+position = Vector2(492, 1450)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/TutorialHoldStartLeft" unique_id=1900181002]
+disabled = true
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/TutorialHoldStartLeft" unique_id=1900181003]
+color = Color(0.95, 0.78, 0.32, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
+[node name="TutorialHoldStartRight" type="StaticBody2D" parent="Handholds" unique_id=1900181004 groups=["tutorial_handhold"]]
+visible = false
+position = Vector2(588, 1450)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/TutorialHoldStartRight" unique_id=1900181005]
+disabled = true
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/TutorialHoldStartRight" unique_id=1900181006]
+color = Color(0.95, 0.78, 0.32, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
+[node name="TutorialHoldMidCenter" type="StaticBody2D" parent="Handholds" unique_id=1900181007 groups=["tutorial_handhold"]]
+visible = false
+position = Vector2(540, 1362)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/TutorialHoldMidCenter" unique_id=1900181008]
+disabled = true
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/TutorialHoldMidCenter" unique_id=1900181009]
+color = Color(0.95, 0.78, 0.32, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
+[node name="TutorialHoldUpperLeft" type="StaticBody2D" parent="Handholds" unique_id=1900181010 groups=["tutorial_handhold"]]
+visible = false
+position = Vector2(452, 1278)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/TutorialHoldUpperLeft" unique_id=1900181011]
+disabled = true
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/TutorialHoldUpperLeft" unique_id=1900181012]
+color = Color(0.95, 0.78, 0.32, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
+[node name="TutorialHoldUpperRight" type="StaticBody2D" parent="Handholds" unique_id=1900181013 groups=["tutorial_handhold"]]
+visible = false
+position = Vector2(628, 1278)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/TutorialHoldUpperRight" unique_id=1900181014]
+disabled = true
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/TutorialHoldUpperRight" unique_id=1900181015]
+color = Color(0.95, 0.78, 0.32, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
+[node name="TutorialHoldTopCenter" type="StaticBody2D" parent="Handholds" unique_id=1900181016 groups=["tutorial_handhold"]]
+visible = false
+position = Vector2(540, 1190)
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/TutorialHoldTopCenter" unique_id=1900181017]
+disabled = true
+shape = SubResource("RectangleShape2D_hold")
+
+[node name="Visual" type="Polygon2D" parent="Handholds/TutorialHoldTopCenter" unique_id=1900181018]
+color = Color(0.95, 0.78, 0.32, 1)
+polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+
 [node name="Floor" type="StaticBody2D" parent="." unique_id=713653130]
 position = Vector2(540, 1840)
 
