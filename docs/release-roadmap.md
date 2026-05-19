@@ -19,21 +19,30 @@ This roadmap continues after the MVP implementation sequence in [implementation-
 - `Hold` and `release` are the only required gestures for v1.0. Hidden smart reach assist is allowed; visible joysticks and complex gesture sets are not.
 - Optional post-attach hold-drag nudge may remain in the prototype as a playtest-gated comfort layer and does not block release.
 
+## Current Repo Baseline
+
+This roadmap assumes the current repository already includes the late-MVP control and system baseline that later release work will build on:
+
+- The mobile control baseline is already the split-screen two-thumb grip model, with the current post-attach drag-nudge prototype still treated as a comfort-layer experiment rather than a required release mechanic.
+- App settings already persist audio, haptics, touch split, and touch center dead-zone values, and the current settings UI already exposes those controls.
+- The current run loop already has fall-follow camera behavior, recoverable rescue-offered state handling, and tested rewarded-continue plus post-run coin-doubler mock flows.
+- Rewarded ads, haptics, sharing, and subscription seams already exist behind typed platform contracts, but Android production integrations and shipping UX remain ahead.
+
 ## Phase 12: Release Scope And Control Lock
 
-Purpose: lock the v1.0 target and stop the core input model from drifting while the rest of the game is balanced.
+Purpose: close out the remaining release-scope decisions around a control baseline that is already reflected in the repo.
 
 Implementation outcomes:
 
-- Define the Android-first v1.0 feature set and explicitly separate launch scope from post-launch scope.
-- Lock the mobile control baseline as split-screen two-thumb grip alternation.
-- Define hidden smart reach assist rules so auto-grab stays fair without adding UI complexity.
-- Keep post-attach hold-drag nudge as an optional follow-up path, not a release dependency.
+- Confirm the Android-first v1.0 feature set and explicitly separate launch scope from post-launch scope.
+- Keep the split-screen two-thumb baseline as the release control model unless a documented decision replaces it.
+- Decide whether hidden smart reach assist needs further launch-specific tuning or can stay implicit in the current hold-selection behavior.
+- Keep post-attach hold-drag nudge as an optional comfort-layer path, not a release dependency.
 - Record the placeholder policy for the release track: readable placeholders are acceptable until the final presentation phase.
 
 Acceptance gates:
 
-- The control decision is consistent across roadmap, gameplay docs, and onboarding plans.
+- The control decision is consistent across roadmap, gameplay docs, onboarding plans, and the current implemented input/settings surfaces.
 - No launch-critical system depends on a visible joystick, tap-to-target scheme, or other higher-complexity gesture layer.
 - Onboarding, UI, and settings plans can all work with the locked two-thumb baseline.
 
@@ -45,8 +54,8 @@ Implementation outcomes:
 
 - Add first-run onboarding with safe opener conditions, simple grip and release teaching, and delayed or disabled early Chaser pressure.
 - Tune grip reliability, stamina readability, camera smoothing, fall timing, and rescue restoration around the locked control model.
-- Add basic but meaningful haptics and UI feedback for grip, release, warning, pickup, rescue, and fail states.
-- Add the first accessibility-oriented touch settings that improve comfort without adding new mechanics.
+- Expand the current haptics and UI feedback pass where coverage is still missing or too weak for onboarding and failure readability.
+- Extend the current touch comfort settings only where the existing binary grip model can honestly support them.
 - Validate whether the current post-attach drag-nudge prototype stays an optional comfort layer or graduates into the supported launch control set.
 
 Acceptance gates:
@@ -58,28 +67,30 @@ Acceptance gates:
 Code-guided execution sequence:
 
 1. Add an explicit typed onboarding progress model and persist
-   first-run completion in app settings instead of inferring it from
-   missing local data. Advance tutorial steps from successful
-   left-grip, right-grip, and release events so onboarding stays
-   correct as control tuning changes.
+   first-run completion in app settings instead of relying on the
+   current absence of onboarding-specific state. Advance tutorial
+   steps from successful left-grip, right-grip, and release events so
+   onboarding stays correct as control tuning changes.
 2. Keep deterministic chunk 0, but add an onboarding-safe opener
    profile plus an explicit Chaser grace gate. Choose one grace-end
    trigger at the start of the phase; prefer a safe height milestone
    because the current run session already tracks height and that seam
    is easier to test than timer-only or gesture-sequence inference.
-3. Extend the existing run-loop coordinator and run scene camera
-   follow with separate climb and fall smoothing plus a
-   fall-resolution delay before rescue or result UI appears. Tune
-   stamina readability and rescue restoration in the same slice so
-   feel changes stay coupled to readable failure beats.
-4. Expand the current haptics and UI feedback pass to cover release,
-   rescue acceptance, Chaser or hazard failure, and low-stamina
-   warning states while keeping all platform behavior behind the
-   existing haptics adapter boundary.
-5. Grow touch comfort settings only where the current binary grip
-   model can honor them: split, center dead zone, optional grip-zone
-   width, and haptic intensity. Do not add analog-style sensitivity
-   settings until a mechanic actually consumes them.
+3. Tune the existing run-loop coordinator and run scene camera
+   follow with any additional climb-versus-fall smoothing that tests
+   show is still needed, then add a fall-resolution delay before
+   rescue or result UI appears. Tune stamina readability and rescue
+   restoration in the same slice so feel changes stay coupled to
+   readable failure beats.
+4. Expand the current haptics and UI feedback pass to cover any
+   remaining gaps for release, rescue acceptance, Chaser or hazard
+   failure, and low-stamina warning states while keeping all platform
+   behavior behind the existing haptics adapter boundary.
+5. Keep touch comfort settings constrained to controls the current
+   binary grip model already supports: split, center dead zone, and
+   haptic intensity. Do not add grip-zone width or analog-style
+   sensitivity settings until a mechanic or input abstraction can
+   actually consume them.
 6. Validate the phase with focused tests for onboarding progression,
    Chaser grace transitions, camera follow and fall timing,
    app-settings round-trips, and haptic dispatch, then keep
@@ -129,7 +140,7 @@ Implementation outcomes:
 - Add Google Play Billing and Supporter subscription behavior if monetization remains launch-scope.
 - Add purchase restore, duplicate-prevention, receipt-validation strategy, and subscription grace or expiry handling.
 - Add crash reporting and analytics behind typed boundaries.
-- Add the lightweight launch sharing slice, preferably screenshot or share-card based unless native video is proven low-risk.
+- Connect the existing lightweight launch sharing contract to a real Android screenshot or share-card flow unless native video is proven low-risk.
 
 Acceptance gates:
 
@@ -211,10 +222,10 @@ Every release phase should pass these checks before being treated as complete:
 
 ## Recommended First Release Sprint
 
-Start Phase 12 now that the MVP loop is playable and the launch control direction is decided.
+Start Phase 13 now that the late-MVP control baseline, touch settings, haptics boundary, fall-follow camera, and mock rewarded-ad flows are already in place.
 
 Sprint outcomes:
 
-- Lock the Android-first v1.0 scope.
-- Record the two-thumb control baseline and the placeholder-late presentation strategy.
-- Start onboarding and touch-feel work before expanding economy, platform, and release operations.
+- Close any remaining Phase 12 scope-lock documentation while keeping the current two-thumb baseline unchanged.
+- Add the explicit onboarding progress model plus the first Chaser grace rule.
+- Start onboarding and touch-feel tuning before expanding economy, platform, and release operations.
