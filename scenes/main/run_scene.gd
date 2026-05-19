@@ -56,7 +56,10 @@ const RewardedAdsAdapterScript = preload("res://src/platform/ads/rewarded_ads_ad
 const RewardedAdsAdapterFactoryScript = preload("res://src/platform/ads/rewarded_ads_adapter_factory.gd")
 const RewardedContinueServiceScript = preload("res://src/gameplay/run/rewarded_continue_service.gd")
 const RunFrameRuntimeScript = preload("res://src/gameplay/run/run_frame_runtime.gd")
+const RunGeneratedHandholdRuntimeScript = preload("res://src/gameplay/run/run_generated_handhold_runtime.gd")
 const RunGameplayNodeRefsScript = preload("res://src/gameplay/run/run_gameplay_node_refs.gd")
+const RunRescueRuntimeScript = preload("res://src/gameplay/run/run_rescue_runtime.gd")
+const RunResetRuntimeScript = preload("res://src/gameplay/run/run_reset_runtime.gd")
 const RunWorldSurfaceConfiguratorScript = preload("res://src/gameplay/run/run_world_surface_configurator.gd")
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunLaunchModeScript = preload("res://src/core/run_launch_mode.gd")
@@ -136,6 +139,9 @@ var _normal_coin_pickup_service: NormalCoinPickupServiceScript = NormalCoinPicku
 var _run_loop_coordinator: RunLoopCoordinatorScript = RunLoopCoordinatorScript.new()
 var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop_coordinator)
 var _run_frame_runtime: RunFrameRuntimeScript = RunFrameRuntimeScript.new()
+var _run_generated_handhold_runtime: RunGeneratedHandholdRuntimeScript = RunGeneratedHandholdRuntimeScript.new()
+var _run_rescue_runtime: RunRescueRuntimeScript = RunRescueRuntimeScript.new()
+var _run_reset_runtime: RunResetRuntimeScript = RunResetRuntimeScript.new()
 var _stamina_fall_service: StaminaFallServiceScript = StaminaFallServiceScript.new()
 var _wind_gust_hazard_contact_service: WindGustHazardContactServiceScript = WindGustHazardContactServiceScript.new()
 var _wallet: WalletScript = WalletScript.new()
@@ -396,33 +402,11 @@ func _physics_process(delta: float) -> void:
 	_refresh_ui()
 
 func _advance_generated_handhold_lifecycle(delta_seconds: float) -> void:
-	Validation.require_condition(delta_seconds >= 0.0, "RunScene generated handhold lifecycle advance cannot use a negative delta.")
-	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
-	var left_hold_path: NodePath = NodePath()
-	if attachment_state.is_attached(HandSideScript.Value.LEFT):
-		left_hold_path = attachment_state.get_hold_path(HandSideScript.Value.LEFT)
-		_advance_generated_handhold_lifecycle_for_path(left_hold_path, delta_seconds)
-
-	if attachment_state.is_attached(HandSideScript.Value.RIGHT):
-		var right_hold_path: NodePath = attachment_state.get_hold_path(HandSideScript.Value.RIGHT)
-		if left_hold_path.is_empty() or right_hold_path != left_hold_path:
-			_advance_generated_handhold_lifecycle_for_path(right_hold_path, delta_seconds)
-
-func _advance_generated_handhold_lifecycle_for_path(hold_path: NodePath, delta_seconds: float) -> void:
-	var generated_handhold: GeneratedHandholdAdapterScript = _get_generated_handhold_adapter(hold_path)
-	if generated_handhold == null:
-		return
-
-	var broke_now: bool = generated_handhold.advance_attached_lifecycle(delta_seconds)
-	if not broke_now:
-		return
-
-	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
-	if attachment_state.is_attached(HandSideScript.Value.LEFT) and attachment_state.get_hold_path(HandSideScript.Value.LEFT) == hold_path:
-		attachment_state.release(HandSideScript.Value.LEFT)
-
-	if attachment_state.is_attached(HandSideScript.Value.RIGHT) and attachment_state.get_hold_path(HandSideScript.Value.RIGHT) == hold_path:
-		attachment_state.release(HandSideScript.Value.RIGHT)
+	_run_generated_handhold_runtime.advance_attached_lifecycle(
+		_controller,
+		delta_seconds,
+		Callable(self, "_get_generated_handhold_adapter")
+	)
 
 func _resolve_generated_handhold_attachment_changes(
 	left_was_attached: bool,
@@ -430,50 +414,15 @@ func _resolve_generated_handhold_attachment_changes(
 	right_was_attached: bool,
 	right_previous_hold_path: NodePath
 ) -> void:
-	_resolve_generated_handhold_attachment_change_for_hand(
-		HandSideScript.Value.LEFT,
+	_run_generated_handhold_runtime.resolve_attachment_changes(
+		_controller,
+		_player,
 		left_was_attached,
-		left_previous_hold_path
-	)
-	_resolve_generated_handhold_attachment_change_for_hand(
-		HandSideScript.Value.RIGHT,
+		left_previous_hold_path,
 		right_was_attached,
-		right_previous_hold_path
+		right_previous_hold_path,
+		Callable(self, "_get_generated_handhold_adapter")
 	)
-
-func _resolve_generated_handhold_attachment_change_for_hand(
-	hand_side: int,
-	was_attached: bool,
-	previous_hold_path: NodePath
-) -> void:
-	HandSideScript.assert_valid(hand_side)
-	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
-	var is_attached_now: bool = attachment_state.is_attached(hand_side)
-	var current_hold_path: NodePath = NodePath()
-	if is_attached_now:
-		current_hold_path = attachment_state.get_hold_path(hand_side)
-
-	if was_attached and (not is_attached_now or current_hold_path != previous_hold_path):
-		_notify_generated_handhold_released(previous_hold_path)
-
-	if is_attached_now and (not was_attached or current_hold_path != previous_hold_path):
-		_notify_generated_handhold_attached(current_hold_path)
-
-func _notify_generated_handhold_attached(hold_path: NodePath) -> void:
-	var generated_handhold: GeneratedHandholdAdapterScript = _get_generated_handhold_adapter(hold_path)
-	if generated_handhold == null:
-		return
-
-	generated_handhold.notify_hand_attached()
-
-func _notify_generated_handhold_released(hold_path: NodePath) -> void:
-	var generated_handhold: GeneratedHandholdAdapterScript = _get_generated_handhold_adapter(hold_path)
-	if generated_handhold == null or generated_handhold.is_broken():
-		return
-
-	var release_impulse_pixels: Vector2 = generated_handhold.notify_hand_released()
-	if release_impulse_pixels != Vector2.ZERO:
-		_player.set_body_linear_velocity(_player.get_body_linear_velocity() + release_impulse_pixels)
 
 func _get_generated_handhold_adapter(hold_path: NodePath) -> GeneratedHandholdAdapterScript:
 	if hold_path.is_empty():
@@ -1027,32 +976,25 @@ func _uses_generated_chunks() -> bool:
 func _reset_playground() -> void:
 	_clear_aim_preview()
 
-	if _controller != null:
-		_controller.reset()
-
 	_desktop_input.reset()
 	_mobile_input.reset()
 	_active_touch_contacts = []
 	_post_run_coin_doubler_reward_id = ""
 	_rewarded_continue_feedback_message = ""
 	_run_pickup_transaction_ledger = CoinTransactionLedgerScript.new()
-	_run_session = RunSessionScript.new()
-	_run_session.start_run()
-	if _chaser_pacing_model != null:
-		_chaser_pacing_model.reset()
-	if _uses_generated_chunks() and _generated_chunk_coordinator != null:
-		_generated_chunk_coordinator.reset_chunks()
-	_player.reset_physics(_reset_anchor.global_position)
-	_camera.global_position = Vector2(
-		_reset_anchor.global_position.x,
-		_reset_anchor.global_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
+	_run_session = _run_reset_runtime.create_started_run_session()
+	_run_reset_runtime.reset_gameplay_state(
+		_gameplay_nodes,
+		_controller,
+		_chaser_pacing_model,
+		_uses_generated_chunks(),
+		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 	)
 	if _chaser_kill_zone != null:
 		_apply_cosmetic_loadout()
-		_chaser_kill_zone.reset_to_player_position(
-			_player.get_body_global_position().y,
+		_run_reset_runtime.reset_chaser_to_player_position(
+			_gameplay_nodes,
 			_get_climb_tuning_float(&"pixels_per_meter"),
-			_camera.global_position.x,
 			get_viewport_rect().size.x
 		)
 
@@ -1540,20 +1482,26 @@ func _restore_rewarded_continue() -> void:
 	Validation.require_condition(rescue_hold_targets.size() == 2, "RunScene rewarded continue requires exactly two rescue hold targets.")
 	var left_hold_target: HandholdTargetScript = rescue_hold_targets[0]
 	var right_hold_target: HandholdTargetScript = rescue_hold_targets[1]
-	var rescue_body_position: Vector2 = _calculate_rewarded_continue_body_position(left_hold_target, right_hold_target)
-
-	_controller.reset()
-	_player.reset_physics(rescue_body_position)
-	var attachment_state: HandAttachmentState = _controller.get_attachment_state()
-	attachment_state.attach(HandSideScript.Value.LEFT, left_hold_target.hold_id, left_hold_target.attach_position, left_hold_target.hold_path)
-	attachment_state.attach(HandSideScript.Value.RIGHT, right_hold_target.hold_id, right_hold_target.attach_position, right_hold_target.hold_path)
-	_notify_generated_handhold_attached(left_hold_target.hold_path)
-	_notify_generated_handhold_attached(right_hold_target.hold_path)
-	_player.sync_runtime_grip_joints(attachment_state)
-	_player.sync_runtime_grip_links(attachment_state)
-	_camera.global_position = Vector2(
-		_camera.global_position.x,
-		rescue_body_position.y - _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
+	var rescue_body_position: Vector2 = _run_rescue_runtime.calculate_rewarded_continue_body_position(
+		left_hold_target,
+		right_hold_target,
+		_get_climb_tuning_float(&"grip_hang_offset_pixels")
+	)
+	var _attachment_state: HandAttachmentState = _run_rescue_runtime.restore_rewarded_continue(
+		_gameplay_nodes,
+		_controller,
+		left_hold_target,
+		right_hold_target,
+		rescue_body_position,
+		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
+	)
+	_run_generated_handhold_runtime.notify_hand_attached_for_path(
+		left_hold_target.hold_path,
+		Callable(self, "_get_generated_handhold_adapter")
+	)
+	_run_generated_handhold_runtime.notify_hand_attached_for_path(
+		right_hold_target.hold_path,
+		Callable(self, "_get_generated_handhold_adapter")
 	)
 	_run_frame_runtime.sync_generated_chunks(
 		_gameplay_nodes,
@@ -1572,70 +1520,15 @@ func _find_rewarded_continue_hold_targets() -> Array[HandholdTargetScript]:
 		Validation.require_condition(handhold is StaticBody2D, "RunScene rescue handholds must be StaticBody2D instances.")
 		handholds.append(handhold as StaticBody2D)
 
-	Validation.require_condition(handholds.size() >= 2, "RunScene rewarded continue requires at least two handholds.")
-	var target_body_y: float = _camera.global_position.y + _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
-	var target_hold_average_y: float = target_body_y - _get_climb_tuning_float(&"grip_hang_offset_pixels")
-	var target_center_x: float = _camera.global_position.x
-	var target_anchor_spacing: float = _player.get_left_hand_anchor_global_position().distance_to(_player.get_right_hand_anchor_global_position())
-	var best_score: float = INF
-	var best_left_hold: StaticBody2D = null
-	var best_right_hold: StaticBody2D = null
-
-	for first_index in range(handholds.size() - 1):
-		for second_index in range(first_index + 1, handholds.size()):
-			var first_hold: StaticBody2D = handholds[first_index]
-			var second_hold: StaticBody2D = handholds[second_index]
-			var left_hold: StaticBody2D = first_hold
-			var right_hold: StaticBody2D = second_hold
-			if left_hold.global_position.x > right_hold.global_position.x:
-				var swapped_hold: StaticBody2D = left_hold
-				left_hold = right_hold
-				right_hold = swapped_hold
-
-			var average_position: Vector2 = (left_hold.global_position + right_hold.global_position) * 0.5
-			var spacing_x: float = absf(right_hold.global_position.x - left_hold.global_position.x)
-			var vertical_target_penalty: float = absf(average_position.y - target_hold_average_y)
-			var horizontal_target_penalty: float = absf(average_position.x - target_center_x)
-			var spacing_penalty: float = absf(spacing_x - target_anchor_spacing)
-			var vertical_alignment_penalty: float = absf(left_hold.global_position.y - right_hold.global_position.y)
-			var collapse_penalty: float = 0.0
-			if spacing_x < 48.0:
-				collapse_penalty = 1000.0
-
-			var score: float = vertical_target_penalty \
-				+ (horizontal_target_penalty * 0.35) \
-				+ (spacing_penalty * 0.5) \
-				+ (vertical_alignment_penalty * 0.75) \
-				+ collapse_penalty
-			if score < best_score:
-				best_score = score
-				best_left_hold = left_hold
-				best_right_hold = right_hold
-
-	Validation.require_condition(best_left_hold != null, "RunScene rewarded continue requires a left rescue handhold.")
-	Validation.require_condition(best_right_hold != null, "RunScene rewarded continue requires a right rescue handhold.")
-	return [
-		HandholdTargetScript.new(
-			best_left_hold.name,
-			best_left_hold.global_position,
-			best_left_hold.get_path(),
-			_require_handhold_drain_multiplier(best_left_hold),
-			_require_handhold_type(best_left_hold)
-		),
-		HandholdTargetScript.new(
-			best_right_hold.name,
-			best_right_hold.global_position,
-			best_right_hold.get_path(),
-			_require_handhold_drain_multiplier(best_right_hold),
-			_require_handhold_type(best_right_hold)
-		),
-	]
-
-func _calculate_rewarded_continue_body_position(left_hold_target: HandholdTargetScript, right_hold_target: HandholdTargetScript) -> Vector2:
-	left_hold_target.assert_valid()
-	right_hold_target.assert_valid()
-	var average_hold_position: Vector2 = (left_hold_target.attach_position + right_hold_target.attach_position) * 0.5
-	return average_hold_position + Vector2.DOWN * _get_climb_tuning_float(&"grip_hang_offset_pixels")
+	return _run_rescue_runtime.find_rewarded_continue_hold_targets(
+		handholds,
+		_camera.global_position,
+		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
+		_get_climb_tuning_float(&"grip_hang_offset_pixels"),
+		_player.get_left_hand_anchor_global_position().distance_to(_player.get_right_hand_anchor_global_position()),
+		Callable(self, "_require_handhold_drain_multiplier"),
+		Callable(self, "_require_handhold_type")
+	)
 
 func _get_climb_tuning_float(property_name: StringName) -> float:
 	var property_value: Variant = climb_tuning.get(property_name)
