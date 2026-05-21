@@ -72,7 +72,16 @@ func _apply_launch_mode_surface(
 	var tutorial_mode_enabled: bool = launch_mode == RunLaunchModeScript.Value.TUTORIAL
 	gameplay_nodes.generated_chunk_coordinator.visible = not tutorial_mode_enabled
 	run_hud.visible = not tutorial_mode_enabled
+	_set_chaser_enabled(gameplay_nodes.chaser_kill_zone, not tutorial_mode_enabled)
 	_set_tutorial_handholds_enabled(gameplay_nodes, tutorial_mode_enabled, climb_tuning, tutorial_handhold_group_name)
+
+func _set_chaser_enabled(chaser_kill_zone: Node, enabled: bool) -> void:
+	Validation.require_condition(chaser_kill_zone != null, "RunWorldSurfaceConfigurator requires ChaserKillZone when toggling tutorial mode.")
+	Validation.require_condition(chaser_kill_zone is Area2D, "RunWorldSurfaceConfigurator requires ChaserKillZone to be an Area2D.")
+	var typed_chaser_kill_zone: Area2D = chaser_kill_zone as Area2D
+	typed_chaser_kill_zone.visible = enabled
+	typed_chaser_kill_zone.monitoring = enabled
+	typed_chaser_kill_zone.monitorable = enabled
 
 func _set_tutorial_handholds_enabled(
 	gameplay_nodes: RunGameplayNodeRefsScript,

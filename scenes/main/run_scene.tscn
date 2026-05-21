@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://crdl3mj8qeugi"]
 
-[ext_resource type="Script" path="res://scenes/main/run_scene.gd" id="1_dev"]
+[ext_resource type="Script" uid="uid://bbcr6elll4por" path="res://scenes/main/run_scene.gd" id="1_dev"]
 [ext_resource type="Script" uid="uid://co0omgi88wjup" path="res://resources/config/climb_prototype_tuning.gd" id="2_climb"]
 [ext_resource type="Script" uid="uid://coalyt3xlftcd" path="res://resources/config/stamina_tuning.gd" id="3_stamina"]
 [ext_resource type="PackedScene" uid="uid://1a8vb0lql3ln" path="res://scenes/player/player_character.tscn" id="4_player"]
@@ -9,8 +9,8 @@
 [ext_resource type="PackedScene" path="res://scenes/chaser/chaser_kill_zone.tscn" id="7_chaser"]
 [ext_resource type="Resource" path="res://resources/config/cosmetic_loadout_default.tres" id="8_loadout"]
 [ext_resource type="Resource" path="res://resources/config/chaser_theme_catalog.tres" id="9_theme_catalog"]
-[ext_resource type="Script" path="res://resources/config/generation_tuning.gd" id="10_generation"]
-[ext_resource type="Script" path="res://src/gameplay/generation/generated_chunk_coordinator.gd" id="11_generated_chunks"]
+[ext_resource type="Script" uid="uid://5um68hdxp5u1" path="res://resources/config/generation_tuning.gd" id="10_generation"]
+[ext_resource type="Script" uid="uid://d0uk4g31ib747" path="res://src/gameplay/generation/generated_chunk_coordinator.gd" id="11_generated_chunks"]
 [ext_resource type="Resource" path="res://resources/config/cosmetic_item_catalog.tres" id="12_cosmetic_catalog"]
 
 [sub_resource type="Resource" id="Resource_climb"]
@@ -22,9 +22,24 @@ one_hand_seconds = 100.0
 
 [sub_resource type="Resource" id="Resource_generation"]
 script = ExtResource("10_generation")
+handhold_definitions = null
+handhold_assignment_rules = null
+ladder_hold_rows = null
+zigzag_hold_rows = null
+wide_traverse_hold_rows = null
+sparse_reach_hold_rows = null
+dense_recovery_hold_rows = null
+fork_hold_rows = null
+risk_lane_hold_rows = null
+swing_gap_hold_rows = null
+opener_ladder_hold_rows = null
+opener_zigzag_hold_rows = null
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_hold"]
 size = Vector2(128, 34)
+
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_tutorial_hold"]
+size = Vector2(96, 34)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_floor"]
 size = Vector2(1200, 80)
@@ -64,10 +79,6 @@ position = Vector2(540, 2396)
 
 [node name="Handholds" type="Node2D" parent="." unique_id=142891664]
 
-[node name="GeneratedChunks" type="Node2D" parent="." unique_id=1704810011]
-unique_name_in_owner = true
-script = ExtResource("11_generated_chunks")
-
 [node name="HoldSafePlatform" type="StaticBody2D" parent="Handholds" unique_id=1100838222 groups=["handhold"]]
 position = Vector2(540, 1557)
 
@@ -78,97 +89,81 @@ shape = SubResource("RectangleShape2D_hold")
 color = Color(0.34, 0.78, 0.48, 1)
 polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
 
-[node name="HoldBottomLeft" type="StaticBody2D" parent="Handholds" unique_id=134443766 groups=["handhold"]]
-position = Vector2(390, 1680)
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldBottomLeft" unique_id=287166556]
-shape = SubResource("RectangleShape2D_hold")
-
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldBottomLeft" unique_id=630230376]
-color = Color(0.34, 0.78, 0.48, 1)
-polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
-
-[node name="HoldBottomRight" type="StaticBody2D" parent="Handholds" unique_id=918479919 groups=["handhold"]]
-position = Vector2(690, 1680)
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldBottomRight" unique_id=1335380198]
-shape = SubResource("RectangleShape2D_hold")
-
-[node name="Visual" type="Polygon2D" parent="Handholds/HoldBottomRight" unique_id=1249159251]
-color = Color(0.34, 0.78, 0.48, 1)
-polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
-
 [node name="TutorialHoldStartLeft" type="StaticBody2D" parent="Handholds" unique_id=1900181001 groups=["tutorial_handhold"]]
 visible = false
 position = Vector2(492, 1450)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/TutorialHoldStartLeft" unique_id=1900181002]
+shape = SubResource("RectangleShape2D_tutorial_hold")
 disabled = true
-shape = SubResource("RectangleShape2D_hold")
 
 [node name="Visual" type="Polygon2D" parent="Handholds/TutorialHoldStartLeft" unique_id=1900181003]
 color = Color(0.95, 0.78, 0.32, 1)
-polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+polygon = PackedVector2Array(-48, -17, 48, -17, 48, 17, -48, 17)
 
 [node name="TutorialHoldStartRight" type="StaticBody2D" parent="Handholds" unique_id=1900181004 groups=["tutorial_handhold"]]
 visible = false
 position = Vector2(588, 1450)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/TutorialHoldStartRight" unique_id=1900181005]
+shape = SubResource("RectangleShape2D_tutorial_hold")
 disabled = true
-shape = SubResource("RectangleShape2D_hold")
 
 [node name="Visual" type="Polygon2D" parent="Handholds/TutorialHoldStartRight" unique_id=1900181006]
 color = Color(0.95, 0.78, 0.32, 1)
-polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+polygon = PackedVector2Array(-48, -17, 48, -17, 48, 17, -48, 17)
 
 [node name="TutorialHoldMidCenter" type="StaticBody2D" parent="Handholds" unique_id=1900181007 groups=["tutorial_handhold"]]
 visible = false
 position = Vector2(540, 1362)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/TutorialHoldMidCenter" unique_id=1900181008]
+shape = SubResource("RectangleShape2D_tutorial_hold")
 disabled = true
-shape = SubResource("RectangleShape2D_hold")
 
 [node name="Visual" type="Polygon2D" parent="Handholds/TutorialHoldMidCenter" unique_id=1900181009]
 color = Color(0.95, 0.78, 0.32, 1)
-polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+polygon = PackedVector2Array(-48, -17, 48, -17, 48, 17, -48, 17)
 
 [node name="TutorialHoldUpperLeft" type="StaticBody2D" parent="Handholds" unique_id=1900181010 groups=["tutorial_handhold"]]
 visible = false
 position = Vector2(452, 1278)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/TutorialHoldUpperLeft" unique_id=1900181011]
+shape = SubResource("RectangleShape2D_tutorial_hold")
 disabled = true
-shape = SubResource("RectangleShape2D_hold")
 
 [node name="Visual" type="Polygon2D" parent="Handholds/TutorialHoldUpperLeft" unique_id=1900181012]
 color = Color(0.95, 0.78, 0.32, 1)
-polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+polygon = PackedVector2Array(-48, -17, 48, -17, 48, 17, -48, 17)
 
 [node name="TutorialHoldUpperRight" type="StaticBody2D" parent="Handholds" unique_id=1900181013 groups=["tutorial_handhold"]]
 visible = false
 position = Vector2(628, 1278)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/TutorialHoldUpperRight" unique_id=1900181014]
+shape = SubResource("RectangleShape2D_tutorial_hold")
 disabled = true
-shape = SubResource("RectangleShape2D_hold")
 
 [node name="Visual" type="Polygon2D" parent="Handholds/TutorialHoldUpperRight" unique_id=1900181015]
 color = Color(0.95, 0.78, 0.32, 1)
-polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+polygon = PackedVector2Array(-48, -17, 48, -17, 48, 17, -48, 17)
 
 [node name="TutorialHoldTopCenter" type="StaticBody2D" parent="Handholds" unique_id=1900181016 groups=["tutorial_handhold"]]
 visible = false
 position = Vector2(540, 1190)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/TutorialHoldTopCenter" unique_id=1900181017]
+shape = SubResource("RectangleShape2D_tutorial_hold")
 disabled = true
-shape = SubResource("RectangleShape2D_hold")
 
 [node name="Visual" type="Polygon2D" parent="Handholds/TutorialHoldTopCenter" unique_id=1900181018]
 color = Color(0.95, 0.78, 0.32, 1)
-polygon = PackedVector2Array(-64, -17, 64, -17, 64, 17, -64, 17)
+polygon = PackedVector2Array(-48, -17, 48, -17, 48, 17, -48, 17)
+
+[node name="GeneratedChunks" type="Node2D" parent="." unique_id=1704810011]
+unique_name_in_owner = true
+script = ExtResource("11_generated_chunks")
 
 [node name="Floor" type="StaticBody2D" parent="." unique_id=713653130]
 position = Vector2(540, 1840)

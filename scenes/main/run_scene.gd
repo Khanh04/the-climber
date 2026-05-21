@@ -104,6 +104,11 @@ const WalletTransactionServiceScript = preload("res://src/economy/wallet_transac
 const WindGustHazardContactServiceScript = preload("res://src/gameplay/hazards/wind_gust_hazard_contact_service.gd")
 
 const TUTORIAL_HANDHOLD_GROUP_NAME: StringName = &"tutorial_handhold"
+const TUTORIAL_UPPER_HOLD_IDS: Array[StringName] = [
+	&"TutorialHoldUpperLeft",
+	&"TutorialHoldUpperRight",
+	&"TutorialHoldTopCenter",
+]
 
 @export var climb_tuning: ClimbPrototypeTuningScript
 @export var stamina_tuning: StaminaTuningScript
@@ -365,14 +370,15 @@ func _physics_process(delta: float) -> void:
 		current_height_meters_before_input,
 		_uses_generated_chunks()
 	)
-	_run_frame_runtime.update_chaser(
-		_gameplay_nodes,
-		_run_session,
-		_chaser_pacing_model,
-		_get_climb_tuning_float(&"pixels_per_meter"),
-		current_height_meters_before_input,
-		delta
-	)
+	if _uses_chaser():
+		_run_frame_runtime.update_chaser(
+			_gameplay_nodes,
+			_run_session,
+			_chaser_pacing_model,
+			_get_climb_tuning_float(&"pixels_per_meter"),
+			current_height_meters_before_input,
+			delta
+		)
 
 	if _run_frame_runtime.resolve_bottom_screen_fall_if_needed(
 		_gameplay_nodes,
@@ -665,10 +671,23 @@ func _emit_tutorial_observation(
 		attachment_state.is_attached(HandSideScript.Value.LEFT),
 		attachment_state.is_attached(HandSideScript.Value.RIGHT),
 		attachment_state.get_attached_hand_count(),
-		frame_result.control_force
+		frame_result.control_force,
+		_has_reached_tutorial_upper_hold(attachment_state)
 	)
 	observation.assert_valid()
 	tutorial_observation_recorded.emit(observation)
+
+func _has_reached_tutorial_upper_hold(attachment_state: HandAttachmentState) -> bool:
+	Validation.require_condition(attachment_state != null, "RunScene requires an attachment state to evaluate tutorial upper holds.")
+	for hand_side in [HandSideScript.Value.LEFT, HandSideScript.Value.RIGHT]:
+		var typed_hand_side: int = hand_side
+		if not attachment_state.is_attached(typed_hand_side):
+			continue
+
+		if TUTORIAL_UPPER_HOLD_IDS.has(attachment_state.get_hold_id(typed_hand_side)):
+			return true
+
+	return false
 
 func _create_input_frame() -> PlayerInputFrameScript:
 	if _active_touch_contacts.size() > 0 or _mobile_input.has_held_grip_state():
@@ -871,6 +890,9 @@ func _is_run_active_for_generated_spawns() -> bool:
 func _uses_generated_chunks() -> bool:
 	return _launch_mode != RunLaunchModeScript.Value.TUTORIAL
 
+func _uses_chaser() -> bool:
+	return _launch_mode != RunLaunchModeScript.Value.TUTORIAL
+
 func _reset_playground() -> void:
 	_clear_aim_preview()
 
@@ -888,7 +910,7 @@ func _reset_playground() -> void:
 		_uses_generated_chunks(),
 		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 	)
-	if _chaser_kill_zone != null:
+	if _uses_chaser() and _chaser_kill_zone != null:
 		_apply_cosmetic_loadout()
 		_run_reset_runtime.reset_chaser_to_player_position(
 			_gameplay_nodes,

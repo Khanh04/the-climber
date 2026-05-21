@@ -17,7 +17,7 @@ func test_tutorial_run_controller_hides_prompt_when_complete() -> void:
 	controller.observe_observation(TutorialRunObservationScript.new(false, false, true, false, 1, Vector2.ZERO))
 	controller.observe_observation(TutorialRunObservationScript.new(true, false, true, false, 1, Vector2.RIGHT))
 	controller.observe_observation(TutorialRunObservationScript.new(true, false, true, true, 2, Vector2.ZERO))
-	controller.observe_observation(TutorialRunObservationScript.new(true, true, false, true, 1, Vector2.ZERO))
+	controller.observe_observation(TutorialRunObservationScript.new(true, true, true, true, 2, Vector2.ZERO, true))
 
 	assert_true(controller.is_complete())
 	assert_eq(controller.get_current_prompt_text(), "")

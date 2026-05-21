@@ -7,7 +7,7 @@ enum Step {
 	LEFT_GRIP,
 	DRAG,
 	RIGHT_GRIP,
-	RELEASE,
+	REACH_UPPER_HOLD,
 	COMPLETE
 }
 
@@ -27,8 +27,8 @@ func get_current_prompt_text() -> String:
 			return "Drag while holding to move your free hand"
 		Step.RIGHT_GRIP:
 			return "Hold right side to grip with your right hand"
-		Step.RELEASE:
-			return "Release a hand to let go"
+		Step.REACH_UPPER_HOLD:
+			return "Reach an upper hold to finish the tutorial"
 		Step.COMPLETE:
 			return ""
 		_:
@@ -50,11 +50,9 @@ func observe_observation(observation: RefCounted) -> void:
 				_current_step = Step.RIGHT_GRIP
 		Step.RIGHT_GRIP:
 			if not typed_observation.right_was_attached and typed_observation.right_is_attached:
-				_current_step = Step.RELEASE
-		Step.RELEASE:
-			var left_released_now: bool = typed_observation.left_was_attached and not typed_observation.left_is_attached
-			var right_released_now: bool = typed_observation.right_was_attached and not typed_observation.right_is_attached
-			if left_released_now or right_released_now:
+				_current_step = Step.REACH_UPPER_HOLD
+		Step.REACH_UPPER_HOLD:
+			if typed_observation.has_reached_upper_hold:
 				_current_step = Step.COMPLETE
 		Step.COMPLETE:
 			pass

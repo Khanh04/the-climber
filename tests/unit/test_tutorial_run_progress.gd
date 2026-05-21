@@ -18,9 +18,9 @@ func test_tutorial_progress_advances_through_expected_milestones() -> void:
 
 	progress.observe_observation(TutorialRunObservationScript.new(true, false, true, true, 2, Vector2.ZERO))
 
-	assert_eq(progress.get_current_prompt_text(), "Release a hand to let go")
+	assert_eq(progress.get_current_prompt_text(), "Reach an upper hold to finish the tutorial")
 
-	progress.observe_observation(TutorialRunObservationScript.new(true, true, false, true, 1, Vector2.ZERO))
+	progress.observe_observation(TutorialRunObservationScript.new(true, true, true, true, 2, Vector2.ZERO, true))
 
 	assert_true(progress.is_complete())
 	assert_eq(progress.get_current_prompt_text(), "")
