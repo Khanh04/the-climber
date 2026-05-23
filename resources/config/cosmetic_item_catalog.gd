@@ -12,6 +12,7 @@ func is_valid() -> bool:
 
 	var seen_item_ids: Dictionary[StringName, bool] = {}
 	var seen_chaser_theme_ids: Dictionary[StringName, bool] = {}
+	var seen_player_appearance_ids: Dictionary[StringName, bool] = {}
 	for item in items:
 		if item == null or not item is CosmeticItemScript:
 			return false
@@ -25,6 +26,11 @@ func is_valid() -> bool:
 				return false
 
 			seen_chaser_theme_ids[typed_item.chaser_theme_id] = true
+		elif typed_item.slot == CosmeticSlotScript.Value.PLAYER_APPEARANCE:
+			if seen_player_appearance_ids.has(typed_item.player_appearance_id):
+				return false
+
+			seen_player_appearance_ids[typed_item.player_appearance_id] = true
 
 		seen_item_ids[typed_item.item_id] = true
 
@@ -38,6 +44,7 @@ func assert_valid() -> void:
 
 	var seen_item_ids: Dictionary[StringName, bool] = {}
 	var seen_chaser_theme_ids: Dictionary[StringName, bool] = {}
+	var seen_player_appearance_ids: Dictionary[StringName, bool] = {}
 	for item in items:
 		Validation.require_condition(item != null, "Cosmetic item catalog cannot contain null items.")
 		Validation.require_condition(item is CosmeticItemScript, "Cosmetic item catalog requires CosmeticItem resources.")
@@ -47,6 +54,12 @@ func assert_valid() -> void:
 		if typed_item.slot == CosmeticSlotScript.Value.CHASER_THEME:
 			Validation.require_condition(not seen_chaser_theme_ids.has(typed_item.chaser_theme_id), "Cosmetic item catalog Chaser theme ids must be unique.")
 			seen_chaser_theme_ids[typed_item.chaser_theme_id] = true
+		elif typed_item.slot == CosmeticSlotScript.Value.PLAYER_APPEARANCE:
+			Validation.require_condition(
+				not seen_player_appearance_ids.has(typed_item.player_appearance_id),
+				"Cosmetic item catalog player appearance ids must be unique."
+			)
+			seen_player_appearance_ids[typed_item.player_appearance_id] = true
 
 		seen_item_ids[typed_item.item_id] = true
 
@@ -98,4 +111,16 @@ func get_required_chaser_item_by_theme_id(chaser_theme_id: StringName) -> Cosmet
 			return typed_item
 
 	Validation.require_condition(false, "Cosmetic item catalog is missing Chaser theme id %s." % String(chaser_theme_id))
+	return null
+
+func get_required_player_appearance_item_by_id(player_appearance_id: StringName) -> CosmeticItemScript:
+	Validation.require_condition(not player_appearance_id.is_empty(), "Cosmetic item catalog player appearance lookup requires an appearance id.")
+	assert_valid()
+
+	for item in items:
+		var typed_item: CosmeticItemScript = item as CosmeticItemScript
+		if typed_item.slot == CosmeticSlotScript.Value.PLAYER_APPEARANCE and typed_item.player_appearance_id == player_appearance_id:
+			return typed_item
+
+	Validation.require_condition(false, "Cosmetic item catalog is missing player appearance id %s." % String(player_appearance_id))
 	return null

@@ -10,6 +10,8 @@ const CosmeticPurchaseResultScript = preload("res://src/cosmetics/cosmetic_purch
 const CosmeticSlotScript = preload("res://src/cosmetics/cosmetic_slot.gd")
 const CosmeticUnlockPurchaseServiceScript = preload("res://src/cosmetics/cosmetic_unlock_purchase_service.gd")
 const PersistentCoinTransactionServiceScript = preload("res://src/economy/persistent_coin_transaction_service.gd")
+const PlayerAppearanceScript = preload("res://resources/config/player_appearance.gd")
+const PlayerAppearanceCatalogScript = preload("res://resources/config/player_appearance_catalog.gd")
 const StoreItemStateScript = preload("res://src/ui/store_item_state.gd")
 const StorePresenterScript = preload("res://src/ui/store_presenter.gd")
 const StoreStateScript = preload("res://src/ui/store_state.gd")
@@ -20,10 +22,57 @@ func test_default_cosmetic_item_catalog_is_valid() -> void:
     var catalog: CosmeticItemCatalogScript = _load_catalog()
 
     assert_true(catalog.is_valid())
+    assert_eq(catalog.get_required_player_appearance_item_by_id(&"human").item_id, &"character_human")
     assert_eq(catalog.get_required_item_by_id(&"body_sunrise_jacket").slot, CosmeticSlotScript.Value.BODY)
     assert_eq(catalog.get_required_chaser_item_by_theme_id(&"glitch").item_id, &"chaser_glitch")
+    assert_true(catalog.get_default_unlocked_item_ids().has("character_human"))
     assert_true(catalog.get_default_unlocked_item_ids().has("body_default"))
     assert_true(catalog.get_default_unlocked_item_ids().has("chaser_rising_void"))
+
+func test_default_player_appearance_catalog_is_valid() -> void:
+    var catalog: PlayerAppearanceCatalogScript = _load_appearance_catalog()
+    var human_appearance: PlayerAppearanceScript = catalog.get_required_appearance_by_id(&"human")
+
+    assert_true(catalog.is_valid())
+    assert_eq(human_appearance.display_name, "Human")
+    assert_eq(human_appearance.rig_scene_path, "res://scenes/player/human_character_rig.tscn")
+    assert_false(String(human_appearance.rig_lower_body_bone_path).is_empty())
+    assert_false(String(human_appearance.rig_left_upper_arm_bone_path).is_empty())
+    assert_false(String(human_appearance.rig_left_forearm_bone_path).is_empty())
+    assert_false(String(human_appearance.rig_left_hand_bone_path).is_empty())
+    assert_false(String(human_appearance.rig_right_upper_arm_bone_path).is_empty())
+    assert_false(String(human_appearance.rig_right_forearm_bone_path).is_empty())
+    assert_false(String(human_appearance.rig_right_hand_bone_path).is_empty())
+
+func test_rigged_player_appearance_requires_driver_bone_paths() -> void:
+    var catalog: PlayerAppearanceCatalogScript = _load_appearance_catalog()
+    var human_appearance: PlayerAppearanceScript = catalog.get_required_appearance_by_id(&"human")
+    var rigged_appearance := PlayerAppearanceScript.new()
+
+    rigged_appearance.appearance_id = &"alt_human"
+    rigged_appearance.display_name = "Alt Human"
+    rigged_appearance.rig_scene_path = human_appearance.rig_scene_path
+    rigged_appearance.body_texture_path = human_appearance.body_texture_path
+    rigged_appearance.face_texture_path = human_appearance.face_texture_path
+    rigged_appearance.left_upper_arm_texture_path = human_appearance.left_upper_arm_texture_path
+    rigged_appearance.left_forearm_texture_path = human_appearance.left_forearm_texture_path
+    rigged_appearance.left_hand_texture_path = human_appearance.left_hand_texture_path
+    rigged_appearance.right_upper_arm_texture_path = human_appearance.right_upper_arm_texture_path
+    rigged_appearance.right_forearm_texture_path = human_appearance.right_forearm_texture_path
+    rigged_appearance.right_hand_texture_path = human_appearance.right_hand_texture_path
+    rigged_appearance.lower_body_texture_path = human_appearance.lower_body_texture_path
+
+    assert_false(rigged_appearance.is_valid())
+
+    rigged_appearance.rig_lower_body_bone_path = human_appearance.rig_lower_body_bone_path
+    rigged_appearance.rig_left_upper_arm_bone_path = human_appearance.rig_left_upper_arm_bone_path
+    rigged_appearance.rig_left_forearm_bone_path = human_appearance.rig_left_forearm_bone_path
+    rigged_appearance.rig_left_hand_bone_path = human_appearance.rig_left_hand_bone_path
+    rigged_appearance.rig_right_upper_arm_bone_path = human_appearance.rig_right_upper_arm_bone_path
+    rigged_appearance.rig_right_forearm_bone_path = human_appearance.rig_right_forearm_bone_path
+    rigged_appearance.rig_right_hand_bone_path = human_appearance.rig_right_hand_bone_path
+
+    assert_true(rigged_appearance.is_valid())
 
 func test_cosmetic_inventory_merges_defaults_and_saved_ids_without_duplicates() -> void:
     var catalog: CosmeticItemCatalogScript = _load_catalog()
@@ -39,9 +88,11 @@ func test_cosmetic_loadout_service_equips_owned_player_and_chaser_items() -> voi
     var loadout := CosmeticLoadoutScript.new()
     var service := CosmeticLoadoutServiceScript.new()
 
+    service.equip_item(loadout, inventory, catalog, &"character_human")
     service.equip_item(loadout, inventory, catalog, &"body_sunrise_jacket")
     service.equip_item(loadout, inventory, catalog, &"chaser_hot_coffee")
 
+    assert_eq(loadout.player_appearance_id, &"human")
     assert_eq(loadout.body_cosmetic_id, &"body_sunrise_jacket")
     assert_eq(loadout.chaser_theme_id, &"hot_coffee")
     service.assert_loadout_owned(loadout, inventory, catalog)
@@ -111,6 +162,7 @@ func test_store_presenter_marks_owned_equipped_and_affordable_items() -> void:
     var catalog: CosmeticItemCatalogScript = _load_catalog()
     var inventory := CosmeticInventoryScript.new(PackedStringArray(["body_sunrise_jacket"]), catalog.get_default_unlocked_item_ids())
     var loadout := CosmeticLoadoutScript.new()
+    loadout.player_appearance_id = &"human"
     loadout.body_cosmetic_id = &"body_sunrise_jacket"
     var wallet := WalletScript.new(20)
     var loadout_service := CosmeticLoadoutServiceScript.new()
@@ -120,6 +172,8 @@ func test_store_presenter_marks_owned_equipped_and_affordable_items() -> void:
 
     assert_eq(state.wallet_coins, 20)
     assert_eq(state.selected_item_id, &"chaser_hot_coffee")
+    assert_true(_find_item_state(state, &"character_human").owned)
+    assert_true(_find_item_state(state, &"character_human").equipped)
     assert_true(_find_item_state(state, &"body_sunrise_jacket").owned)
     assert_true(_find_item_state(state, &"body_sunrise_jacket").equipped)
     assert_true(_find_item_state(state, &"chaser_hot_coffee").can_purchase)
@@ -127,6 +181,12 @@ func test_store_presenter_marks_owned_equipped_and_affordable_items() -> void:
 
 func _load_catalog() -> CosmeticItemCatalogScript:
     var catalog: CosmeticItemCatalogScript = load("res://resources/config/cosmetic_item_catalog.tres") as CosmeticItemCatalogScript
+
+    assert_not_null(catalog)
+    return catalog
+
+func _load_appearance_catalog() -> PlayerAppearanceCatalogScript:
+    var catalog: PlayerAppearanceCatalogScript = load("res://resources/config/player_appearance_catalog.tres") as PlayerAppearanceCatalogScript
 
     assert_not_null(catalog)
     return catalog

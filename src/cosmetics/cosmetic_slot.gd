@@ -5,7 +5,8 @@ enum Value {
 	BODY,
 	LEFT_HAND,
 	RIGHT_HAND,
-	CHASER_THEME
+	CHASER_THEME,
+	PLAYER_APPEARANCE
 }
 
 static func is_valid(value: int) -> bool:
@@ -17,6 +18,8 @@ static func is_valid(value: int) -> bool:
 		Value.RIGHT_HAND:
 			return true
 		Value.CHASER_THEME:
+			return true
+		Value.PLAYER_APPEARANCE:
 			return true
 		_:
 			return false
@@ -36,6 +39,8 @@ static func to_label(value: int) -> String:
 			return "Right Hand"
 		Value.CHASER_THEME:
 			return "Chaser Theme"
+		Value.PLAYER_APPEARANCE:
+			return "Character"
 		_:
 			Validation.require_condition(false, "Unsupported cosmetic slot.")
 			return ""

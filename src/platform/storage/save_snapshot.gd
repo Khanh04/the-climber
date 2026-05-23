@@ -6,6 +6,7 @@ const SELF_SCRIPT: GDScript = preload("res://src/platform/storage/save_snapshot.
 
 var schema_version: int
 var wallet_coins: int
+var player_appearance_id: StringName
 var chaser_theme_id: StringName
 var body_cosmetic_id: StringName
 var left_hand_cosmetic_id: StringName
@@ -21,10 +22,12 @@ func _init(
 	owned_cosmetic_ids_value: PackedStringArray = PackedStringArray(),
 	body_cosmetic_id_value: StringName = &"body_default",
 	left_hand_cosmetic_id_value: StringName = &"left_hand_default",
-	right_hand_cosmetic_id_value: StringName = &"right_hand_default"
+	right_hand_cosmetic_id_value: StringName = &"right_hand_default",
+	player_appearance_id_value: StringName = &"human"
 ) -> void:
 	schema_version = schema_version_value
 	wallet_coins = wallet_coin_count
+	player_appearance_id = player_appearance_id_value
 	chaser_theme_id = chaser_theme_id_value
 	body_cosmetic_id = body_cosmetic_id_value
 	left_hand_cosmetic_id = left_hand_cosmetic_id_value
@@ -38,6 +41,9 @@ static func is_dictionary_valid(payload: Dictionary) -> bool:
 		return false
 
 	if not payload.has(SaveSchemaScript.KEY_WALLET_COINS):
+		return false
+
+	if not payload.has(SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID):
 		return false
 
 	if not payload.has(SaveSchemaScript.KEY_CHASER_THEME_ID):
@@ -60,6 +66,7 @@ static func is_dictionary_valid(payload: Dictionary) -> bool:
 
 	var raw_schema_version: Variant = payload[SaveSchemaScript.KEY_SCHEMA_VERSION]
 	var raw_wallet_coins: Variant = payload[SaveSchemaScript.KEY_WALLET_COINS]
+	var raw_player_appearance_id: Variant = payload[SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID]
 	var raw_chaser_theme_id: Variant = payload[SaveSchemaScript.KEY_CHASER_THEME_ID]
 	var raw_body_cosmetic_id: Variant = payload[SaveSchemaScript.KEY_BODY_COSMETIC_ID]
 	var raw_left_hand_cosmetic_id: Variant = payload[SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID]
@@ -76,6 +83,9 @@ static func is_dictionary_valid(payload: Dictionary) -> bool:
 	var schema_version_value: int = _integer_from_variant(raw_schema_version, "Save schema version must be an integer.")
 	var wallet_coin_count: int = _integer_from_variant(raw_wallet_coins, "Save wallet coins must be an integer.")
 
+	if not (raw_player_appearance_id is String or raw_player_appearance_id is StringName):
+		return false
+
 	if not (raw_chaser_theme_id is String or raw_chaser_theme_id is StringName):
 		return false
 
@@ -88,12 +98,14 @@ static func is_dictionary_valid(payload: Dictionary) -> bool:
 	if not (raw_right_hand_cosmetic_id is String or raw_right_hand_cosmetic_id is StringName):
 		return false
 
+	var player_appearance_id_string: String = _string_id_from_variant(raw_player_appearance_id)
 	var chaser_theme_id_string: String = _theme_id_string_from_variant(raw_chaser_theme_id)
 	var body_cosmetic_id_string: String = _string_id_from_variant(raw_body_cosmetic_id)
 	var left_hand_cosmetic_id_string: String = _string_id_from_variant(raw_left_hand_cosmetic_id)
 	var right_hand_cosmetic_id_string: String = _string_id_from_variant(raw_right_hand_cosmetic_id)
 	return schema_version_value == SaveSchemaScript.VERSION \
 		and wallet_coin_count >= 0 \
+		and not player_appearance_id_string.is_empty() \
 		and not chaser_theme_id_string.is_empty() \
 		and not body_cosmetic_id_string.is_empty() \
 		and not left_hand_cosmetic_id_string.is_empty() \
@@ -104,6 +116,7 @@ static func is_dictionary_valid(payload: Dictionary) -> bool:
 static func assert_dictionary_valid(payload: Dictionary) -> void:
 	Validation.require_condition(payload.has(SaveSchemaScript.KEY_SCHEMA_VERSION), "Save payload is missing schema version.")
 	Validation.require_condition(payload.has(SaveSchemaScript.KEY_WALLET_COINS), "Save payload is missing wallet coins.")
+	Validation.require_condition(payload.has(SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID), "Save payload is missing player appearance id.")
 	Validation.require_condition(payload.has(SaveSchemaScript.KEY_CHASER_THEME_ID), "Save payload is missing chaser theme id.")
 	Validation.require_condition(payload.has(SaveSchemaScript.KEY_BODY_COSMETIC_ID), "Save payload is missing body cosmetic id.")
 	Validation.require_condition(payload.has(SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID), "Save payload is missing left-hand cosmetic id.")
@@ -113,6 +126,7 @@ static func assert_dictionary_valid(payload: Dictionary) -> void:
 
 	var raw_schema_version: Variant = payload[SaveSchemaScript.KEY_SCHEMA_VERSION]
 	var raw_wallet_coins: Variant = payload[SaveSchemaScript.KEY_WALLET_COINS]
+	var raw_player_appearance_id: Variant = payload[SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID]
 	var raw_chaser_theme_id: Variant = payload[SaveSchemaScript.KEY_CHASER_THEME_ID]
 	var raw_body_cosmetic_id: Variant = payload[SaveSchemaScript.KEY_BODY_COSMETIC_ID]
 	var raw_left_hand_cosmetic_id: Variant = payload[SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID]
@@ -122,6 +136,7 @@ static func assert_dictionary_valid(payload: Dictionary) -> void:
 
 	var schema_version_value: int = _integer_from_variant(raw_schema_version, "Save schema version must be an integer.")
 	var wallet_coin_count: int = _integer_from_variant(raw_wallet_coins, "Save wallet coins must be an integer.")
+	Validation.require_condition(raw_player_appearance_id is String or raw_player_appearance_id is StringName, "Save player appearance id must be a string.")
 	Validation.require_condition(raw_chaser_theme_id is String or raw_chaser_theme_id is StringName, "Save chaser theme id must be a string.")
 	Validation.require_condition(raw_body_cosmetic_id is String or raw_body_cosmetic_id is StringName, "Save body cosmetic id must be a string.")
 	Validation.require_condition(raw_left_hand_cosmetic_id is String or raw_left_hand_cosmetic_id is StringName, "Save left-hand cosmetic id must be a string.")
@@ -135,6 +150,7 @@ static func assert_dictionary_valid(payload: Dictionary) -> void:
 		"Save applied persistent transaction ids must be an array of strings."
 	)
 
+	var player_appearance_id_value: String = _string_id_from_variant(raw_player_appearance_id)
 	var chaser_theme_id_value: String = _theme_id_string_from_variant(raw_chaser_theme_id)
 	var body_cosmetic_id_value: String = _string_id_from_variant(raw_body_cosmetic_id)
 	var left_hand_cosmetic_id_value: String = _string_id_from_variant(raw_left_hand_cosmetic_id)
@@ -144,6 +160,7 @@ static func assert_dictionary_valid(payload: Dictionary) -> void:
 
 	Validation.require_condition(schema_version_value == SaveSchemaScript.VERSION, "Save schema version is unsupported.")
 	Validation.require_condition(wallet_coin_count >= 0, "Save wallet coins cannot be negative.")
+	Validation.require_condition(not player_appearance_id_value.is_empty(), "Save player appearance id cannot be empty.")
 	Validation.require_condition(not chaser_theme_id_value.is_empty(), "Save chaser theme id cannot be empty.")
 	Validation.require_condition(not body_cosmetic_id_value.is_empty(), "Save body cosmetic id cannot be empty.")
 	Validation.require_condition(not left_hand_cosmetic_id_value.is_empty(), "Save left-hand cosmetic id cannot be empty.")
@@ -156,17 +173,19 @@ static func from_dictionary(payload: Dictionary) -> RefCounted:
 
 	var wallet_coin_count: int = _integer_from_variant(payload[SaveSchemaScript.KEY_WALLET_COINS], "Save wallet coins must be an integer.")
 	var schema_version_value: int = _integer_from_variant(payload[SaveSchemaScript.KEY_SCHEMA_VERSION], "Save schema version must be an integer.")
+	var player_appearance_id_value: StringName = StringName(_string_id_from_variant(payload[SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID]))
 	var chaser_theme_id_value: StringName = StringName(_theme_id_string_from_variant(payload[SaveSchemaScript.KEY_CHASER_THEME_ID]))
 	var body_cosmetic_id_value: StringName = StringName(_string_id_from_variant(payload[SaveSchemaScript.KEY_BODY_COSMETIC_ID]))
 	var left_hand_cosmetic_id_value: StringName = StringName(_string_id_from_variant(payload[SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID]))
 	var right_hand_cosmetic_id_value: StringName = StringName(_string_id_from_variant(payload[SaveSchemaScript.KEY_RIGHT_HAND_COSMETIC_ID]))
 	var owned_ids: PackedStringArray = _owned_cosmetic_ids_from_variant(payload[SaveSchemaScript.KEY_OWNED_COSMETIC_IDS])
 	var transaction_ids: PackedStringArray = _transaction_ids_from_variant(payload[SaveSchemaScript.KEY_APPLIED_PERSISTENT_TRANSACTION_IDS])
-	return SELF_SCRIPT.new(wallet_coin_count, schema_version_value, chaser_theme_id_value, transaction_ids, owned_ids, body_cosmetic_id_value, left_hand_cosmetic_id_value, right_hand_cosmetic_id_value)
+	return SELF_SCRIPT.new(wallet_coin_count, schema_version_value, chaser_theme_id_value, transaction_ids, owned_ids, body_cosmetic_id_value, left_hand_cosmetic_id_value, right_hand_cosmetic_id_value, player_appearance_id_value)
 
 func is_valid() -> bool:
 	return schema_version == SaveSchemaScript.VERSION \
 		and wallet_coins >= 0 \
+		and not player_appearance_id.is_empty() \
 		and not chaser_theme_id.is_empty() \
 		and not body_cosmetic_id.is_empty() \
 		and not left_hand_cosmetic_id.is_empty() \
@@ -177,6 +196,7 @@ func is_valid() -> bool:
 func assert_valid() -> void:
 	Validation.require_condition(schema_version == SaveSchemaScript.VERSION, "Save schema version is unsupported.")
 	Validation.require_condition(wallet_coins >= 0, "Save wallet coins cannot be negative.")
+	Validation.require_condition(not player_appearance_id.is_empty(), "Save player appearance id cannot be empty.")
 	Validation.require_condition(not chaser_theme_id.is_empty(), "Save chaser theme id cannot be empty.")
 	Validation.require_condition(not body_cosmetic_id.is_empty(), "Save body cosmetic id cannot be empty.")
 	Validation.require_condition(not left_hand_cosmetic_id.is_empty(), "Save left-hand cosmetic id cannot be empty.")
@@ -188,6 +208,7 @@ func to_dictionary() -> Dictionary:
 	return {
 		SaveSchemaScript.KEY_SCHEMA_VERSION: schema_version,
 		SaveSchemaScript.KEY_WALLET_COINS: wallet_coins,
+		SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID: _theme_id_string_from_string_name(player_appearance_id),
 		SaveSchemaScript.KEY_CHASER_THEME_ID: _theme_id_string_from_string_name(chaser_theme_id),
 		SaveSchemaScript.KEY_BODY_COSMETIC_ID: _theme_id_string_from_string_name(body_cosmetic_id),
 		SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID: _theme_id_string_from_string_name(left_hand_cosmetic_id),

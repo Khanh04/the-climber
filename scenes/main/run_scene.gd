@@ -15,6 +15,9 @@ const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_
 const CosmeticItemScript = preload("res://resources/config/cosmetic_item.gd")
 const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
 const CosmeticLoadoutServiceScript = preload("res://src/cosmetics/cosmetic_loadout_service.gd")
+const PlayerAppearanceCatalogScript = preload("res://resources/config/player_appearance_catalog.gd")
+const PlayerAppearanceScript = preload("res://resources/config/player_appearance.gd")
+const PlayerAppearanceApplicatorScript = preload("res://src/cosmetics/player_appearance_applicator.gd")
 const CosmeticPurchaseOutcomeScript = preload("res://src/cosmetics/cosmetic_purchase_outcome.gd")
 const CosmeticPurchaseResultScript = preload("res://src/cosmetics/cosmetic_purchase_result.gd")
 const CosmeticUnlockPurchaseServiceScript = preload("res://src/cosmetics/cosmetic_unlock_purchase_service.gd")
@@ -116,6 +119,7 @@ const TUTORIAL_UPPER_HOLD_IDS: Array[StringName] = [
 @export var cosmetic_loadout: CosmeticLoadoutScript
 @export var chaser_theme_catalog: ChaserThemeCatalogScript
 @export var cosmetic_item_catalog: CosmeticItemCatalogScript
+@export var player_appearance_catalog: PlayerAppearanceCatalogScript
 
 @onready var _player: PlayerCharacterScript = %PlayerCharacter
 @onready var _chaser_kill_zone: ChaserKillZoneScript = get_node("ChaserKillZone") as ChaserKillZoneScript
@@ -164,6 +168,7 @@ var _wallet: WalletScript = WalletScript.new()
 var _world_surface_configurator: RunWorldSurfaceConfiguratorScript = RunWorldSurfaceConfiguratorScript.new()
 var _cosmetic_inventory: CosmeticInventoryScript = CosmeticInventoryScript.new()
 var _cosmetic_loadout_service: CosmeticLoadoutServiceScript = CosmeticLoadoutServiceScript.new()
+var _player_appearance_applicator: PlayerAppearanceApplicatorScript = PlayerAppearanceApplicatorScript.new()
 var _cosmetic_unlock_purchase_service: CosmeticUnlockPurchaseServiceScript = CosmeticUnlockPurchaseServiceScript.new()
 var _player_cosmetic_applicator: PlayerCosmeticApplicatorScript = PlayerCosmeticApplicatorScript.new()
 var _store_presenter: StorePresenterScript = StorePresenterScript.new(_cosmetic_loadout_service)
@@ -253,6 +258,7 @@ func _validate_required_state() -> void:
 	Validation.require_condition(cosmetic_loadout != null, "RunScene requires a cosmetic loadout before ready.")
 	Validation.require_condition(chaser_theme_catalog != null, "RunScene requires a chaser theme catalog before ready.")
 	Validation.require_condition(cosmetic_item_catalog != null, "RunScene requires a cosmetic item catalog before ready.")
+	Validation.require_condition(player_appearance_catalog != null, "RunScene requires a player appearance catalog before ready.")
 
 func set_local_storage_adapter(local_storage_adapter: RefCounted) -> void:
 	Validation.require_condition(local_storage_adapter != null, "RunScene requires a local storage adapter.")
@@ -943,13 +949,18 @@ func _apply_equipped_chaser_theme() -> void:
 	_chaser_kill_zone.apply_theme(chaser_theme_catalog.get_required_theme_by_id(cosmetic_loadout.chaser_theme_id))
 
 func _apply_cosmetic_loadout() -> void:
-	if _player == null or cosmetic_loadout == null or cosmetic_item_catalog == null:
+	if _player == null or cosmetic_loadout == null or cosmetic_item_catalog == null or player_appearance_catalog == null:
 		return
 
 	_cosmetic_loadout_service.assert_loadout_matches_catalog(cosmetic_loadout, cosmetic_item_catalog)
+	var active_appearance: PlayerAppearanceScript = player_appearance_catalog.get_required_appearance_by_id(cosmetic_loadout.player_appearance_id)
+	_player_appearance_applicator.apply_appearance(_player, active_appearance)
 	if _cosmetic_inventory != null:
 		_cosmetic_loadout_service.assert_loadout_owned(cosmetic_loadout, _cosmetic_inventory, cosmetic_item_catalog)
-	_player_cosmetic_applicator.apply_loadout(_player, cosmetic_loadout, cosmetic_item_catalog)
+	if active_appearance.hide_overlay_cosmetics:
+		_player_cosmetic_applicator.clear_loadout_visuals(_player)
+	else:
+		_player_cosmetic_applicator.apply_loadout(_player, cosmetic_loadout, cosmetic_item_catalog)
 	_apply_equipped_chaser_theme()
 
 func _duplicate_cosmetic_loadout(loadout: Resource) -> CosmeticLoadoutScript:

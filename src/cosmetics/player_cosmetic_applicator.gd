@@ -30,6 +30,15 @@ func apply_loadout(player: Node, loadout: Resource, catalog: Resource) -> void:
 	_apply_hand_cosmetic(typed_player.get_right_hand_cosmetic_root(), typed_catalog.get_required_item_by_id(typed_loadout.right_hand_cosmetic_id), APPLIED_RIGHT_HAND_NODE_NAME, false)
 	typed_player.assert_visual_roots_physics_neutral()
 
+func clear_loadout_visuals(player: Node) -> void:
+	Validation.require_condition(player != null, "PlayerCosmeticApplicator requires a player before clearing visuals.")
+	Validation.require_condition(player is PlayerCharacterScript, "PlayerCosmeticApplicator requires a PlayerCharacter implementation before clearing visuals.")
+	var typed_player: PlayerCharacterScript = player as PlayerCharacterScript
+	_clear_owned_node(typed_player.get_cosmetic_visual_root(), APPLIED_BODY_NODE_NAME)
+	_clear_owned_node(typed_player.get_left_hand_cosmetic_root(), APPLIED_LEFT_HAND_NODE_NAME)
+	_clear_owned_node(typed_player.get_right_hand_cosmetic_root(), APPLIED_RIGHT_HAND_NODE_NAME)
+	typed_player.assert_visual_roots_physics_neutral()
+
 func _apply_body_cosmetic(root: Node2D, item: CosmeticItemScript) -> void:
 	Validation.require_condition(root != null, "PlayerCosmeticApplicator requires a body cosmetic root.")
 	_assert_item_slot(item, CosmeticSlotScript.Value.BODY)

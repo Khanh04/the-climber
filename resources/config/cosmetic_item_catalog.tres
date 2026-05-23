@@ -8,6 +8,14 @@ script = ExtResource("2_item")
 display_name = "Trail Jacket"
 default_unlocked = true
 
+[sub_resource type="Resource" id="Resource_character_human"]
+script = ExtResource("2_item")
+item_id = &"character_human"
+display_name = "Human"
+slot = 4
+default_unlocked = true
+player_appearance_id = &"human"
+
 [sub_resource type="Resource" id="Resource_body_sunrise"]
 script = ExtResource("2_item")
 item_id = &"body_sunrise_jacket"
@@ -76,4 +84,4 @@ chaser_theme_id = &"glitch"
 
 [resource]
 script = ExtResource("1_catalog")
-items = Array[Resource]([SubResource("Resource_body_default"), SubResource("Resource_body_sunrise"), SubResource("Resource_left_hand_default"), SubResource("Resource_left_hand_gold"), SubResource("Resource_right_hand_default"), SubResource("Resource_right_hand_gold"), SubResource("Resource_chaser_rising_void"), SubResource("Resource_chaser_hot_coffee"), SubResource("Resource_chaser_glitch")])
+items = Array[Resource]([SubResource("Resource_body_default"), SubResource("Resource_character_human"), SubResource("Resource_body_sunrise"), SubResource("Resource_left_hand_default"), SubResource("Resource_left_hand_gold"), SubResource("Resource_right_hand_default"), SubResource("Resource_right_hand_gold"), SubResource("Resource_chaser_rising_void"), SubResource("Resource_chaser_hot_coffee"), SubResource("Resource_chaser_glitch")])

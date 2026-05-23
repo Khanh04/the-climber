@@ -17,13 +17,15 @@ func test_save_snapshot_round_trips_through_local_storage() -> void:
         owned_cosmetic_ids,
         &"body_default",
         &"left_hand_default",
-        &"right_hand_default"
+        &"right_hand_default",
+        &"human"
     )
 
     save_storage.save_snapshot(snapshot)
 
     assert_true(save_storage.has_snapshot())
     assert_eq(save_storage.load_snapshot().wallet_coins, 42)
+    assert_eq(save_storage.load_snapshot().player_appearance_id, &"human")
     assert_eq(save_storage.load_snapshot().chaser_theme_id, &"glitch")
     assert_eq(save_storage.load_snapshot().body_cosmetic_id, &"body_default")
     assert_eq(save_storage.load_snapshot().left_hand_cosmetic_id, &"left_hand_default")
@@ -35,6 +37,7 @@ func test_save_snapshot_dictionary_validation_rejects_unsupported_schema_version
     var payload: Dictionary = {
         SaveSchemaScript.KEY_SCHEMA_VERSION: 99,
         SaveSchemaScript.KEY_WALLET_COINS: 4,
+        SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID: "human",
         SaveSchemaScript.KEY_CHASER_THEME_ID: "rising_void",
         SaveSchemaScript.KEY_BODY_COSMETIC_ID: "body_default",
         SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID: "left_hand_default",
@@ -49,6 +52,7 @@ func test_save_snapshot_from_dictionary_accepts_integer_valued_json_numbers() ->
     var payload: Dictionary = {
         SaveSchemaScript.KEY_SCHEMA_VERSION: float(SaveSchemaScript.VERSION),
         SaveSchemaScript.KEY_WALLET_COINS: 4.0,
+        SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID: "human",
         SaveSchemaScript.KEY_CHASER_THEME_ID: "glitch",
         SaveSchemaScript.KEY_BODY_COSMETIC_ID: "body_default",
         SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID: "left_hand_default",
@@ -65,6 +69,7 @@ func test_save_snapshot_from_dictionary_accepts_integer_valued_json_numbers() ->
     var snapshot: SaveSnapshotScript = raw_snapshot as SaveSnapshotScript
     assert_eq(snapshot.schema_version, SaveSchemaScript.VERSION)
     assert_eq(snapshot.wallet_coins, 4)
+    assert_eq(snapshot.player_appearance_id, &"human")
     assert_eq(snapshot.chaser_theme_id, &"glitch")
     assert_eq(snapshot.body_cosmetic_id, &"body_default")
     assert_eq(snapshot.left_hand_cosmetic_id, &"left_hand_default")
@@ -76,6 +81,7 @@ func test_save_snapshot_dictionary_validation_rejects_negative_wallet_balance() 
     var payload: Dictionary = {
         SaveSchemaScript.KEY_SCHEMA_VERSION: SaveSchemaScript.VERSION,
         SaveSchemaScript.KEY_WALLET_COINS: -1,
+        SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID: "human",
         SaveSchemaScript.KEY_CHASER_THEME_ID: "rising_void",
         SaveSchemaScript.KEY_BODY_COSMETIC_ID: "body_default",
         SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID: "left_hand_default",
@@ -93,10 +99,26 @@ func test_save_snapshot_dictionary_validation_rejects_missing_required_fields() 
 
     assert_false(SaveSnapshotScript.is_dictionary_valid(payload))
 
+func test_save_snapshot_dictionary_validation_rejects_empty_player_appearance_id() -> void:
+    var payload: Dictionary = {
+        SaveSchemaScript.KEY_SCHEMA_VERSION: SaveSchemaScript.VERSION,
+        SaveSchemaScript.KEY_WALLET_COINS: 4,
+        SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID: "",
+        SaveSchemaScript.KEY_CHASER_THEME_ID: "rising_void",
+        SaveSchemaScript.KEY_BODY_COSMETIC_ID: "body_default",
+        SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID: "left_hand_default",
+        SaveSchemaScript.KEY_RIGHT_HAND_COSMETIC_ID: "right_hand_default",
+        SaveSchemaScript.KEY_OWNED_COSMETIC_IDS: [],
+        SaveSchemaScript.KEY_APPLIED_PERSISTENT_TRANSACTION_IDS: [],
+    }
+
+    assert_false(SaveSnapshotScript.is_dictionary_valid(payload))
+
 func test_save_snapshot_dictionary_validation_rejects_empty_chaser_theme_id() -> void:
     var payload: Dictionary = {
         SaveSchemaScript.KEY_SCHEMA_VERSION: SaveSchemaScript.VERSION,
         SaveSchemaScript.KEY_WALLET_COINS: 4,
+        SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID: "human",
         SaveSchemaScript.KEY_CHASER_THEME_ID: "",
         SaveSchemaScript.KEY_BODY_COSMETIC_ID: "body_default",
         SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID: "left_hand_default",
@@ -111,6 +133,7 @@ func test_save_snapshot_dictionary_validation_rejects_duplicate_transaction_ids(
     var payload: Dictionary = {
         SaveSchemaScript.KEY_SCHEMA_VERSION: SaveSchemaScript.VERSION,
         SaveSchemaScript.KEY_WALLET_COINS: 4,
+        SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID: "human",
         SaveSchemaScript.KEY_CHASER_THEME_ID: "rising_void",
         SaveSchemaScript.KEY_BODY_COSMETIC_ID: "body_default",
         SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID: "left_hand_default",
@@ -125,6 +148,7 @@ func test_save_snapshot_dictionary_validation_rejects_empty_transaction_ids() ->
     var payload: Dictionary = {
         SaveSchemaScript.KEY_SCHEMA_VERSION: SaveSchemaScript.VERSION,
         SaveSchemaScript.KEY_WALLET_COINS: 4,
+        SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID: "human",
         SaveSchemaScript.KEY_CHASER_THEME_ID: "rising_void",
         SaveSchemaScript.KEY_BODY_COSMETIC_ID: "body_default",
         SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID: "left_hand_default",
@@ -139,6 +163,7 @@ func test_save_snapshot_dictionary_validation_rejects_duplicate_owned_cosmetic_i
     var payload: Dictionary = {
         SaveSchemaScript.KEY_SCHEMA_VERSION: SaveSchemaScript.VERSION,
         SaveSchemaScript.KEY_WALLET_COINS: 4,
+        SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID: "human",
         SaveSchemaScript.KEY_CHASER_THEME_ID: "rising_void",
         SaveSchemaScript.KEY_BODY_COSMETIC_ID: "body_default",
         SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID: "left_hand_default",
@@ -153,6 +178,7 @@ func test_save_snapshot_dictionary_validation_rejects_empty_body_cosmetic_id() -
     var payload: Dictionary = {
         SaveSchemaScript.KEY_SCHEMA_VERSION: SaveSchemaScript.VERSION,
         SaveSchemaScript.KEY_WALLET_COINS: 4,
+        SaveSchemaScript.KEY_PLAYER_APPEARANCE_ID: "human",
         SaveSchemaScript.KEY_CHASER_THEME_ID: "rising_void",
         SaveSchemaScript.KEY_BODY_COSMETIC_ID: "",
         SaveSchemaScript.KEY_LEFT_HAND_COSMETIC_ID: "left_hand_default",

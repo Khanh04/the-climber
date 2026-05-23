@@ -1,9 +1,10 @@
 class_name SaveSchema
 extends RefCounted
 
-const VERSION: int = 4
+const VERSION: int = 5
 const KEY_SCHEMA_VERSION: String = "schema_version"
 const KEY_WALLET_COINS: String = "wallet_coins"
+const KEY_PLAYER_APPEARANCE_ID: String = "player_appearance_id"
 const KEY_CHASER_THEME_ID: String = "chaser_theme_id"
 const KEY_BODY_COSMETIC_ID: String = "body_cosmetic_id"
 const KEY_LEFT_HAND_COSMETIC_ID: String = "left_hand_cosmetic_id"

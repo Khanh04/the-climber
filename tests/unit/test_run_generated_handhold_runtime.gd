@@ -44,6 +44,7 @@ func test_resolve_attachment_changes_applies_release_impulse_to_player_body() ->
 	var generated_hold: GeneratedHandholdAdapterScript = fixture.get_node("GeneratedHold") as GeneratedHandholdAdapterScript
 	var controller: ClimbPrototypeControllerScript = _create_controller()
 	var runtime: RunGeneratedHandholdRuntimeScript = RunGeneratedHandholdRuntimeScript.new()
+	var starting_linear_velocity: Vector2 = player.get_body_linear_velocity()
 
 	controller.get_attachment_state().attach(
 		HandSideScript.Value.LEFT,
@@ -67,7 +68,7 @@ func test_resolve_attachment_changes_applies_release_impulse_to_player_body() ->
 		Callable(self, "_resolve_generated_handhold").bind(fixture)
 	)
 
-	assert_eq(player.get_body_linear_velocity(), release_impulse)
+	assert_eq(player.get_body_linear_velocity() - starting_linear_velocity, release_impulse)
 
 func _build_fixture(break_after_attach_seconds: float, breaks_on_release: bool, release_impulse: Vector2) -> Node2D:
 	var root: Node2D = Node2D.new()

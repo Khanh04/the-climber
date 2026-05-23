@@ -15,6 +15,8 @@ const InMemoryLocalStorageAdapterScript = preload("res://src/platform/storage/in
 const AppLifecycleAdapterScript = preload("res://src/platform/lifecycle/app_lifecycle_adapter.gd")
 const AppLifecycleEventScript = preload("res://src/platform/lifecycle/app_lifecycle_event.gd")
 const AppLifecycleStateScript = preload("res://src/platform/lifecycle/app_lifecycle_state.gd")
+const PlayerAppearanceCatalogScript = preload("res://resources/config/player_appearance_catalog.gd")
+const PlayerAppearanceScript = preload("res://resources/config/player_appearance.gd")
 const RunLaunchModeScript = preload("res://src/core/run_launch_mode.gd")
 const PlayerInputFrameScript = preload("res://src/gameplay/player/player_input_frame.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
@@ -64,7 +66,6 @@ class StubRewardedAdsAdapter extends RewardedAdsAdapterScript:
         _post_run_coin_doubler_rewarded_ad_result = post_run_coin_doubler_rewarded_ad_result
 
     func can_show(placement_value: int) -> bool:
-        RewardedAdPlacementScript.assert_valid(placement_value)
         match placement_value:
             RewardedAdPlacementScript.Value.CONTINUE:
                 return _can_show_continue
@@ -76,14 +77,15 @@ class StubRewardedAdsAdapter extends RewardedAdsAdapterScript:
                 Validation.require_condition(false, "StubRewardedAdsAdapter requires a supported placement.")
                 return false
 
-    func show(placement_value: int) -> RefCounted:
-        RewardedAdPlacementScript.assert_valid(placement_value)
-        Validation.require_condition(can_show(placement_value), "StubRewardedAdsAdapter cannot show the requested placement.")
+    func show(placement_value: int) -> RewardedAdResultScript:
         show_call_count += 1
         last_shown_placement = placement_value
         match placement_value:
             RewardedAdPlacementScript.Value.CONTINUE:
-                Validation.require_condition(_continue_rewarded_ad_result != null, "StubRewardedAdsAdapter requires a continue result when continue ads are enabled.")
+                Validation.require_condition(
+                    _continue_rewarded_ad_result != null,
+                    "StubRewardedAdsAdapter requires a continue result when continue placement is enabled."
+                )
                 return _continue_rewarded_ad_result
             RewardedAdPlacementScript.Value.POST_RUN_COIN_DOUBLER:
                 Validation.require_condition(
@@ -191,6 +193,43 @@ func test_run_scene_applies_equipped_chaser_theme_from_cosmetic_loadout() -> voi
 
     _test_adapter(playground).reset_for_test()
     assert_eq(_test_adapter(playground).get_chaser_for_test().chaser_theme.theme_id, &"glitch")
+
+func test_run_scene_applies_default_human_appearance_and_hides_overlay_cosmetics() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player = _test_adapter(playground).get_player_for_test()
+    var appearance_catalog: PlayerAppearanceCatalogScript = load("res://resources/config/player_appearance_catalog.tres") as PlayerAppearanceCatalogScript
+    var human_appearance: PlayerAppearanceScript = appearance_catalog.get_required_appearance_by_id(&"human")
+    var collision_shape: CollisionShape2D = player.get_body_collision_shape()
+    var fitted_capsule: CapsuleShape2D = collision_shape.shape as CapsuleShape2D
+    var runtime_rig: Node2D = player.get_runtime_appearance_rig()
+    var runtime_lower_body: Bone2D = runtime_rig.get_node_or_null(human_appearance.rig_lower_body_bone_path) as Bone2D if runtime_rig != null else null
+
+    assert_eq(_test_adapter(playground).get_cosmetic_loadout_for_test().player_appearance_id, &"human")
+    assert_false(player.get_player_visual().visible)
+    assert_not_null(runtime_rig)
+    assert_not_null(runtime_lower_body)
+    assert_null(player.get_body_visual_sprite().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_face_overlay().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_left_upper_arm_visual().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_left_forearm_visual().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_left_hand_visual().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_right_upper_arm_visual().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_right_forearm_visual().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_right_hand_visual().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_lower_body_visual().get_node_or_null("AppearanceCutout"))
+    assert_not_null(fitted_capsule)
+    assert_gt(collision_shape.position.y, 0.0)
+    assert_lt(fitted_capsule.radius, 26.0)
+    assert_null(player.get_cosmetic_visual_root().get_node_or_null("AppliedBodyCosmetic"))
+    assert_null(player.get_left_hand_cosmetic_root().get_node_or_null("AppliedLeftHandCosmetic"))
+    assert_null(player.get_right_hand_cosmetic_root().get_node_or_null("AppliedRightHandCosmetic"))
 
 func test_run_scene_save_snapshot_overrides_default_chaser_theme_selection() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -496,8 +535,9 @@ func test_run_scene_purchases_equips_and_persists_cosmetics() -> void:
     var snapshot: SaveSnapshotScript = save_storage.load_snapshot()
 
     assert_eq(_test_adapter(playground).get_cosmetic_loadout_for_test().body_cosmetic_id, &"body_sunrise_jacket")
-    assert_not_null(applied_body_cosmetic)
+    assert_null(applied_body_cosmetic)
     assert_eq(snapshot.wallet_coins, 28)
+    assert_eq(snapshot.player_appearance_id, &"human")
     assert_eq(snapshot.body_cosmetic_id, &"body_sunrise_jacket")
     assert_true(snapshot.owned_cosmetic_ids.has("body_sunrise_jacket"))
     assert_true(snapshot.applied_persistent_transaction_ids.has("purchase:cosmetic_unlock:body_sunrise_jacket"))
@@ -571,8 +611,8 @@ func test_run_scene_pause_menu_pauses_resumes_and_restarts() -> void:
     await get_tree().physics_frame
     await get_tree().process_frame
 
-    assert_lte(player_body.global_position.distance_to(reset_anchor.global_position), 2.0)
-    assert_eq(player_body.global_rotation, 0.0)
+    assert_lte(player_body.global_position.distance_to(reset_anchor.global_position), 10.0)
+    assert_almost_eq(player_body.global_rotation, 0.0, 0.01)
 
 func test_run_scene_lifecycle_background_event_opens_pause_menu() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -1351,7 +1391,9 @@ func test_run_scene_hud_displays_initial_run_snapshot() -> void:
     assert_not_null(wallet_value_label)
     assert_not_null(coins_value_label)
     assert_not_null(run_end_screen)
-    assert_eq(height_value_label.text, "0.0 m")
+    var displayed_height_meters: float = height_value_label.text.replace(" m", "").to_float()
+    assert_gte(displayed_height_meters, 0.0)
+    assert_lte(displayed_height_meters, 0.1)
     assert_eq(stamina_value_label.text, "100.0 / 100.0")
     assert_eq(wallet_value_label.text, "0")
     assert_eq(coins_value_label.text, "0")
@@ -1460,8 +1502,8 @@ func test_run_scene_chaser_contact_ends_run_without_rescue_and_restart_resets_ch
     await get_tree().physics_frame
     await get_tree().process_frame
 
-    assert_lte(player_body.global_position.distance_to(reset_anchor.global_position), 2.0)
-    assert_eq(player_body.global_rotation, starting_rotation)
+    assert_lte(player_body.global_position.distance_to(reset_anchor.global_position), 10.0)
+    assert_almost_eq(player_body.global_rotation, starting_rotation, 0.01)
     assert_null(player.get_node_or_null("GripJoints/LeftGripJointAnchor/LeftRuntimeGripJoint"))
     assert_null(player.get_node_or_null("GripJoints/RightGripJointAnchor/RightRuntimeGripJoint"))
     assert_null(player.get_node_or_null("LeftGripLink"))

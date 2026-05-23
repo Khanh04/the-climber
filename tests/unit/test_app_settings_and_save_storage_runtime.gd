@@ -75,10 +75,11 @@ func test_runtime_hydrates_save_state_and_applies_saved_cosmetic_selection() -> 
         SaveSchemaScript.VERSION,
         &"hot_coffee",
         PackedStringArray(["ad_reward:continue_offer_01"]),
-        PackedStringArray(["body_default", "body_sunrise_jacket", "left_hand_default", "right_hand_default", "chaser_hot_coffee"]),
+        PackedStringArray(["character_human", "body_default", "body_sunrise_jacket", "left_hand_default", "right_hand_default", "chaser_hot_coffee"]),
         &"body_sunrise_jacket",
         &"left_hand_default",
-        &"right_hand_default"
+        &"right_hand_default",
+        &"human"
     )
 
     runtime.set_save_snapshot(save_snapshot)
@@ -97,6 +98,7 @@ func test_runtime_hydrates_save_state_and_applies_saved_cosmetic_selection() -> 
         cosmetic_loadout_service
     )
 
+    assert_eq(cosmetic_loadout.player_appearance_id, &"human")
     assert_eq(cosmetic_loadout.chaser_theme_id, &"hot_coffee")
     assert_eq(cosmetic_loadout.body_cosmetic_id, &"body_sunrise_jacket")
 
@@ -127,6 +129,7 @@ func test_runtime_persists_save_state_from_runtime_models() -> void:
 
     assert_true(save_storage.has_snapshot())
     assert_eq(save_storage.load_snapshot().wallet_coins, 28)
+    assert_eq(save_storage.load_snapshot().player_appearance_id, &"human")
     assert_eq(save_storage.load_snapshot().body_cosmetic_id, &"body_sunrise_jacket")
     assert_true(save_storage.load_snapshot().owned_cosmetic_ids.has("body_sunrise_jacket"))
     assert_eq(

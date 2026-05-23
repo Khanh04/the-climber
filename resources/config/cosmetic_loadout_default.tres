@@ -1,10 +1,6 @@
-[gd_resource type="Resource" script_class="CosmeticLoadout" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="CosmeticLoadout" format=3 uid="uid://pkomv75rg3na"]
 
-[ext_resource type="Script" path="res://resources/config/cosmetic_loadout.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://dmcjlpf5j40hx" path="res://resources/config/cosmetic_loadout.gd" id="1_script"]
 
 [resource]
 script = ExtResource("1_script")
-chaser_theme_id = &"rising_void"
-body_cosmetic_id = &"body_default"
-left_hand_cosmetic_id = &"left_hand_default"
-right_hand_cosmetic_id = &"right_hand_default"

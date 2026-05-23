@@ -51,6 +51,7 @@ func apply_state(state: RefCounted) -> void:
 func _populate_slot_filter_options() -> void:
 	_slot_filter_option.clear()
 	_slot_filter_option.add_item("All", ALL_SLOTS_FILTER_ID)
+	_slot_filter_option.add_item(CosmeticSlotScript.to_label(CosmeticSlotScript.Value.PLAYER_APPEARANCE), CosmeticSlotScript.Value.PLAYER_APPEARANCE)
 	_slot_filter_option.add_item(CosmeticSlotScript.to_label(CosmeticSlotScript.Value.BODY), CosmeticSlotScript.Value.BODY)
 	_slot_filter_option.add_item(CosmeticSlotScript.to_label(CosmeticSlotScript.Value.LEFT_HAND), CosmeticSlotScript.Value.LEFT_HAND)
 	_slot_filter_option.add_item(CosmeticSlotScript.to_label(CosmeticSlotScript.Value.RIGHT_HAND), CosmeticSlotScript.Value.RIGHT_HAND)

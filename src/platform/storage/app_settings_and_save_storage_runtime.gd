@@ -105,7 +105,8 @@ func load_or_create_save_state(default_loadout: CosmeticLoadoutScript, cosmetic_
 				_get_owned_item_ids_for_new_save(default_loadout, cosmetic_item_catalog),
 				default_loadout.body_cosmetic_id,
 				default_loadout.left_hand_cosmetic_id,
-				default_loadout.right_hand_cosmetic_id
+				default_loadout.right_hand_cosmetic_id,
+				default_loadout.player_appearance_id
 			)
 
 func persist_save_state(
@@ -130,7 +131,8 @@ func persist_save_state(
 		cosmetic_inventory.get_owned_item_ids(),
 		cosmetic_loadout.body_cosmetic_id,
 		cosmetic_loadout.left_hand_cosmetic_id,
-		cosmetic_loadout.right_hand_cosmetic_id
+		cosmetic_loadout.right_hand_cosmetic_id,
+		cosmetic_loadout.player_appearance_id
 	)
 	save_storage.save_snapshot(snapshot)
 	save_snapshot = snapshot
@@ -187,6 +189,7 @@ func apply_saved_cosmetic_selection(
 	Validation.require_condition(cosmetic_item_catalog != null, "AppSettingsAndSaveStorageRuntime requires a cosmetic item catalog before applying saved selection.")
 	Validation.require_condition(cosmetic_loadout_service != null, "AppSettingsAndSaveStorageRuntime requires a cosmetic loadout service before applying saved selection.")
 	var snapshot: SaveSnapshotScript = get_save_snapshot()
+	cosmetic_loadout.player_appearance_id = snapshot.player_appearance_id
 	cosmetic_loadout.chaser_theme_id = snapshot.chaser_theme_id
 	cosmetic_loadout.body_cosmetic_id = snapshot.body_cosmetic_id
 	cosmetic_loadout.left_hand_cosmetic_id = snapshot.left_hand_cosmetic_id

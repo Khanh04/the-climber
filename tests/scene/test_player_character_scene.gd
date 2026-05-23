@@ -5,6 +5,9 @@ const HandAttachmentStateScript = preload("res://src/gameplay/player/hand_attach
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_catalog.gd")
 const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
+const PlayerAppearanceScript = preload("res://resources/config/player_appearance.gd")
+const PlayerAppearanceCatalogScript = preload("res://resources/config/player_appearance_catalog.gd")
+const PlayerAppearanceApplicatorScript = preload("res://src/cosmetics/player_appearance_applicator.gd")
 const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
 const PlayerCosmeticApplicatorScript = preload("res://src/cosmetics/player_cosmetic_applicator.gd")
@@ -179,6 +182,71 @@ func test_player_cosmetic_applicator_adds_visuals_without_changing_physics() -> 
     assert_eq(body.collision_layer, starting_collision_layer)
     assert_eq(body.collision_mask, starting_collision_mask)
     assert_eq(player.get_body_collision_shape().shape, starting_collision_shape)
+
+func test_player_appearance_applicator_applies_human_rig_without_changing_physics() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var catalog: PlayerAppearanceCatalogScript = load("res://resources/config/player_appearance_catalog.tres") as PlayerAppearanceCatalogScript
+    var applicator := PlayerAppearanceApplicatorScript.new()
+    var body: RigidBody2D = player.get_player_body()
+    var starting_mass: float = body.mass
+    var starting_collision_layer: int = body.collision_layer
+    var starting_collision_mask: int = body.collision_mask
+    var starting_collision_shape: Shape2D = player.get_body_collision_shape().shape
+    var starting_capsule: CapsuleShape2D = starting_collision_shape as CapsuleShape2D
+    var starting_collision_position: Vector2 = player.get_body_collision_shape().position
+
+    assert_not_null(catalog)
+    assert_not_null(starting_capsule)
+    var human_appearance: PlayerAppearanceScript = catalog.get_required_appearance_by_id(&"human")
+    applicator.apply_appearance(player, human_appearance)
+
+    var fitted_collision_shape: Shape2D = player.get_body_collision_shape().shape
+    var fitted_capsule: CapsuleShape2D = fitted_collision_shape as CapsuleShape2D
+    var runtime_rig: Node2D = player.get_runtime_appearance_rig()
+    var runtime_left_upper_arm: Bone2D = runtime_rig.get_node_or_null(human_appearance.rig_left_upper_arm_bone_path) as Bone2D if runtime_rig != null else null
+    var runtime_right_forearm: Bone2D = runtime_rig.get_node_or_null(human_appearance.rig_right_forearm_bone_path) as Bone2D if runtime_rig != null else null
+    var runtime_lower_body: Bone2D = runtime_rig.get_node_or_null(human_appearance.rig_lower_body_bone_path) as Bone2D if runtime_rig != null else null
+    var gameplay_left_upper_arm: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone") as Bone2D
+    var gameplay_right_forearm: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone") as Bone2D
+    var gameplay_lower_body: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone") as Bone2D
+
+    assert_false(player.get_player_visual().visible)
+    assert_null(player.get_body_visual_sprite().texture)
+    assert_null(player.get_face_overlay().texture)
+    assert_null(player.get_left_upper_arm_visual().texture)
+    assert_null(player.get_left_forearm_visual().texture)
+    assert_null(player.get_left_hand_visual().texture)
+    assert_null(player.get_right_upper_arm_visual().texture)
+    assert_null(player.get_right_forearm_visual().texture)
+    assert_null(player.get_right_hand_visual().texture)
+    assert_null(player.get_lower_body_visual().texture)
+    assert_null(player.get_body_visual_sprite().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_face_overlay().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_left_upper_arm_visual().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_left_forearm_visual().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_left_hand_visual().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_right_upper_arm_visual().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_right_forearm_visual().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_right_hand_visual().get_node_or_null("AppearanceCutout"))
+    assert_null(player.get_lower_body_visual().get_node_or_null("AppearanceCutout"))
+    assert_not_null(runtime_rig)
+    assert_eq(runtime_rig.get_parent(), player.get_visual_root())
+    assert_not_null(runtime_left_upper_arm)
+    assert_not_null(runtime_right_forearm)
+    assert_not_null(runtime_lower_body)
+    assert_almost_eq(runtime_left_upper_arm.global_rotation, gameplay_left_upper_arm.global_rotation, 0.001)
+    assert_almost_eq(runtime_right_forearm.global_rotation, gameplay_right_forearm.global_rotation, 0.001)
+    assert_almost_eq(runtime_lower_body.global_rotation, gameplay_lower_body.global_rotation, 0.001)
+    assert_not_null(fitted_capsule)
+    assert_true(fitted_collision_shape is CapsuleShape2D)
+    assert_ne(fitted_collision_shape, starting_collision_shape)
+    assert_lt(fitted_capsule.radius, starting_capsule.radius)
+    assert_gt(fitted_capsule.height, starting_capsule.height)
+    assert_gt(player.get_body_collision_shape().position.y, starting_collision_position.y)
+    player.assert_visual_roots_physics_neutral()
+    assert_eq(body.mass, starting_mass)
+    assert_eq(body.collision_layer, starting_collision_layer)
+    assert_eq(body.collision_mask, starting_collision_mask)
 
 func test_player_character_grip_joints_target_player_body() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
