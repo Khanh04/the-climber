@@ -143,19 +143,82 @@ func test_player_character_visual_arm_bones_follow_hand_targets() -> void:
     player.set_body_linear_velocity(Vector2(300.0, 0.0))
     player._physics_process(1.0 / 60.0)
 
-    assert_lt(left_hand_bone.global_position.x, starting_position.x)
+    assert_eq(left_hand_bone.global_position, starting_position)
 
-func test_player_character_grip_pose_targets_visual_hand_bone_toward_hold() -> void:
+func test_player_character_unattached_motion_keeps_rest_pose() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var left_upper_arm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone") as Bone2D
+    var left_forearm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone") as Bone2D
+    var lower_body_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone") as Bone2D
+    var starting_left_upper_arm_rotation: float = left_upper_arm_bone.rotation
+    var starting_left_forearm_rotation: float = left_forearm_bone.rotation
+    var starting_lower_body_rotation: float = lower_body_bone.rotation
+
+    player.set_body_linear_velocity(Vector2(600.0, 0.0))
+    player._physics_process(1.0 / 60.0)
+
+    assert_almost_eq(left_upper_arm_bone.rotation, starting_left_upper_arm_rotation, 0.001)
+    assert_almost_eq(left_forearm_bone.rotation, starting_left_forearm_rotation, 0.001)
+    assert_almost_eq(lower_body_bone.rotation, starting_lower_body_rotation, 0.001)
+
+func test_player_character_left_grip_pose_uses_static_attached_rotations() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
     var hold: StaticBody2D = _create_hold(&"LeftHold", Vector2(180.0, 260.0))
     var attachment_state := HandAttachmentStateScript.new()
+    var left_upper_arm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone") as Bone2D
     var left_hand_bone: Bone2D = player.get_left_hand_bone()
-    var starting_distance_to_hold: float = left_hand_bone.global_position.distance_to(hold.global_position)
+    var left_forearm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone") as Bone2D
+    var starting_left_upper_arm_rotation: float = left_upper_arm_bone.rotation
+    var starting_left_forearm_rotation: float = left_forearm_bone.rotation
+    var starting_left_hand_rotation: float = left_hand_bone.rotation
 
     attachment_state.attach(HandSideScript.Value.LEFT, &"left_hold", hold.global_position, hold.get_path())
     player.apply_frame_motion(ClimbPrototypeFrameResultScript.new(Vector2.ZERO, false, 1), attachment_state)
 
-    assert_lt(left_hand_bone.global_position.distance_to(hold.global_position), starting_distance_to_hold)
+    assert_almost_eq(left_upper_arm_bone.rotation - starting_left_upper_arm_rotation, 0.45, 0.001)
+    assert_almost_eq(left_forearm_bone.rotation - starting_left_forearm_rotation, 1.2, 0.001)
+    assert_almost_eq(left_hand_bone.rotation - starting_left_hand_rotation, 0.9, 0.001)
+
+func test_player_character_right_grip_pose_uses_static_attached_rotations() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var hold: StaticBody2D = _create_hold(&"RightHold", Vector2(60.0, 260.0))
+    var attachment_state := HandAttachmentStateScript.new()
+    var right_upper_arm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone") as Bone2D
+    var right_hand_bone: Bone2D = player.get_right_hand_bone()
+    var right_forearm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone") as Bone2D
+    var starting_right_upper_arm_rotation: float = right_upper_arm_bone.rotation
+    var starting_right_forearm_rotation: float = right_forearm_bone.rotation
+    var starting_right_hand_rotation: float = right_hand_bone.rotation
+
+    attachment_state.attach(HandSideScript.Value.RIGHT, &"right_hold", hold.global_position, hold.get_path())
+    player.apply_frame_motion(ClimbPrototypeFrameResultScript.new(Vector2.ZERO, false, 1), attachment_state)
+
+    assert_almost_eq(right_upper_arm_bone.rotation - starting_right_upper_arm_rotation, -0.45, 0.001)
+    assert_almost_eq(right_forearm_bone.rotation - starting_right_forearm_rotation, -1.2, 0.001)
+    assert_almost_eq(right_hand_bone.rotation - starting_right_hand_rotation, -0.9, 0.001)
+
+func test_player_character_grab_pose_disables_free_side_and_lower_body_animation() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var hold: StaticBody2D = _create_hold(&"LeftHold", Vector2(180.0, 260.0))
+    var attachment_state := HandAttachmentStateScript.new()
+    var right_upper_arm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone") as Bone2D
+    var right_forearm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone") as Bone2D
+    var right_hand_bone: Bone2D = player.get_right_hand_bone()
+    var lower_body_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone") as Bone2D
+    var starting_right_upper_arm_rotation: float = right_upper_arm_bone.rotation
+    var starting_right_forearm_rotation: float = right_forearm_bone.rotation
+    var starting_right_hand_rotation: float = right_hand_bone.rotation
+    var starting_lower_body_rotation: float = lower_body_bone.rotation
+
+    player.set_body_linear_velocity(Vector2(600.0, 0.0))
+    attachment_state.attach(HandSideScript.Value.LEFT, &"left_hold", hold.global_position, hold.get_path())
+    player.apply_frame_motion(ClimbPrototypeFrameResultScript.new(Vector2.ZERO, false, 1), attachment_state)
+    player._physics_process(1.0 / 60.0)
+
+    assert_almost_eq(right_upper_arm_bone.rotation, starting_right_upper_arm_rotation, 0.001)
+    assert_almost_eq(right_forearm_bone.rotation, starting_right_forearm_rotation, 0.001)
+    assert_almost_eq(right_hand_bone.rotation, starting_right_hand_rotation, 0.001)
+    assert_almost_eq(lower_body_bone.rotation, starting_lower_body_rotation, 0.001)
 
 func test_player_cosmetic_applicator_adds_visuals_without_changing_physics() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
@@ -234,9 +297,14 @@ func test_player_appearance_applicator_applies_human_rig_without_changing_physic
     assert_not_null(runtime_left_upper_arm)
     assert_not_null(runtime_right_forearm)
     assert_not_null(runtime_lower_body)
-    assert_almost_eq(runtime_left_upper_arm.global_rotation, gameplay_left_upper_arm.global_rotation, 0.001)
-    assert_almost_eq(runtime_right_forearm.global_rotation, gameplay_right_forearm.global_rotation, 0.001)
-    assert_almost_eq(runtime_lower_body.global_rotation, gameplay_lower_body.global_rotation, 0.001)
+    var left_upper_arm_rotation_offset: float = wrapf(runtime_left_upper_arm.rotation - gameplay_left_upper_arm.rotation, -PI, PI)
+    var right_forearm_rotation_offset: float = wrapf(runtime_right_forearm.rotation - gameplay_right_forearm.rotation, -PI, PI)
+    var lower_body_rotation_offset: float = wrapf(runtime_lower_body.rotation - gameplay_lower_body.rotation, -PI, PI)
+    player.set_body_linear_velocity(Vector2(300.0, 0.0))
+    player._physics_process(1.0 / 60.0)
+    assert_almost_eq(wrapf((runtime_left_upper_arm.rotation - gameplay_left_upper_arm.rotation) - left_upper_arm_rotation_offset, -PI, PI), 0.0, 0.001)
+    assert_almost_eq(wrapf((runtime_right_forearm.rotation - gameplay_right_forearm.rotation) - right_forearm_rotation_offset, -PI, PI), 0.0, 0.001)
+    assert_almost_eq(wrapf((runtime_lower_body.rotation - gameplay_lower_body.rotation) - lower_body_rotation_offset, -PI, PI), 0.0, 0.001)
     assert_not_null(fitted_capsule)
     assert_true(fitted_collision_shape is CapsuleShape2D)
     assert_ne(fitted_collision_shape, starting_collision_shape)
@@ -324,6 +392,12 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
     var attachment_state := HandAttachmentStateScript.new()
     var player_body: RigidBody2D = player.get_player_body()
     var starting_rotation: float = player_body.global_rotation
+    var left_upper_arm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone") as Bone2D
+    var left_forearm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone") as Bone2D
+    var lower_body_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone") as Bone2D
+    var starting_left_upper_arm_rotation: float = left_upper_arm_bone.rotation
+    var starting_left_forearm_rotation: float = left_forearm_bone.rotation
+    var starting_lower_body_rotation: float = lower_body_bone.rotation
 
     assert_eq(player_body.collision_mask, 1)
 
@@ -331,6 +405,9 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
 
     assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
     assert_eq(player_body.collision_mask, 3)
+    assert_almost_eq(left_upper_arm_bone.rotation, starting_left_upper_arm_rotation, 0.001)
+    assert_almost_eq(left_forearm_bone.rotation, starting_left_forearm_rotation, 0.001)
+    assert_almost_eq(lower_body_bone.rotation, starting_lower_body_rotation, 0.001)
 
     player_body.global_rotation = 0.65
     player_body.angular_velocity = 4.0

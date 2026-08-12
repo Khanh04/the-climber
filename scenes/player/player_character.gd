@@ -14,6 +14,12 @@ const CONTROLLED_COLLISION_MASK: int = 1
 const FALLING_COLLISION_MASK: int = 3
 const BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = PI / 2.0
 const MIN_ARM_TARGET_DISTANCE_PIXELS: float = 4.0
+const LEFT_ATTACHED_UPPER_ARM_ROTATION_OFFSET: float = 0.45
+const LEFT_ATTACHED_FOREARM_ROTATION_OFFSET: float = 1.2
+const LEFT_ATTACHED_HAND_ROTATION_OFFSET: float = 0.9
+const RIGHT_ATTACHED_UPPER_ARM_ROTATION_OFFSET: float = -0.45
+const RIGHT_ATTACHED_FOREARM_ROTATION_OFFSET: float = -1.2
+const RIGHT_ATTACHED_HAND_ROTATION_OFFSET: float = -0.9
 const APPLIED_APPEARANCE_RIG_NODE_NAME: StringName = &"AppliedAppearanceRig"
 
 @export var climb_tuning: ClimbPrototypeTuningScript
@@ -65,6 +71,20 @@ var _runtime_appearance_left_hand_bone: Bone2D = null
 var _runtime_appearance_right_upper_arm_bone: Bone2D = null
 var _runtime_appearance_right_forearm_bone: Bone2D = null
 var _runtime_appearance_right_hand_bone: Bone2D = null
+var _lower_body_rest_rotation: float = 0.0
+var _left_upper_arm_rest_rotation: float = 0.0
+var _left_forearm_rest_rotation: float = 0.0
+var _left_hand_rest_rotation: float = 0.0
+var _right_upper_arm_rest_rotation: float = 0.0
+var _right_forearm_rest_rotation: float = 0.0
+var _right_hand_rest_rotation: float = 0.0
+var _runtime_appearance_lower_body_rest_rotation: float = 0.0
+var _runtime_appearance_left_upper_arm_rest_rotation: float = 0.0
+var _runtime_appearance_left_forearm_rest_rotation: float = 0.0
+var _runtime_appearance_left_hand_rest_rotation: float = 0.0
+var _runtime_appearance_right_upper_arm_rest_rotation: float = 0.0
+var _runtime_appearance_right_forearm_rest_rotation: float = 0.0
+var _runtime_appearance_right_hand_rest_rotation: float = 0.0
 var _hand_visual_follow_controller: HandVisualFollowControllerScript
 var _motion_controller: PlayerMotionControllerScript
 var _left_hand_visual_offset_from_reach: Vector2 = Vector2.ZERO
@@ -311,9 +331,23 @@ func apply_runtime_appearance_rig(
 	_runtime_appearance_right_upper_arm_bone = _require_bone_2d_from_root(typed_rig, right_upper_arm_bone_path, "PlayerCharacter appearance rig requires a right upper arm driver bone.")
 	_runtime_appearance_right_forearm_bone = _require_bone_2d_from_root(typed_rig, right_forearm_bone_path, "PlayerCharacter appearance rig requires a right forearm driver bone.")
 	_runtime_appearance_right_hand_bone = _require_bone_2d_from_root(typed_rig, right_hand_bone_path, "PlayerCharacter appearance rig requires a right hand driver bone.")
+	_runtime_appearance_lower_body_rest_rotation = _runtime_appearance_lower_body_bone.rotation
+	_runtime_appearance_left_upper_arm_rest_rotation = _runtime_appearance_left_upper_arm_bone.rotation
+	_runtime_appearance_left_forearm_rest_rotation = _runtime_appearance_left_forearm_bone.rotation
+	_runtime_appearance_left_hand_rest_rotation = _runtime_appearance_left_hand_bone.rotation
+	_runtime_appearance_right_upper_arm_rest_rotation = _runtime_appearance_right_upper_arm_bone.rotation
+	_runtime_appearance_right_forearm_rest_rotation = _runtime_appearance_right_forearm_bone.rotation
+	_runtime_appearance_right_hand_rest_rotation = _runtime_appearance_right_hand_bone.rotation
 	_sync_runtime_appearance_rig_pose()
 
 func clear_runtime_appearance_rig() -> void:
+	_runtime_appearance_lower_body_rest_rotation = 0.0
+	_runtime_appearance_left_upper_arm_rest_rotation = 0.0
+	_runtime_appearance_left_forearm_rest_rotation = 0.0
+	_runtime_appearance_left_hand_rest_rotation = 0.0
+	_runtime_appearance_right_upper_arm_rest_rotation = 0.0
+	_runtime_appearance_right_forearm_rest_rotation = 0.0
+	_runtime_appearance_right_hand_rest_rotation = 0.0
 	_runtime_appearance_lower_body_bone = null
 	_runtime_appearance_left_upper_arm_bone = null
 	_runtime_appearance_left_forearm_bone = null
@@ -398,6 +432,13 @@ func _validate_required_state() -> void:
 	_right_forearm_bone = _require_bone_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone", "PlayerCharacter requires RightForearmBone.")
 	_right_hand_bone = _require_bone_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone/RightHandBone", "PlayerCharacter requires RightHandBone.")
 	_lower_body_bone = _require_bone_2d("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone", "PlayerCharacter requires LowerBodyBone.")
+	_left_upper_arm_rest_rotation = _left_upper_arm_bone.rotation
+	_left_forearm_rest_rotation = _left_forearm_bone.rotation
+	_left_hand_rest_rotation = _left_hand_bone.rotation
+	_right_upper_arm_rest_rotation = _right_upper_arm_bone.rotation
+	_right_forearm_rest_rotation = _right_forearm_bone.rotation
+	_right_hand_rest_rotation = _right_hand_bone.rotation
+	_lower_body_rest_rotation = _lower_body_bone.rotation
 	_player_body = _require_rigid_body_2d("BaseSkeleton/PlayerBody", "PlayerCharacter requires PlayerBody.")
 	_body_collision_shape = _require_collision_shape_2d("BaseSkeleton/PlayerBody/BodyCollisionShape", "PlayerCharacter requires BodyCollisionShape.")
 	_left_shoulder_socket = _require_marker_2d("BaseSkeleton/PlayerBody/LeftShoulderSocket", "PlayerCharacter requires LeftShoulderSocket.")
@@ -495,39 +536,62 @@ func _sync_hand_visual_anchors(delta: float) -> void:
 	)
 
 func _sync_visual_bones() -> void:
-	_sync_arm_bone_chain(
-		_left_upper_arm_bone,
-		_left_forearm_bone,
-		_left_hand_bone,
-		_left_shoulder_socket.global_position,
-		_get_hand_pose_target_global_position(HandSideScript.Value.LEFT),
-		true
-	)
-	_sync_arm_bone_chain(
-		_right_upper_arm_bone,
-		_right_forearm_bone,
-		_right_hand_bone,
-		_right_shoulder_socket.global_position,
-		_get_hand_pose_target_global_position(HandSideScript.Value.RIGHT),
-		false
-	)
-	_sync_lower_body_bone()
+	_sync_idle_rest_pose()
+	if _left_runtime_grip_joint != null or _right_runtime_grip_joint != null:
+		if _left_runtime_grip_joint != null:
+			_sync_attached_side_static_pose(
+				_left_upper_arm_bone,
+				_left_forearm_bone,
+				_left_hand_bone,
+				_left_shoulder_socket.global_position,
+				HandSideScript.Value.LEFT
+			)
+		if _right_runtime_grip_joint != null:
+			_sync_attached_side_static_pose(
+				_right_upper_arm_bone,
+				_right_forearm_bone,
+				_right_hand_bone,
+				_right_shoulder_socket.global_position,
+				HandSideScript.Value.RIGHT
+			)
 	_sync_runtime_appearance_rig_pose()
 
-func _get_hand_pose_target_global_position(hand_side: int) -> Vector2:
+func _sync_idle_rest_pose() -> void:
+	_left_upper_arm_bone.global_position = _left_shoulder_socket.global_position
+	_right_upper_arm_bone.global_position = _right_shoulder_socket.global_position
+	_left_upper_arm_bone.rotation = _left_upper_arm_rest_rotation
+	_left_forearm_bone.rotation = _left_forearm_rest_rotation
+	_left_hand_bone.rotation = _left_hand_rest_rotation
+	_right_upper_arm_bone.rotation = _right_upper_arm_rest_rotation
+	_right_forearm_bone.rotation = _right_forearm_rest_rotation
+	_right_hand_bone.rotation = _right_hand_rest_rotation
+	_lower_body_bone.rotation = _lower_body_rest_rotation
+
+func _sync_attached_side_static_pose(
+	upper_arm_bone: Bone2D,
+	forearm_bone: Bone2D,
+	hand_bone: Bone2D,
+	shoulder_global_position: Vector2,
+	hand_side: int
+) -> void:
+	Validation.require_condition(upper_arm_bone != null, "PlayerCharacter requires an upper arm bone to sync attached pose.")
+	Validation.require_condition(forearm_bone != null, "PlayerCharacter requires a forearm bone to sync attached pose.")
+	Validation.require_condition(hand_bone != null, "PlayerCharacter requires a hand bone to sync attached pose.")
+
+	upper_arm_bone.global_position = shoulder_global_position
 	if hand_side == HandSideScript.Value.LEFT:
-		if _left_runtime_grip_joint != null:
-			return _left_runtime_grip_joint.global_position
-		return _left_hand_visual_anchor.global_position
+		upper_arm_bone.rotation = _left_upper_arm_rest_rotation + LEFT_ATTACHED_UPPER_ARM_ROTATION_OFFSET
+		forearm_bone.rotation = _left_forearm_rest_rotation + LEFT_ATTACHED_FOREARM_ROTATION_OFFSET
+		hand_bone.rotation = _left_hand_rest_rotation + LEFT_ATTACHED_HAND_ROTATION_OFFSET
+		return
 
 	if hand_side == HandSideScript.Value.RIGHT:
-		if _right_runtime_grip_joint != null:
-			return _right_runtime_grip_joint.global_position
-		return _right_hand_visual_anchor.global_position
+		upper_arm_bone.rotation = _right_upper_arm_rest_rotation + RIGHT_ATTACHED_UPPER_ARM_ROTATION_OFFSET
+		forearm_bone.rotation = _right_forearm_rest_rotation + RIGHT_ATTACHED_FOREARM_ROTATION_OFFSET
+		hand_bone.rotation = _right_hand_rest_rotation + RIGHT_ATTACHED_HAND_ROTATION_OFFSET
+		return
 
-	Validation.require_condition(false, "PlayerCharacter received unsupported hand side for pose target.")
-	return Vector2.ZERO
-
+	Validation.require_condition(false, "PlayerCharacter received unsupported hand side for attached pose sync.")
 func _sync_arm_bone_chain(
 	upper_arm_bone: Bone2D,
 	forearm_bone: Bone2D,
@@ -579,13 +643,16 @@ func _sync_runtime_appearance_rig_pose() -> void:
 	Validation.require_condition(_runtime_appearance_right_forearm_bone != null, "PlayerCharacter appearance rig requires a right forearm driver bone before syncing pose.")
 	Validation.require_condition(_runtime_appearance_right_hand_bone != null, "PlayerCharacter appearance rig requires a right hand driver bone before syncing pose.")
 
-	_runtime_appearance_lower_body_bone.global_rotation = _lower_body_bone.global_rotation
-	_runtime_appearance_left_upper_arm_bone.global_rotation = _left_upper_arm_bone.global_rotation
-	_runtime_appearance_left_forearm_bone.global_rotation = _left_forearm_bone.global_rotation
-	_runtime_appearance_left_hand_bone.global_rotation = _left_hand_bone.global_rotation
-	_runtime_appearance_right_upper_arm_bone.global_rotation = _right_upper_arm_bone.global_rotation
-	_runtime_appearance_right_forearm_bone.global_rotation = _right_forearm_bone.global_rotation
-	_runtime_appearance_right_hand_bone.global_rotation = _right_hand_bone.global_rotation
+	_runtime_appearance_lower_body_bone.rotation = _runtime_appearance_lower_body_rest_rotation + _rotation_delta(_lower_body_bone.rotation, _lower_body_rest_rotation)
+	_runtime_appearance_left_upper_arm_bone.rotation = _runtime_appearance_left_upper_arm_rest_rotation + _rotation_delta(_left_upper_arm_bone.rotation, _left_upper_arm_rest_rotation)
+	_runtime_appearance_left_forearm_bone.rotation = _runtime_appearance_left_forearm_rest_rotation + _rotation_delta(_left_forearm_bone.rotation, _left_forearm_rest_rotation)
+	_runtime_appearance_left_hand_bone.rotation = _runtime_appearance_left_hand_rest_rotation + _rotation_delta(_left_hand_bone.rotation, _left_hand_rest_rotation)
+	_runtime_appearance_right_upper_arm_bone.rotation = _runtime_appearance_right_upper_arm_rest_rotation + _rotation_delta(_right_upper_arm_bone.rotation, _right_upper_arm_rest_rotation)
+	_runtime_appearance_right_forearm_bone.rotation = _runtime_appearance_right_forearm_rest_rotation + _rotation_delta(_right_forearm_bone.rotation, _right_forearm_rest_rotation)
+	_runtime_appearance_right_hand_bone.rotation = _runtime_appearance_right_hand_rest_rotation + _rotation_delta(_right_hand_bone.rotation, _right_hand_rest_rotation)
+
+func _rotation_delta(current_rotation: float, rest_rotation: float) -> float:
+	return wrapf(current_rotation - rest_rotation, -PI, PI)
 
 func _require_skeleton_2d(node_path: NodePath, message: String) -> Skeleton2D:
 	var node: Node = get_node_or_null(node_path)

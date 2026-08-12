@@ -1,0 +1,12 @@
+[gd_scene format=3 uid="uid://crgw0r7fshwsc"]
+
+[ext_resource type="Script" path="res://src/debug/player_rig_preview.gd" id="1_script"]
+[ext_resource type="Resource" uid="uid://dmuooovvgsc1c" path="res://resources/config/player_appearance_catalog.tres" id="2_appearance_catalog"]
+
+[node name="PlayerRigPreview" type="Node2D"]
+script = ExtResource("1_script")
+appearance_catalog = ExtResource("2_appearance_catalog")
+
+[node name="AuthoredRestPoseAnchor" type="Marker2D" parent="."]
+
+[node name="RuntimeDrivenPoseAnchor" type="Marker2D" parent="."]
