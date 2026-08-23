@@ -1,0 +1,126 @@
+[gd_scene format=3 uid="uid://csig155jxj1ob"]
+
+[ext_resource type="Texture2D" uid="uid://cpnap55m3pjve" path="res://assets/PNG/UI/Screen/Select CHR/Backgroud.png" id="1_hlpfj"]
+[ext_resource type="Texture2D" uid="uid://rig0de3k4y44" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_01.png" id="2_1p4fg"]
+[ext_resource type="Texture2D" uid="uid://drrlri6xjhwqr" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_02.png" id="3_0igne"]
+[ext_resource type="Texture2D" uid="uid://blveultuo8wi5" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_03.png" id="4_ifipq"]
+[ext_resource type="Texture2D" uid="uid://dihf6d2vuscrh" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_04.png" id="5_gxla7"]
+[ext_resource type="Texture2D" uid="uid://b2fwyd8lljoon" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_05.png" id="6_tmen8"]
+[ext_resource type="Texture2D" uid="uid://bvhbtq3lfu5t4" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_06.png" id="7_bayf0"]
+[ext_resource type="Texture2D" uid="uid://cvvd18rd78qqj" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_07.png" id="8_ipbdf"]
+[ext_resource type="Texture2D" uid="uid://dqdcuv30vbsan" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_08.png" id="9_1viel"]
+[ext_resource type="Texture2D" uid="uid://ddiamqjtwp3ci" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_09.png" id="10_vskbl"]
+[ext_resource type="Texture2D" uid="uid://ccjm8jw14d20f" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_10.png" id="11_iihf7"]
+[ext_resource type="Texture2D" uid="uid://coty68m8m4y7b" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_11.png" id="12_b31hv"]
+[ext_resource type="Texture2D" uid="uid://bl5c46uowdilv" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_12.png" id="13_bxgmg"]
+[ext_resource type="Texture2D" uid="uid://dbajg4kmk7xn7" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_13.png" id="14_bfn0d"]
+[ext_resource type="Texture2D" uid="uid://dcgw8kpkmkg02" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_14.png" id="15_h6jxo"]
+[ext_resource type="Texture2D" uid="uid://4jrnhjp8dpqp" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_15.png" id="16_7nx1k"]
+[ext_resource type="Texture2D" uid="uid://dhxiejfblykt4" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_16.png" id="17_uyxu7"]
+[ext_resource type="Texture2D" uid="uid://dvc4ttqkojtx8" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_17.png" id="18_8crfj"]
+[ext_resource type="Texture2D" uid="uid://duvfev7r1capy" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_18.png" id="19_7eb06"]
+[ext_resource type="Texture2D" uid="uid://cmepty6xmpxta" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_19.png" id="20_n1odo"]
+[ext_resource type="Texture2D" uid="uid://cbhybbt3f7qsq" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_20.png" id="21_jok3t"]
+[ext_resource type="Texture2D" uid="uid://b24h7prs66oup" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_21.png" id="22_fnlet"]
+[ext_resource type="Texture2D" uid="uid://eyougq0x5myi" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_22.png" id="23_j6vox"]
+[ext_resource type="Texture2D" uid="uid://clcni4fuxee2s" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_23.png" id="24_duh6q"]
+[ext_resource type="Texture2D" uid="uid://dmlgp2hmd648r" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_24.png" id="25_yu2qo"]
+[ext_resource type="Texture2D" uid="uid://dq2ya5dlrpupx" path="res://assets/PNG/UI/Screen/Select CHR/decoration/decoration/frame_25.png" id="26_v8jvm"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_uj04i"]
+animations = [{
+"frames": [{
+"duration": 1.5,
+"texture": ExtResource("2_1p4fg")
+}, {
+"duration": 1.5,
+"texture": ExtResource("3_0igne")
+}, {
+"duration": 1.5,
+"texture": ExtResource("4_ifipq")
+}, {
+"duration": 1.5,
+"texture": ExtResource("5_gxla7")
+}, {
+"duration": 1.5,
+"texture": ExtResource("6_tmen8")
+}, {
+"duration": 1.5,
+"texture": ExtResource("7_bayf0")
+}, {
+"duration": 1.5,
+"texture": ExtResource("8_ipbdf")
+}, {
+"duration": 1.5,
+"texture": ExtResource("9_1viel")
+}, {
+"duration": 1.5,
+"texture": ExtResource("10_vskbl")
+}, {
+"duration": 1.5,
+"texture": ExtResource("11_iihf7")
+}, {
+"duration": 1.5,
+"texture": ExtResource("12_b31hv")
+}, {
+"duration": 1.5,
+"texture": ExtResource("13_bxgmg")
+}, {
+"duration": 1.5,
+"texture": ExtResource("14_bfn0d")
+}, {
+"duration": 1.5,
+"texture": ExtResource("15_h6jxo")
+}, {
+"duration": 1.5,
+"texture": ExtResource("16_7nx1k")
+}, {
+"duration": 1.5,
+"texture": ExtResource("17_uyxu7")
+}, {
+"duration": 1.5,
+"texture": ExtResource("18_8crfj")
+}, {
+"duration": 1.5,
+"texture": ExtResource("19_7eb06")
+}, {
+"duration": 1.5,
+"texture": ExtResource("20_n1odo")
+}, {
+"duration": 1.5,
+"texture": ExtResource("21_jok3t")
+}, {
+"duration": 1.5,
+"texture": ExtResource("22_fnlet")
+}, {
+"duration": 1.5,
+"texture": ExtResource("23_j6vox")
+}, {
+"duration": 1.5,
+"texture": ExtResource("24_duh6q")
+}, {
+"duration": 1.5,
+"texture": ExtResource("25_yu2qo")
+}, {
+"duration": 1.5,
+"texture": ExtResource("26_v8jvm")
+}],
+"loop": 1,
+"name": &"decoration ",
+"speed": 16.0
+}]
+
+[node name="ChrScene" type="Node2D" unique_id=719164538]
+
+[node name="TextureRect" type="TextureRect" parent="." unique_id=1682902304]
+offset_right = 1088.0
+offset_bottom = 1930.0
+texture = ExtResource("1_hlpfj")
+
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=1244172830]
+position = Vector2(540, 963.7778)
+scale = Vector2(6.0111113, 6.0111113)
+sprite_frames = SubResource("SpriteFrames_uj04i")
+animation = &"decoration "
+frame_progress = 0.35928968
+speed_scale = 1.5

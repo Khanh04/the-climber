@@ -5,9 +5,9 @@ signal start_requested
 signal tutorial_requested
 signal settings_requested
 
-@onready var _start_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/StartButton") as Button
-@onready var _tutorial_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/TutorialButton") as Button
-@onready var _settings_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
+@onready var _start_button: TextureButton = get_node("CenterContainer/Panel/ContentMargin/Content/StartButton") as TextureButton
+@onready var _tutorial_button: TextureButton = get_node("CenterContainer/Panel/ContentMargin/Content/TutorialButton") as TextureButton
+@onready var _settings_button: TextureButton = get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as TextureButton
 
 func _ready() -> void:
 	_validate_required_nodes()
@@ -28,3 +28,9 @@ func _validate_required_nodes() -> void:
 	Validation.require_condition(_start_button != null, "MainMenu requires StartButton.")
 	Validation.require_condition(_tutorial_button != null, "MainMenu requires TutorialButton.")
 	Validation.require_condition(_settings_button != null, "MainMenu requires SettingsButton.")
+func _on_start_button_down() -> void:
+	_start_button.scale = Vector2(0.95, 0.95)
+
+
+func _on_start_button_up() -> void:
+	_start_button.scale = Vector2.ONE

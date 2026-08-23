@@ -1,143 +1,269 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3 uid="uid://bpxsufjvq5d26"]
 
-[ext_resource type="Script" path="res://scenes/ui/settings_menu.gd" id="1_settings"]
+[ext_resource type="Script" uid="uid://b1qu3kvescpvb" path="res://scenes/ui/settings_menu.gd" id="1_settings"]
+[ext_resource type="Texture2D" uid="uid://dc1ntnqcfkalq" path="res://assets/PNG/UI/run_sence/Setting_scene/panel_setting.png" id="2_x3vyp"]
+[ext_resource type="Texture2D" uid="uid://dfpjssq453no5" path="res://assets/PNG/UI/run_sence/Setting_scene/btn_Exit.png" id="3_0b1cv"]
+[ext_resource type="Texture2D" uid="uid://cwoohrqlkhtm5" path="res://assets/PNG/UI/run_sence/Setting_scene/icon_Music.png" id="4_yu862"]
+[ext_resource type="Texture2D" uid="uid://d03upvg7j0kro" path="res://assets/PNG/UI/run_sence/Setting_scene/slider/grabber.png" id="5_iii5b"]
+[ext_resource type="Texture2D" uid="uid://di6i3q6qt3d4r" path="res://assets/PNG/UI/run_sence/Setting_scene/icon_Sound.png" id="5_ywggk"]
+[ext_resource type="Texture2D" uid="uid://clwul2up3g1ip" path="res://assets/PNG/UI/run_sence/Setting_scene/slider/track.png" id="6_h271e"]
+[ext_resource type="Texture2D" uid="uid://nuefaxs8ga8m" path="res://assets/PNG/UI/run_sence/Setting_scene/icon_Haptics.png" id="7_7dpwb"]
+[ext_resource type="Texture2D" uid="uid://b4ftdipa4jetv" path="res://assets/PNG/UI/run_sence/Setting_scene/slider/fill.png" id="7_r6v77"]
+[ext_resource type="Texture2D" uid="uid://dhxddob3y8c0h" path="res://assets/PNG/UI/run_sence/Setting_scene/icon_left zone.png" id="8_iii5b"]
+[ext_resource type="Texture2D" uid="uid://d0375vvt7nrru" path="res://assets/PNG/UI/run_sence/Setting_scene/icon_center gap.png" id="9_r6v77"]
 
-[node name="SettingsMenu" type="Control"]
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_qwcqe"]
+texture = ExtResource("2_x3vyp")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_uj04i"]
+texture = ExtResource("3_0b1cv")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_buo60"]
+texture = ExtResource("6_h271e")
+expand_margin_top = 4.0
+expand_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_qyey2"]
+texture = ExtResource("7_r6v77")
+expand_margin_top = 6.0
+expand_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_qx4d5"]
+texture = ExtResource("7_r6v77")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_l7kn0"]
+texture = ExtResource("6_h271e")
+expand_margin_top = 4.0
+expand_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_6q72o"]
+texture = ExtResource("7_r6v77")
+expand_margin_top = 6.0
+expand_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_kpih6"]
+texture = ExtResource("6_h271e")
+expand_margin_top = 4.0
+expand_margin_bottom = 4.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_mo066"]
+texture = ExtResource("7_r6v77")
+expand_margin_top = 6.0
+expand_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_6o8jw"]
+texture = ExtResource("7_r6v77")
+
+[node name="SettingsMenu" type="Control" unique_id=2111691378]
 process_mode = 3
-visible = false
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
 script = ExtResource("1_settings")
+metadata/_edit_vertical_guides_ = [648.0]
 
-[node name="Backdrop" type="ColorRect" parent="."]
+[node name="Backdrop" type="ColorRect" parent="." unique_id=592937676]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_left = 3.0
+offset_top = 1.0
+offset_right = 3.0
+offset_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 color = Color(0.015, 0.02, 0.024, 0.72)
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1342168344]
 layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -194.0
+offset_top = -270.0
+offset_right = 194.0
+offset_bottom = 270.0
 grow_horizontal = 2
 grow_vertical = 2
+scale = Vector2(1, 0.8399988)
 
-[node name="Panel" type="PanelContainer" parent="CenterContainer"]
+[node name="Panel" type="PanelContainer" parent="CenterContainer" unique_id=178631179]
 custom_minimum_size = Vector2(388, 540)
 layout_mode = 2
+theme_override_styles/panel = SubResource("StyleBoxTexture_qwcqe")
 
-[node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel"]
-layout_mode = 2
-theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 18
-theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 18
-
-[node name="Content" type="VBoxContainer" parent="CenterContainer/Panel/ContentMargin"]
-layout_mode = 2
-theme_override_constants/separation = 10
-
-[node name="Header" type="HBoxContainer" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="ControlPosition" type="Control" parent="CenterContainer/Panel" unique_id=636766101]
 layout_mode = 2
 
-[node name="TitleLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/Header"]
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Settings"
-
-[node name="CloseButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content/Header" unique_name_in_owner=true]
+[node name="CloseButton" type="Button" parent="CenterContainer/Panel/ControlPosition" unique_id=1663265585]
 custom_minimum_size = Vector2(108, 60)
-layout_mode = 2
-text = "Close"
+layout_mode = 0
+offset_left = 336.00003
+offset_top = -9.523819
+offset_right = 449.3334
+offset_bottom = 91.47618
+scale = Vector2(0.5, 0.5888889)
+theme_override_styles/normal = SubResource("StyleBoxTexture_uj04i")
 
-[node name="AudioMuteCheckBox" type="CheckBox" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
-layout_mode = 2
-text = "Mute Audio"
+[node name="AudioControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=877160596]
+anchors_preset = 0
+offset_left = 52.0
+offset_top = 153.57166
+offset_right = 328.0
+offset_bottom = 208.33362
 
-[node name="VolumeRow" type="HBoxContainer" parent="CenterContainer/Panel/ContentMargin/Content"]
-layout_mode = 2
-theme_override_constants/separation = 8
+[node name="AudioMuteCheckBox" type="CheckBox" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=966139236]
+layout_mode = 0
+offset_left = 224.0
+offset_top = 2.380949
+offset_right = 248.0
+offset_bottom = 26.380949
+scale = Vector2(2, 2)
 
-[node name="VolumeLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/VolumeRow"]
-custom_minimum_size = Vector2(104, 0)
-layout_mode = 2
-text = "Volume"
+[node name="icon_Audio" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=624236252]
+layout_mode = 0
+offset_left = -1.0
+offset_top = -6.1035156e-05
+offset_right = 15.0
+offset_bottom = 17.999939
+scale = Vector2(3, 3)
+texture = ExtResource("4_yu862")
 
-[node name="VolumeSlider" type="HSlider" parent="CenterContainer/Panel/ContentMargin/Content/VolumeRow" unique_name_in_owner=true]
-layout_mode = 2
+[node name="VolumeControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=77972330]
+anchors_preset = 0
+offset_left = 52.0
+offset_top = 222.61923
+offset_right = 312.0
+offset_bottom = 273.8099
+
+[node name="VolumeSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/VolumeControl" unique_id=777184412]
+layout_mode = 0
+offset_left = 53.0
+offset_top = 20.23816
+offset_right = 263.0
+offset_bottom = 36.23816
 size_flags_horizontal = 3
-max_value = 1.0
-step = 0.05
-value = 1.0
+theme_override_icons/grabber = ExtResource("5_iii5b")
+theme_override_icons/grabber_highlight = ExtResource("5_iii5b")
+theme_override_styles/slider = SubResource("StyleBoxTexture_buo60")
+theme_override_styles/grabber_area = SubResource("StyleBoxTexture_qyey2")
+theme_override_styles/grabber_area_highlight = SubResource("StyleBoxTexture_qx4d5")
 
-[node name="VolumeValueLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/VolumeRow" unique_name_in_owner=true]
-custom_minimum_size = Vector2(48, 0)
-layout_mode = 2
-text = "100%"
-horizontal_alignment = 2
+[node name="icon_volume" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/VolumeControl" unique_id=971360350]
+layout_mode = 0
+offset_left = -1.0
+offset_top = 1.1905518
+offset_right = 15.0
+offset_bottom = 19.190552
+scale = Vector2(3, 3)
+texture = ExtResource("5_ywggk")
 
-[node name="HapticsCheckBox" type="CheckBox" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
-layout_mode = 2
+[node name="value_volume" type="Label" parent="CenterContainer/Panel/ControlPosition/VolumeControl" unique_id=1122811858]
+layout_mode = 0
+offset_left = 264.0
+offset_top = 16.666817
+offset_right = 304.0
+offset_bottom = 39.666817
+
+[node name="HapicControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=1870664668]
+anchors_preset = 0
+offset_left = 52.0
+offset_top = 298.80997
+offset_right = 309.0
+offset_bottom = 355.9529
+
+[node name="HapticsCheckBox" type="CheckBox" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=2047688248]
+layout_mode = 0
+offset_left = 223.0
+offset_right = 247.0
+offset_bottom = 31.0
+scale = Vector2(2, 2)
 button_pressed = true
-text = "Haptics"
 
-[node name="TouchSplitRow" type="HBoxContainer" parent="CenterContainer/Panel/ContentMargin/Content"]
-layout_mode = 2
-theme_override_constants/separation = 8
+[node name="icon_haptic" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=376600665]
+layout_mode = 0
+offset_left = -3.0
+offset_top = 2.3809814
+offset_right = 13.0
+offset_bottom = 20.380981
+scale = Vector2(3, 3)
+texture = ExtResource("7_7dpwb")
 
-[node name="TouchSplitLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/TouchSplitRow"]
-custom_minimum_size = Vector2(104, 0)
-layout_mode = 2
-text = "Left Zone"
+[node name="TouchSplitControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=612888563]
+anchors_preset = 0
+offset_left = 58.0
+offset_top = 372.6196
+offset_right = 313.0
+offset_bottom = 423.81015
 
-[node name="TouchSplitSlider" type="HSlider" parent="CenterContainer/Panel/ContentMargin/Content/TouchSplitRow" unique_name_in_owner=true]
-layout_mode = 2
+[node name="TouchSplitSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/TouchSplitControl" unique_id=1279545631]
+layout_mode = 0
+offset_left = 38.0
+offset_top = 16.666626
+offset_right = 257.0
+offset_bottom = 32.666626
 size_flags_horizontal = 3
-min_value = 0.35
-max_value = 0.65
-step = 0.01
-value = 0.5
+theme_override_icons/grabber = ExtResource("5_iii5b")
+theme_override_icons/grabber_highlight = ExtResource("5_iii5b")
+theme_override_icons/grabber_disabled = ExtResource("5_iii5b")
+theme_override_icons/tick = ExtResource("5_iii5b")
+theme_override_styles/slider = SubResource("StyleBoxTexture_l7kn0")
+theme_override_styles/grabber_area = SubResource("StyleBoxTexture_6q72o")
 
-[node name="TouchSplitValueLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/TouchSplitRow" unique_name_in_owner=true]
-custom_minimum_size = Vector2(48, 0)
-layout_mode = 2
-text = "50%"
-horizontal_alignment = 2
+[node name="icon_TouchSplit" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/TouchSplitControl" unique_id=1805460442]
+layout_mode = 0
+offset_left = -4.0
+offset_top = -1.1900024
+offset_right = 8.0
+offset_bottom = 15.809998
+scale = Vector2(3, 3)
+texture = ExtResource("8_iii5b")
 
-[node name="TouchDeadZoneRow" type="HBoxContainer" parent="CenterContainer/Panel/ContentMargin/Content"]
-layout_mode = 2
-theme_override_constants/separation = 8
+[node name="value_touchsplit" type="Label" parent="CenterContainer/Panel/ControlPosition/TouchSplitControl" unique_id=1800757770]
+layout_mode = 0
+offset_left = 259.0
+offset_top = 14.285736
+offset_right = 299.0
+offset_bottom = 37.285736
 
-[node name="TouchDeadZoneLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/TouchDeadZoneRow"]
-custom_minimum_size = Vector2(104, 0)
-layout_mode = 2
-text = "Center Gap"
+[node name="TouchDeadZoneControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=83258428]
+anchors_preset = 0
+offset_left = 54.0
+offset_top = 446.42923
+offset_right = 312.0
+offset_bottom = 491.6674
 
-[node name="TouchDeadZoneSlider" type="HSlider" parent="CenterContainer/Panel/ContentMargin/Content/TouchDeadZoneRow" unique_name_in_owner=true]
-layout_mode = 2
+[node name="TouchDeadZoneSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/TouchDeadZoneControl" unique_id=1813482756]
+layout_mode = 0
+offset_left = 42.0
+offset_top = 16.66687
+offset_right = 261.0
+offset_bottom = 32.66687
 size_flags_horizontal = 3
-max_value = 0.2
-step = 0.01
-value = 0.0
+theme_override_icons/grabber = ExtResource("5_iii5b")
+theme_override_icons/grabber_highlight = ExtResource("5_iii5b")
+theme_override_styles/slider = SubResource("StyleBoxTexture_kpih6")
+theme_override_styles/grabber_area = SubResource("StyleBoxTexture_mo066")
+theme_override_styles/grabber_area_highlight = SubResource("StyleBoxTexture_6o8jw")
 
-[node name="TouchDeadZoneValueLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content/TouchDeadZoneRow" unique_name_in_owner=true]
-custom_minimum_size = Vector2(48, 0)
-layout_mode = 2
-text = "0%"
-horizontal_alignment = 2
+[node name="icon_touchdead" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/TouchDeadZoneControl" unique_id=437609321]
+layout_mode = 0
+offset_top = -4.7619095
+offset_right = 12.0
+offset_bottom = 13.2380905
+scale = Vector2(3, 3)
+texture = ExtResource("9_r6v77")
 
-[node name="BackButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
-custom_minimum_size = Vector2(0, 72)
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Back"
+[node name="value_touchdead" type="Label" parent="CenterContainer/Panel/ControlPosition/TouchDeadZoneControl" unique_id=1743283739]
+layout_mode = 0
+offset_left = 263.0
+offset_top = 14.285786
+offset_right = 303.0
+offset_bottom = 37.285786

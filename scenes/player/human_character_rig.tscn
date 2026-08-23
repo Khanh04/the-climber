@@ -6,7 +6,7 @@
 [ext_resource type="Texture2D" uid="uid://d2bioptlqyqhf" path="res://assets/art/character/human/left_upperarm.png" id="4_left_upper_arm"]
 [ext_resource type="Texture2D" uid="uid://bg0pyphrh4xaw" path="res://assets/art/character/human/left_arm.png" id="5_left_forearm"]
 [ext_resource type="Texture2D" uid="uid://b1qe275k7p7i6" path="res://assets/art/character/human/left_hand.png" id="6_left_hand"]
-[ext_resource type="Texture2D" uid="uid://bqngje4j5a0f4" path="res://assets/art/character/human/right_upperarm.png" id="7_right_upper_arm"]
+[ext_resource type="Texture2D" uid="uid://bhm77c3osi5le" path="res://assets/art/character/human/right_upperarm.png" id="7_right_upper_arm"]
 [ext_resource type="Texture2D" uid="uid://db46t3bgyop1j" path="res://assets/art/character/human/right_forearm.png" id="8_right_forearm"]
 [ext_resource type="Texture2D" uid="uid://c7r851ue5h8di" path="res://assets/art/character/human/right_hand.png" id="9_right_hand"]
 [ext_resource type="Texture2D" uid="uid://cknwpyemkx1q1" path="res://assets/art/character/human/Lower_Body.png" id="10_lower_body"]

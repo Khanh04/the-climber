@@ -86,7 +86,7 @@ position = Vector2(-18, -34)
 rest = Transform2D(1, 0, 0, 1, 0, 0)
 auto_calculate_length_and_angle = false
 length = 28.0
-bone_angle = 1.5707964
+bone_angle = 1.5707963
 
 [node name="LeftUpperArmVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone" unique_id=1739338784]
 position = Vector2(0, 14)
@@ -97,7 +97,7 @@ position = Vector2(0, 28)
 rest = Transform2D(1, 0, 0, 1, 0, 0)
 auto_calculate_length_and_angle = false
 length = 24.0
-bone_angle = 1.5707964
+bone_angle = 1.5707963
 
 [node name="LeftForearmVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone" unique_id=1739338786]
 position = Vector2(0, 12)
@@ -108,7 +108,7 @@ position = Vector2(0, 24)
 rest = Transform2D(1, 0, 0, 1, 0, 0)
 auto_calculate_length_and_angle = false
 length = 8.0
-bone_angle = 1.5707964
+bone_angle = 1.5707963
 
 [node name="LeftHandCosmeticRoot" type="Node2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone/LeftHandBone" unique_id=862418928]
 unique_name_in_owner = true
@@ -121,7 +121,7 @@ position = Vector2(18, -34)
 rest = Transform2D(1, 0, 0, 1, 0, 0)
 auto_calculate_length_and_angle = false
 length = 28.0
-bone_angle = 1.5707964
+bone_angle = 1.5707963
 
 [node name="RightUpperArmVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone" unique_id=1739338789]
 position = Vector2(0, 14)
@@ -132,7 +132,7 @@ position = Vector2(0, 28)
 rest = Transform2D(1, 0, 0, 1, 0, 0)
 auto_calculate_length_and_angle = false
 length = 24.0
-bone_angle = 1.5707964
+bone_angle = 1.5707963
 
 [node name="RightForearmVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone" unique_id=1739338791]
 position = Vector2(0, 12)
@@ -143,7 +143,7 @@ position = Vector2(0, 24)
 rest = Transform2D(1, 0, 0, 1, 0, 0)
 auto_calculate_length_and_angle = false
 length = 8.0
-bone_angle = 1.5707964
+bone_angle = 1.5707963
 
 [node name="RightHandCosmeticRoot" type="Node2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone/RightHandBone" unique_id=901338481]
 unique_name_in_owner = true
@@ -156,7 +156,7 @@ position = Vector2(0, 30)
 rest = Transform2D(1, 0, 0, 1, 0, 0)
 auto_calculate_length_and_angle = false
 length = 26.0
-bone_angle = 1.5707964
+bone_angle = 1.5707963
 
 [node name="LowerBodyVisual" type="Sprite2D" parent="BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone" unique_id=1739338794]
 position = Vector2(0, 18)
