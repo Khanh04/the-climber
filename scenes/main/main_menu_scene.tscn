@@ -2,6 +2,8 @@
 
 [ext_resource type="Script" uid="uid://d3grxd2efonr8" path="res://scenes/main/main_menu_scene.gd" id="1_scene"]
 [ext_resource type="PackedScene" uid="uid://wdx1u6hx4prx" path="res://scenes/ui/main_menu.tscn" id="2_menu"]
+[ext_resource type="Resource" uid="uid://ou47hb7bijus" path="res://resources/config/cosmetic_item_catalog.tres" id="3_cosmetic_catalog"]
+[ext_resource type="Resource" uid="uid://pkomv75rg3na" path="res://resources/config/cosmetic_loadout_default.tres" id="4_loadout"]
 
 [node name="MainMenuScene" type="Control" unique_id=2132401272]
 layout_mode = 3
@@ -11,6 +13,8 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_scene")
+cosmetic_item_catalog = ExtResource("3_cosmetic_catalog")
+cosmetic_loadout = ExtResource("4_loadout")
 
 [node name="MainMenu" parent="." unique_id=1401698379 instance=ExtResource("2_menu")]
 unique_name_in_owner = true

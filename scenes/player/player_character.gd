@@ -367,7 +367,14 @@ func _configure_collision_polygons(body: RigidBody2D, fallback_shape: CollisionS
 		body.add_child(polygon_node)
 		created_polygons.append(polygon_node)
 
-	fallback_shape.disabled = true
+	# Only disable the fallback primitive once it actually has a replacement: `assert()` (what
+	# Validation.require_condition relies on above) is a no-op in release exports, so an empty
+	# local_polygons list survives past the check above there. Disabling unconditionally would
+	# leave the body with zero enabled collision shapes -- no fallback, no fitted polygons,
+	# falling straight through the world. Never surfaced in editor/debug runs (assert crashes
+	# there first); only ever hits release exports (e.g. Android).
+	if not created_polygons.is_empty():
+		fallback_shape.disabled = true
 	return created_polygons
 
 func _configure_capsule_shape(shape_node: CollisionShape2D, label: String, radius: float, height: float, collision_offset: Vector2) -> void:

@@ -120,10 +120,7 @@ func _build_cutout_uv(source_rect: Rect2) -> PackedVector2Array:
 
 func _load_cutout_source(asset_path: String) -> CutoutSource:
 	Validation.require_condition(not asset_path.is_empty(), "PlayerAppearanceApplicator requires a cutout asset path.")
-	Validation.require_condition(FileAccess.file_exists(asset_path), "PlayerAppearanceApplicator is missing cutout asset at %s." % asset_path)
-	var image := Image.new()
-	var load_result: Error = image.load(ProjectSettings.globalize_path(asset_path))
-	Validation.require_condition(load_result == OK, "PlayerAppearanceApplicator failed to load cutout image at %s." % asset_path)
+	var image: Image = _load_image_resource(asset_path)
 	var used_rect: Rect2i = image.get_used_rect()
 	Validation.require_condition(used_rect.size.x > 0 and used_rect.size.y > 0, "PlayerAppearanceApplicator found no opaque pixels in %s." % asset_path)
 	return CutoutSource.new(Vector2(image.get_width(), image.get_height()), Rect2(used_rect.position, used_rect.size))
@@ -203,11 +200,8 @@ func _require_visual_root(anchor: Sprite2D) -> Node2D:
 func _apply_part(sprite: Sprite2D, asset_path: String, offset: Vector2, scale_value: Vector2) -> Image:
 	Validation.require_condition(sprite != null, "PlayerAppearanceApplicator requires a sprite target.")
 	Validation.require_condition(not asset_path.is_empty(), "PlayerAppearanceApplicator requires a texture asset path.")
-	Validation.require_condition(FileAccess.file_exists(asset_path), "PlayerAppearanceApplicator is missing asset at %s." % asset_path)
 	_clear_part_visual(sprite)
-	var image := Image.new()
-	var load_result: Error = image.load(ProjectSettings.globalize_path(asset_path))
-	Validation.require_condition(load_result == OK, "PlayerAppearanceApplicator failed to load image at %s." % asset_path)
+	var image: Image = _load_image_resource(asset_path)
 	var used_rect: Rect2i = image.get_used_rect()
 	Validation.require_condition(used_rect.size.x > 0 and used_rect.size.y > 0, "PlayerAppearanceApplicator found no opaque pixels in %s." % asset_path)
 	var frame_size: Vector2 = Vector2(image.get_width(), image.get_height())
@@ -219,6 +213,23 @@ func _apply_part(sprite: Sprite2D, asset_path: String, offset: Vector2, scale_va
 	sprite.texture = texture
 	sprite.offset = offset + crop_center_offset
 	sprite.scale = scale_value
+	return image
+
+# Reading these bytes via Image.load(ProjectSettings.globalize_path(...)) only works when
+# res:// maps to real files on disk (editor, or a debug run from source). An exported build
+# (export_filter=all_resources) ships the *imported* .ctex resource, not the raw source PNG,
+# so that raw-file read fails silently in release (Validation.require_condition's assert() is
+# a no-op there) -- this is why Android in particular loses appearance textures and, via the
+# pixel-silhouette collision that depends on them, all body collision. Going through the normal
+# resource loader instead resolves the same res:// path to the imported texture on every
+# platform, editor and export alike.
+func _load_image_resource(asset_path: String) -> Image:
+	var texture_resource: Resource = load(asset_path)
+	Validation.require_condition(texture_resource != null, "PlayerAppearanceApplicator failed to load texture at %s." % asset_path)
+	Validation.require_condition(texture_resource is Texture2D, "PlayerAppearanceApplicator texture asset must be a Texture2D at %s." % asset_path)
+	var texture: Texture2D = texture_resource as Texture2D
+	var image: Image = texture.get_image()
+	Validation.require_condition(image != null, "PlayerAppearanceApplicator failed to read pixel data from %s." % asset_path)
 	return image
 
 func _clear_part_visual(sprite: Sprite2D) -> void:

@@ -182,10 +182,12 @@ func test_run_scene_applies_equipped_chaser_theme_from_cosmetic_loadout() -> voi
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
     var cosmetic_loadout := CosmeticLoadoutScript.new()
+    var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
 
     assert_not_null(playground)
     cosmetic_loadout.chaser_theme_id = &"glitch"
     playground.cosmetic_loadout = cosmetic_loadout
+    playground.set_local_storage_adapter(local_storage)
     add_child_autofree(playground)
     await get_tree().process_frame
 
@@ -198,14 +200,15 @@ func test_run_scene_applies_default_human_appearance_and_hides_overlay_cosmetics
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
+    var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
 
     assert_not_null(playground)
+    playground.set_local_storage_adapter(local_storage)
     add_child_autofree(playground)
     await get_tree().process_frame
 
     var player = _test_adapter(playground).get_player_for_test()
     var collision_shape: CollisionShape2D = player.get_torso_collision_shape()
-    var fitted_capsule: CapsuleShape2D = collision_shape.shape as CapsuleShape2D
 
     assert_eq(_test_adapter(playground).get_cosmetic_loadout_for_test().player_appearance_id, &"human")
     assert_false(player.get_player_visual().visible)
@@ -215,9 +218,14 @@ func test_run_scene_applies_default_human_appearance_and_hides_overlay_cosmetics
     assert_null(player.get_face_overlay().get_node_or_null("AppearanceCutout"))
     assert_null(player.get_left_arm_visual().get_node_or_null("AppearanceCutout"))
     assert_null(player.get_right_arm_visual().get_node_or_null("AppearanceCutout"))
-    assert_not_null(fitted_capsule)
-    assert_gt(fitted_capsule.radius, 0.0)
-    assert_gt(fitted_capsule.height, 0.0)
+    # Plain-texture appearances fit pixel-silhouette collision now: the fallback capsule is
+    # disabled (not deleted -- it's what the cutout appearance path still uses), and real
+    # collision comes from one or more convex CollisionPolygon2D children per limb.
+    assert_true(collision_shape.disabled)
+    assert_gt(player.get_torso_fitted_collision_polygons().size(), 0)
+    assert_gt(player.get_head_fitted_collision_polygons().size(), 0)
+    assert_gt(player.get_left_arm_fitted_collision_polygons().size(), 0)
+    assert_gt(player.get_right_arm_fitted_collision_polygons().size(), 0)
     assert_null(player.get_cosmetic_visual_root().get_node_or_null("AppliedBodyCosmetic"))
     assert_null(player.get_left_hand_cosmetic_root().get_node_or_null("AppliedLeftHandCosmetic"))
     assert_null(player.get_right_hand_cosmetic_root().get_node_or_null("AppliedRightHandCosmetic"))

@@ -568,6 +568,12 @@ ignore_texture_size = true
 stretch_mode = 5
 script = ExtResource("9_8g5eo")
 
+[node name="StoreButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+custom_minimum_size = Vector2(0, 60)
+layout_mode = 2
+size_flags_horizontal = 3
+text = "Store"
+
 [connection signal="button_down" from="CenterContainer/Panel/ContentMargin/Content/StartButton" to="CenterContainer/Panel/ContentMargin/Content/StartButton" method="_on_button_down"]
 [connection signal="button_up" from="CenterContainer/Panel/ContentMargin/Content/StartButton" to="CenterContainer/Panel/ContentMargin/Content/StartButton" method="_on_button_up"]
 [connection signal="button_down" from="CenterContainer/Panel/ContentMargin/Content/TutorialButton" to="CenterContainer/Panel/ContentMargin/Content/TutorialButton" method="_on_button_down"]
