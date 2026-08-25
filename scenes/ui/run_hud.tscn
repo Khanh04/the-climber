@@ -1,11 +1,11 @@
 [gd_scene format=3 uid="uid://b7y1m41fyw3oa"]
 
 [ext_resource type="Script" uid="uid://c64k3agxnuki" path="res://scenes/ui/run_hud.gd" id="1_run_hud"]
-[ext_resource type="Texture2D" uid="uid://fs45muiihnpj" path="res://assets/PNG/UI/run_sence/HUD/icon_Height.png" id="2_6el0o"]
-[ext_resource type="Texture2D" uid="uid://dd8aluvwmqfuv" path="res://assets/PNG/UI/run_sence/HUD/panel_HUD.png" id="2_my1ax"]
-[ext_resource type="Texture2D" uid="uid://c8ulv8ks6apn" path="res://assets/PNG/UI/run_sence/HUD/icon_Stamina.png" id="3_my1ax"]
-[ext_resource type="Texture2D" uid="uid://cyevy8f68wpj8" path="res://assets/PNG/UI/run_sence/HUD/icon_coin.png" id="5_88klh"]
-[ext_resource type="Texture2D" uid="uid://fca52xeof1c" path="res://assets/PNG/UI/run_sence/HUD/btn_pause.png" id="5_sfsch"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/HUD/icon_Height.png" id="2_6el0o"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/HUD/panel_HUD.png" id="2_my1ax"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/HUD/icon_Stamina.png" id="3_my1ax"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/HUD/icon_coin.png" id="5_88klh"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/HUD/btn_pause.png" id="5_sfsch"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_tjuia"]
 texture = ExtResource("2_my1ax")
@@ -131,6 +131,10 @@ text = "Wallet"
 [node name="WalletValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric" unique_id=1962637028]
 layout_mode = 2
 text = "0"
+
+[node name="CoinsValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric" unique_id=1962637029]
+layout_mode = 2
+text = "+0"
 
 [node name="Wrapper_BtnPause" type="Control" parent="Panel/ContentMargin/Metrics" unique_id=973305931]
 layout_mode = 2

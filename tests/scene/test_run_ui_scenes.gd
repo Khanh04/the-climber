@@ -70,9 +70,9 @@ func test_main_menu_emits_start_tutorial_and_settings_requests() -> void:
 	var _start_connect_result: int = menu.connect(&"start_requested", Callable(self, "_mark_start_requested"))
 	var _tutorial_connect_result: int = menu.connect(&"tutorial_requested", Callable(self, "_mark_tutorial_requested"))
 	var _settings_connect_result: int = menu.connect(&"settings_requested", Callable(self, "_mark_settings_requested"))
-	var start_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/StartButton") as Button
-	var tutorial_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/TutorialButton") as Button
-	var settings_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
+	var start_button: TextureButton = menu.get_node("CenterContainer/Panel/ContentMargin/Content/StartButton") as TextureButton
+	var tutorial_button: TextureButton = menu.get_node("CenterContainer/Panel/ContentMargin/Content/TutorialButton") as TextureButton
+	var settings_button: TextureButton = menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as TextureButton
 
 	assert_not_null(start_button)
 	assert_not_null(tutorial_button)
@@ -112,14 +112,13 @@ func test_menu_buttons_use_mobile_sized_touch_targets() -> void:
 	add_child_autofree(settings_menu)
 	await get_tree().process_frame
 
-	var start_button: Button = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content/StartButton") as Button
-	var tutorial_button: Button = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content/TutorialButton") as Button
-	var main_settings_button: Button = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
+	var start_button: TextureButton = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content/StartButton") as TextureButton
+	var tutorial_button: TextureButton = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content/TutorialButton") as TextureButton
+	var main_settings_button: TextureButton = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as TextureButton
 	var resume_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/ResumeButton") as Button
 	var restart_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
 	var pause_settings_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
-	var close_button: Button = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/Header/CloseButton") as Button
-	var back_button: Button = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/BackButton") as Button
+	var close_button: Button = settings_menu.get_node("CenterContainer/Panel/ControlPosition/CloseButton") as Button
 
 	assert_not_null(start_button)
 	assert_not_null(tutorial_button)
@@ -128,14 +127,12 @@ func test_menu_buttons_use_mobile_sized_touch_targets() -> void:
 	assert_not_null(restart_button)
 	assert_not_null(pause_settings_button)
 	assert_not_null(close_button)
-	assert_not_null(back_button)
 	assert_eq(start_button.size_flags_horizontal, 3)
 	assert_eq(tutorial_button.size_flags_horizontal, 3)
 	assert_eq(main_settings_button.size_flags_horizontal, 3)
 	assert_eq(resume_button.size_flags_horizontal, 3)
 	assert_eq(restart_button.size_flags_horizontal, 3)
 	assert_eq(pause_settings_button.size_flags_horizontal, 3)
-	assert_eq(back_button.size_flags_horizontal, 3)
 	assert_gte(start_button.custom_minimum_size.y, 84.0)
 	assert_gte(tutorial_button.custom_minimum_size.y, 84.0)
 	assert_gte(main_settings_button.custom_minimum_size.y, 84.0)
@@ -143,7 +140,6 @@ func test_menu_buttons_use_mobile_sized_touch_targets() -> void:
 	assert_gte(restart_button.custom_minimum_size.y, 72.0)
 	assert_gte(pause_settings_button.custom_minimum_size.y, 72.0)
 	assert_gte(close_button.custom_minimum_size.y, 60.0)
-	assert_gte(back_button.custom_minimum_size.y, 72.0)
 
 func test_menu_panels_fit_portrait_phone_widths_better() -> void:
 	var main_menu_scene: PackedScene = load("res://scenes/ui/main_menu.tscn")
@@ -170,34 +166,22 @@ func test_menu_panels_fit_portrait_phone_widths_better() -> void:
 	add_child_autofree(settings_menu)
 	await get_tree().process_frame
 
-	var main_panel: PanelContainer = main_menu.get_node("CenterContainer/Panel") as PanelContainer
+	var main_panel: TextureRect = main_menu.get_node("CenterContainer/Panel") as TextureRect
 	var pause_panel: PanelContainer = pause_menu.get_node("CenterContainer/Panel") as PanelContainer
 	var settings_panel: PanelContainer = settings_menu.get_node("CenterContainer/Panel") as PanelContainer
 	var main_content: VBoxContainer = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content") as VBoxContainer
 	var pause_content: VBoxContainer = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content") as VBoxContainer
-	var settings_content: VBoxContainer = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content") as VBoxContainer
-	var volume_label: Label = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/VolumeRow/VolumeLabel") as Label
-	var split_label: Label = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/TouchSplitRow/TouchSplitLabel") as Label
-	var dead_zone_label: Label = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/TouchDeadZoneRow/TouchDeadZoneLabel") as Label
 
 	assert_not_null(main_panel)
 	assert_not_null(pause_panel)
 	assert_not_null(settings_panel)
 	assert_not_null(main_content)
 	assert_not_null(pause_content)
-	assert_not_null(settings_content)
-	assert_not_null(volume_label)
-	assert_not_null(split_label)
-	assert_not_null(dead_zone_label)
 	assert_lte(main_panel.custom_minimum_size.x, 360.0)
 	assert_lte(pause_panel.custom_minimum_size.x, 360.0)
 	assert_lte(settings_panel.custom_minimum_size.x, 388.0)
 	assert_lte(main_content.get_theme_constant("separation"), 12)
 	assert_lte(pause_content.get_theme_constant("separation"), 10)
-	assert_lte(settings_content.get_theme_constant("separation"), 10)
-	assert_lte(volume_label.custom_minimum_size.x, 104.0)
-	assert_lte(split_label.custom_minimum_size.x, 104.0)
-	assert_lte(dead_zone_label.custom_minimum_size.x, 104.0)
 
 func test_run_hud_scene_wires_required_nodes() -> void:
 	var scene: PackedScene = load("res://scenes/ui/run_hud.tscn")
@@ -210,12 +194,12 @@ func test_run_hud_scene_wires_required_nodes() -> void:
 	add_child_autofree(hud)
 	await get_tree().process_frame
 
-	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/HeightMetric/HeightValueLabel"))
-	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/StaminaMetric/StaminaValueLabel"))
-	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/StaminaMetric/StaminaBar"))
-	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/WalletMetric/WalletValueLabel"))
-	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/CoinsMetric/CoinsValueLabel"))
-	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/PauseButton"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric/HeightValueLabel"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaValueLabel"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaBar"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/WalletValueLabel"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/CoinsValueLabel"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton"))
 
 func test_run_hud_scene_displays_height_stamina_and_run_coins() -> void:
 	var scene: PackedScene = load("res://scenes/ui/run_hud.tscn")
@@ -230,12 +214,12 @@ func test_run_hud_scene_displays_height_stamina_and_run_coins() -> void:
 
 	hud.call("apply_state", RunHudStateScript.new(18.5, 7.0, 20.0, 9, 4, RunStateScript.Value.CLIMBING))
 
-	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/HeightMetric/HeightValueLabel") as Label
-	var stamina_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/StaminaMetric/StaminaValueLabel") as Label
-	var stamina_bar: ProgressBar = hud.get_node("Panel/ContentMargin/Metrics/StaminaMetric/StaminaBar") as ProgressBar
-	var wallet_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/WalletMetric/WalletValueLabel") as Label
-	var coins_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/CoinsMetric/CoinsValueLabel") as Label
-	var pause_button: Button = hud.get_node("Panel/ContentMargin/Metrics/PauseButton") as Button
+	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric/HeightValueLabel") as Label
+	var stamina_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaValueLabel") as Label
+	var stamina_bar: ProgressBar = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaBar") as ProgressBar
+	var wallet_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/WalletValueLabel") as Label
+	var coins_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/CoinsValueLabel") as Label
+	var pause_button: Button = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton") as Button
 
 	assert_not_null(height_value_label)
 	assert_not_null(stamina_value_label)
@@ -248,7 +232,7 @@ func test_run_hud_scene_displays_height_stamina_and_run_coins() -> void:
 	assert_eq(stamina_bar.max_value, 20.0)
 	assert_eq(stamina_bar.value, 7.0)
 	assert_eq(wallet_value_label.text, "9")
-	assert_eq(coins_value_label.text, "4")
+	assert_eq(coins_value_label.text, "+4")
 
 func test_run_hud_emits_pause_request() -> void:
 	var scene: PackedScene = load("res://scenes/ui/run_hud.tscn")
@@ -263,7 +247,7 @@ func test_run_hud_emits_pause_request() -> void:
 
 	_pause_requested = false
 	var _connect_result: int = hud.connect(&"pause_requested", Callable(self, "_mark_pause_requested"))
-	var pause_button: Button = hud.get_node("Panel/ContentMargin/Metrics/PauseButton") as Button
+	var pause_button: Button = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton") as Button
 
 	assert_not_null(pause_button)
 	var _emit_result: int = pause_button.emit_signal("pressed")
@@ -536,7 +520,7 @@ func test_run_ui_view_applies_snapshots_to_both_controls() -> void:
 		RunEndScreenStateScript.new(true, true, 14.0, 7, 2, true, RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
 	)
 
-	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/HeightMetric/HeightValueLabel") as Label
+	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric/HeightValueLabel") as Label
 	var title_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
 
 	assert_not_null(height_value_label)
@@ -669,34 +653,36 @@ func test_settings_menu_displays_state_and_emits_setting_intents() -> void:
 	var _dead_zone_connect_result: int = menu.connect(&"touch_center_dead_zone_changed", Callable(self, "_mark_settings_touch_dead_zone"))
 	menu.call("apply_state", SettingsStateScript.new(true, true, 0.65, false, 0.58, 0.07))
 
-	var audio_mute_check_box: CheckBox = menu.get_node("CenterContainer/Panel/ContentMargin/Content/AudioMuteCheckBox") as CheckBox
-	var volume_slider: HSlider = menu.get_node("CenterContainer/Panel/ContentMargin/Content/VolumeRow/VolumeSlider") as HSlider
-	var volume_value_label: Label = menu.get_node("CenterContainer/Panel/ContentMargin/Content/VolumeRow/VolumeValueLabel") as Label
-	var haptics_check_box: CheckBox = menu.get_node("CenterContainer/Panel/ContentMargin/Content/HapticsCheckBox") as CheckBox
-	var touch_split_slider: HSlider = menu.get_node("CenterContainer/Panel/ContentMargin/Content/TouchSplitRow/TouchSplitSlider") as HSlider
-	var touch_dead_zone_slider: HSlider = menu.get_node("CenterContainer/Panel/ContentMargin/Content/TouchDeadZoneRow/TouchDeadZoneSlider") as HSlider
-	var back_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/BackButton") as Button
+	var audio_mute_check_box: CheckBox = menu.get_node("CenterContainer/Panel/ControlPosition/AudioControl/AudioMuteCheckBox") as CheckBox
+	var volume_slider: HSlider = menu.get_node("CenterContainer/Panel/ControlPosition/VolumeControl/VolumeSlider") as HSlider
+	var volume_value_label: Label = menu.get_node("CenterContainer/Panel/ControlPosition/VolumeControl/value_volume") as Label
+	var haptics_check_box: CheckBox = menu.get_node("CenterContainer/Panel/ControlPosition/HapicControl/HapticsCheckBox") as CheckBox
+	var touch_split_slider: HSlider = menu.get_node("CenterContainer/Panel/ControlPosition/TouchSplitControl/TouchSplitSlider") as HSlider
+	var touch_dead_zone_slider: HSlider = menu.get_node("CenterContainer/Panel/ControlPosition/TouchDeadZoneControl/TouchDeadZoneSlider") as HSlider
+	var close_button: Button = menu.get_node("CenterContainer/Panel/ControlPosition/CloseButton") as Button
 
+	# Sliders run 0-100 in this scene; SettingsState stores 0.0-1.0 ratios.
 	assert_true(menu.visible)
 	assert_true(audio_mute_check_box.button_pressed)
-	assert_eq(volume_slider.value, 0.65)
+	assert_eq(volume_slider.value, 65.0)
 	assert_eq(volume_value_label.text, "65%")
 	assert_false(haptics_check_box.button_pressed)
-	assert_eq(touch_split_slider.value, 0.58)
-	assert_eq(touch_dead_zone_slider.value, 0.07)
+	# HSlider snaps to its default step of 1.0, so 76.667 rounds to 77.0.
+	assert_eq(touch_split_slider.value, 77.0)
+	assert_eq(touch_dead_zone_slider.value, 35.0)
 
 	var _audio_emit_result: int = audio_mute_check_box.emit_signal("toggled", false)
-	var _volume_emit_result: int = volume_slider.emit_signal("value_changed", 0.35)
+	var _volume_emit_result: int = volume_slider.emit_signal("value_changed", 35.0)
 	var _haptics_emit_result: int = haptics_check_box.emit_signal("toggled", true)
-	var _split_emit_result: int = touch_split_slider.emit_signal("value_changed", 0.45)
-	var _dead_zone_emit_result: int = touch_dead_zone_slider.emit_signal("value_changed", 0.10)
-	var _back_emit_result: int = back_button.emit_signal("pressed")
+	var _split_emit_result: int = touch_split_slider.emit_signal("value_changed", 50.0)
+	var _dead_zone_emit_result: int = touch_dead_zone_slider.emit_signal("value_changed", 25.0)
+	var _close_emit_result: int = close_button.emit_signal("pressed")
 
 	assert_false(_settings_audio_muted)
 	assert_eq(_settings_master_volume_ratio, 0.35)
 	assert_true(_settings_haptics_enabled)
-	assert_eq(_settings_touch_split_ratio, 0.45)
-	assert_eq(_settings_touch_dead_zone_ratio, 0.10)
+	assert_eq(_settings_touch_split_ratio, 0.5)
+	assert_eq(_settings_touch_dead_zone_ratio, 0.05)
 	assert_true(_settings_closed)
 
 func _mark_restart_requested() -> void:

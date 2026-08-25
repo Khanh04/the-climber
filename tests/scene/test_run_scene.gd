@@ -433,7 +433,7 @@ func test_run_scene_generated_coin_pickups_increment_run_coins() -> void:
     var raw_pickup_node: Variant = pickup_nodes[0]
     assert_true(raw_pickup_node is GeneratedCoinPickupSpawnAdapterScript)
     var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = raw_pickup_node
-    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/WalletMetric/WalletValueLabel") as Label
+    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/WalletValueLabel") as Label
     assert_not_null(pickup_spawn)
     assert_not_null(wallet_value_label)
     assert_eq(_test_adapter(playground).get_run_session_for_test().get_run_earned_coins(), 0)
@@ -666,12 +666,12 @@ func test_run_scene_pause_settings_overlay_keeps_run_paused() -> void:
     assert_true(_test_adapter(playground).is_pause_menu_visible_for_test())
     assert_true(get_tree().paused)
 
-    var haptics_check_box: CheckBox = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/HapticsCheckBox") as CheckBox
-    var back_button: Button = settings_menu.get_node("CenterContainer/Panel/ContentMargin/Content/BackButton") as Button
+    var haptics_check_box: CheckBox = settings_menu.get_node("CenterContainer/Panel/ControlPosition/HapicControl/HapticsCheckBox") as CheckBox
+    var close_button: Button = settings_menu.get_node("CenterContainer/Panel/ControlPosition/CloseButton") as Button
     assert_not_null(haptics_check_box)
-    assert_not_null(back_button)
+    assert_not_null(close_button)
     var _haptics_emit_result: int = haptics_check_box.emit_signal("toggled", false)
-    var _back_emit_result: int = back_button.emit_signal("pressed")
+    var _close_emit_result: int = close_button.emit_signal("pressed")
 
     assert_false(settings_menu.visible)
     assert_true(_test_adapter(playground).is_pause_menu_visible_for_test())
@@ -1380,10 +1380,10 @@ func test_run_scene_hud_displays_initial_run_snapshot() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    var height_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/HeightMetric/HeightValueLabel") as Label
-    var stamina_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/StaminaMetric/StaminaValueLabel") as Label
-    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/WalletMetric/WalletValueLabel") as Label
-    var coins_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/CoinsMetric/CoinsValueLabel") as Label
+    var height_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric/HeightValueLabel") as Label
+    var stamina_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaValueLabel") as Label
+    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/WalletValueLabel") as Label
+    var coins_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/CoinsValueLabel") as Label
     var run_end_screen: Control = playground.get_node("UiLayer/RunEndScreen") as Control
 
     assert_not_null(height_value_label)
@@ -1396,7 +1396,7 @@ func test_run_scene_hud_displays_initial_run_snapshot() -> void:
     assert_lte(displayed_height_meters, 0.1)
     assert_eq(stamina_value_label.text, "100.0 / 100.0")
     assert_eq(wallet_value_label.text, "0")
-    assert_eq(coins_value_label.text, "0")
+    assert_eq(coins_value_label.text, "+0")
     assert_false(run_end_screen.visible)
 
 func test_run_scene_bottom_screen_fall_shows_run_end_screen() -> void:
