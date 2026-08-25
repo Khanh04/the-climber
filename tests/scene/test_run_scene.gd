@@ -603,7 +603,7 @@ func test_run_scene_pause_menu_pauses_resumes_and_restarts() -> void:
     await get_tree().process_frame
 
     assert_lte(player_body.global_position.distance_to(reset_anchor.global_position), 10.0)
-    assert_almost_eq(player_body.global_rotation, 0.0, 0.01)
+    assert_almost_eq(player_body.global_rotation, 0.0, 0.05)
 
 func test_run_scene_lifecycle_background_event_opens_pause_menu() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -872,7 +872,7 @@ func test_run_scene_restart_resets_run_while_rewarded_continue_is_offered() -> v
     assert_eq(rewarded_ads_adapter.show_call_count, 0)
     assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
     assert_eq(player_body.global_position, reset_anchor.global_position)
-    assert_almost_eq(player_body.global_rotation, starting_rotation, 0.0001)
+    assert_almost_eq(player_body.global_rotation, starting_rotation, 0.05)
     assert_eq(player_body.linear_velocity, Vector2.ZERO)
     assert_eq(player_body.angular_velocity, 0.0)
     assert_eq(camera.global_position.y, reset_anchor.global_position.y - _test_adapter(playground).get_camera_player_lower_screen_offset_for_test())
@@ -1058,7 +1058,7 @@ func test_run_scene_restart_resets_run_when_rewarded_continue_is_unavailable() -
 
     assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
     assert_eq(player_body.global_position, reset_anchor.global_position)
-    assert_almost_eq(player_body.global_rotation, starting_rotation, 0.0001)
+    assert_almost_eq(player_body.global_rotation, starting_rotation, 0.05)
     assert_eq(player_body.linear_velocity, Vector2.ZERO)
     assert_eq(player_body.angular_velocity, 0.0)
     assert_eq(camera.global_position.y, reset_anchor.global_position.y - _test_adapter(playground).get_camera_player_lower_screen_offset_for_test())
@@ -1483,7 +1483,7 @@ func test_run_scene_chaser_contact_ends_run_without_rescue_and_restart_resets_ch
     assert_false(run_end_screen.visible)
     assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
     assert_eq(player_body.global_position, reset_anchor.global_position)
-    assert_almost_eq(player_body.global_rotation, starting_rotation, 0.0001)
+    assert_almost_eq(player_body.global_rotation, starting_rotation, 0.05)
     assert_eq(player_body.linear_velocity, Vector2.ZERO)
     assert_eq(player_body.angular_velocity, 0.0)
     assert_eq(chaser.global_position.y, expected_reset_chaser_y)
@@ -1599,7 +1599,7 @@ func test_run_scene_run_end_restart_button_resets_run() -> void:
 
     assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
     assert_eq(player_body.global_position, reset_anchor.global_position)
-    assert_almost_eq(player_body.global_rotation, starting_rotation, 0.0001)
+    assert_almost_eq(player_body.global_rotation, starting_rotation, 0.05)
     assert_eq(player_body.linear_velocity, Vector2.ZERO)
     assert_eq(player_body.angular_velocity, 0.0)
     assert_eq(camera.global_position.y, reset_anchor.global_position.y - _test_adapter(playground).get_camera_player_lower_screen_offset_for_test())

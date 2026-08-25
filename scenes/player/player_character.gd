@@ -34,6 +34,13 @@ const LIMB_COLLISION_LAYER: int = 32
 
 var _torso: RigidBody2D
 var _torso_collision_shape: CollisionShape2D
+var _head_collision_shape: CollisionShape2D
+var _left_arm_collision_shape: CollisionShape2D
+var _right_arm_collision_shape: CollisionShape2D
+var _torso_fitted_collision_polygons: Array[CollisionPolygon2D] = []
+var _head_fitted_collision_polygons: Array[CollisionPolygon2D] = []
+var _left_arm_fitted_collision_polygons: Array[CollisionPolygon2D] = []
+var _right_arm_fitted_collision_polygons: Array[CollisionPolygon2D] = []
 var _left_shoulder_socket: Marker2D
 var _right_shoulder_socket: Marker2D
 var _left_hand_anchor: Marker2D
@@ -282,20 +289,101 @@ func get_right_arm_visual() -> Sprite2D:
 func get_torso_collision_shape() -> CollisionShape2D:
 	return _torso_collision_shape
 
-func configure_torso_collision_capsule(radius: float, height: float, collision_offset: Vector2) -> void:
-	Validation.require_condition(radius > 0.0, "PlayerCharacter torso collision capsule radius must be positive.")
-	Validation.require_condition(height >= 0.0, "PlayerCharacter torso collision capsule height cannot be negative.")
-	Validation.require_condition(_torso_collision_shape != null, "PlayerCharacter requires TorsoCollisionShape before configuring the capsule.")
-	Validation.require_condition(_torso_collision_shape.shape != null, "PlayerCharacter requires TorsoCollisionShape to have a shape before configuring the capsule.")
-	Validation.require_condition(_torso_collision_shape.shape is CapsuleShape2D, "PlayerCharacter torso collision shape must remain a CapsuleShape2D.")
+func get_head_collision_shape() -> CollisionShape2D:
+	return _head_collision_shape
 
-	var duplicated_shape: Resource = _torso_collision_shape.shape.duplicate()
-	Validation.require_condition(duplicated_shape is CapsuleShape2D, "PlayerCharacter failed to duplicate the torso collision capsule.")
+func get_left_arm_collision_shape() -> CollisionShape2D:
+	return _left_arm_collision_shape
+
+func get_right_arm_collision_shape() -> CollisionShape2D:
+	return _right_arm_collision_shape
+
+func get_torso_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
+	return _torso_fitted_collision_polygons
+
+func get_head_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
+	return _head_fitted_collision_polygons
+
+func get_left_arm_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
+	return _left_arm_fitted_collision_polygons
+
+func get_right_arm_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
+	return _right_arm_fitted_collision_polygons
+
+func configure_torso_collision_capsule(radius: float, height: float, collision_offset: Vector2) -> void:
+	_configure_capsule_shape(_torso_collision_shape, "Torso", radius, height, collision_offset)
+
+func configure_arm_collision_capsule(hand_side: int, radius: float, height: float, collision_offset: Vector2) -> void:
+	if hand_side == HandSideScript.Value.LEFT:
+		_configure_capsule_shape(_left_arm_collision_shape, "LeftArm", radius, height, collision_offset)
+		return
+	_configure_capsule_shape(_right_arm_collision_shape, "RightArm", radius, height, collision_offset)
+
+func configure_head_collision_circle(radius: float, collision_offset: Vector2) -> void:
+	Validation.require_condition(radius > 0.0, "PlayerCharacter head collision circle radius must be positive.")
+	Validation.require_condition(_head_collision_shape != null, "PlayerCharacter requires HeadCollisionShape before configuring the circle.")
+	Validation.require_condition(_head_collision_shape.shape != null, "PlayerCharacter requires HeadCollisionShape to have a shape before configuring the circle.")
+	Validation.require_condition(_head_collision_shape.shape is CircleShape2D, "PlayerCharacter head collision shape must remain a CircleShape2D.")
+
+	var duplicated_shape: Resource = _head_collision_shape.shape.duplicate()
+	Validation.require_condition(duplicated_shape is CircleShape2D, "PlayerCharacter failed to duplicate the head collision circle.")
+	var circle_shape: CircleShape2D = duplicated_shape as CircleShape2D
+	circle_shape.radius = radius
+	_head_collision_shape.shape = circle_shape
+	_head_collision_shape.position = collision_offset
+
+# Pixel-silhouette collision: N convex CollisionPolygon2D children replace the fallback
+# primitive shape (disabled, not removed -- it's the always-valid state before any appearance
+# is applied, and stays the shape used by the cutout appearance path). Godot's dynamic
+# RigidBody2D physics doesn't support a single concave shape correctly (no well-defined
+# "inside"), so a traced silhouette must arrive pre-decomposed into convex pieces -- this
+# only assembles what PlayerAppearanceApplicator hands it, it doesn't do the tracing itself.
+func configure_torso_collision_polygons(local_polygons: Array[PackedVector2Array]) -> void:
+	_torso_fitted_collision_polygons = _configure_collision_polygons(_torso, _torso_collision_shape, _torso_fitted_collision_polygons, "Torso", local_polygons)
+
+func configure_head_collision_polygons(local_polygons: Array[PackedVector2Array]) -> void:
+	_head_fitted_collision_polygons = _configure_collision_polygons(_head, _head_collision_shape, _head_fitted_collision_polygons, "Head", local_polygons)
+
+func configure_arm_collision_polygons(hand_side: int, local_polygons: Array[PackedVector2Array]) -> void:
+	if hand_side == HandSideScript.Value.LEFT:
+		_left_arm_fitted_collision_polygons = _configure_collision_polygons(_left_arm, _left_arm_collision_shape, _left_arm_fitted_collision_polygons, "LeftArm", local_polygons)
+		return
+	_right_arm_fitted_collision_polygons = _configure_collision_polygons(_right_arm, _right_arm_collision_shape, _right_arm_fitted_collision_polygons, "RightArm", local_polygons)
+
+func _configure_collision_polygons(body: RigidBody2D, fallback_shape: CollisionShape2D, existing_polygons: Array[CollisionPolygon2D], label: String, local_polygons: Array[PackedVector2Array]) -> Array[CollisionPolygon2D]:
+	Validation.require_condition(body != null, "PlayerCharacter requires a %s body before configuring fitted collision polygons." % label)
+	Validation.require_condition(fallback_shape != null, "PlayerCharacter requires a %s fallback collision shape before configuring fitted collision polygons." % label)
+	Validation.require_condition(not local_polygons.is_empty(), "PlayerCharacter requires at least one %s collision polygon." % label)
+
+	for existing_polygon in existing_polygons:
+		existing_polygon.queue_free()
+
+	var created_polygons: Array[CollisionPolygon2D] = []
+	for polygon_points in local_polygons:
+		Validation.require_condition(polygon_points.size() >= 3, "PlayerCharacter %s collision polygon requires at least 3 points." % label)
+		var polygon_node := CollisionPolygon2D.new()
+		polygon_node.name = "%sFittedCollisionPolygon%d" % [label, created_polygons.size()]
+		polygon_node.polygon = polygon_points
+		body.add_child(polygon_node)
+		created_polygons.append(polygon_node)
+
+	fallback_shape.disabled = true
+	return created_polygons
+
+func _configure_capsule_shape(shape_node: CollisionShape2D, label: String, radius: float, height: float, collision_offset: Vector2) -> void:
+	Validation.require_condition(radius > 0.0, "PlayerCharacter %s collision capsule radius must be positive." % label)
+	Validation.require_condition(height >= 0.0, "PlayerCharacter %s collision capsule height cannot be negative." % label)
+	Validation.require_condition(shape_node != null, "PlayerCharacter requires %s collision shape before configuring the capsule." % label)
+	Validation.require_condition(shape_node.shape != null, "PlayerCharacter requires %s collision shape to have a shape before configuring the capsule." % label)
+	Validation.require_condition(shape_node.shape is CapsuleShape2D, "PlayerCharacter %s collision shape must remain a CapsuleShape2D." % label)
+
+	var duplicated_shape: Resource = shape_node.shape.duplicate()
+	Validation.require_condition(duplicated_shape is CapsuleShape2D, "PlayerCharacter failed to duplicate the %s collision capsule." % label)
 	var capsule_shape: CapsuleShape2D = duplicated_shape as CapsuleShape2D
 	capsule_shape.radius = radius
 	capsule_shape.height = height
-	_torso_collision_shape.shape = capsule_shape
-	_torso_collision_shape.position = collision_offset
+	shape_node.shape = capsule_shape
+	shape_node.position = collision_offset
 
 func get_left_grip_joint_anchor() -> Marker2D:
 	return _left_grip_joint_anchor
@@ -400,18 +488,18 @@ func _validate_required_state() -> void:
 	_body_visual_sprite = _require_sprite_2d("Torso/VisualRoot/BodyVisualSprite", "PlayerCharacter requires BodyVisualSprite.")
 
 	_head = _require_rigid_body_2d("Head", "PlayerCharacter requires Head.")
-	var head_collision_shape: CollisionShape2D = _require_collision_shape_2d("Head/HeadCollisionShape", "PlayerCharacter requires HeadCollisionShape.")
+	_head_collision_shape = _require_collision_shape_2d("Head/HeadCollisionShape", "PlayerCharacter requires HeadCollisionShape.")
 	_head_visual_root = _require_node_2d("Head/HeadVisualRoot", "PlayerCharacter requires HeadVisualRoot.")
 	_face_overlay = _require_sprite_2d("Head/HeadVisualRoot/FaceOverlay", "PlayerCharacter requires FaceOverlay.")
 
 	_left_arm = _require_rigid_body_2d("LeftArm", "PlayerCharacter requires LeftArm.")
-	var left_arm_collision_shape: CollisionShape2D = _require_collision_shape_2d("LeftArm/LeftArmCollisionShape", "PlayerCharacter requires LeftArmCollisionShape.")
+	_left_arm_collision_shape = _require_collision_shape_2d("LeftArm/LeftArmCollisionShape", "PlayerCharacter requires LeftArmCollisionShape.")
 	_left_arm_visual_root = _require_node_2d("LeftArm/LeftArmVisualRoot", "PlayerCharacter requires LeftArmVisualRoot.")
 	_left_arm_visual = _require_sprite_2d("LeftArm/LeftArmVisualRoot/LeftArmVisual", "PlayerCharacter requires LeftArmVisual.")
 	_left_hand_cosmetic_root = _require_node_2d("LeftArm/LeftHandCosmeticRoot", "PlayerCharacter requires LeftHandCosmeticRoot.")
 
 	_right_arm = _require_rigid_body_2d("RightArm", "PlayerCharacter requires RightArm.")
-	var right_arm_collision_shape: CollisionShape2D = _require_collision_shape_2d("RightArm/RightArmCollisionShape", "PlayerCharacter requires RightArmCollisionShape.")
+	_right_arm_collision_shape = _require_collision_shape_2d("RightArm/RightArmCollisionShape", "PlayerCharacter requires RightArmCollisionShape.")
 	_right_arm_visual_root = _require_node_2d("RightArm/RightArmVisualRoot", "PlayerCharacter requires RightArmVisualRoot.")
 	_right_arm_visual = _require_sprite_2d("RightArm/RightArmVisualRoot/RightArmVisual", "PlayerCharacter requires RightArmVisual.")
 	_right_hand_cosmetic_root = _require_node_2d("RightArm/RightHandCosmeticRoot", "PlayerCharacter requires RightHandCosmeticRoot.")
@@ -431,12 +519,12 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_neck_socket.get_parent() == _torso, "PlayerCharacter NeckSocket must belong to Torso.")
 	Validation.require_condition(_player_visual.get_parent() == _visual_root, "PlayerCharacter PlayerVisual must belong to VisualRoot.")
 	Validation.require_condition(_body_visual_sprite.get_parent() == _visual_root, "PlayerCharacter BodyVisualSprite must belong to VisualRoot.")
-	Validation.require_condition(head_collision_shape.get_parent() == _head, "PlayerCharacter HeadCollisionShape must belong to Head.")
+	Validation.require_condition(_head_collision_shape.get_parent() == _head, "PlayerCharacter HeadCollisionShape must belong to Head.")
 	Validation.require_condition(_face_overlay.get_parent() == _head_visual_root, "PlayerCharacter FaceOverlay must belong to HeadVisualRoot.")
-	Validation.require_condition(left_arm_collision_shape.get_parent() == _left_arm, "PlayerCharacter LeftArmCollisionShape must belong to LeftArm.")
+	Validation.require_condition(_left_arm_collision_shape.get_parent() == _left_arm, "PlayerCharacter LeftArmCollisionShape must belong to LeftArm.")
 	Validation.require_condition(_left_arm_visual.get_parent() == _left_arm_visual_root, "PlayerCharacter LeftArmVisual must belong to LeftArmVisualRoot.")
 	Validation.require_condition(_left_hand_cosmetic_root.get_parent() == _left_arm, "PlayerCharacter LeftHandCosmeticRoot must belong to LeftArm.")
-	Validation.require_condition(right_arm_collision_shape.get_parent() == _right_arm, "PlayerCharacter RightArmCollisionShape must belong to RightArm.")
+	Validation.require_condition(_right_arm_collision_shape.get_parent() == _right_arm, "PlayerCharacter RightArmCollisionShape must belong to RightArm.")
 	Validation.require_condition(_right_arm_visual.get_parent() == _right_arm_visual_root, "PlayerCharacter RightArmVisual must belong to RightArmVisualRoot.")
 	Validation.require_condition(_right_hand_cosmetic_root.get_parent() == _right_arm, "PlayerCharacter RightHandCosmeticRoot must belong to RightArm.")
 

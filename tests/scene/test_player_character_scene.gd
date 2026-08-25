@@ -10,6 +10,7 @@ const PlayerAppearanceCatalogScript = preload("res://resources/config/player_app
 const PlayerAppearanceApplicatorScript = preload("res://src/cosmetics/player_appearance_applicator.gd")
 const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
+const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
 const PlayerCosmeticApplicatorScript = preload("res://src/cosmetics/player_cosmetic_applicator.gd")
 
 func test_player_character_scene_wires_required_nodes() -> void:
@@ -17,6 +18,9 @@ func test_player_character_scene_wires_required_nodes() -> void:
 
     assert_not_null(player.get_player_body())
     assert_not_null(player.get_torso_collision_shape())
+    assert_not_null(player.get_head_collision_shape())
+    assert_not_null(player.get_left_arm_collision_shape())
+    assert_not_null(player.get_right_arm_collision_shape())
     assert_not_null(player.get_head_body())
     assert_not_null(player.get_left_arm_body())
     assert_not_null(player.get_right_arm_body())
@@ -68,7 +72,7 @@ func test_player_character_each_limb_owns_its_own_collision_shape() -> void:
 func test_player_character_limb_collision_layer_excludes_self_and_torso() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
 
-    for limb_body in [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]:
+    for limb_body in _limb_bodies(player):
         assert_eq(limb_body.collision_layer, PlayerCharacterScript.LIMB_COLLISION_LAYER)
         assert_eq(limb_body.collision_mask, 1)
 
@@ -80,7 +84,7 @@ func test_player_character_limbs_start_frozen_kinematic_while_climbing() -> void
     var player: PlayerCharacterScript = await _instantiate_player()
 
     assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
-    for limb_body in [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]:
+    for limb_body in _limb_bodies(player):
         assert_true(limb_body.freeze)
         assert_eq(limb_body.freeze_mode, RigidBody2D.FREEZE_MODE_KINEMATIC)
 
@@ -90,26 +94,27 @@ func test_player_character_enters_falling_unfreezes_limbs_and_seeds_velocity_fro
     torso.linear_velocity = Vector2(120.0, -40.0)
     torso.angular_velocity = 1.5
 
-    player.enter_falling(0)
+    player.enter_falling(PlayerPhysicsModeTransitionsScript.Reason.FALL_DETECTED)
+    await get_tree().process_frame
 
-    for limb_body in [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]:
+    for limb_body in _limb_bodies(player):
         assert_false(limb_body.freeze)
         assert_eq(limb_body.linear_velocity, Vector2(120.0, -40.0))
         assert_eq(limb_body.angular_velocity, 1.5)
 
 func test_player_character_reset_physics_refreezes_limbs_and_snaps_pose() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
-    player.enter_falling(0)
+    player.enter_falling(PlayerPhysicsModeTransitionsScript.Reason.FALL_DETECTED)
 
     player.reset_physics(Vector2(40.0, 90.0))
 
     assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
-    for limb_body in [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]:
+    for limb_body in _limb_bodies(player):
         assert_true(limb_body.freeze)
         assert_eq(limb_body.linear_velocity, Vector2.ZERO)
         assert_eq(limb_body.angular_velocity, 0.0)
 
-    assert_eq(player.get_head_body().global_position, player.get_node("Torso/NeckSocket").global_position)
+    assert_eq(player.get_head_body().global_position, (player.get_node("Torso/NeckSocket") as Node2D).global_position)
     assert_eq(player.get_left_arm_body().global_position, player.get_left_shoulder_socket().global_position)
     assert_eq(player.get_right_arm_body().global_position, player.get_right_shoulder_socket().global_position)
 
@@ -288,27 +293,32 @@ func test_player_appearance_applicator_applies_human_appearance_without_changing
     var starting_mass: float = body.mass
     var starting_collision_layer: int = body.collision_layer
     var starting_collision_mask: int = body.collision_mask
-    var starting_collision_shape: Shape2D = player.get_torso_collision_shape().shape
-    var starting_capsule: CapsuleShape2D = starting_collision_shape as CapsuleShape2D
 
     assert_not_null(catalog)
-    assert_not_null(starting_capsule)
+    assert_true(player.get_torso_collision_shape().shape is CapsuleShape2D)
+    assert_false(player.get_torso_collision_shape().disabled)
+    assert_true(player.get_torso_fitted_collision_polygons().is_empty())
     var human_appearance: PlayerAppearanceScript = catalog.get_required_appearance_by_id(&"human")
     applicator.apply_appearance(player, human_appearance)
-
-    var fitted_collision_shape: Shape2D = player.get_torso_collision_shape().shape
-    var fitted_capsule: CapsuleShape2D = fitted_collision_shape as CapsuleShape2D
 
     assert_false(player.get_player_visual().visible)
     assert_not_null(player.get_body_visual_sprite().texture)
     assert_not_null(player.get_face_overlay().texture)
     assert_not_null(player.get_left_arm_visual().texture)
     assert_not_null(player.get_right_arm_visual().texture)
-    assert_not_null(fitted_capsule)
-    assert_true(fitted_collision_shape is CapsuleShape2D)
-    assert_ne(fitted_collision_shape, starting_collision_shape)
-    assert_gt(fitted_capsule.radius, 0.0)
-    assert_gt(fitted_capsule.height, 0.0)
+
+    # The plain-texture path fits pixel-silhouette collision, which disables the fallback
+    # primitive shape (still a valid CapsuleShape2D/CircleShape2D -- untouched, just inactive)
+    # and replaces it with one or more convex CollisionPolygon2D children per limb.
+    assert_true(player.get_torso_collision_shape().disabled)
+    _assert_fitted_collision_polygons_are_valid(player.get_torso_fitted_collision_polygons())
+    assert_true(player.get_head_collision_shape().disabled)
+    _assert_fitted_collision_polygons_are_valid(player.get_head_fitted_collision_polygons())
+    assert_true(player.get_left_arm_collision_shape().disabled)
+    _assert_fitted_collision_polygons_are_valid(player.get_left_arm_fitted_collision_polygons())
+    assert_true(player.get_right_arm_collision_shape().disabled)
+    _assert_fitted_collision_polygons_are_valid(player.get_right_arm_fitted_collision_polygons())
+
     player.assert_visual_roots_physics_neutral()
     assert_eq(body.mass, starting_mass)
     assert_eq(body.collision_layer, starting_collision_layer)
@@ -394,10 +404,11 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
     assert_eq(player_body.collision_mask, 1)
 
     player.apply_frame_motion(frame_result, attachment_state)
+    await get_tree().process_frame
 
     assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
     assert_eq(player_body.collision_mask, 3)
-    for limb_body in [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]:
+    for limb_body in _limb_bodies(player):
         assert_false(limb_body.freeze)
 
     player_body.global_rotation = 0.65
@@ -411,8 +422,17 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
     assert_eq(player_body.global_rotation, starting_rotation)
     assert_eq(player.get_body_linear_velocity(), Vector2.ZERO)
     assert_eq(player_body.angular_velocity, 0.0)
-    for limb_body in [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]:
+    for limb_body in _limb_bodies(player):
         assert_true(limb_body.freeze)
+
+func _limb_bodies(player: PlayerCharacterScript) -> Array[RigidBody2D]:
+    return [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]
+
+func _assert_fitted_collision_polygons_are_valid(polygons: Array[CollisionPolygon2D]) -> void:
+    assert_gt(polygons.size(), 0)
+    for polygon_node in polygons:
+        assert_gt(polygon_node.polygon.size(), 2)
+        assert_false(polygon_node.disabled)
 
 func _instantiate_player() -> PlayerCharacterScript:
     var scene: PackedScene = load("res://scenes/player/player_character.tscn")
