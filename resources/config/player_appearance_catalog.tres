@@ -5,25 +5,14 @@
 
 [sub_resource type="Resource" id="Resource_human"]
 script = ExtResource("2_appearance")
-rig_scene_path = "res://scenes/player/human_character_rig.tscn"
-rig_visual_offset = Vector2(0, 0)
-rig_lower_body_bone_path = NodePath("Parts/Skeleton2D/Hip")
-rig_left_upper_arm_bone_path = NodePath("Parts/Skeleton2D/Hip/Chest/arm_left")
-rig_left_forearm_bone_path = NodePath("Parts/Skeleton2D/Hip/Chest/arm_left/fore_arm_left")
-rig_left_hand_bone_path = NodePath("Parts/Skeleton2D/Hip/Chest/arm_left/fore_arm_left/hand_left")
-rig_right_upper_arm_bone_path = NodePath("Parts/Skeleton2D/Hip/Chest/arm_right")
-rig_right_forearm_bone_path = NodePath("Parts/Skeleton2D/Hip/Chest/arm_right/fore_arm_right")
-rig_right_hand_bone_path = NodePath("Parts/Skeleton2D/Hip/Chest/arm_right/fore_arm_right/hand_right")
-atlas_texture_path = "res://assets/art/character/human/Character.png"
-body_texture_path = "res://assets/art/character/human/UPPER_BODY.png"
-face_texture_path = "res://assets/art/character/human/Head.png"
-left_upper_arm_texture_path = "res://assets/art/character/human/left_upperarm.png"
-left_forearm_texture_path = "res://assets/art/character/human/left_arm.png"
-left_hand_texture_path = "res://assets/art/character/human/left_hand.png"
-right_upper_arm_texture_path = "res://assets/art/character/human/right_upperarm.png"
-right_forearm_texture_path = "res://assets/art/character/human/right_forearm.png"
-right_hand_texture_path = "res://assets/art/character/human/right_hand.png"
-lower_body_texture_path = "res://assets/art/character/human/Lower_Body.png"
+body_texture_path = "res://assets/PNG/Character/CHR2/back.png"
+body_scale = Vector2(3, 3)
+face_texture_path = "res://assets/PNG/Character/CHR2/head.png"
+face_scale = Vector2(3, 3)
+left_upper_arm_texture_path = "res://assets/PNG/Character/CHR2/leftarm.png"
+left_upper_arm_scale = Vector2(3, 3)
+right_upper_arm_texture_path = "res://assets/PNG/Character/CHR2/rightarm.png"
+right_upper_arm_scale = Vector2(3, 3)
 
 [resource]
 script = ExtResource("1_catalog")

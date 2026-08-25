@@ -35,44 +35,9 @@ func test_default_player_appearance_catalog_is_valid() -> void:
 
     assert_true(catalog.is_valid())
     assert_eq(human_appearance.display_name, "Human")
-    assert_eq(human_appearance.rig_scene_path, "res://scenes/player/human_character_rig.tscn")
-    assert_false(String(human_appearance.rig_lower_body_bone_path).is_empty())
-    assert_false(String(human_appearance.rig_left_upper_arm_bone_path).is_empty())
-    assert_false(String(human_appearance.rig_left_forearm_bone_path).is_empty())
-    assert_false(String(human_appearance.rig_left_hand_bone_path).is_empty())
-    assert_false(String(human_appearance.rig_right_upper_arm_bone_path).is_empty())
-    assert_false(String(human_appearance.rig_right_forearm_bone_path).is_empty())
-    assert_false(String(human_appearance.rig_right_hand_bone_path).is_empty())
-
-func test_rigged_player_appearance_requires_driver_bone_paths() -> void:
-    var catalog: PlayerAppearanceCatalogScript = _load_appearance_catalog()
-    var human_appearance: PlayerAppearanceScript = catalog.get_required_appearance_by_id(&"human")
-    var rigged_appearance := PlayerAppearanceScript.new()
-
-    rigged_appearance.appearance_id = &"alt_human"
-    rigged_appearance.display_name = "Alt Human"
-    rigged_appearance.rig_scene_path = human_appearance.rig_scene_path
-    rigged_appearance.body_texture_path = human_appearance.body_texture_path
-    rigged_appearance.face_texture_path = human_appearance.face_texture_path
-    rigged_appearance.left_upper_arm_texture_path = human_appearance.left_upper_arm_texture_path
-    rigged_appearance.left_forearm_texture_path = human_appearance.left_forearm_texture_path
-    rigged_appearance.left_hand_texture_path = human_appearance.left_hand_texture_path
-    rigged_appearance.right_upper_arm_texture_path = human_appearance.right_upper_arm_texture_path
-    rigged_appearance.right_forearm_texture_path = human_appearance.right_forearm_texture_path
-    rigged_appearance.right_hand_texture_path = human_appearance.right_hand_texture_path
-    rigged_appearance.lower_body_texture_path = human_appearance.lower_body_texture_path
-
-    assert_false(rigged_appearance.is_valid())
-
-    rigged_appearance.rig_lower_body_bone_path = human_appearance.rig_lower_body_bone_path
-    rigged_appearance.rig_left_upper_arm_bone_path = human_appearance.rig_left_upper_arm_bone_path
-    rigged_appearance.rig_left_forearm_bone_path = human_appearance.rig_left_forearm_bone_path
-    rigged_appearance.rig_left_hand_bone_path = human_appearance.rig_left_hand_bone_path
-    rigged_appearance.rig_right_upper_arm_bone_path = human_appearance.rig_right_upper_arm_bone_path
-    rigged_appearance.rig_right_forearm_bone_path = human_appearance.rig_right_forearm_bone_path
-    rigged_appearance.rig_right_hand_bone_path = human_appearance.rig_right_hand_bone_path
-
-    assert_true(rigged_appearance.is_valid())
+    assert_eq(human_appearance.left_upper_arm_texture_path, "res://assets/PNG/Character/CHR2/leftarm.png")
+    assert_eq(human_appearance.right_upper_arm_texture_path, "res://assets/PNG/Character/CHR2/rightarm.png")
+    assert_eq(human_appearance.face_texture_path, "res://assets/PNG/Character/CHR2/head.png")
 
 func test_cosmetic_inventory_merges_defaults_and_saved_ids_without_duplicates() -> void:
     var catalog: CosmeticItemCatalogScript = _load_catalog()

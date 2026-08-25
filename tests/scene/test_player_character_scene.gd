@@ -15,21 +15,19 @@ const PlayerCosmeticApplicatorScript = preload("res://src/cosmetics/player_cosme
 func test_player_character_scene_wires_required_nodes() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
 
-    assert_not_null(player.get_node_or_null("BaseSkeleton"))
-    assert_not_null(player.get_node_or_null("BaseSkeleton/TorsoBone"))
-    assert_not_null(player.get_visual_skeleton())
-    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/BodyVisualSprite"))
-    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/FaceOverlay"))
-    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone"))
-    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone"))
-    assert_not_null(player.get_left_hand_bone())
-    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone"))
-    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone"))
-    assert_not_null(player.get_right_hand_bone())
-    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone"))
-    assert_not_null(player.get_node_or_null("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone/LowerBodyVisual"))
     assert_not_null(player.get_player_body())
-    assert_not_null(player.get_body_collision_shape())
+    assert_not_null(player.get_torso_collision_shape())
+    assert_not_null(player.get_head_body())
+    assert_not_null(player.get_left_arm_body())
+    assert_not_null(player.get_right_arm_body())
+    assert_not_null(player.get_node_or_null("Torso/NeckSocket"))
+    assert_not_null(player.get_node_or_null("Torso/NeckSocket/TorsoHeadJoint"))
+    assert_not_null(player.get_node_or_null("Torso/LeftShoulderSocket/TorsoLeftArmJoint"))
+    assert_not_null(player.get_node_or_null("Torso/RightShoulderSocket/TorsoRightArmJoint"))
+    assert_not_null(player.get_body_visual_sprite())
+    assert_not_null(player.get_face_overlay())
+    assert_not_null(player.get_left_arm_visual())
+    assert_not_null(player.get_right_arm_visual())
     assert_not_null(player.get_left_shoulder_socket())
     assert_not_null(player.get_right_shoulder_socket())
     assert_not_null(player.get_left_hand_anchor())
@@ -44,23 +42,88 @@ func test_player_character_scene_wires_required_nodes() -> void:
     assert_not_null(player.get_visual_root())
     assert_not_null(player.get_cosmetic_visual_root())
 
-func test_player_character_owns_gameplay_collision_under_base_skeleton_body() -> void:
+func test_player_character_each_limb_owns_its_own_collision_shape() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
-    var body: RigidBody2D = player.get_player_body()
-    var collision_shape: CollisionShape2D = player.get_body_collision_shape()
 
-    assert_true(body.get_parent() is Skeleton2D)
-    assert_eq(collision_shape.get_parent(), body)
-    assert_not_null(collision_shape.shape)
-    assert_true(collision_shape.shape is CapsuleShape2D)
+    var torso: RigidBody2D = player.get_player_body()
+    var torso_shape: CollisionShape2D = player.get_torso_collision_shape()
+    assert_eq(torso_shape.get_parent(), torso)
+    assert_true(torso_shape.shape is CapsuleShape2D)
+
+    var head: RigidBody2D = player.get_head_body()
+    var head_shape: CollisionShape2D = head.get_node("HeadCollisionShape")
+    assert_eq(head_shape.get_parent(), head)
+    assert_true(head_shape.shape is CircleShape2D)
+
+    var left_arm: RigidBody2D = player.get_left_arm_body()
+    var left_arm_shape: CollisionShape2D = left_arm.get_node("LeftArmCollisionShape")
+    assert_eq(left_arm_shape.get_parent(), left_arm)
+    assert_true(left_arm_shape.shape is CapsuleShape2D)
+
+    var right_arm: RigidBody2D = player.get_right_arm_body()
+    var right_arm_shape: CollisionShape2D = right_arm.get_node("RightArmCollisionShape")
+    assert_eq(right_arm_shape.get_parent(), right_arm)
+    assert_true(right_arm_shape.shape is CapsuleShape2D)
+
+func test_player_character_limb_collision_layer_excludes_self_and_torso() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+
+    for limb_body in [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]:
+        assert_eq(limb_body.collision_layer, PlayerCharacterScript.LIMB_COLLISION_LAYER)
+        assert_eq(limb_body.collision_mask, 1)
+
+    assert_true((player.get_node("Torso/NeckSocket/TorsoHeadJoint") as PinJoint2D).disable_collision)
+    assert_true((player.get_node("Torso/LeftShoulderSocket/TorsoLeftArmJoint") as PinJoint2D).disable_collision)
+    assert_true((player.get_node("Torso/RightShoulderSocket/TorsoRightArmJoint") as PinJoint2D).disable_collision)
+
+func test_player_character_limbs_start_frozen_kinematic_while_climbing() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+
+    assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
+    for limb_body in [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]:
+        assert_true(limb_body.freeze)
+        assert_eq(limb_body.freeze_mode, RigidBody2D.FREEZE_MODE_KINEMATIC)
+
+func test_player_character_enters_falling_unfreezes_limbs_and_seeds_velocity_from_torso() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var torso: RigidBody2D = player.get_player_body()
+    torso.linear_velocity = Vector2(120.0, -40.0)
+    torso.angular_velocity = 1.5
+
+    player.enter_falling(0)
+
+    for limb_body in [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]:
+        assert_false(limb_body.freeze)
+        assert_eq(limb_body.linear_velocity, Vector2(120.0, -40.0))
+        assert_eq(limb_body.angular_velocity, 1.5)
+
+func test_player_character_reset_physics_refreezes_limbs_and_snaps_pose() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    player.enter_falling(0)
+
+    player.reset_physics(Vector2(40.0, 90.0))
+
+    assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
+    for limb_body in [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]:
+        assert_true(limb_body.freeze)
+        assert_eq(limb_body.linear_velocity, Vector2.ZERO)
+        assert_eq(limb_body.angular_velocity, 0.0)
+
+    assert_eq(player.get_head_body().global_position, player.get_node("Torso/NeckSocket").global_position)
+    assert_eq(player.get_left_arm_body().global_position, player.get_left_shoulder_socket().global_position)
+    assert_eq(player.get_right_arm_body().global_position, player.get_right_shoulder_socket().global_position)
 
 func test_player_character_visual_roots_are_physics_neutral() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
-    var body: RigidBody2D = player.get_player_body()
-    var starting_mass: float = body.mass
-    var starting_collision_layer: int = body.collision_layer
-    var starting_collision_mask: int = body.collision_mask
-    var starting_collision_shape: Shape2D = player.get_body_collision_shape().shape
+    var bodies: Array[RigidBody2D] = [player.get_player_body(), player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]
+    var starting_masses: Array[float] = []
+    var starting_layers: Array[int] = []
+    var starting_masks: Array[int] = []
+    for body in bodies:
+        starting_masses.append(body.mass)
+        starting_layers.append(body.collision_layer)
+        starting_masks.append(body.collision_mask)
+    var starting_torso_shape: Shape2D = player.get_torso_collision_shape().shape
 
     var extra_visual := Polygon2D.new()
     extra_visual.name = &"TestCosmeticVisual"
@@ -69,26 +132,21 @@ func test_player_character_visual_roots_are_physics_neutral() -> void:
 
     player.assert_visual_roots_physics_neutral()
 
-    assert_eq(body.mass, starting_mass)
-    assert_eq(body.collision_layer, starting_collision_layer)
-    assert_eq(body.collision_mask, starting_collision_mask)
-    assert_eq(player.get_body_collision_shape().shape, starting_collision_shape)
+    for index in bodies.size():
+        assert_eq(bodies[index].mass, starting_masses[index])
+        assert_eq(bodies[index].collision_layer, starting_layers[index])
+        assert_eq(bodies[index].collision_mask, starting_masks[index])
+    assert_eq(player.get_torso_collision_shape().shape, starting_torso_shape)
 
 func test_player_character_hand_geometry_separates_reach_and_visual_anchors() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
-    var left_placeholder: Node2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone/LeftHandBone/LeftHandCosmeticRoot/LeftHandVisual") as Node2D
-    var right_placeholder: Node2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone/RightHandBone/RightHandCosmeticRoot/RightHandVisual") as Node2D
 
     assert_eq(player.get_left_hand_anchor().get_parent(), player.get_left_shoulder_socket())
     assert_eq(player.get_right_hand_anchor().get_parent(), player.get_right_shoulder_socket())
     assert_eq(player.get_left_hand_visual_anchor().get_parent(), player.get_left_shoulder_socket())
     assert_eq(player.get_right_hand_visual_anchor().get_parent(), player.get_right_shoulder_socket())
-    assert_eq(player.get_left_hand_cosmetic_root().get_parent(), player.get_left_hand_bone())
-    assert_eq(player.get_right_hand_cosmetic_root().get_parent(), player.get_right_hand_bone())
-    assert_not_null(left_placeholder)
-    assert_not_null(right_placeholder)
-    assert_eq(left_placeholder.get_parent(), player.get_left_hand_cosmetic_root())
-    assert_eq(right_placeholder.get_parent(), player.get_right_hand_cosmetic_root())
+    assert_eq(player.get_left_hand_cosmetic_root().get_parent(), player.get_left_arm_body())
+    assert_eq(player.get_right_hand_cosmetic_root().get_parent(), player.get_right_arm_body())
     assert_ne(player.get_left_hand_anchor().position, player.get_left_hand_visual_anchor().position)
     assert_ne(player.get_right_hand_anchor().position, player.get_right_hand_visual_anchor().position)
 
@@ -135,90 +193,66 @@ func test_player_character_attached_visual_hand_biases_toward_hold() -> void:
 
     assert_lt(left_visual_anchor.global_position.distance_to(hold.global_position), starting_distance_to_hold)
 
-func test_player_character_visual_arm_bones_follow_hand_targets() -> void:
+func test_player_character_unattached_arm_tracks_shoulder_socket() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
-    var left_hand_bone: Bone2D = player.get_left_hand_bone()
-    var starting_position: Vector2 = left_hand_bone.global_position
+    var left_arm: RigidBody2D = player.get_left_arm_body()
 
     player.set_body_linear_velocity(Vector2(300.0, 0.0))
     player._physics_process(1.0 / 60.0)
 
-    assert_eq(left_hand_bone.global_position, starting_position)
+    assert_eq(left_arm.global_position, player.get_left_shoulder_socket().global_position)
 
-func test_player_character_unattached_motion_keeps_rest_pose() -> void:
+func test_player_character_unattached_motion_keeps_arm_rest_rotation() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
-    var left_upper_arm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone") as Bone2D
-    var left_forearm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone") as Bone2D
-    var lower_body_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone") as Bone2D
-    var starting_left_upper_arm_rotation: float = left_upper_arm_bone.rotation
-    var starting_left_forearm_rotation: float = left_forearm_bone.rotation
-    var starting_lower_body_rotation: float = lower_body_bone.rotation
+    var left_arm: RigidBody2D = player.get_left_arm_body()
+    var starting_left_arm_rotation: float = left_arm.global_rotation
 
     player.set_body_linear_velocity(Vector2(600.0, 0.0))
     player._physics_process(1.0 / 60.0)
 
-    assert_almost_eq(left_upper_arm_bone.rotation, starting_left_upper_arm_rotation, 0.001)
-    assert_almost_eq(left_forearm_bone.rotation, starting_left_forearm_rotation, 0.001)
-    assert_almost_eq(lower_body_bone.rotation, starting_lower_body_rotation, 0.001)
+    assert_almost_eq(left_arm.global_rotation, starting_left_arm_rotation, 0.001)
 
-func test_player_character_left_grip_pose_uses_static_attached_rotations() -> void:
+func test_player_character_left_arm_pose_points_toward_hold() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
     var hold: StaticBody2D = _create_hold(&"LeftHold", Vector2(180.0, 260.0))
     var attachment_state := HandAttachmentStateScript.new()
-    var left_upper_arm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone") as Bone2D
-    var left_hand_bone: Bone2D = player.get_left_hand_bone()
-    var left_forearm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone") as Bone2D
-    var starting_left_upper_arm_rotation: float = left_upper_arm_bone.rotation
-    var starting_left_forearm_rotation: float = left_forearm_bone.rotation
-    var starting_left_hand_rotation: float = left_hand_bone.rotation
+    var left_arm: RigidBody2D = player.get_left_arm_body()
+    var left_shoulder_socket: Marker2D = player.get_left_shoulder_socket()
 
     attachment_state.attach(HandSideScript.Value.LEFT, &"left_hold", hold.global_position, hold.get_path())
     player.apply_frame_motion(ClimbPrototypeFrameResultScript.new(Vector2.ZERO, false, 1), attachment_state)
 
-    assert_almost_eq(left_upper_arm_bone.rotation - starting_left_upper_arm_rotation, 0.45, 0.001)
-    assert_almost_eq(left_forearm_bone.rotation - starting_left_forearm_rotation, 1.2, 0.001)
-    assert_almost_eq(left_hand_bone.rotation - starting_left_hand_rotation, 0.9, 0.001)
+    var expected_direction: Vector2 = (hold.global_position - left_shoulder_socket.global_position).normalized()
+    var actual_direction: Vector2 = Vector2.RIGHT.rotated(left_arm.global_rotation + PlayerCharacterScript.LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS)
+    assert_almost_eq(actual_direction.angle_to(expected_direction), 0.0, 0.01)
+    assert_eq(left_arm.global_position, left_shoulder_socket.global_position)
 
-func test_player_character_right_grip_pose_uses_static_attached_rotations() -> void:
+func test_player_character_right_arm_pose_points_toward_hold() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
     var hold: StaticBody2D = _create_hold(&"RightHold", Vector2(60.0, 260.0))
     var attachment_state := HandAttachmentStateScript.new()
-    var right_upper_arm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone") as Bone2D
-    var right_hand_bone: Bone2D = player.get_right_hand_bone()
-    var right_forearm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone") as Bone2D
-    var starting_right_upper_arm_rotation: float = right_upper_arm_bone.rotation
-    var starting_right_forearm_rotation: float = right_forearm_bone.rotation
-    var starting_right_hand_rotation: float = right_hand_bone.rotation
+    var right_arm: RigidBody2D = player.get_right_arm_body()
+    var right_shoulder_socket: Marker2D = player.get_right_shoulder_socket()
 
     attachment_state.attach(HandSideScript.Value.RIGHT, &"right_hold", hold.global_position, hold.get_path())
     player.apply_frame_motion(ClimbPrototypeFrameResultScript.new(Vector2.ZERO, false, 1), attachment_state)
 
-    assert_almost_eq(right_upper_arm_bone.rotation - starting_right_upper_arm_rotation, -0.45, 0.001)
-    assert_almost_eq(right_forearm_bone.rotation - starting_right_forearm_rotation, -1.2, 0.001)
-    assert_almost_eq(right_hand_bone.rotation - starting_right_hand_rotation, -0.9, 0.001)
+    var expected_direction: Vector2 = (hold.global_position - right_shoulder_socket.global_position).normalized()
+    var actual_direction: Vector2 = Vector2.RIGHT.rotated(right_arm.global_rotation + PlayerCharacterScript.RIGHT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS)
+    assert_almost_eq(actual_direction.angle_to(expected_direction), 0.0, 0.01)
 
-func test_player_character_grab_pose_disables_free_side_and_lower_body_animation() -> void:
+func test_player_character_grab_pose_keeps_free_side_at_rest_pose() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
     var hold: StaticBody2D = _create_hold(&"LeftHold", Vector2(180.0, 260.0))
     var attachment_state := HandAttachmentStateScript.new()
-    var right_upper_arm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone") as Bone2D
-    var right_forearm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone") as Bone2D
-    var right_hand_bone: Bone2D = player.get_right_hand_bone()
-    var lower_body_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone") as Bone2D
-    var starting_right_upper_arm_rotation: float = right_upper_arm_bone.rotation
-    var starting_right_forearm_rotation: float = right_forearm_bone.rotation
-    var starting_right_hand_rotation: float = right_hand_bone.rotation
-    var starting_lower_body_rotation: float = lower_body_bone.rotation
+    var right_arm: RigidBody2D = player.get_right_arm_body()
+    var torso: RigidBody2D = player.get_player_body()
 
-    player.set_body_linear_velocity(Vector2(600.0, 0.0))
     attachment_state.attach(HandSideScript.Value.LEFT, &"left_hold", hold.global_position, hold.get_path())
     player.apply_frame_motion(ClimbPrototypeFrameResultScript.new(Vector2.ZERO, false, 1), attachment_state)
-    player._physics_process(1.0 / 60.0)
 
-    assert_almost_eq(right_upper_arm_bone.rotation, starting_right_upper_arm_rotation, 0.001)
-    assert_almost_eq(right_forearm_bone.rotation, starting_right_forearm_rotation, 0.001)
-    assert_almost_eq(right_hand_bone.rotation, starting_right_hand_rotation, 0.001)
-    assert_almost_eq(lower_body_bone.rotation, starting_lower_body_rotation, 0.001)
+    assert_almost_eq(right_arm.global_rotation, torso.global_rotation, 0.001)
+    assert_eq(right_arm.global_position, player.get_right_shoulder_socket().global_position)
 
 func test_player_cosmetic_applicator_adds_visuals_without_changing_physics() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
@@ -229,7 +263,7 @@ func test_player_cosmetic_applicator_adds_visuals_without_changing_physics() -> 
     var starting_mass: float = body.mass
     var starting_collision_layer: int = body.collision_layer
     var starting_collision_mask: int = body.collision_mask
-    var starting_collision_shape: Shape2D = player.get_body_collision_shape().shape
+    var starting_collision_shape: Shape2D = player.get_torso_collision_shape().shape
 
     assert_not_null(catalog)
     loadout.body_cosmetic_id = &"body_sunrise_jacket"
@@ -244,9 +278,9 @@ func test_player_cosmetic_applicator_adds_visuals_without_changing_physics() -> 
     assert_eq(body.mass, starting_mass)
     assert_eq(body.collision_layer, starting_collision_layer)
     assert_eq(body.collision_mask, starting_collision_mask)
-    assert_eq(player.get_body_collision_shape().shape, starting_collision_shape)
+    assert_eq(player.get_torso_collision_shape().shape, starting_collision_shape)
 
-func test_player_appearance_applicator_applies_human_rig_without_changing_physics() -> void:
+func test_player_appearance_applicator_applies_human_appearance_without_changing_physics() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
     var catalog: PlayerAppearanceCatalogScript = load("res://resources/config/player_appearance_catalog.tres") as PlayerAppearanceCatalogScript
     var applicator := PlayerAppearanceApplicatorScript.new()
@@ -254,65 +288,27 @@ func test_player_appearance_applicator_applies_human_rig_without_changing_physic
     var starting_mass: float = body.mass
     var starting_collision_layer: int = body.collision_layer
     var starting_collision_mask: int = body.collision_mask
-    var starting_collision_shape: Shape2D = player.get_body_collision_shape().shape
+    var starting_collision_shape: Shape2D = player.get_torso_collision_shape().shape
     var starting_capsule: CapsuleShape2D = starting_collision_shape as CapsuleShape2D
-    var starting_collision_position: Vector2 = player.get_body_collision_shape().position
 
     assert_not_null(catalog)
     assert_not_null(starting_capsule)
     var human_appearance: PlayerAppearanceScript = catalog.get_required_appearance_by_id(&"human")
     applicator.apply_appearance(player, human_appearance)
 
-    var fitted_collision_shape: Shape2D = player.get_body_collision_shape().shape
+    var fitted_collision_shape: Shape2D = player.get_torso_collision_shape().shape
     var fitted_capsule: CapsuleShape2D = fitted_collision_shape as CapsuleShape2D
-    var runtime_rig: Node2D = player.get_runtime_appearance_rig()
-    var runtime_left_upper_arm: Bone2D = runtime_rig.get_node_or_null(human_appearance.rig_left_upper_arm_bone_path) as Bone2D if runtime_rig != null else null
-    var runtime_right_forearm: Bone2D = runtime_rig.get_node_or_null(human_appearance.rig_right_forearm_bone_path) as Bone2D if runtime_rig != null else null
-    var runtime_lower_body: Bone2D = runtime_rig.get_node_or_null(human_appearance.rig_lower_body_bone_path) as Bone2D if runtime_rig != null else null
-    var gameplay_left_upper_arm: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone") as Bone2D
-    var gameplay_right_forearm: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/RightUpperArmBone/RightForearmBone") as Bone2D
-    var gameplay_lower_body: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone") as Bone2D
 
     assert_false(player.get_player_visual().visible)
-    assert_null(player.get_body_visual_sprite().texture)
-    assert_null(player.get_face_overlay().texture)
-    assert_null(player.get_left_upper_arm_visual().texture)
-    assert_null(player.get_left_forearm_visual().texture)
-    assert_null(player.get_left_hand_visual().texture)
-    assert_null(player.get_right_upper_arm_visual().texture)
-    assert_null(player.get_right_forearm_visual().texture)
-    assert_null(player.get_right_hand_visual().texture)
-    assert_null(player.get_lower_body_visual().texture)
-    assert_null(player.get_body_visual_sprite().get_node_or_null("AppearanceCutout"))
-    assert_null(player.get_face_overlay().get_node_or_null("AppearanceCutout"))
-    assert_null(player.get_left_upper_arm_visual().get_node_or_null("AppearanceCutout"))
-    assert_null(player.get_left_forearm_visual().get_node_or_null("AppearanceCutout"))
-    assert_null(player.get_left_hand_visual().get_node_or_null("AppearanceCutout"))
-    assert_null(player.get_right_upper_arm_visual().get_node_or_null("AppearanceCutout"))
-    assert_null(player.get_right_forearm_visual().get_node_or_null("AppearanceCutout"))
-    assert_null(player.get_right_hand_visual().get_node_or_null("AppearanceCutout"))
-    assert_null(player.get_lower_body_visual().get_node_or_null("AppearanceCutout"))
-    assert_not_null(runtime_rig)
-    assert_eq(runtime_rig.get_parent(), player.get_visual_root())
-    assert_not_null(runtime_left_upper_arm)
-    assert_not_null(runtime_right_forearm)
-    assert_not_null(runtime_lower_body)
-    var left_upper_arm_rotation_offset: float = wrapf(runtime_left_upper_arm.rotation - gameplay_left_upper_arm.rotation, -PI, PI)
-    var right_forearm_rotation_offset: float = wrapf(runtime_right_forearm.rotation - gameplay_right_forearm.rotation, -PI, PI)
-    var lower_body_rotation_offset: float = wrapf(runtime_lower_body.rotation - gameplay_lower_body.rotation, -PI, PI)
-    player.set_body_linear_velocity(Vector2(300.0, 0.0))
-    player._physics_process(1.0 / 60.0)
-    assert_almost_eq(wrapf((runtime_left_upper_arm.rotation - gameplay_left_upper_arm.rotation) - left_upper_arm_rotation_offset, -PI, PI), 0.0, 0.001)
-    assert_almost_eq(wrapf((runtime_right_forearm.rotation - gameplay_right_forearm.rotation) - right_forearm_rotation_offset, -PI, PI), 0.0, 0.001)
-    assert_almost_eq(wrapf((runtime_lower_body.rotation - gameplay_lower_body.rotation) - lower_body_rotation_offset, -PI, PI), 0.0, 0.001)
+    assert_not_null(player.get_body_visual_sprite().texture)
+    assert_not_null(player.get_face_overlay().texture)
+    assert_not_null(player.get_left_arm_visual().texture)
+    assert_not_null(player.get_right_arm_visual().texture)
     assert_not_null(fitted_capsule)
     assert_true(fitted_collision_shape is CapsuleShape2D)
     assert_ne(fitted_collision_shape, starting_collision_shape)
     assert_gt(fitted_capsule.radius, 0.0)
     assert_gt(fitted_capsule.height, 0.0)
-    assert_ne(fitted_capsule.radius, starting_capsule.radius)
-    assert_ne(fitted_capsule.height, starting_capsule.height)
-    assert_gt(player.get_body_collision_shape().position.y, starting_collision_position.y)
     player.assert_visual_roots_physics_neutral()
     assert_eq(body.mass, starting_mass)
     assert_eq(body.collision_layer, starting_collision_layer)
@@ -394,12 +390,6 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
     var attachment_state := HandAttachmentStateScript.new()
     var player_body: RigidBody2D = player.get_player_body()
     var starting_rotation: float = player_body.global_rotation
-    var left_upper_arm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone") as Bone2D
-    var left_forearm_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LeftUpperArmBone/LeftForearmBone") as Bone2D
-    var lower_body_bone: Bone2D = player.get_node("BaseSkeleton/PlayerBody/VisualRoot/VisualSkeleton/LowerBodyBone") as Bone2D
-    var starting_left_upper_arm_rotation: float = left_upper_arm_bone.rotation
-    var starting_left_forearm_rotation: float = left_forearm_bone.rotation
-    var starting_lower_body_rotation: float = lower_body_bone.rotation
 
     assert_eq(player_body.collision_mask, 1)
 
@@ -407,9 +397,8 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
 
     assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
     assert_eq(player_body.collision_mask, 3)
-    assert_almost_eq(left_upper_arm_bone.rotation, starting_left_upper_arm_rotation, 0.001)
-    assert_almost_eq(left_forearm_bone.rotation, starting_left_forearm_rotation, 0.001)
-    assert_almost_eq(lower_body_bone.rotation, starting_lower_body_rotation, 0.001)
+    for limb_body in [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]:
+        assert_false(limb_body.freeze)
 
     player_body.global_rotation = 0.65
     player_body.angular_velocity = 4.0
@@ -422,6 +411,8 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
     assert_eq(player_body.global_rotation, starting_rotation)
     assert_eq(player.get_body_linear_velocity(), Vector2.ZERO)
     assert_eq(player_body.angular_velocity, 0.0)
+    for limb_body in [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]:
+        assert_true(limb_body.freeze)
 
 func _instantiate_player() -> PlayerCharacterScript:
     var scene: PackedScene = load("res://scenes/player/player_character.tscn")

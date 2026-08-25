@@ -6,105 +6,105 @@
 [ext_resource type="PackedScene" uid="uid://1a8vb0lql3ln" path="res://scenes/player/player_character.tscn" id="4_player"]
 [ext_resource type="PackedScene" uid="uid://b7y1m41fyw3oa" path="res://scenes/ui/run_hud.tscn" id="5_run_hud"]
 [ext_resource type="PackedScene" uid="uid://b4yuxkuixyx8a" path="res://scenes/ui/run_end_screen.tscn" id="6_run_end"]
-[ext_resource type="PackedScene" uid="uid://mrfp8nboh2xm" path="res://scenes/chaser/chaser_kill_zone.tscn" id="7_chaser"]
+[ext_resource type="PackedScene" path="res://scenes/chaser/chaser_kill_zone.tscn" id="7_chaser"]
 [ext_resource type="Resource" uid="uid://pkomv75rg3na" path="res://resources/config/cosmetic_loadout_default.tres" id="8_loadout"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/background.png" id="9_oot7o"]
+[ext_resource type="Texture2D" uid="uid://duyb1yp4cgy7s" path="res://assets/PNG/UI/run_sence/background.png" id="9_oot7o"]
 [ext_resource type="Resource" path="res://resources/config/chaser_theme_catalog.tres" id="9_theme_catalog"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0000.png" id="10_fmtfv"]
+[ext_resource type="Texture2D" uid="uid://c23lgaj5hrgqs" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0000.png" id="10_fmtfv"]
 [ext_resource type="Script" uid="uid://5um68hdxp5u1" path="res://resources/config/generation_tuning.gd" id="10_generation"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0001.png" id="11_2ayvg"]
+[ext_resource type="Texture2D" uid="uid://csnhj0870gdwf" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0001.png" id="11_2ayvg"]
 [ext_resource type="Script" uid="uid://d0uk4g31ib747" path="res://src/gameplay/generation/generated_chunk_coordinator.gd" id="11_generated_chunks"]
 [ext_resource type="Resource" uid="uid://ou47hb7bijus" path="res://resources/config/cosmetic_item_catalog.tres" id="12_cosmetic_catalog"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0002.png" id="12_gcfjg"]
+[ext_resource type="Texture2D" uid="uid://bpisjtreryy8n" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0002.png" id="12_gcfjg"]
 [ext_resource type="Resource" uid="uid://dmuooovvgsc1c" path="res://resources/config/player_appearance_catalog.tres" id="13_appearance_catalog"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0003.png" id="13_civhj"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0004.png" id="14_kvdqo"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/base.png" id="15_oot7o"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0005.png" id="15_y6dka"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0006.png" id="16_306mh"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/floor.png" id="17_cid27"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0007.png" id="17_k0khs"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0008.png" id="18_lu6yv"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0009.png" id="19_qe6a5"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0010.png" id="20_brp48"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0011.png" id="21_irhew"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0012.png" id="22_onkr4"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0013.png" id="23_k6msv"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0014.png" id="24_5mpe1"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0015.png" id="25_gk7o1"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0016.png" id="26_if53y"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0017.png" id="27_qmjj6"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0018.png" id="28_7djgy"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0019.png" id="29_fcwex"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0020.png" id="30_ekfuv"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0021.png" id="31_6b1k3"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0022.png" id="32_u7bro"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0023.png" id="33_b6nfw"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0024.png" id="34_5a4j7"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0025.png" id="35_8b0ee"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0026.png" id="36_0ko2u"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0027.png" id="37_2gnr4"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0028.png" id="38_xua2w"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0029.png" id="39_txhxv"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0030.png" id="40_ogjf3"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0031.png" id="41_fr1kq"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0032.png" id="42_yy453"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0033.png" id="43_m6g7d"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0034.png" id="44_0lvty"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0035.png" id="45_wl2u5"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0036.png" id="46_mwjjq"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0037.png" id="47_ws51g"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0038.png" id="48_r8f4j"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0039.png" id="49_jc10i"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0040.png" id="50_5urms"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0041.png" id="51_yi4ya"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0042.png" id="52_i237h"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0043.png" id="53_ngrwb"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0044.png" id="54_cetol"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0045.png" id="55_s121b"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0046.png" id="56_4kp1f"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0047.png" id="57_v4qnt"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0048.png" id="58_tfagg"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0049.png" id="59_xtv4h"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0050.png" id="60_4r43j"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0051.png" id="61_7d2ob"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0052.png" id="62_qmstw"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0053.png" id="63_slg0x"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0054.png" id="64_d6ssm"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0055.png" id="65_dvifo"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0056.png" id="66_dab7p"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0057.png" id="67_mh2rd"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0058.png" id="68_kmw3y"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0059.png" id="69_7xrcn"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0060.png" id="70_ljibq"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0061.png" id="71_ywxh8"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0062.png" id="72_kimh3"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0063.png" id="73_dady2"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0064.png" id="74_fjw46"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0065.png" id="75_etm3f"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0066.png" id="76_lmiug"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0067.png" id="77_2q2pv"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0068.png" id="78_b5xby"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0069.png" id="79_3utu2"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0070.png" id="80_7fnwo"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0071.png" id="81_eo8gu"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0072.png" id="82_lxxpa"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0073.png" id="83_jpkop"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0074.png" id="84_hy6yh"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0075.png" id="85_tfdh3"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0076.png" id="86_vajai"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0077.png" id="87_klta5"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0078.png" id="88_1l05u"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0079.png" id="89_173bu"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0080.png" id="90_blntf"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0081.png" id="91_cx783"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0082.png" id="92_fitkw"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0083.png" id="93_syhsl"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0084.png" id="94_yqfji"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0085.png" id="95_im7f3"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0086.png" id="96_1q831"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0087.png" id="97_d88xe"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0088.png" id="98_dhbwt"]
+[ext_resource type="Texture2D" uid="uid://6v1jglojt8p3" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0003.png" id="13_civhj"]
+[ext_resource type="Texture2D" uid="uid://ctes14fu03vho" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0004.png" id="14_kvdqo"]
+[ext_resource type="Texture2D" uid="uid://bx1g7uomtx24r" path="res://assets/PNG/UI/run_sence/base.png" id="15_oot7o"]
+[ext_resource type="Texture2D" uid="uid://do1if8txibkga" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0005.png" id="15_y6dka"]
+[ext_resource type="Texture2D" uid="uid://irekxv003dkt" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0006.png" id="16_306mh"]
+[ext_resource type="Texture2D" uid="uid://dsml82syawksn" path="res://assets/PNG/UI/run_sence/floor.png" id="17_cid27"]
+[ext_resource type="Texture2D" uid="uid://chysi35bech1v" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0007.png" id="17_k0khs"]
+[ext_resource type="Texture2D" uid="uid://cqmg7sp2dmc8x" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0008.png" id="18_lu6yv"]
+[ext_resource type="Texture2D" uid="uid://cpietslokhi16" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0009.png" id="19_qe6a5"]
+[ext_resource type="Texture2D" uid="uid://cbdhdhx5xn7du" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0010.png" id="20_brp48"]
+[ext_resource type="Texture2D" uid="uid://2i2fesw5x442" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0011.png" id="21_irhew"]
+[ext_resource type="Texture2D" uid="uid://dodhns2fq8bh" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0012.png" id="22_onkr4"]
+[ext_resource type="Texture2D" uid="uid://bo7djngukjim6" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0013.png" id="23_k6msv"]
+[ext_resource type="Texture2D" uid="uid://clneulgyuumqw" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0014.png" id="24_5mpe1"]
+[ext_resource type="Texture2D" uid="uid://ilgy23bum4cx" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0015.png" id="25_gk7o1"]
+[ext_resource type="Texture2D" uid="uid://dbhrt15iryvoy" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0016.png" id="26_if53y"]
+[ext_resource type="Texture2D" uid="uid://becb6hlds25j6" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0017.png" id="27_qmjj6"]
+[ext_resource type="Texture2D" uid="uid://b812kd4bmebel" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0018.png" id="28_7djgy"]
+[ext_resource type="Texture2D" uid="uid://de23th4wqrhag" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0019.png" id="29_fcwex"]
+[ext_resource type="Texture2D" uid="uid://dghqcm8r2ihy5" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0020.png" id="30_ekfuv"]
+[ext_resource type="Texture2D" uid="uid://or4uftqlo186" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0021.png" id="31_6b1k3"]
+[ext_resource type="Texture2D" uid="uid://fwqybg6iuuym" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0022.png" id="32_u7bro"]
+[ext_resource type="Texture2D" uid="uid://cajjrnju0tk02" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0023.png" id="33_b6nfw"]
+[ext_resource type="Texture2D" uid="uid://blaiopbxulny8" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0024.png" id="34_5a4j7"]
+[ext_resource type="Texture2D" uid="uid://jqgydhh34dhy" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0025.png" id="35_8b0ee"]
+[ext_resource type="Texture2D" uid="uid://c1jbovni0uyub" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0026.png" id="36_0ko2u"]
+[ext_resource type="Texture2D" uid="uid://c5ftqbbe1xeck" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0027.png" id="37_2gnr4"]
+[ext_resource type="Texture2D" uid="uid://btcr2e3ljpy7v" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0028.png" id="38_xua2w"]
+[ext_resource type="Texture2D" uid="uid://dp6seslsblrev" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0029.png" id="39_txhxv"]
+[ext_resource type="Texture2D" uid="uid://bkvga41rarip2" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0030.png" id="40_ogjf3"]
+[ext_resource type="Texture2D" uid="uid://by17256y2yq4j" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0031.png" id="41_fr1kq"]
+[ext_resource type="Texture2D" uid="uid://cpqtpfj0qusx3" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0032.png" id="42_yy453"]
+[ext_resource type="Texture2D" uid="uid://q06h3qb11xp0" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0033.png" id="43_m6g7d"]
+[ext_resource type="Texture2D" uid="uid://dqn6vpw1fm4x4" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0034.png" id="44_0lvty"]
+[ext_resource type="Texture2D" uid="uid://3xj0cr4q7d3y" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0035.png" id="45_wl2u5"]
+[ext_resource type="Texture2D" uid="uid://bkadcvn5td6bb" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0036.png" id="46_mwjjq"]
+[ext_resource type="Texture2D" uid="uid://crwp2p0ilr3gj" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0037.png" id="47_ws51g"]
+[ext_resource type="Texture2D" uid="uid://d04y1igkkgbsy" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0038.png" id="48_r8f4j"]
+[ext_resource type="Texture2D" uid="uid://ccdguyex6evbu" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0039.png" id="49_jc10i"]
+[ext_resource type="Texture2D" uid="uid://b401fdea8w2x3" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0040.png" id="50_5urms"]
+[ext_resource type="Texture2D" uid="uid://bug8uwbr7or7g" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0041.png" id="51_yi4ya"]
+[ext_resource type="Texture2D" uid="uid://crl23beqgaxfv" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0042.png" id="52_i237h"]
+[ext_resource type="Texture2D" uid="uid://eqrp5i46np8j" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0043.png" id="53_ngrwb"]
+[ext_resource type="Texture2D" uid="uid://f5epggehwegr" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0044.png" id="54_cetol"]
+[ext_resource type="Texture2D" uid="uid://bekalbmul6kn3" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0045.png" id="55_s121b"]
+[ext_resource type="Texture2D" uid="uid://dv3rolnc5jjl8" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0046.png" id="56_4kp1f"]
+[ext_resource type="Texture2D" uid="uid://dswbnccdlnqic" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0047.png" id="57_v4qnt"]
+[ext_resource type="Texture2D" uid="uid://bqwk1vrbo6x0y" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0048.png" id="58_tfagg"]
+[ext_resource type="Texture2D" uid="uid://df8o2f1r7yrjh" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0049.png" id="59_xtv4h"]
+[ext_resource type="Texture2D" uid="uid://dokssqj8lxv75" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0050.png" id="60_4r43j"]
+[ext_resource type="Texture2D" uid="uid://bk1iuna8nbk1v" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0051.png" id="61_7d2ob"]
+[ext_resource type="Texture2D" uid="uid://b1wm6g3bcp7xx" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0052.png" id="62_qmstw"]
+[ext_resource type="Texture2D" uid="uid://8xmebt117r8l" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0053.png" id="63_slg0x"]
+[ext_resource type="Texture2D" uid="uid://cbou0dfxiesr1" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0054.png" id="64_d6ssm"]
+[ext_resource type="Texture2D" uid="uid://duaydu5exby8x" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0055.png" id="65_dvifo"]
+[ext_resource type="Texture2D" uid="uid://d2uurlsrg8jcd" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0056.png" id="66_dab7p"]
+[ext_resource type="Texture2D" uid="uid://dod5uqqd3vygk" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0057.png" id="67_mh2rd"]
+[ext_resource type="Texture2D" uid="uid://dxd2gimv3y6bs" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0058.png" id="68_kmw3y"]
+[ext_resource type="Texture2D" uid="uid://b8abe002l5ajf" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0059.png" id="69_7xrcn"]
+[ext_resource type="Texture2D" uid="uid://20c2qheteaqc" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0060.png" id="70_ljibq"]
+[ext_resource type="Texture2D" uid="uid://b2e5afug3jr6u" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0061.png" id="71_ywxh8"]
+[ext_resource type="Texture2D" uid="uid://bnddod8c6vkgg" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0062.png" id="72_kimh3"]
+[ext_resource type="Texture2D" uid="uid://dlsuf3xuonba7" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0063.png" id="73_dady2"]
+[ext_resource type="Texture2D" uid="uid://fwm3l38qdenh" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0064.png" id="74_fjw46"]
+[ext_resource type="Texture2D" uid="uid://doags5fqoruf0" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0065.png" id="75_etm3f"]
+[ext_resource type="Texture2D" uid="uid://ds774haflqma3" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0066.png" id="76_lmiug"]
+[ext_resource type="Texture2D" uid="uid://diwuujromlddo" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0067.png" id="77_2q2pv"]
+[ext_resource type="Texture2D" uid="uid://ck46j4qr07546" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0068.png" id="78_b5xby"]
+[ext_resource type="Texture2D" uid="uid://dx4kf235qy8ui" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0069.png" id="79_3utu2"]
+[ext_resource type="Texture2D" uid="uid://cs5g7shsjj3pv" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0070.png" id="80_7fnwo"]
+[ext_resource type="Texture2D" uid="uid://8jr3qcl0lbl5" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0071.png" id="81_eo8gu"]
+[ext_resource type="Texture2D" uid="uid://bnpthrn8tgw0p" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0072.png" id="82_lxxpa"]
+[ext_resource type="Texture2D" uid="uid://ciac8mffus2fi" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0073.png" id="83_jpkop"]
+[ext_resource type="Texture2D" uid="uid://d2whs8eamycua" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0074.png" id="84_hy6yh"]
+[ext_resource type="Texture2D" uid="uid://bna02jxdctlhi" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0075.png" id="85_tfdh3"]
+[ext_resource type="Texture2D" uid="uid://dgruja5wiheki" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0076.png" id="86_vajai"]
+[ext_resource type="Texture2D" uid="uid://dxl2wboichkn5" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0077.png" id="87_klta5"]
+[ext_resource type="Texture2D" uid="uid://dnis7tbgx7oet" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0078.png" id="88_1l05u"]
+[ext_resource type="Texture2D" uid="uid://dtm02401f78t6" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0079.png" id="89_173bu"]
+[ext_resource type="Texture2D" uid="uid://k2dgyo6p30k5" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0080.png" id="90_blntf"]
+[ext_resource type="Texture2D" uid="uid://bwl1nk0pflt81" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0081.png" id="91_cx783"]
+[ext_resource type="Texture2D" uid="uid://cipr8cjy6rhbj" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0082.png" id="92_fitkw"]
+[ext_resource type="Texture2D" uid="uid://cgf3uawejvc15" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0083.png" id="93_syhsl"]
+[ext_resource type="Texture2D" uid="uid://dr2k8wtps7ik5" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0084.png" id="94_yqfji"]
+[ext_resource type="Texture2D" uid="uid://dq8h30kb0m7wv" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0085.png" id="95_im7f3"]
+[ext_resource type="Texture2D" uid="uid://ctkgyk7tye13d" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0086.png" id="96_1q831"]
+[ext_resource type="Texture2D" uid="uid://f680p1i7xiuu" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0087.png" id="97_d88xe"]
+[ext_resource type="Texture2D" uid="uid://cik5huf0j0ewd" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0088.png" id="98_dhbwt"]
 [ext_resource type="Script" uid="uid://bs74tya2bc18s" path="res://scenes/main/animated_sprite_2d.gd" id="99_xjwkq"]
 
 [sub_resource type="Resource" id="Resource_climb"]
@@ -399,16 +399,13 @@ animations = [{
 "duration": 1.0,
 "texture": ExtResource("98_dhbwt")
 }],
-"loop": 1,
+"loop": true,
 "name": &"cloud",
 "speed": 16.0
 }]
 
 [sub_resource type="CompressedTexture2D" id="CompressedTexture2D_cid27"]
 load_path = "res://.godot/imported/Tree.png-5b080b1b128f6026c6efb997eb76ffa8.ctex"
-
-[sub_resource type="RectangleShape2D" id="RectangleShape2D_hold"]
-size = Vector2(128, 34)
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_tutorial_hold"]
 size = Vector2(96, 34)
@@ -435,8 +432,8 @@ scale = Vector2(4, 4)
 texture = ExtResource("9_oot7o")
 
 [node name="cloud" type="AnimatedSprite2D" parent="DevCamera" unique_id=984040109]
-position = Vector2(0, -60)
-scale = Vector2(4, 4)
+position = Vector2(2, -31)
+scale = Vector2(3.9851851, 3.8791666)
 sprite_frames = SubResource("SpriteFrames_uj04i")
 animation = &"cloud"
 script = ExtResource("99_xjwkq")
@@ -450,8 +447,10 @@ texture = SubResource("CompressedTexture2D_cid27")
 
 [node name="RunHud" parent="UiLayer" unique_id=120501001 instance=ExtResource("5_run_hud")]
 unique_name_in_owner = true
-offset_right = -1080.0
-offset_bottom = -1920.0
+offset_left = -2.0
+offset_top = 374.0
+offset_right = -2.0
+offset_bottom = 374.0
 metadata/_edit_use_anchors_ = true
 
 [node name="RunEndScreen" parent="UiLayer" unique_id=120501002 instance=ExtResource("6_run_end")]
@@ -463,7 +462,7 @@ position = Vector2(540, 1500)
 
 [node name="PlayerCharacter" parent="." unique_id=2062018110 instance=ExtResource("4_player")]
 unique_name_in_owner = true
-position = Vector2(540, 1500)
+position = Vector2(563, 1475)
 
 [node name="ChaserKillZone" parent="." unique_id=1635600093 instance=ExtResource("7_chaser")]
 unique_name_in_owner = true
@@ -471,20 +470,18 @@ position = Vector2(540, 2396)
 
 [node name="Handholds" type="Node2D" parent="." unique_id=142891664]
 
-[node name="HoldSafePlatform" type="StaticBody2D" parent="Handholds" unique_id=1100838222 groups=["handhold"]]
+[node name="HoldSafePlatform" type="StaticBody2D" parent="Handholds" unique_id=693929253 groups=["handhold"]]
 position = Vector2(540, 1557)
-
-[node name="CollisionShape2D" type="CollisionShape2D" parent="Handholds/HoldSafePlatform" unique_id=467169153]
-position = Vector2(0, 25)
-scale = Vector2(2, 2)
-shape = SubResource("RectangleShape2D_hold")
 
 [node name="Visual" type="Polygon2D" parent="Handholds/HoldSafePlatform" unique_id=245411791]
 z_index = 300
-position = Vector2(-523, -13)
+position = Vector2(-505, -38.000004)
 scale = Vector2(3.9, 3.9)
 texture = ExtResource("15_oot7o")
-polygon = PackedVector2Array(-9.87282, -0.20075464, 277.9149, -0.20075464, 277.9149, 76.24285, -9.87282, 76.24285)
+polygon = PackedVector2Array(-9.87282, -0.20075464, 277.9149, -0.20075464, 277.9149, 76.24285, -9.87282, 76.24285, -9.872818, 21.600555)
+
+[node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Handholds/HoldSafePlatform" unique_id=1904665093]
+polygon = PackedVector2Array(-91.6, -26.3, -103.3, -26.3, -103.3, -14.6, -87.7, -14.6, -68.2, 8.8, -64.3, 8.8, -83.8, 24.4, -83.8, 28.3, -196.9, 47.8, -208.6, 47.8, -271, 86.8, -271, 90.7, -403.6, 141.4, -403.6, 145.3, -505, 157, -505, 199.9, -450.4, 180.4, -423.1, 180.4, -419.2, 203.8, -411.4, 203.8, -391.9, 164.8, -380.2, 164.8, -376.3, 231.1, -368.5, 231.1, -368.5, 168.7, -368.5, 157, -333.4, 145.3, -321.7, 145.3, -263.2, 110.2, -263.2, 106.3, -263.2, 145.3, -255.4, 145.3, -251.5, 129.7, -251.5, 98.5, -232, 86.8, -232, 82.9, -224.2, 98.5, -216.4, 98.5, -216.4, 75.1, -208.6, 79, -200.8, 79, -196.9, 75.1, -196.9, 63.4, -181.3, 63.4, -181.3, 59.5, -169.6, 59.5, -177.4, 79, -181.3, 79, -177.4, 125.8, -169.6, 125.8, -173.5, 118, -173.5, 82.9, -161.8, 67.3, -161.8, 59.5, -64.3, 43.9, -56.5, 43.9, -56.5, 71.2, -48.7, 71.2, -48.7, 28.3, -40.9, 28.3, 29.3, 47.8, 29.3, 59.5, 80, 36.1, 103.4, 36.1, 130.7, 55.6, 130.7, 79, 138.5, 55.6, 154.1, 55.6, 150.2, 75.1, 150.2, 98.5, 161.9, 55.6, 212.6, 55.6, 228.2, 149.2, 228.2, 153.1, 232.1, 106.3, 232.1, 79, 220.4, 67.3, 220.4, 55.6, 282.8, 67.3, 294.5, 67.3, 314, 110.2, 317.9, 110.2, 321.8, 145.3, 321.8, 157, 333.5, 149.2, 333.5, 133.6, 314, 86.8, 317.9, 86.8, 403.7, 176.5, 403.7, 180.4, 442.7, 199.9, 442.7, 223.3, 458.3, 211.6, 462.2, 211.6, 466.1, 238.9, 466.1, 254.5, 470, 235, 470, 219.4, 528.5, 238.9, 548, 238.9, 548, 196, 524.6, 192.1, 505.1, 192.1, 466.1, 168.7, 454.4, 168.7, 337.4, 63.4, 337.4, 59.5, 282.8, 43.9, 282.8, 40, 126.8, 32.2, 119, 32.2, 119, 8.8, 119, 1, 154.1, -14.6, 154.1, -30.2, -91.6, -34.1)
 
 [node name="TutorialHoldStartLeft" type="StaticBody2D" parent="Handholds" unique_id=1900181001 groups=["tutorial_handhold"]]
 visible = false

@@ -28,7 +28,7 @@ The Climber is a Godot 4.4+ mobile-first 2D physics game. The MVP architecture p
 
 - Scene scripts should be thin coordinators.
 - Scene scripts may cache required child nodes, but missing nodes must fail fast.
-- Player collision shapes belong to the base skeleton only.
+- Player collision shapes belong to their owning `RigidBody2D` (Torso/Head/LeftArm/RightArm) only.
 - Cosmetics must never modify mass, friction, collision layers, collision shapes, or gameplay tuning.
 
 ## Configuration

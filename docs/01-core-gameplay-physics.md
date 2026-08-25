@@ -39,8 +39,8 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 
 ### Player Character
 
-- Use `Skeleton2D`, `Bone2D`, and `PinJoint2D` for the ragdoll setup.
-- All gameplay collision shapes must remain attached to the base skeleton only.
+- The ragdoll is 4 real `RigidBody2D` bodies (Torso, Head, LeftArm, RightArm), connected to Torso by 3 scene-authored `PinJoint2D`s. Torso is always dynamic; the other 3 flip between `freeze = true` (kinematic, code-posed while climbing) and `freeze = false` (real ragdoll physics while falling) via `RigidBody2D.freeze_mode = FREEZE_MODE_KINEMATIC`.
+- Each of the 4 bodies owns its own collision shape.
 - Cosmetics must be visual-only sprite swaps.
 - Cosmetics must not affect collision boundaries, friction, mass, or any other gameplay-relevant value.
 

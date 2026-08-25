@@ -24,10 +24,6 @@ func apply_appearance(player: Node, appearance: Resource) -> void:
 	typed_appearance.assert_valid()
 	_clear_existing_appearance_visuals(typed_player)
 	typed_player.get_player_visual().visible = false
-	if not typed_appearance.rig_scene_path.is_empty():
-		_apply_rigged_appearance(typed_player, typed_appearance)
-		typed_player.assert_visual_roots_physics_neutral()
-		return
 	if not typed_appearance.atlas_texture_path.is_empty():
 		_apply_cutout_appearance(typed_player, typed_appearance)
 		typed_player.assert_visual_roots_physics_neutral()
@@ -35,91 +31,17 @@ func apply_appearance(player: Node, appearance: Resource) -> void:
 
 	_apply_part(typed_player.get_body_visual_sprite(), typed_appearance.body_texture_path, typed_appearance.body_offset, typed_appearance.body_scale)
 	_apply_part(typed_player.get_face_overlay(), typed_appearance.face_texture_path, typed_appearance.face_offset, typed_appearance.face_scale)
-	_apply_part(typed_player.get_left_upper_arm_visual(), typed_appearance.left_upper_arm_texture_path, typed_appearance.left_upper_arm_offset, typed_appearance.left_upper_arm_scale)
-	_apply_part(typed_player.get_left_forearm_visual(), typed_appearance.left_forearm_texture_path, typed_appearance.left_forearm_offset, typed_appearance.left_forearm_scale)
-	_apply_part(typed_player.get_left_hand_visual(), typed_appearance.left_hand_texture_path, typed_appearance.left_hand_offset, typed_appearance.left_hand_scale)
-	_apply_part(typed_player.get_right_upper_arm_visual(), typed_appearance.right_upper_arm_texture_path, typed_appearance.right_upper_arm_offset, typed_appearance.right_upper_arm_scale)
-	_apply_part(typed_player.get_right_forearm_visual(), typed_appearance.right_forearm_texture_path, typed_appearance.right_forearm_offset, typed_appearance.right_forearm_scale)
-	_apply_part(typed_player.get_right_hand_visual(), typed_appearance.right_hand_texture_path, typed_appearance.right_hand_offset, typed_appearance.right_hand_scale)
-	_apply_part(typed_player.get_lower_body_visual(), typed_appearance.lower_body_texture_path, typed_appearance.lower_body_offset, typed_appearance.lower_body_scale)
-	_fit_body_collision_to_visible_body(typed_player)
+	_apply_part(typed_player.get_left_arm_visual(), typed_appearance.left_upper_arm_texture_path, typed_appearance.left_upper_arm_offset, typed_appearance.left_upper_arm_scale)
+	_apply_part(typed_player.get_right_arm_visual(), typed_appearance.right_upper_arm_texture_path, typed_appearance.right_upper_arm_offset, typed_appearance.right_upper_arm_scale)
+	_fit_torso_collision_to_visible_body(typed_player)
 	typed_player.assert_visual_roots_physics_neutral()
-
-func _apply_rigged_appearance(player: PlayerCharacterScript, appearance: PlayerAppearanceScript) -> void:
-	Validation.require_condition(player != null, "PlayerAppearanceApplicator requires a player for rigged appearance application.")
-	Validation.require_condition(appearance != null, "PlayerAppearanceApplicator requires an appearance for rigged appearance application.")
-	var rig_scene_resource: Resource = load(appearance.rig_scene_path)
-	Validation.require_condition(rig_scene_resource != null, "PlayerAppearanceApplicator failed to load rig scene at %s." % appearance.rig_scene_path)
-	Validation.require_condition(rig_scene_resource is PackedScene, "PlayerAppearanceApplicator rig scene must be a PackedScene.")
-	player.apply_runtime_appearance_rig(
-		rig_scene_resource as PackedScene,
-		appearance.rig_visual_offset,
-		appearance.rig_lower_body_bone_path,
-		appearance.rig_left_upper_arm_bone_path,
-		appearance.rig_left_forearm_bone_path,
-		appearance.rig_left_hand_bone_path,
-		appearance.rig_right_upper_arm_bone_path,
-		appearance.rig_right_forearm_bone_path,
-		appearance.rig_right_hand_bone_path
-	)
-
-	_fit_body_collision_to_rig_bounds(player, player.get_runtime_appearance_rig())
-
-func _fit_body_collision_to_rig_bounds(player: PlayerCharacterScript, rig: Node2D) -> void:
-	Validation.require_condition(player != null, "PlayerAppearanceApplicator requires a player to fit rig collision.")
-	Validation.require_condition(rig != null, "PlayerAppearanceApplicator requires an instantiated rig to fit collision.")
-	var merged_bounds: Rect2 = _get_rig_local_rect(rig, player.get_player_body())
-	Validation.require_condition(merged_bounds.size.x > 0.0 and merged_bounds.size.y > 0.0, "PlayerAppearanceApplicator requires visible rig bounds to fit collision.")
-	var capsule_radius: float = merged_bounds.size.x / 2.0
-	var capsule_height: float = maxf(0.0, merged_bounds.size.y - (capsule_radius * 2.0))
-	var collision_offset: Vector2 = merged_bounds.position + (merged_bounds.size / 2.0)
-	player.configure_body_collision_capsule(capsule_radius, capsule_height, collision_offset)
-
-const TORSO_RIG_PART_NAMES: PackedStringArray = ["Head", "UpperBody", "LowerBody"]
-
-func _get_rig_local_rect(rig: Node2D, stop_at: Node) -> Rect2:
-	var parts_root: Node = rig.get_node_or_null(NodePath("Parts"))
-	Validation.require_condition(parts_root != null, "PlayerAppearanceApplicator requires a Parts root to fit rig collision.")
-	var merged_bounds: Rect2
-	var has_bounds: bool = false
-	for part_name in TORSO_RIG_PART_NAMES:
-		var part_node: Node = parts_root.get_node_or_null(NodePath(part_name))
-		Validation.require_condition(part_node is Polygon2D, "PlayerAppearanceApplicator requires a Polygon2D torso part named %s." % part_name)
-		var polygon_rect: Rect2 = _get_polygon_2d_local_rect(part_node as Polygon2D, stop_at)
-		if not has_bounds:
-			merged_bounds = polygon_rect
-			has_bounds = true
-		else:
-			merged_bounds = merged_bounds.merge(polygon_rect)
-	Validation.require_condition(has_bounds, "PlayerAppearanceApplicator requires at least one torso part to fit rig collision.")
-	return merged_bounds
-
-func _get_polygon_2d_local_rect(polygon_node: Polygon2D, stop_at: Node) -> Rect2:
-	Validation.require_condition(polygon_node.polygon.size() > 0, "PlayerAppearanceApplicator requires non-empty polygon points to fit rig collision.")
-	var to_stop_at_transform: Transform2D = (stop_at as Node2D).get_global_transform().affine_inverse() * polygon_node.get_global_transform()
-	var merged_rect: Rect2
-	var has_point: bool = false
-	for local_point in polygon_node.polygon:
-		var transformed_point: Vector2 = to_stop_at_transform * (local_point + polygon_node.offset)
-		if not has_point:
-			merged_rect = Rect2(transformed_point, Vector2.ZERO)
-			has_point = true
-		else:
-			merged_rect = merged_rect.expand(transformed_point)
-	return merged_rect
 
 func _clear_existing_appearance_visuals(player: PlayerCharacterScript) -> void:
 	Validation.require_condition(player != null, "PlayerAppearanceApplicator requires a player before clearing appearance visuals.")
-	player.clear_runtime_appearance_rig()
 	_clear_part_visual(player.get_body_visual_sprite())
 	_clear_part_visual(player.get_face_overlay())
-	_clear_part_visual(player.get_left_upper_arm_visual())
-	_clear_part_visual(player.get_left_forearm_visual())
-	_clear_part_visual(player.get_left_hand_visual())
-	_clear_part_visual(player.get_right_upper_arm_visual())
-	_clear_part_visual(player.get_right_forearm_visual())
-	_clear_part_visual(player.get_right_hand_visual())
-	_clear_part_visual(player.get_lower_body_visual())
+	_clear_part_visual(player.get_left_arm_visual())
+	_clear_part_visual(player.get_right_arm_visual())
 
 func _apply_cutout_appearance(player: PlayerCharacterScript, appearance: PlayerAppearanceScript) -> void:
 	Validation.require_condition(player != null, "PlayerAppearanceApplicator requires a player for cutout application.")
@@ -132,23 +54,13 @@ func _apply_cutout_appearance(player: PlayerCharacterScript, appearance: PlayerA
 	var body_source: CutoutSource = _load_cutout_source(appearance.body_texture_path)
 	var face_source: CutoutSource = _load_cutout_source(appearance.face_texture_path)
 	var left_upper_arm_source: CutoutSource = _load_cutout_source(appearance.left_upper_arm_texture_path)
-	var left_forearm_source: CutoutSource = _load_cutout_source(appearance.left_forearm_texture_path)
-	var left_hand_source: CutoutSource = _load_cutout_source(appearance.left_hand_texture_path)
 	var right_upper_arm_source: CutoutSource = _load_cutout_source(appearance.right_upper_arm_texture_path)
-	var right_forearm_source: CutoutSource = _load_cutout_source(appearance.right_forearm_texture_path)
-	var right_hand_source: CutoutSource = _load_cutout_source(appearance.right_hand_texture_path)
-	var lower_body_source: CutoutSource = _load_cutout_source(appearance.lower_body_texture_path)
 
 	_apply_cutout_part(player.get_body_visual_sprite(), atlas_texture, body_source, appearance.body_offset, appearance.body_scale)
 	_apply_cutout_part(player.get_face_overlay(), atlas_texture, face_source, appearance.face_offset, appearance.face_scale)
-	_apply_cutout_part(player.get_left_upper_arm_visual(), atlas_texture, left_upper_arm_source, appearance.left_upper_arm_offset, appearance.left_upper_arm_scale)
-	_apply_cutout_part(player.get_left_forearm_visual(), atlas_texture, left_forearm_source, appearance.left_forearm_offset, appearance.left_forearm_scale)
-	_apply_cutout_part(player.get_left_hand_visual(), atlas_texture, left_hand_source, appearance.left_hand_offset, appearance.left_hand_scale)
-	_apply_cutout_part(player.get_right_upper_arm_visual(), atlas_texture, right_upper_arm_source, appearance.right_upper_arm_offset, appearance.right_upper_arm_scale)
-	_apply_cutout_part(player.get_right_forearm_visual(), atlas_texture, right_forearm_source, appearance.right_forearm_offset, appearance.right_forearm_scale)
-	_apply_cutout_part(player.get_right_hand_visual(), atlas_texture, right_hand_source, appearance.right_hand_offset, appearance.right_hand_scale)
-	_apply_cutout_part(player.get_lower_body_visual(), atlas_texture, lower_body_source, appearance.lower_body_offset, appearance.lower_body_scale)
-	_fit_body_collision_to_cutout_bounds(player, body_source, face_source, lower_body_source, appearance)
+	_apply_cutout_part(player.get_left_arm_visual(), atlas_texture, left_upper_arm_source, appearance.left_upper_arm_offset, appearance.left_upper_arm_scale)
+	_apply_cutout_part(player.get_right_arm_visual(), atlas_texture, right_upper_arm_source, appearance.right_upper_arm_offset, appearance.right_upper_arm_scale)
+	_fit_torso_collision_to_cutout_bounds(player, body_source, appearance)
 
 func _apply_cutout_part(anchor: Sprite2D, atlas_texture: Texture2D, source: CutoutSource, offset: Vector2, scale_value: Vector2) -> void:
 	Validation.require_condition(anchor != null, "PlayerAppearanceApplicator requires a cutout anchor.")
@@ -209,22 +121,18 @@ func _load_cutout_source(asset_path: String) -> CutoutSource:
 	Validation.require_condition(used_rect.size.x > 0 and used_rect.size.y > 0, "PlayerAppearanceApplicator found no opaque pixels in %s." % asset_path)
 	return CutoutSource.new(Vector2(image.get_width(), image.get_height()), Rect2(used_rect.position, used_rect.size))
 
-func _fit_body_collision_to_cutout_bounds(
+func _fit_torso_collision_to_cutout_bounds(
 	player: PlayerCharacterScript,
 	body_source: CutoutSource,
-	face_source: CutoutSource,
-	lower_body_source: CutoutSource,
 	appearance: PlayerAppearanceScript
 ) -> void:
 	Validation.require_condition(player != null, "PlayerAppearanceApplicator requires a player to fit cutout collision.")
 	var merged_bounds: Rect2 = _build_cutout_rect(body_source, appearance.body_offset, appearance.body_scale)
-	merged_bounds = merged_bounds.merge(_build_cutout_rect(face_source, appearance.face_offset, appearance.face_scale))
-	merged_bounds = merged_bounds.merge(_build_cutout_rect(lower_body_source, appearance.lower_body_offset, appearance.lower_body_scale))
 	Validation.require_condition(merged_bounds.size.x > 0.0 and merged_bounds.size.y > 0.0, "PlayerAppearanceApplicator requires visible cutout bounds to fit collision.")
 	var capsule_radius: float = merged_bounds.size.x / 2.0
 	var capsule_height: float = maxf(0.0, merged_bounds.size.y - (capsule_radius * 2.0))
 	var collision_offset: Vector2 = merged_bounds.position + (merged_bounds.size / 2.0)
-	player.configure_body_collision_capsule(capsule_radius, capsule_height, collision_offset)
+	player.configure_torso_collision_capsule(capsule_radius, capsule_height, collision_offset)
 
 func _build_cutout_rect(source: CutoutSource, offset: Vector2, scale_value: Vector2) -> Rect2:
 	var center: Vector2 = _get_cutout_center_in_visual_frame(source) + offset
@@ -233,8 +141,15 @@ func _build_cutout_rect(source: CutoutSource, offset: Vector2, scale_value: Vect
 
 func _get_cutout_center_in_visual_frame(source: CutoutSource) -> Vector2:
 	Validation.require_condition(source != null, "PlayerAppearanceApplicator requires a cutout source to resolve its center.")
-	var frame_center: Vector2 = source.frame_size / 2.0
-	return source.used_rect.position + (source.used_rect.size / 2.0) - frame_center
+	return _resolve_crop_center_offset(source.frame_size, source.used_rect.position, source.used_rect.size)
+
+# Cropping an image to its opaque bounding box (used_rect) throws away where that
+# box sat within the original canvas. Assets are frequently drawn off-center within
+# their canvas (e.g. an arm sprite whose opaque pixels sit left-of-center), so the
+# cropped, re-centered sprite must be nudged back by this delta or it renders shifted
+# from its intended attachment point. Shared by both the plain and cutout part paths.
+func _resolve_crop_center_offset(frame_size: Vector2, used_rect_position: Vector2, used_rect_size: Vector2) -> Vector2:
+	return used_rect_position + (used_rect_size / 2.0) - (frame_size / 2.0)
 
 func _require_visual_root(anchor: Sprite2D) -> Node2D:
 	var current: Node = anchor
@@ -255,12 +170,14 @@ func _apply_part(sprite: Sprite2D, asset_path: String, offset: Vector2, scale_va
 	Validation.require_condition(load_result == OK, "PlayerAppearanceApplicator failed to load image at %s." % asset_path)
 	var used_rect: Rect2i = image.get_used_rect()
 	Validation.require_condition(used_rect.size.x > 0 and used_rect.size.y > 0, "PlayerAppearanceApplicator found no opaque pixels in %s." % asset_path)
+	var frame_size: Vector2 = Vector2(image.get_width(), image.get_height())
+	var crop_center_offset: Vector2 = _resolve_crop_center_offset(frame_size, Vector2(used_rect.position), Vector2(used_rect.size))
 	if used_rect.position != Vector2i.ZERO or used_rect.size != Vector2i(image.get_width(), image.get_height()):
 		image = image.get_region(used_rect)
 	var texture: ImageTexture = ImageTexture.create_from_image(image)
 	Validation.require_condition(texture != null, "PlayerAppearanceApplicator failed to create texture for %s." % asset_path)
 	sprite.texture = texture
-	sprite.offset = offset
+	sprite.offset = offset + crop_center_offset
 	sprite.scale = scale_value
 
 func _clear_part_visual(sprite: Sprite2D) -> void:
@@ -273,20 +190,14 @@ func _clear_part_visual(sprite: Sprite2D) -> void:
 	sprite.offset = Vector2.ZERO
 	sprite.scale = Vector2.ONE
 
-func _fit_body_collision_to_visible_body(player: PlayerCharacterScript) -> void:
+func _fit_torso_collision_to_visible_body(player: PlayerCharacterScript) -> void:
 	Validation.require_condition(player != null, "PlayerAppearanceApplicator requires a player to fit collision.")
-	var merged_bounds: Rect2 = _get_body_collision_fit_bounds(player)
+	var merged_bounds: Rect2 = _get_sprite_body_local_rect(player.get_body_visual_sprite(), player.get_player_body())
 	Validation.require_condition(merged_bounds.size.x > 0.0 and merged_bounds.size.y > 0.0, "PlayerAppearanceApplicator requires visible body bounds to fit collision.")
 	var capsule_radius: float = merged_bounds.size.x / 2.0
 	var capsule_height: float = maxf(0.0, merged_bounds.size.y - (capsule_radius * 2.0))
 	var collision_offset: Vector2 = merged_bounds.position + (merged_bounds.size / 2.0)
-	player.configure_body_collision_capsule(capsule_radius, capsule_height, collision_offset)
-
-func _get_body_collision_fit_bounds(player: PlayerCharacterScript) -> Rect2:
-	var body_bounds: Rect2 = _get_sprite_body_local_rect(player.get_body_visual_sprite(), player.get_player_body())
-	var face_bounds: Rect2 = _get_sprite_body_local_rect(player.get_face_overlay(), player.get_player_body())
-	var lower_body_bounds: Rect2 = _get_sprite_body_local_rect(player.get_lower_body_visual(), player.get_player_body())
-	return body_bounds.merge(face_bounds).merge(lower_body_bounds)
+	player.configure_torso_collision_capsule(capsule_radius, capsule_height, collision_offset)
 
 func _get_sprite_body_local_rect(sprite: Sprite2D, stop_at: Node) -> Rect2:
 	Validation.require_condition(sprite != null, "PlayerAppearanceApplicator requires a sprite to measure collision fit bounds.")
@@ -310,5 +221,5 @@ func _sum_local_positions(node: Node2D, stop_at: Node) -> Vector2:
 		var typed_current: Node2D = current as Node2D
 		accumulated += typed_current.position
 		current = typed_current.get_parent()
-	Validation.require_condition(current == stop_at, "PlayerAppearanceApplicator could not resolve collision fit positions to PlayerBody.")
+	Validation.require_condition(current == stop_at, "PlayerAppearanceApplicator could not resolve collision fit positions to Torso.")
 	return accumulated
