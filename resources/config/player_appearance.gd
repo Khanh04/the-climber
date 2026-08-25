@@ -6,6 +6,7 @@ extends Resource
 @export var display_name: String = "Human"
 @export var hide_overlay_cosmetics: bool = true
 @export_file("*.tscn") var rig_scene_path: String = ""
+@export var rig_visual_offset: Vector2 = Vector2.ZERO
 @export var rig_lower_body_bone_path: NodePath = NodePath("")
 @export var rig_left_upper_arm_bone_path: NodePath = NodePath("")
 @export var rig_left_forearm_bone_path: NodePath = NodePath("")

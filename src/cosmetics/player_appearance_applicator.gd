@@ -53,6 +53,7 @@ func _apply_rigged_appearance(player: PlayerCharacterScript, appearance: PlayerA
 	Validation.require_condition(rig_scene_resource is PackedScene, "PlayerAppearanceApplicator rig scene must be a PackedScene.")
 	player.apply_runtime_appearance_rig(
 		rig_scene_resource as PackedScene,
+		appearance.rig_visual_offset,
 		appearance.rig_lower_body_bone_path,
 		appearance.rig_left_upper_arm_bone_path,
 		appearance.rig_left_forearm_bone_path,
@@ -62,10 +63,50 @@ func _apply_rigged_appearance(player: PlayerCharacterScript, appearance: PlayerA
 		appearance.rig_right_hand_bone_path
 	)
 
-	var body_source: CutoutSource = _load_cutout_source(appearance.body_texture_path)
-	var face_source: CutoutSource = _load_cutout_source(appearance.face_texture_path)
-	var lower_body_source: CutoutSource = _load_cutout_source(appearance.lower_body_texture_path)
-	_fit_body_collision_to_cutout_bounds(player, body_source, face_source, lower_body_source, appearance)
+	_fit_body_collision_to_rig_bounds(player, player.get_runtime_appearance_rig())
+
+func _fit_body_collision_to_rig_bounds(player: PlayerCharacterScript, rig: Node2D) -> void:
+	Validation.require_condition(player != null, "PlayerAppearanceApplicator requires a player to fit rig collision.")
+	Validation.require_condition(rig != null, "PlayerAppearanceApplicator requires an instantiated rig to fit collision.")
+	var merged_bounds: Rect2 = _get_rig_local_rect(rig, player.get_player_body())
+	Validation.require_condition(merged_bounds.size.x > 0.0 and merged_bounds.size.y > 0.0, "PlayerAppearanceApplicator requires visible rig bounds to fit collision.")
+	var capsule_radius: float = merged_bounds.size.x / 2.0
+	var capsule_height: float = maxf(0.0, merged_bounds.size.y - (capsule_radius * 2.0))
+	var collision_offset: Vector2 = merged_bounds.position + (merged_bounds.size / 2.0)
+	player.configure_body_collision_capsule(capsule_radius, capsule_height, collision_offset)
+
+const TORSO_RIG_PART_NAMES: PackedStringArray = ["Head", "UpperBody", "LowerBody"]
+
+func _get_rig_local_rect(rig: Node2D, stop_at: Node) -> Rect2:
+	var parts_root: Node = rig.get_node_or_null(NodePath("Parts"))
+	Validation.require_condition(parts_root != null, "PlayerAppearanceApplicator requires a Parts root to fit rig collision.")
+	var merged_bounds: Rect2
+	var has_bounds: bool = false
+	for part_name in TORSO_RIG_PART_NAMES:
+		var part_node: Node = parts_root.get_node_or_null(NodePath(part_name))
+		Validation.require_condition(part_node is Polygon2D, "PlayerAppearanceApplicator requires a Polygon2D torso part named %s." % part_name)
+		var polygon_rect: Rect2 = _get_polygon_2d_local_rect(part_node as Polygon2D, stop_at)
+		if not has_bounds:
+			merged_bounds = polygon_rect
+			has_bounds = true
+		else:
+			merged_bounds = merged_bounds.merge(polygon_rect)
+	Validation.require_condition(has_bounds, "PlayerAppearanceApplicator requires at least one torso part to fit rig collision.")
+	return merged_bounds
+
+func _get_polygon_2d_local_rect(polygon_node: Polygon2D, stop_at: Node) -> Rect2:
+	Validation.require_condition(polygon_node.polygon.size() > 0, "PlayerAppearanceApplicator requires non-empty polygon points to fit rig collision.")
+	var to_stop_at_transform: Transform2D = (stop_at as Node2D).get_global_transform().affine_inverse() * polygon_node.get_global_transform()
+	var merged_rect: Rect2
+	var has_point: bool = false
+	for local_point in polygon_node.polygon:
+		var transformed_point: Vector2 = to_stop_at_transform * (local_point + polygon_node.offset)
+		if not has_point:
+			merged_rect = Rect2(transformed_point, Vector2.ZERO)
+			has_point = true
+		else:
+			merged_rect = merged_rect.expand(transformed_point)
+	return merged_rect
 
 func _clear_existing_appearance_visuals(player: PlayerCharacterScript) -> void:
 	Validation.require_condition(player != null, "PlayerAppearanceApplicator requires a player before clearing appearance visuals.")

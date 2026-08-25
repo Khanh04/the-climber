@@ -63,8 +63,8 @@ func _validate_required_state() -> void:
 		Validation.require_condition(impulse_vector_pixels != Vector2.ZERO, "GeneratedHazardSpawnAdapter force hazards require a non-zero impulse vector.")
 	Validation.require_condition(get_node_or_null("CollisionShape2D") is CollisionShape2D, "GeneratedHazardSpawnAdapter requires CollisionShape2D.")
 	Validation.require_condition(get_node_or_null("Visual") is Polygon2D, "GeneratedHazardSpawnAdapter requires Visual.")
-	if hazard_kind == GeneratedHazardKindScript.Value.WIND_GUST:
-		Validation.require_condition(get_node_or_null("AnimatedSprite2D") is AnimatedSprite2D, "GeneratedHazardSpawnAdapter wind gust hazards require AnimatedSprite2D.")
+	if _hazard_kind_uses_wind_animation(hazard_kind):
+		Validation.require_condition(get_node_or_null("AnimatedSprite2D") is AnimatedSprite2D, "GeneratedHazardSpawnAdapter wind-animated hazards require AnimatedSprite2D.")
 
 func get_impulse_vector_pixels() -> Vector2:
 	return impulse_vector_pixels
@@ -189,8 +189,9 @@ func _ensure_presentation() -> void:
 
 	visual.color = _build_visual_color()
 	visual.polygon = _build_visual_polygon()
+	visual.visible = not _hazard_kind_uses_wind_animation(hazard_kind)
 
-	if hazard_kind == GeneratedHazardKindScript.Value.WIND_GUST:
+	if _hazard_kind_uses_wind_animation(hazard_kind):
 		var animated_sprite: AnimatedSprite2D = get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
 		if animated_sprite == null:
 			animated_sprite = AnimatedSprite2D.new()
@@ -199,6 +200,12 @@ func _ensure_presentation() -> void:
 			animated_sprite.animation = WIND_GUST_ANIMATION_NAME
 			add_child(animated_sprite)
 			animated_sprite.play()
+		animated_sprite.rotation = impulse_vector_pixels.angle()
+
+func _hazard_kind_uses_wind_animation(hazard_kind_value: int) -> bool:
+	return hazard_kind_value == GeneratedHazardKindScript.Value.WIND_GUST \
+		or hazard_kind_value == GeneratedHazardKindScript.Value.UPDRAFT \
+		or hazard_kind_value == GeneratedHazardKindScript.Value.DOWNDRAFT
 
 func _on_body_entered(body: Node) -> void:
 	Validation.require_condition(body != null, "GeneratedHazardSpawnAdapter body_entered requires a body.")

@@ -33,6 +33,7 @@ bone_angle = -1.5707998
 
 [node name="PlayerBody" type="RigidBody2D" parent="BaseSkeleton" unique_id=840062987]
 unique_name_in_owner = true
+continuous_cd = 2
 
 [node name="BodyCollisionShape" type="CollisionShape2D" parent="BaseSkeleton/PlayerBody" unique_id=1186239048]
 unique_name_in_owner = true

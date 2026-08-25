@@ -303,6 +303,7 @@ func get_body_collision_shape() -> CollisionShape2D:
 
 func apply_runtime_appearance_rig(
 	rig_scene: PackedScene,
+	rig_visual_offset: Vector2,
 	lower_body_bone_path: NodePath,
 	left_upper_arm_bone_path: NodePath,
 	left_forearm_bone_path: NodePath,
@@ -319,7 +320,7 @@ func apply_runtime_appearance_rig(
 	Validation.require_condition(instantiated_rig is Node2D, "PlayerCharacter appearance rig root must be a Node2D.")
 	var typed_rig: Node2D = instantiated_rig as Node2D
 	typed_rig.name = APPLIED_APPEARANCE_RIG_NODE_NAME
-	typed_rig.position = Vector2.ZERO
+	typed_rig.position = rig_visual_offset
 	typed_rig.rotation = 0.0
 	typed_rig.scale = Vector2.ONE
 	_visual_root.add_child(typed_rig)

@@ -6,6 +6,7 @@
 [sub_resource type="Resource" id="Resource_human"]
 script = ExtResource("2_appearance")
 rig_scene_path = "res://scenes/player/human_character_rig.tscn"
+rig_visual_offset = Vector2(0, 0)
 rig_lower_body_bone_path = NodePath("Parts/Skeleton2D/Hip")
 rig_left_upper_arm_bone_path = NodePath("Parts/Skeleton2D/Hip/Chest/arm_left")
 rig_left_forearm_bone_path = NodePath("Parts/Skeleton2D/Hip/Chest/arm_left/fore_arm_left")
