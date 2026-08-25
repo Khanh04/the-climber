@@ -315,6 +315,7 @@ func test_default_chaser_theme_is_valid() -> void:
 func test_invalid_chaser_theme_is_detected() -> void:
     var theme := ChaserThemeScript.new()
     theme.audio_loop_stream = load("res://assets/audio/chaser_pressure_loop.tres") as AudioStream
+    theme.chaser_sprite_frames = load("res://resources/config/chaser_run_animation.tres") as SpriteFrames
     theme.pulse_max_frequency_hz = 0.25
     theme.pulse_min_frequency_hz = 0.5
 
@@ -323,7 +324,14 @@ func test_invalid_chaser_theme_is_detected() -> void:
 func test_chaser_theme_rejects_non_positive_audio_curve_exponents() -> void:
     var theme := ChaserThemeScript.new()
     theme.audio_loop_stream = load("res://assets/audio/chaser_pressure_loop.tres") as AudioStream
+    theme.chaser_sprite_frames = load("res://resources/config/chaser_run_animation.tres") as SpriteFrames
     theme.audio_pitch_curve_exponent = 0.0
+
+    assert_false(theme.is_valid())
+
+func test_chaser_theme_requires_sprite_frames() -> void:
+    var theme := ChaserThemeScript.new()
+    theme.audio_loop_stream = load("res://assets/audio/chaser_pressure_loop.tres") as AudioStream
 
     assert_false(theme.is_valid())
 
@@ -337,6 +345,9 @@ func test_concrete_chaser_themes_swap_distinct_audio_and_pulse_profiles() -> voi
     assert_not_null(glitch_theme)
     assert_ne(rising_void_theme.audio_loop_stream, hot_coffee_theme.audio_loop_stream)
     assert_ne(hot_coffee_theme.audio_loop_stream, glitch_theme.audio_loop_stream)
+    assert_not_null(rising_void_theme.chaser_sprite_frames)
+    assert_not_null(hot_coffee_theme.chaser_sprite_frames)
+    assert_not_null(glitch_theme.chaser_sprite_frames)
     assert_ne(rising_void_theme.pulse_max_frequency_hz, glitch_theme.pulse_max_frequency_hz)
     assert_ne(rising_void_theme.audio_volume_curve_exponent, hot_coffee_theme.audio_volume_curve_exponent)
     assert_ne(hot_coffee_theme.audio_pitch_curve_exponent, glitch_theme.audio_pitch_curve_exponent)

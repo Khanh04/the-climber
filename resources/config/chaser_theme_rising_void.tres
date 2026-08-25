@@ -1,12 +1,14 @@
-[gd_resource type="Resource" script_class="ChaserTheme" load_steps=3 format=3]
+[gd_resource type="Resource" script_class="ChaserTheme" load_steps=4 format=3]
 
 [ext_resource type="Script" path="res://resources/config/chaser_theme.gd" id="1_script"]
 [ext_resource type="AudioStreamWAV" path="res://assets/audio/chaser_pressure_loop.tres" id="2_loop"]
+[ext_resource type="SpriteFrames" path="res://resources/config/chaser_run_animation.tres" id="3_sprite_frames"]
 
 [resource]
 script = ExtResource("1_script")
 theme_id = &"rising_void"
 audio_loop_stream = ExtResource("2_loop")
+chaser_sprite_frames = ExtResource("3_sprite_frames")
 base_fill_color = Color(0.16, 0.09, 0.12, 1)
 high_pressure_fill_color = Color(0.36, 0.1, 0.08, 1)
 glow_color = Color(0.84, 0.22, 0.14, 1)

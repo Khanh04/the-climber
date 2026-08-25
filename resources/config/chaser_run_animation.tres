@@ -1,0 +1,303 @@
+[gd_resource type="SpriteFrames" load_steps=74 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_01.png" id="1_f01"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_02.png" id="2_f02"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_03.png" id="3_f03"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_04.png" id="4_f04"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_05.png" id="5_f05"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_06.png" id="6_f06"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_07.png" id="7_f07"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_08.png" id="8_f08"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_09.png" id="9_f09"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_10.png" id="10_f10"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_11.png" id="11_f11"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_12.png" id="12_f12"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_13.png" id="13_f13"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_14.png" id="14_f14"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_15.png" id="15_f15"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_16.png" id="16_f16"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_17.png" id="17_f17"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_18.png" id="18_f18"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_19.png" id="19_f19"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_20.png" id="20_f20"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_21.png" id="21_f21"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_22.png" id="22_f22"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_23.png" id="23_f23"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_24.png" id="24_f24"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_25.png" id="25_f25"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_26.png" id="26_f26"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_27.png" id="27_f27"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_28.png" id="28_f28"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_29.png" id="29_f29"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_30.png" id="30_f30"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_31.png" id="31_f31"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_32.png" id="32_f32"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_33.png" id="33_f33"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_34.png" id="34_f34"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_35.png" id="35_f35"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_36.png" id="36_f36"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_37.png" id="37_f37"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_38.png" id="38_f38"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_39.png" id="39_f39"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_40.png" id="40_f40"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_41.png" id="41_f41"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_42.png" id="42_f42"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_43.png" id="43_f43"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_44.png" id="44_f44"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_45.png" id="45_f45"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_46.png" id="46_f46"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_47.png" id="47_f47"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_48.png" id="48_f48"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_49.png" id="49_f49"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_50.png" id="50_f50"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_51.png" id="51_f51"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_52.png" id="52_f52"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_53.png" id="53_f53"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_54.png" id="54_f54"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_55.png" id="55_f55"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_56.png" id="56_f56"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_57.png" id="57_f57"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_58.png" id="58_f58"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_59.png" id="59_f59"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_60.png" id="60_f60"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_61.png" id="61_f61"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_62.png" id="62_f62"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_63.png" id="63_f63"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_64.png" id="64_f64"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_65.png" id="65_f65"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_66.png" id="66_f66"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_67.png" id="67_f67"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_68.png" id="68_f68"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_69.png" id="69_f69"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_70.png" id="70_f70"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_71.png" id="71_f71"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_72.png" id="72_f72"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Chaser/Chaser_animation/frame_73.png" id="73_f73"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_f01")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_f02")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_f03")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_f04")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_f05")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_f06")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_f07")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_f08")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_f09")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_f10")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11_f11")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_f12")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_f13")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_f14")
+}, {
+"duration": 1.0,
+"texture": ExtResource("15_f15")
+}, {
+"duration": 1.0,
+"texture": ExtResource("16_f16")
+}, {
+"duration": 1.0,
+"texture": ExtResource("17_f17")
+}, {
+"duration": 1.0,
+"texture": ExtResource("18_f18")
+}, {
+"duration": 1.0,
+"texture": ExtResource("19_f19")
+}, {
+"duration": 1.0,
+"texture": ExtResource("20_f20")
+}, {
+"duration": 1.0,
+"texture": ExtResource("21_f21")
+}, {
+"duration": 1.0,
+"texture": ExtResource("22_f22")
+}, {
+"duration": 1.0,
+"texture": ExtResource("23_f23")
+}, {
+"duration": 1.0,
+"texture": ExtResource("24_f24")
+}, {
+"duration": 1.0,
+"texture": ExtResource("25_f25")
+}, {
+"duration": 1.0,
+"texture": ExtResource("26_f26")
+}, {
+"duration": 1.0,
+"texture": ExtResource("27_f27")
+}, {
+"duration": 1.0,
+"texture": ExtResource("28_f28")
+}, {
+"duration": 1.0,
+"texture": ExtResource("29_f29")
+}, {
+"duration": 1.0,
+"texture": ExtResource("30_f30")
+}, {
+"duration": 1.0,
+"texture": ExtResource("31_f31")
+}, {
+"duration": 1.0,
+"texture": ExtResource("32_f32")
+}, {
+"duration": 1.0,
+"texture": ExtResource("33_f33")
+}, {
+"duration": 1.0,
+"texture": ExtResource("34_f34")
+}, {
+"duration": 1.0,
+"texture": ExtResource("35_f35")
+}, {
+"duration": 1.0,
+"texture": ExtResource("36_f36")
+}, {
+"duration": 1.0,
+"texture": ExtResource("37_f37")
+}, {
+"duration": 1.0,
+"texture": ExtResource("38_f38")
+}, {
+"duration": 1.0,
+"texture": ExtResource("39_f39")
+}, {
+"duration": 1.0,
+"texture": ExtResource("40_f40")
+}, {
+"duration": 1.0,
+"texture": ExtResource("41_f41")
+}, {
+"duration": 1.0,
+"texture": ExtResource("42_f42")
+}, {
+"duration": 1.0,
+"texture": ExtResource("43_f43")
+}, {
+"duration": 1.0,
+"texture": ExtResource("44_f44")
+}, {
+"duration": 1.0,
+"texture": ExtResource("45_f45")
+}, {
+"duration": 1.0,
+"texture": ExtResource("46_f46")
+}, {
+"duration": 1.0,
+"texture": ExtResource("47_f47")
+}, {
+"duration": 1.0,
+"texture": ExtResource("48_f48")
+}, {
+"duration": 1.0,
+"texture": ExtResource("49_f49")
+}, {
+"duration": 1.0,
+"texture": ExtResource("50_f50")
+}, {
+"duration": 1.0,
+"texture": ExtResource("51_f51")
+}, {
+"duration": 1.0,
+"texture": ExtResource("52_f52")
+}, {
+"duration": 1.0,
+"texture": ExtResource("53_f53")
+}, {
+"duration": 1.0,
+"texture": ExtResource("54_f54")
+}, {
+"duration": 1.0,
+"texture": ExtResource("55_f55")
+}, {
+"duration": 1.0,
+"texture": ExtResource("56_f56")
+}, {
+"duration": 1.0,
+"texture": ExtResource("57_f57")
+}, {
+"duration": 1.0,
+"texture": ExtResource("58_f58")
+}, {
+"duration": 1.0,
+"texture": ExtResource("59_f59")
+}, {
+"duration": 1.0,
+"texture": ExtResource("60_f60")
+}, {
+"duration": 1.0,
+"texture": ExtResource("61_f61")
+}, {
+"duration": 1.0,
+"texture": ExtResource("62_f62")
+}, {
+"duration": 1.0,
+"texture": ExtResource("63_f63")
+}, {
+"duration": 1.0,
+"texture": ExtResource("64_f64")
+}, {
+"duration": 1.0,
+"texture": ExtResource("65_f65")
+}, {
+"duration": 1.0,
+"texture": ExtResource("66_f66")
+}, {
+"duration": 1.0,
+"texture": ExtResource("67_f67")
+}, {
+"duration": 1.0,
+"texture": ExtResource("68_f68")
+}, {
+"duration": 1.0,
+"texture": ExtResource("69_f69")
+}, {
+"duration": 1.0,
+"texture": ExtResource("70_f70")
+}, {
+"duration": 1.0,
+"texture": ExtResource("71_f71")
+}, {
+"duration": 1.0,
+"texture": ExtResource("72_f72")
+}, {
+"duration": 1.0,
+"texture": ExtResource("73_f73")
+}
+],
+"loop": true,
+"name": &"chase",
+"speed": 30.0
+}]

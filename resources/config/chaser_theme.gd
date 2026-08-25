@@ -3,6 +3,7 @@ extends Resource
 
 @export var theme_id: StringName = &"rising_void"
 @export var audio_loop_stream: AudioStream
+@export var chaser_sprite_frames: SpriteFrames
 @export var base_fill_color: Color = Color(0.16, 0.09, 0.12, 1.0)
 @export var high_pressure_fill_color: Color = Color(0.36, 0.10, 0.08, 1.0)
 @export var glow_color: Color = Color(0.84, 0.22, 0.14, 1.0)
@@ -26,6 +27,7 @@ extends Resource
 func is_valid() -> bool:
 	return not theme_id.is_empty() \
 		and audio_loop_stream != null \
+		and chaser_sprite_frames != null \
 		and glow_extra_width_pixels >= 0.0 \
 		and glow_extra_height_pixels >= 0.0 \
 		and crest_height_pixels > 0.0 \
@@ -52,6 +54,7 @@ func validate() -> void:
 func assert_valid() -> void:
 	Validation.require_condition(not theme_id.is_empty(), "Chaser theme id cannot be empty.")
 	Validation.require_condition(audio_loop_stream != null, "Chaser theme requires an audio loop stream.")
+	Validation.require_condition(chaser_sprite_frames != null, "Chaser theme requires chaser sprite frames.")
 	Validation.require_condition(glow_extra_width_pixels >= 0.0, "Chaser theme glow extra width cannot be negative.")
 	Validation.require_condition(glow_extra_height_pixels >= 0.0, "Chaser theme glow extra height cannot be negative.")
 	Validation.require_condition(crest_height_pixels > 0.0, "Chaser theme crest height must be positive.")

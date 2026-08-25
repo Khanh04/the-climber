@@ -17,6 +17,7 @@ func test_chaser_scene_wires_required_nodes_and_defaults() -> void:
 	assert_not_null(chaser.get_node_or_null("Visual"))
 	assert_not_null(chaser.get_node_or_null("CrestVisual"))
 	assert_not_null(chaser.get_node_or_null("IntensityAudioPlayer"))
+	assert_not_null(chaser.get_node_or_null("AnimatedSprite2D"))
 	assert_not_null(audio_player)
 	assert_true(chaser.monitoring)
 	assert_true(chaser.monitorable)
@@ -26,6 +27,7 @@ func test_chaser_scene_wires_required_nodes_and_defaults() -> void:
 	assert_eq(chaser.get_feedback_intensity_ratio(), 0.0)
 	assert_not_null(audio_player.stream)
 	assert_false(audio_player.playing)
+	assert_not_null((chaser.get_node("AnimatedSprite2D") as AnimatedSprite2D).sprite_frames)
 
 func test_chaser_scene_reset_and_rise_use_typed_geometry_contract() -> void:
 	var chaser: ChaserKillZoneScript = await _instantiate_chaser()
@@ -87,16 +89,19 @@ func test_chaser_scene_apply_theme_swaps_visuals_and_audio_without_gameplay_chan
 	var audio_player: AudioStreamPlayer2D = chaser.get_node("IntensityAudioPlayer") as AudioStreamPlayer2D
 	var visual: Polygon2D = chaser.get_node("Visual") as Polygon2D
 	var glow_visual: Polygon2D = chaser.get_node("GlowVisual") as Polygon2D
+	var animated_sprite: AnimatedSprite2D = chaser.get_node("AnimatedSprite2D") as AnimatedSprite2D
 
 	assert_not_null(hot_coffee_theme)
 	assert_not_null(audio_player)
 	assert_not_null(visual)
 	assert_not_null(glow_visual)
+	assert_not_null(animated_sprite)
 
 	chaser.apply_theme(hot_coffee_theme)
 
 	assert_eq(chaser.chaser_theme, hot_coffee_theme)
 	assert_eq(audio_player.stream, hot_coffee_theme.audio_loop_stream)
+	assert_eq(animated_sprite.sprite_frames, hot_coffee_theme.chaser_sprite_frames)
 	assert_true(is_equal_approx(visual.color.r, hot_coffee_theme.base_fill_color.r))
 	assert_true(is_equal_approx(visual.color.g, hot_coffee_theme.base_fill_color.g))
 	assert_true(is_equal_approx(visual.color.b, hot_coffee_theme.base_fill_color.b))

@@ -18,6 +18,7 @@ signal feedback_intensity_changed(intensity_ratio: float)
 @onready var _visual: Polygon2D = get_node("Visual") as Polygon2D
 @onready var _crest_visual: Polygon2D = get_node("CrestVisual") as Polygon2D
 @onready var _audio_player: AudioStreamPlayer2D = get_node("IntensityAudioPlayer") as AudioStreamPlayer2D
+@onready var _animated_sprite: AnimatedSprite2D = get_node("AnimatedSprite2D") as AnimatedSprite2D
 
 var _feedback_intensity_ratio: float = -1.0
 var _presentation_time_seconds: float = 0.0
@@ -124,8 +125,10 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_visual != null, "ChaserKillZone requires Visual.")
 	Validation.require_condition(_crest_visual != null, "ChaserKillZone requires CrestVisual.")
 	Validation.require_condition(_audio_player != null, "ChaserKillZone requires IntensityAudioPlayer.")
+	Validation.require_condition(_animated_sprite != null, "ChaserKillZone requires AnimatedSprite2D.")
 	_apply_theme_resource()
 	Validation.require_condition(_audio_player.stream != null, "ChaserKillZone requires an assigned audio loop stream.")
+	Validation.require_condition(_animated_sprite.sprite_frames != null, "ChaserKillZone requires assigned chaser sprite frames.")
 	_resize_to_cover_width(_get_rectangle_shape().size.x)
 	_apply_feedback_intensity(0.0)
 
@@ -175,6 +178,8 @@ func _apply_feedback_intensity(intensity_ratio: float) -> void:
 
 func _apply_theme_resource() -> void:
 	_audio_player.stream = chaser_theme.audio_loop_stream
+	_animated_sprite.sprite_frames = chaser_theme.chaser_sprite_frames
+	_animated_sprite.play(&"chase")
 
 func _refresh_audio_feedback() -> void:
 	if _feedback_intensity_ratio < 0.0:

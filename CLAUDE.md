@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 **The Climber** is a Godot 4.6 mobile-first 2D physics climbing game targeting Android. The core loop is: climb, fall, laugh, retry. It uses GDScript with strict typing throughout.
 
+The rules below are also enforced per-path for other tools via `.github/instructions/*.md` (`gdscript-strict`, `godot-scenes`, `testing`, `docs`) — keep them in sync if you change either.
+
 ## Commands
 
 ```sh

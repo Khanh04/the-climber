@@ -41,4 +41,7 @@ polygon = PackedVector2Array(-640, -20, 640, -20, 640, 20, -640, 20)
 volume_db = -20.0
 pitch_scale = 0.98
 
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_name_in_owner = true]
+z_index = 2
+
 [connection signal="body_entered" from="." to="." method="_on_body_entered"]

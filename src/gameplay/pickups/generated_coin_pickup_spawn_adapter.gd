@@ -1,9 +1,15 @@
 class_name GeneratedCoinPickupSpawnAdapter
 extends Area2D
 
+const SpriteFrameSequenceLoaderScript = preload("res://src/core/sprite_frame_sequence_loader.gd")
+
 signal collected(socket_id: StringName, coin_amount: int, body: Node)
 
 const GROUP_NAME: StringName = &"generated_coin_pickup"
+const ANIMATION_FRAME_PATH_FORMAT: String = "res://assets/PNG/UI/run_sence/buff_point/buff_animation/frame_%02d.png"
+const ANIMATION_FRAME_COUNT: int = 48
+const ANIMATION_NAME: StringName = &"buff"
+const ANIMATION_FRAMES_PER_SECOND: float = 24.0
 
 var socket_id: StringName = StringName()
 var coin_amount: int = 1
@@ -49,6 +55,7 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_collision_radius_pixels > 0.0, "GeneratedCoinPickupSpawnAdapter collision radius must remain positive.")
 	Validation.require_condition(get_node_or_null("CollisionShape2D") is CollisionShape2D, "GeneratedCoinPickupSpawnAdapter requires CollisionShape2D.")
 	Validation.require_condition(get_node_or_null("Visual") is Polygon2D, "GeneratedCoinPickupSpawnAdapter requires Visual.")
+	Validation.require_condition(get_node_or_null("AnimatedSprite2D") is AnimatedSprite2D, "GeneratedCoinPickupSpawnAdapter requires AnimatedSprite2D.")
 
 func _ensure_presentation() -> void:
 	var collision_shape: CollisionShape2D = get_node_or_null("CollisionShape2D") as CollisionShape2D
@@ -74,6 +81,15 @@ func _ensure_presentation() -> void:
 		Vector2(0.0, 12.0),
 		Vector2(-10.0, 0.0),
 	])
+
+	var animated_sprite: AnimatedSprite2D = get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+	if animated_sprite == null:
+		animated_sprite = AnimatedSprite2D.new()
+		animated_sprite.name = &"AnimatedSprite2D"
+		animated_sprite.sprite_frames = SpriteFrameSequenceLoaderScript.build_looping_animation(ANIMATION_FRAME_PATH_FORMAT, ANIMATION_FRAME_COUNT, ANIMATION_NAME, ANIMATION_FRAMES_PER_SECOND)
+		animated_sprite.animation = ANIMATION_NAME
+		add_child(animated_sprite)
+		animated_sprite.play()
 
 func _on_body_entered(body: Node) -> void:
 	Validation.require_condition(body != null, "GeneratedCoinPickupSpawnAdapter body_entered requires a body.")

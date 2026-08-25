@@ -11,6 +11,7 @@ This repository is currently initialized as a docs-first scaffold based on the p
 - [05-meta-viral-features.md](./05-meta-viral-features.md): Replay capture, facecam overlay, friend ghosts, and fall sprays.
 - [implementation-roadmap.md](./implementation-roadmap.md): Dependency-managed MVP implementation sequence, architecture gates, and recommended next sprint.
 - [release-roadmap.md](./release-roadmap.md): Android-first post-MVP release phases, launch assumptions, and the final presentation pass.
+- [contributor-guide-for-artists.md](./contributor-guide-for-artists.md): No-coding-background guide for artists to find and safely edit character art, cosmetic skins, and UI screens.
 
 ## Shared Project Assumptions
 

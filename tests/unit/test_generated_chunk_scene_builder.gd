@@ -65,10 +65,12 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     var pickup_collision_shape: CollisionShape2D = pickup_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var pickup_circle_shape: CircleShape2D = pickup_collision_shape.shape as CircleShape2D
     var pickup_visual: Polygon2D = pickup_spawn.get_node("Visual") as Polygon2D
+    var pickup_animated_sprite: AnimatedSprite2D = pickup_spawn.get_node("AnimatedSprite2D") as AnimatedSprite2D
     var wind_gust_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_00") as GeneratedHazardSpawnAdapterScript
     var wind_collision_shape: CollisionShape2D = wind_gust_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var wind_rectangle_shape: RectangleShape2D = wind_collision_shape.shape as RectangleShape2D
     var wind_visual: Polygon2D = wind_gust_spawn.get_node("Visual") as Polygon2D
+    var wind_animated_sprite: AnimatedSprite2D = wind_gust_spawn.get_node("AnimatedSprite2D") as AnimatedSprite2D
     var spike_cluster_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_01") as GeneratedHazardSpawnAdapterScript
     var spike_collision_shape: CollisionShape2D = spike_cluster_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var spike_rectangle_shape: RectangleShape2D = spike_collision_shape.shape as RectangleShape2D
@@ -111,6 +113,9 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_not_null(pickup_circle_shape)
     assert_eq(pickup_spawn.coin_amount, 1)
     assert_not_null(pickup_visual)
+    assert_not_null(pickup_animated_sprite)
+    assert_not_null(pickup_animated_sprite.sprite_frames)
+    assert_eq(pickup_animated_sprite.sprite_frames.get_frame_count(&"buff"), 48)
 
     assert_not_null(wind_gust_spawn)
     assert_true(wind_gust_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
@@ -122,6 +127,9 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_eq(wind_rectangle_shape.size, Vector2(96.0, 56.0))
     assert_true(wind_gust_spawn.get_impulse_vector_pixels().is_equal_approx(Vector2(220.0, -140.0)))
     assert_not_null(wind_visual)
+    assert_not_null(wind_animated_sprite)
+    assert_not_null(wind_animated_sprite.sprite_frames)
+    assert_eq(wind_animated_sprite.sprite_frames.get_frame_count(&"wind"), 50)
 
     assert_not_null(spike_cluster_spawn)
     assert_true(spike_cluster_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))

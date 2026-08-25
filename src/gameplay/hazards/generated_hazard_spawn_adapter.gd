@@ -2,10 +2,15 @@ class_name GeneratedHazardSpawnAdapter
 extends Area2D
 
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
+const SpriteFrameSequenceLoaderScript = preload("res://src/core/sprite_frame_sequence_loader.gd")
 
 signal triggered(body: Node)
 
 const GROUP_NAME: StringName = &"generated_hazard"
+const WIND_GUST_ANIMATION_FRAME_PATH_FORMAT: String = "res://assets/PNG/UI/run_sence/obstacles/wind_animation/wind/frame_%02d.png"
+const WIND_GUST_ANIMATION_FRAME_COUNT: int = 50
+const WIND_GUST_ANIMATION_NAME: StringName = &"wind"
+const WIND_GUST_ANIMATION_FRAMES_PER_SECOND: float = 30.0
 const SPIKE_CLUSTER_GROUP_NAME: StringName = &"generated_spike_cluster_hazard"
 const WIND_GUST_GROUP_NAME: StringName = &"generated_wind_gust_hazard"
 const DOWNDRAFT_GROUP_NAME: StringName = &"generated_downdraft_hazard"
@@ -58,6 +63,8 @@ func _validate_required_state() -> void:
 		Validation.require_condition(impulse_vector_pixels != Vector2.ZERO, "GeneratedHazardSpawnAdapter force hazards require a non-zero impulse vector.")
 	Validation.require_condition(get_node_or_null("CollisionShape2D") is CollisionShape2D, "GeneratedHazardSpawnAdapter requires CollisionShape2D.")
 	Validation.require_condition(get_node_or_null("Visual") is Polygon2D, "GeneratedHazardSpawnAdapter requires Visual.")
+	if hazard_kind == GeneratedHazardKindScript.Value.WIND_GUST:
+		Validation.require_condition(get_node_or_null("AnimatedSprite2D") is AnimatedSprite2D, "GeneratedHazardSpawnAdapter wind gust hazards require AnimatedSprite2D.")
 
 func get_impulse_vector_pixels() -> Vector2:
 	return impulse_vector_pixels
@@ -182,6 +189,16 @@ func _ensure_presentation() -> void:
 
 	visual.color = _build_visual_color()
 	visual.polygon = _build_visual_polygon()
+
+	if hazard_kind == GeneratedHazardKindScript.Value.WIND_GUST:
+		var animated_sprite: AnimatedSprite2D = get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+		if animated_sprite == null:
+			animated_sprite = AnimatedSprite2D.new()
+			animated_sprite.name = &"AnimatedSprite2D"
+			animated_sprite.sprite_frames = SpriteFrameSequenceLoaderScript.build_looping_animation(WIND_GUST_ANIMATION_FRAME_PATH_FORMAT, WIND_GUST_ANIMATION_FRAME_COUNT, WIND_GUST_ANIMATION_NAME, WIND_GUST_ANIMATION_FRAMES_PER_SECOND)
+			animated_sprite.animation = WIND_GUST_ANIMATION_NAME
+			add_child(animated_sprite)
+			animated_sprite.play()
 
 func _on_body_entered(body: Node) -> void:
 	Validation.require_condition(body != null, "GeneratedHazardSpawnAdapter body_entered requires a body.")
