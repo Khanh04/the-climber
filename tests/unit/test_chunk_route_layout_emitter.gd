@@ -52,7 +52,6 @@ func test_emitter_preserves_route_roles_and_handhold_definition_data() -> void:
 
         assert_eq(handhold.definition_id, definition.definition_id)
         assert_true(handhold.physical_size_meters.is_equal_approx(definition.physical_size_meters))
-        assert_eq(handhold.visual_color, definition.visual_color)
         assert_almost_eq(handhold.stamina_drain_multiplier, surface_profile.stamina_drain_multiplier, 0.001)
         assert_almost_eq(handhold.break_after_attach_seconds, lifecycle_rule.break_after_attach_seconds, 0.001)
         assert_eq(handhold.breaks_on_release, lifecycle_rule.breaks_on_release)

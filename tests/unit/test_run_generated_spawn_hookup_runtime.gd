@@ -51,7 +51,13 @@ func test_connect_generated_chunk_wires_pickups_and_hazards_once() -> void:
 	chunk_node.add_child(pickup_root)
 	chunk_node.add_child(hazard_root)
 	pickup_spawn.configure(&"pickup_01", Vector2(32.0, 48.0), 3)
-	hazard_spawn.configure_hazard(&"hazard_01", GeneratedHazardKindScript.Value.SPIKE_CLUSTER, Vector2(64.0, 96.0))
+	hazard_spawn.configure_hazard(
+		&"hazard_01",
+		GeneratedHazardKindScript.Value.SPIKE_CLUSTER,
+		Vector2(64.0, 96.0),
+		Vector2.ZERO,
+		preload("res://resources/config/hazard_presentation_catalog.tres").get_required_definition(GeneratedHazardKindScript.Value.SPIKE_CLUSTER)
+	)
 	pickup_root.add_child(pickup_spawn)
 	hazard_root.add_child(hazard_spawn)
 

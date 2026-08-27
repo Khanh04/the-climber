@@ -316,7 +316,6 @@ func _build_handhold_socket(
         HandholdTypeScript.Value.NORMAL,
         surface_profile.stamina_drain_multiplier,
         definition.physical_size_meters,
-        definition.visual_color,
         lifecycle_rule.break_after_attach_seconds,
         lifecycle_rule.breaks_on_release,
         movement_rule.release_impulse_vector,

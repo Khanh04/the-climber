@@ -30,6 +30,7 @@ const GeneratedChunkSceneBuilderScript = preload("res://src/gameplay/generation/
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/generated_hazard_spawn_adapter.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
+const HandholdPresentationCatalogScript = preload("res://resources/config/handhold_presentation_catalog.gd")
 const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_surface_profile.gd")
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
 const HandholdTargetScript = preload("res://src/gameplay/player/handhold_target.gd")
@@ -108,6 +109,7 @@ const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
 const WalletScript = preload("res://src/economy/wallet.gd")
 const WalletTransactionServiceScript = preload("res://src/economy/wallet_transaction_service.gd")
 const WindGustHazardContactServiceScript = preload("res://src/gameplay/hazards/wind_gust_hazard_contact_service.gd")
+const HazardPresentationCatalogScript = preload("res://resources/config/hazard_presentation_catalog.gd")
 
 const TUTORIAL_HANDHOLD_GROUP_NAME: StringName = &"tutorial_handhold"
 const TUTORIAL_UPPER_HOLD_IDS: Array[StringName] = [
@@ -119,6 +121,8 @@ const TUTORIAL_UPPER_HOLD_IDS: Array[StringName] = [
 @export var climb_tuning: ClimbPrototypeTuningScript
 @export var stamina_tuning: StaminaTuningScript
 @export var generation_tuning: GenerationTuningScript
+@export var handhold_presentation_catalog: HandholdPresentationCatalogScript
+@export var hazard_presentation_catalog: HazardPresentationCatalogScript
 @export var cosmetic_loadout: CosmeticLoadoutScript
 @export var chaser_theme_catalog: ChaserThemeCatalogScript
 @export var cosmetic_item_catalog: CosmeticItemCatalogScript
@@ -809,7 +813,9 @@ func _configure_generated_chunks() -> void:
 		climb_tuning.handhold_group_name,
 		Vector2(128.0, 34.0),
 		2,
-		0
+		0,
+		handhold_presentation_catalog,
+		hazard_presentation_catalog
 	)
 	var static_reach_distance_meters: float = climb_tuning.handhold_detection_radius_pixels / pixels_per_meter
 	var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(generation_tuning, static_reach_distance_meters)

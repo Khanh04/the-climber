@@ -1477,7 +1477,13 @@ func _wire_generated_hazard_for_test(
 
     var hazard_spawn: GeneratedHazardSpawnAdapterScript = GeneratedHazardSpawnAdapterScript.new()
     hazard_spawn.name = socket_id
-    hazard_spawn.configure_hazard(socket_id, hazard_kind, Vector2.ZERO, impulse_vector_pixels)
+    hazard_spawn.configure_hazard(
+        socket_id,
+        hazard_kind,
+        Vector2.ZERO,
+        impulse_vector_pixels,
+        preload("res://resources/config/hazard_presentation_catalog.tres").get_required_definition(hazard_kind)
+    )
     hazard_root.add_child(hazard_spawn)
 
     playground.add_child(chunk_node)

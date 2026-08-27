@@ -60,7 +60,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     var handhold: GeneratedHandholdAdapterScript = chunk_node.get_node("Handholds/chunk_02_hold_00") as GeneratedHandholdAdapterScript
     var collision_shape: CollisionShape2D = handhold.get_node("CollisionShape2D") as CollisionShape2D
     var rectangle_shape: RectangleShape2D = collision_shape.shape as RectangleShape2D
-    var handhold_visual: Polygon2D = handhold.get_node("Visual") as Polygon2D
+    var handhold_presentation: Node2D = handhold.get_node("PresentationRoot/Asset") as Node2D
     var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = chunk_node.get_node("Pickups/chunk_02_pickup_00") as GeneratedCoinPickupSpawnAdapterScript
     var pickup_collision_shape: CollisionShape2D = pickup_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var pickup_circle_shape: CircleShape2D = pickup_collision_shape.shape as CircleShape2D
@@ -69,40 +69,40 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     var wind_gust_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_00") as GeneratedHazardSpawnAdapterScript
     var wind_collision_shape: CollisionShape2D = wind_gust_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var wind_rectangle_shape: RectangleShape2D = wind_collision_shape.shape as RectangleShape2D
-    var wind_visual: Polygon2D = wind_gust_spawn.get_node("Visual") as Polygon2D
-    var wind_animated_sprite: AnimatedSprite2D = wind_gust_spawn.get_node("AnimatedSprite2D") as AnimatedSprite2D
+    var wind_presentation: Node2D = wind_gust_spawn.get_node("PresentationRoot/Asset") as Node2D
+    var wind_animated_sprite: AnimatedSprite2D = wind_presentation.get_node("AnimatedSprite2D") as AnimatedSprite2D
     var spike_cluster_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_01") as GeneratedHazardSpawnAdapterScript
     var spike_collision_shape: CollisionShape2D = spike_cluster_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var spike_rectangle_shape: RectangleShape2D = spike_collision_shape.shape as RectangleShape2D
-    var spike_visual: Polygon2D = spike_cluster_spawn.get_node("Visual") as Polygon2D
+    var spike_presentation: Node2D = spike_cluster_spawn.get_node("PresentationRoot/Asset") as Node2D
     var downdraft_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_02") as GeneratedHazardSpawnAdapterScript
     var downdraft_collision_shape: CollisionShape2D = downdraft_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var downdraft_rectangle_shape: RectangleShape2D = downdraft_collision_shape.shape as RectangleShape2D
-    var downdraft_visual: Polygon2D = downdraft_spawn.get_node("Visual") as Polygon2D
+    var downdraft_presentation: Node2D = downdraft_spawn.get_node("PresentationRoot/Asset") as Node2D
     var updraft_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_03") as GeneratedHazardSpawnAdapterScript
     var updraft_collision_shape: CollisionShape2D = updraft_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var updraft_rectangle_shape: RectangleShape2D = updraft_collision_shape.shape as RectangleShape2D
-    var updraft_visual: Polygon2D = updraft_spawn.get_node("Visual") as Polygon2D
+    var updraft_presentation: Node2D = updraft_spawn.get_node("PresentationRoot/Asset") as Node2D
     var falling_rock_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_04") as GeneratedHazardSpawnAdapterScript
     var falling_rock_collision_shape: CollisionShape2D = falling_rock_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var falling_rock_rectangle_shape: RectangleShape2D = falling_rock_collision_shape.shape as RectangleShape2D
-    var falling_rock_visual: Polygon2D = falling_rock_spawn.get_node("Visual") as Polygon2D
+    var falling_rock_presentation: Node2D = falling_rock_spawn.get_node("PresentationRoot/Asset") as Node2D
     var pendulum_log_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_05") as GeneratedHazardSpawnAdapterScript
     var pendulum_log_collision_shape: CollisionShape2D = pendulum_log_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var pendulum_log_rectangle_shape: RectangleShape2D = pendulum_log_collision_shape.shape as RectangleShape2D
-    var pendulum_log_visual: Polygon2D = pendulum_log_spawn.get_node("Visual") as Polygon2D
+    var pendulum_log_presentation: Node2D = pendulum_log_spawn.get_node("PresentationRoot/Asset") as Node2D
     var wandering_critter_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_06") as GeneratedHazardSpawnAdapterScript
     var wandering_critter_collision_shape: CollisionShape2D = wandering_critter_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var wandering_critter_rectangle_shape: RectangleShape2D = wandering_critter_collision_shape.shape as RectangleShape2D
-    var wandering_critter_visual: Polygon2D = wandering_critter_spawn.get_node("Visual") as Polygon2D
+    var wandering_critter_presentation: Node2D = wandering_critter_spawn.get_node("PresentationRoot/Asset") as Node2D
     var startle_puff_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_07") as GeneratedHazardSpawnAdapterScript
     var startle_puff_collision_shape: CollisionShape2D = startle_puff_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var startle_puff_rectangle_shape: RectangleShape2D = startle_puff_collision_shape.shape as RectangleShape2D
-    var startle_puff_visual: Polygon2D = startle_puff_spawn.get_node("Visual") as Polygon2D
+    var startle_puff_presentation: Node2D = startle_puff_spawn.get_node("PresentationRoot/Asset") as Node2D
     var bug_swarm_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_08") as GeneratedHazardSpawnAdapterScript
     var bug_swarm_collision_shape: CollisionShape2D = bug_swarm_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var bug_swarm_rectangle_shape: RectangleShape2D = bug_swarm_collision_shape.shape as RectangleShape2D
-    var bug_swarm_visual: Polygon2D = bug_swarm_spawn.get_node("Visual") as Polygon2D
+    var bug_swarm_presentation: Node2D = bug_swarm_spawn.get_node("PresentationRoot/Asset") as Node2D
 
     assert_not_null(handhold)
     assert_true(handhold is StaticBody2D)
@@ -124,7 +124,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     var typed_handhold_route_role_meta: String = handhold_route_role_meta
     assert_eq(typed_handhold_type_meta, "REST")
     assert_eq(typed_handhold_route_role_meta, "ENTRY")
-    assert_not_null(handhold_visual)
+    assert_not_null(handhold_presentation)
 
     assert_not_null(pickup_spawn)
     assert_true(pickup_spawn.is_in_group(GeneratedChunkSceneBuilderScript.PICKUP_GROUP_NAME))
@@ -146,7 +146,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_not_null(wind_rectangle_shape)
     assert_eq(wind_rectangle_shape.size, Vector2(96.0, 56.0))
     assert_true(wind_gust_spawn.get_impulse_vector_pixels().is_equal_approx(Vector2(220.0, -140.0)))
-    assert_not_null(wind_visual)
+    assert_not_null(wind_presentation)
     assert_not_null(wind_animated_sprite)
     assert_not_null(wind_animated_sprite.sprite_frames)
     assert_eq(wind_animated_sprite.sprite_frames.get_frame_count(&"wind"), 50)
@@ -159,7 +159,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_not_null(spike_collision_shape)
     assert_not_null(spike_rectangle_shape)
     assert_eq(spike_rectangle_shape.size, Vector2(28.0, 24.0))
-    assert_not_null(spike_visual)
+    assert_not_null(spike_presentation)
 
     assert_not_null(downdraft_spawn)
     assert_true(downdraft_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
@@ -170,7 +170,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_not_null(downdraft_rectangle_shape)
     assert_eq(downdraft_rectangle_shape.size, Vector2(72.0, 96.0))
     assert_true(downdraft_spawn.get_impulse_vector_pixels().is_equal_approx(Vector2(-90.0, 260.0)))
-    assert_not_null(downdraft_visual)
+    assert_not_null(downdraft_presentation)
 
     assert_not_null(updraft_spawn)
     assert_true(updraft_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
@@ -181,7 +181,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_not_null(updraft_rectangle_shape)
     assert_eq(updraft_rectangle_shape.size, Vector2(68.0, 92.0))
     assert_true(updraft_spawn.get_impulse_vector_pixels().is_equal_approx(Vector2(110.0, -320.0)))
-    assert_not_null(updraft_visual)
+    assert_not_null(updraft_presentation)
 
     assert_not_null(falling_rock_spawn)
     assert_true(falling_rock_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
@@ -191,7 +191,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_not_null(falling_rock_collision_shape)
     assert_not_null(falling_rock_rectangle_shape)
     assert_eq(falling_rock_rectangle_shape.size, Vector2(30.0, 28.0))
-    assert_not_null(falling_rock_visual)
+    assert_not_null(falling_rock_presentation)
 
     assert_not_null(pendulum_log_spawn)
     assert_true(pendulum_log_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
@@ -201,7 +201,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_not_null(pendulum_log_collision_shape)
     assert_not_null(pendulum_log_rectangle_shape)
     assert_eq(pendulum_log_rectangle_shape.size, Vector2(44.0, 20.0))
-    assert_not_null(pendulum_log_visual)
+    assert_not_null(pendulum_log_presentation)
 
     assert_not_null(wandering_critter_spawn)
     assert_true(wandering_critter_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
@@ -212,7 +212,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_not_null(wandering_critter_rectangle_shape)
     assert_eq(wandering_critter_rectangle_shape.size, Vector2(24.0, 18.0))
     assert_true(wandering_critter_spawn.get_impulse_vector_pixels().is_equal_approx(Vector2(-150.0, -60.0)))
-    assert_not_null(wandering_critter_visual)
+    assert_not_null(wandering_critter_presentation)
 
     assert_not_null(startle_puff_spawn)
     assert_true(startle_puff_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
@@ -222,7 +222,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_not_null(startle_puff_collision_shape)
     assert_not_null(startle_puff_rectangle_shape)
     assert_eq(startle_puff_rectangle_shape.size, Vector2(28.0, 28.0))
-    assert_not_null(startle_puff_visual)
+    assert_not_null(startle_puff_presentation)
 
     assert_not_null(bug_swarm_spawn)
     assert_true(bug_swarm_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
@@ -232,7 +232,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_not_null(bug_swarm_collision_shape)
     assert_not_null(bug_swarm_rectangle_shape)
     assert_eq(bug_swarm_rectangle_shape.size, Vector2(32.0, 24.0))
-    assert_not_null(bug_swarm_visual)
+    assert_not_null(bug_swarm_presentation)
 
 func _build_layout_fixture() -> GeneratedChunkLayoutScript:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -248,7 +248,6 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
             HandholdTypeScript.Value.REST,
             rest_surface_profile.stamina_drain_multiplier,
             rest_definition.physical_size_meters,
-            rest_definition.visual_color,
             0.0,
             false,
             Vector2.ZERO,
@@ -261,7 +260,6 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
             HandholdTypeScript.Value.BURN,
             burn_surface_profile.stamina_drain_multiplier,
             burn_definition.physical_size_meters,
-            burn_definition.visual_color,
             0.0,
             false,
             Vector2.ZERO,

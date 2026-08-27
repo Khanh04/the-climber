@@ -2,15 +2,12 @@ class_name GeneratedHazardSpawnAdapter
 extends Area2D
 
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
-const SpriteFrameSequenceLoaderScript = preload("res://src/core/sprite_frame_sequence_loader.gd")
+const HazardPresentationDefinitionScript = preload("res://resources/config/hazard_presentation_definition.gd")
+const PresentationSceneValidatorScript = preload("res://resources/config/presentation_scene_validator.gd")
 
 signal triggered(body: Node)
 
 const GROUP_NAME: StringName = &"generated_hazard"
-const WIND_GUST_ANIMATION_FRAME_PATH_FORMAT: String = "res://assets/PNG/UI/run_sence/obstacles/wind_animation/wind/frame_%02d.png"
-const WIND_GUST_ANIMATION_FRAME_COUNT: int = 50
-const WIND_GUST_ANIMATION_NAME: StringName = &"wind"
-const WIND_GUST_ANIMATION_FRAMES_PER_SECOND: float = 30.0
 const SPIKE_CLUSTER_GROUP_NAME: StringName = &"generated_spike_cluster_hazard"
 const WIND_GUST_GROUP_NAME: StringName = &"generated_wind_gust_hazard"
 const DOWNDRAFT_GROUP_NAME: StringName = &"generated_downdraft_hazard"
@@ -34,12 +31,14 @@ var hazard_kind: int = -1
 var impulse_vector_pixels: Vector2 = Vector2.ZERO
 var _motion_origin_position: Vector2 = Vector2.ZERO
 var _motion_time_seconds: float = 0.0
+var _presentation_definition: HazardPresentationDefinitionScript
 
 func configure_hazard(
 	socket_id_value: StringName,
 	hazard_kind_value: int,
 	local_position_pixels_value: Vector2,
 	impulse_vector_pixels_value: Vector2 = Vector2.ZERO,
+	presentation_definition_value: HazardPresentationDefinitionScript = null,
 	collision_layer_value: int = 16,
 	collision_mask_value: int = 1
 ) -> void:
@@ -49,10 +48,17 @@ func configure_hazard(
 	Validation.require_condition(collision_mask_value > 0, "GeneratedHazardSpawnAdapter collision mask must be positive.")
 	if _hazard_kind_requires_impulse_vector(hazard_kind_value):
 		Validation.require_condition(impulse_vector_pixels_value != Vector2.ZERO, "GeneratedHazardSpawnAdapter force hazards require a non-zero impulse vector.")
+	Validation.require_condition(presentation_definition_value != null, "GeneratedHazardSpawnAdapter requires a presentation definition.")
+	presentation_definition_value.assert_valid()
+	Validation.require_condition(
+		presentation_definition_value.hazard_kind == hazard_kind_value,
+		"GeneratedHazardSpawnAdapter presentation kind must match its gameplay kind."
+	)
 
 	socket_id = socket_id_value
 	hazard_kind = hazard_kind_value
 	impulse_vector_pixels = impulse_vector_pixels_value
+	_presentation_definition = presentation_definition_value
 	position = local_position_pixels_value
 	collision_layer = collision_layer_value
 	collision_mask = collision_mask_value
@@ -64,7 +70,7 @@ func configure_hazard(
 	set_meta(&"hazard_kind", GeneratedHazardKindScript.to_label(hazard_kind))
 	set_meta(&"impulse_vector_x", impulse_vector_pixels.x)
 	set_meta(&"impulse_vector_y", impulse_vector_pixels.y)
-	_ensure_presentation()
+	_ensure_runtime_nodes()
 	_motion_origin_position = position
 	_motion_time_seconds = 0.0
 
@@ -107,9 +113,12 @@ func _validate_required_state() -> void:
 	if _hazard_kind_requires_impulse_vector(hazard_kind):
 		Validation.require_condition(impulse_vector_pixels != Vector2.ZERO, "GeneratedHazardSpawnAdapter force hazards require a non-zero impulse vector.")
 	Validation.require_condition(get_node_or_null("CollisionShape2D") is CollisionShape2D, "GeneratedHazardSpawnAdapter requires CollisionShape2D.")
-	Validation.require_condition(get_node_or_null("Visual") is Polygon2D, "GeneratedHazardSpawnAdapter requires Visual.")
-	if _hazard_kind_uses_wind_animation(hazard_kind):
-		Validation.require_condition(get_node_or_null("AnimatedSprite2D") is AnimatedSprite2D, "GeneratedHazardSpawnAdapter wind-animated hazards require AnimatedSprite2D.")
+	Validation.require_condition(get_node_or_null("PresentationRoot") is Node2D, "GeneratedHazardSpawnAdapter requires PresentationRoot.")
+	Validation.require_condition(get_node_or_null("PresentationRoot/Asset") is Node2D, "GeneratedHazardSpawnAdapter requires a presentation asset.")
+	PresentationSceneValidatorScript.assert_live_tree_valid(
+		get_node("PresentationRoot/Asset"),
+		"Generated hazard %s" % String(socket_id)
+	)
 
 func get_impulse_vector_pixels() -> Vector2:
 	return impulse_vector_pixels
@@ -118,111 +127,6 @@ func _build_collision_shape() -> Shape2D:
 	var rectangle_shape: RectangleShape2D = RectangleShape2D.new()
 	rectangle_shape.size = _get_collision_size_for_kind()
 	return rectangle_shape
-
-func _build_visual_polygon() -> PackedVector2Array:
-	match hazard_kind:
-		GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
-			return PackedVector2Array([
-				Vector2(0.0, -12.0),
-				Vector2(11.0, 10.0),
-				Vector2(-11.0, 10.0),
-			])
-		GeneratedHazardKindScript.Value.WIND_GUST:
-			return PackedVector2Array([
-				Vector2(-22.0, -16.0),
-				Vector2(10.0, -16.0),
-				Vector2(24.0, 0.0),
-				Vector2(10.0, 16.0),
-				Vector2(-22.0, 16.0),
-				Vector2(-8.0, 0.0),
-			])
-		GeneratedHazardKindScript.Value.DOWNDRAFT:
-			return PackedVector2Array([
-				Vector2(-18.0, -30.0),
-				Vector2(18.0, -30.0),
-				Vector2(18.0, 8.0),
-				Vector2(30.0, 8.0),
-				Vector2(0.0, 32.0),
-				Vector2(-30.0, 8.0),
-				Vector2(-18.0, 8.0),
-			])
-		GeneratedHazardKindScript.Value.UPDRAFT:
-			return PackedVector2Array([
-				Vector2(0.0, -32.0),
-				Vector2(30.0, -8.0),
-				Vector2(18.0, -8.0),
-				Vector2(18.0, 30.0),
-				Vector2(-18.0, 30.0),
-				Vector2(-18.0, -8.0),
-				Vector2(-30.0, -8.0),
-			])
-		GeneratedHazardKindScript.Value.FALLING_ROCK:
-			return PackedVector2Array([
-				Vector2(-14.0, -8.0),
-				Vector2(-4.0, -16.0),
-				Vector2(10.0, -12.0),
-				Vector2(16.0, 2.0),
-				Vector2(6.0, 14.0),
-				Vector2(-10.0, 12.0),
-			])
-		GeneratedHazardKindScript.Value.PENDULUM_LOG:
-			return PackedVector2Array([
-				Vector2(-22.0, -10.0),
-				Vector2(22.0, -10.0),
-				Vector2(22.0, 10.0),
-				Vector2(-22.0, 10.0),
-			])
-		GeneratedHazardKindScript.Value.WANDERING_CRITTER:
-			return PackedVector2Array([
-				Vector2(0.0, -10.0),
-				Vector2(12.0, -2.0),
-				Vector2(12.0, 8.0),
-				Vector2(-12.0, 8.0),
-				Vector2(-12.0, -2.0),
-			])
-		GeneratedHazardKindScript.Value.STARTLE_PUFF:
-			return PackedVector2Array([
-				Vector2(0.0, -14.0),
-				Vector2(14.0, 0.0),
-				Vector2(0.0, 14.0),
-				Vector2(-14.0, 0.0),
-			])
-		GeneratedHazardKindScript.Value.BUG_SWARM:
-			return PackedVector2Array([
-				Vector2(-16.0, -6.0),
-				Vector2(-4.0, -14.0),
-				Vector2(10.0, -8.0),
-				Vector2(16.0, 4.0),
-				Vector2(4.0, 12.0),
-				Vector2(-10.0, 8.0),
-			])
-		_:
-			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind polygon.")
-			return PackedVector2Array()
-
-func _build_visual_color() -> Color:
-	match hazard_kind:
-		GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
-			return Color(0.93, 0.32, 0.27, 0.92)
-		GeneratedHazardKindScript.Value.WIND_GUST:
-			return Color(0.29, 0.72, 0.96, 0.88)
-		GeneratedHazardKindScript.Value.DOWNDRAFT:
-			return Color(0.96, 0.62, 0.24, 0.9)
-		GeneratedHazardKindScript.Value.UPDRAFT:
-			return Color(0.42, 0.92, 0.55, 0.9)
-		GeneratedHazardKindScript.Value.FALLING_ROCK:
-			return Color(0.5, 0.44, 0.38, 0.95)
-		GeneratedHazardKindScript.Value.PENDULUM_LOG:
-			return Color(0.44, 0.29, 0.17, 0.95)
-		GeneratedHazardKindScript.Value.WANDERING_CRITTER:
-			return Color(0.62, 0.5, 0.34, 0.92)
-		GeneratedHazardKindScript.Value.STARTLE_PUFF:
-			return Color(0.98, 0.86, 0.32, 0.85)
-		GeneratedHazardKindScript.Value.BUG_SWARM:
-			return Color(0.35, 0.3, 0.14, 0.85)
-		_:
-			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind color.")
-			return Color.WHITE
 
 func _get_collision_size_for_kind() -> Vector2:
 	match hazard_kind:
@@ -297,7 +201,7 @@ func _hazard_kind_requires_impulse_vector(hazard_kind_value: int) -> bool:
 			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind when validating impulse state.")
 			return false
 
-func _ensure_presentation() -> void:
+func _ensure_runtime_nodes() -> void:
 	var collision_shape: CollisionShape2D = get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if collision_shape == null:
 		collision_shape = CollisionShape2D.new()
@@ -306,31 +210,17 @@ func _ensure_presentation() -> void:
 
 	collision_shape.shape = _build_collision_shape()
 
-	var visual: Polygon2D = get_node_or_null("Visual") as Polygon2D
-	if visual == null:
-		visual = Polygon2D.new()
-		visual.name = &"Visual"
-		add_child(visual)
+	var presentation_root: Node2D = get_node_or_null("PresentationRoot") as Node2D
+	if presentation_root == null:
+		presentation_root = Node2D.new()
+		presentation_root.name = &"PresentationRoot"
+		add_child(presentation_root)
 
-	visual.color = _build_visual_color()
-	visual.polygon = _build_visual_polygon()
-	visual.visible = not _hazard_kind_uses_wind_animation(hazard_kind)
-
-	if _hazard_kind_uses_wind_animation(hazard_kind):
-		var animated_sprite: AnimatedSprite2D = get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
-		if animated_sprite == null:
-			animated_sprite = AnimatedSprite2D.new()
-			animated_sprite.name = &"AnimatedSprite2D"
-			animated_sprite.sprite_frames = SpriteFrameSequenceLoaderScript.build_looping_animation(WIND_GUST_ANIMATION_FRAME_PATH_FORMAT, WIND_GUST_ANIMATION_FRAME_COUNT, WIND_GUST_ANIMATION_NAME, WIND_GUST_ANIMATION_FRAMES_PER_SECOND)
-			animated_sprite.animation = WIND_GUST_ANIMATION_NAME
-			add_child(animated_sprite)
-			animated_sprite.play()
-		animated_sprite.rotation = impulse_vector_pixels.angle()
-
-func _hazard_kind_uses_wind_animation(hazard_kind_value: int) -> bool:
-	return hazard_kind_value == GeneratedHazardKindScript.Value.WIND_GUST \
-		or hazard_kind_value == GeneratedHazardKindScript.Value.UPDRAFT \
-		or hazard_kind_value == GeneratedHazardKindScript.Value.DOWNDRAFT
+	if presentation_root.get_node_or_null("Asset") == null:
+		Validation.require_condition(_presentation_definition != null, "GeneratedHazardSpawnAdapter requires presentation before creating runtime nodes.")
+		var presentation: Node2D = _presentation_definition.instantiate_presentation(impulse_vector_pixels)
+		presentation.name = &"Asset"
+		presentation_root.add_child(presentation)
 
 func _on_body_entered(body: Node) -> void:
 	Validation.require_condition(body != null, "GeneratedHazardSpawnAdapter body_entered requires a body.")

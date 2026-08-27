@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="BurnPresentation" type="Node2D"]
+
+[node name="Visual" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-9, -15, 9, -15, 9, 15, -9, 15)
+color = Color(0.92, 0.39, 0.27, 1)

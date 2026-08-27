@@ -91,10 +91,10 @@ func _build_fixture(break_after_attach_seconds: float, breaks_on_release: bool, 
 		Vector2(180.0, 220.0),
 		Vector2(72.0, 18.0),
 		1.0,
-		Color(1.0, 0.8, 0.2, 1.0),
 		break_after_attach_seconds,
 		breaks_on_release,
-		release_impulse
+		release_impulse,
+		preload("res://resources/config/handhold_presentation_catalog.tres").get_required_definition(0)
 	)
 	root.add_child(generated_hold)
 

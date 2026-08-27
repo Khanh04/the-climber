@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="FallingRockPresentation" type="Node2D"]
+
+[node name="Visual" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-14, -8, -4, -16, 10, -12, 16, 2, 6, 14, -10, 12)
+color = Color(0.5, 0.44, 0.38, 0.95)

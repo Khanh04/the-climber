@@ -1,0 +1,49 @@
+[gd_resource type="Resource" script_class="HandholdPresentationCatalog" load_steps=16 format=3]
+
+[ext_resource type="Script" path="res://resources/config/handhold_presentation_catalog.gd" id="1"]
+[ext_resource type="Script" path="res://resources/config/handhold_presentation_definition.gd" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/handholds/presentation/normal.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/handholds/presentation/rest.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/handholds/presentation/burn.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/handholds/presentation/break.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/handholds/presentation/boost.tscn" id="7"]
+[ext_resource type="PackedScene" path="res://scenes/handholds/presentation/ghost.tscn" id="8"]
+[ext_resource type="PackedScene" path="res://scenes/handholds/presentation/rocket.tscn" id="9"]
+
+[sub_resource type="Resource" id="Normal"]
+script = ExtResource("2")
+presentation_scene = ExtResource("3")
+
+[sub_resource type="Resource" id="Rest"]
+script = ExtResource("2")
+handhold_type = 1
+presentation_scene = ExtResource("4")
+
+[sub_resource type="Resource" id="Burn"]
+script = ExtResource("2")
+handhold_type = 2
+presentation_scene = ExtResource("5")
+
+[sub_resource type="Resource" id="Break"]
+script = ExtResource("2")
+handhold_type = 3
+presentation_scene = ExtResource("6")
+
+[sub_resource type="Resource" id="Boost"]
+script = ExtResource("2")
+handhold_type = 4
+presentation_scene = ExtResource("7")
+
+[sub_resource type="Resource" id="Ghost"]
+script = ExtResource("2")
+handhold_type = 5
+presentation_scene = ExtResource("8")
+
+[sub_resource type="Resource" id="Rocket"]
+script = ExtResource("2")
+handhold_type = 6
+presentation_scene = ExtResource("9")
+
+[resource]
+script = ExtResource("1")
+definitions = Array[Resource]([SubResource("Normal"), SubResource("Rest"), SubResource("Burn"), SubResource("Break"), SubResource("Boost"), SubResource("Ghost"), SubResource("Rocket")])

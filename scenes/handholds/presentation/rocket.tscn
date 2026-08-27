@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="RocketPresentation" type="Node2D"]
+
+[node name="Visual" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-7, -14, 7, -14, 7, 14, -7, 14)
+color = Color(0.99, 0.48, 0.14, 1)

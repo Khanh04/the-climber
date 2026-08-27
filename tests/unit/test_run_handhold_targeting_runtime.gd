@@ -33,10 +33,10 @@ func test_find_nearest_handhold_returns_closest_generated_target_with_runtime_me
 		Vector2(136.0, 120.0),
 		Vector2(72.0, 18.0),
 		1.35,
-		Color(0.9, 0.8, 0.2, 1.0),
 		0.0,
 		false,
-		Vector2.ZERO
+		Vector2.ZERO,
+		preload("res://resources/config/handhold_presentation_catalog.tres").get_required_definition(HandholdTypeScript.Value.BOOST)
 	)
 	root.add_child(generated_hold)
 	await get_tree().process_frame

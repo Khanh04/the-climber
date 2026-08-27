@@ -5,7 +5,11 @@ const GeneratedCoinPickupSpawnAdapterScript = preload("res://src/gameplay/pickup
 const GeneratedHandholdAdapterScript = preload("res://src/gameplay/generation/generated_handhold_adapter.gd")
 const GeneratedHazardKindScript = preload("res://src/gameplay/generation/generated_hazard_kind.gd")
 const GeneratedHazardSpawnAdapterScript = preload("res://src/gameplay/hazards/generated_hazard_spawn_adapter.gd")
+const HandholdPresentationCatalogScript = preload("res://resources/config/handhold_presentation_catalog.gd")
+const HazardPresentationCatalogScript = preload("res://resources/config/hazard_presentation_catalog.gd")
 const RouteRoleScript = preload("res://src/gameplay/generation/route_role.gd")
+const DefaultHandholdPresentationCatalog = preload("res://resources/config/handhold_presentation_catalog.tres")
+const DefaultHazardPresentationCatalog = preload("res://resources/config/hazard_presentation_catalog.tres")
 
 const PICKUP_GROUP_NAME: StringName = GeneratedCoinPickupSpawnAdapterScript.GROUP_NAME
 const HAZARD_GROUP_NAME: StringName = GeneratedHazardSpawnAdapterScript.GROUP_NAME
@@ -15,19 +19,25 @@ var _handhold_group_name: StringName
 var _hold_size_pixels: Vector2
 var _hold_collision_layer: int
 var _hold_collision_mask: int
+var _handhold_presentation_catalog: HandholdPresentationCatalogScript
+var _hazard_presentation_catalog: HazardPresentationCatalogScript
 
 func _init(
     pixels_per_meter_value: float,
     handhold_group_name_value: StringName = &"handhold",
     hold_size_pixels_value: Vector2 = Vector2(128.0, 34.0),
     hold_collision_layer_value: int = 2,
-    hold_collision_mask_value: int = 0
+    hold_collision_mask_value: int = 0,
+    handhold_presentation_catalog_value: HandholdPresentationCatalogScript = DefaultHandholdPresentationCatalog,
+    hazard_presentation_catalog_value: HazardPresentationCatalogScript = DefaultHazardPresentationCatalog
 ) -> void:
     _pixels_per_meter = pixels_per_meter_value
     _handhold_group_name = handhold_group_name_value
     _hold_size_pixels = hold_size_pixels_value
     _hold_collision_layer = hold_collision_layer_value
     _hold_collision_mask = hold_collision_mask_value
+    _handhold_presentation_catalog = handhold_presentation_catalog_value
+    _hazard_presentation_catalog = hazard_presentation_catalog_value
     _assert_valid()
 
 func build_chunk_node(layout: GeneratedChunkLayout) -> Node2D:
@@ -71,6 +81,10 @@ func _assert_valid() -> void:
     Validation.require_condition(_hold_size_pixels.x > 0.0 and _hold_size_pixels.y > 0.0, "GeneratedChunkSceneBuilder hold size must be positive.")
     Validation.require_condition(_hold_collision_layer > 0, "GeneratedChunkSceneBuilder hold collision layer must be positive.")
     Validation.require_condition(_hold_collision_mask >= 0, "GeneratedChunkSceneBuilder hold collision mask cannot be negative.")
+    Validation.require_condition(_handhold_presentation_catalog != null, "GeneratedChunkSceneBuilder requires a handhold presentation catalog.")
+    Validation.require_condition(_hazard_presentation_catalog != null, "GeneratedChunkSceneBuilder requires a hazard presentation catalog.")
+    _handhold_presentation_catalog.assert_valid()
+    _hazard_presentation_catalog.assert_valid()
 
 func _apply_chunk_metadata(chunk_root: Node2D, layout: GeneratedChunkLayout) -> void:
     chunk_root.set_meta(&"seed_key", layout.seed_key)
@@ -128,10 +142,10 @@ func _build_handhold_body(handhold_socket: GeneratedHandholdSocket) -> Generated
         _meters_to_pixels(handhold_socket.local_position),
         _meters_to_pixels(handhold_socket.physical_size_meters),
         handhold_socket.stamina_drain_multiplier,
-        handhold_socket.visual_color,
         handhold_socket.break_after_attach_seconds,
         handhold_socket.breaks_on_release,
         handhold_socket.release_impulse_vector_pixels,
+        _handhold_presentation_catalog.get_required_definition(handhold_socket.handhold_type),
         _handhold_group_name,
         _hold_collision_layer,
         _hold_collision_mask
@@ -156,7 +170,8 @@ func _build_hazard_spawn(hazard_socket: GeneratedHazardSocket) -> GeneratedHazar
         hazard_socket.socket_id,
         hazard_socket.hazard_kind,
         _meters_to_pixels(hazard_socket.local_position),
-        _build_hazard_impulse_vector(hazard_socket)
+        _build_hazard_impulse_vector(hazard_socket),
+        _hazard_presentation_catalog.get_required_definition(hazard_socket.hazard_kind)
     )
     return hazard_spawn
 

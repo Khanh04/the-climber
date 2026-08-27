@@ -39,6 +39,19 @@ static func is_valid(value: int) -> bool:
 static func assert_valid(value: int) -> void:
 	Validation.require_condition(is_valid(value), "Unsupported generated hazard kind.")
 
+static func get_all_values() -> Array[int]:
+	return [
+		Value.SPIKE_CLUSTER,
+		Value.WIND_GUST,
+		Value.DOWNDRAFT,
+		Value.UPDRAFT,
+		Value.FALLING_ROCK,
+		Value.PENDULUM_LOG,
+		Value.WANDERING_CRITTER,
+		Value.STARTLE_PUFF,
+		Value.BUG_SWARM,
+	]
+
 static func to_label(value: int) -> String:
 	assert_valid(value)
 	match value:

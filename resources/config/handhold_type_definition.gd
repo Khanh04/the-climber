@@ -10,7 +10,6 @@ const HandholdSurfaceProfileScript = preload("res://resources/config/handhold_su
 @export var handhold_type: int = HandholdTypeScript.Value.NORMAL
 @export var display_name: String = "Normal"
 @export var physical_size_meters: Vector2 = Vector2(1.12, 0.30)
-@export var visual_color: Color = Color(0.92, 0.72, 0.23, 1.0)
 @export var surface_profile: Resource = HandholdSurfaceProfileScript.new()
 @export var lifecycle_rule: Resource = HandholdLifecycleRuleScript.new()
 @export var movement_rule: Resource = HandholdMovementRuleScript.new()

@@ -413,6 +413,26 @@ aliases over a smaller ruleset.
   proposed typed model that can scale from the first five handhold
   types to the broader catalog above.
 
+### Generated Asset Authoring
+
+- Generated handhold and hazard adapters own gameplay state, collision,
+  targeting, movement, groups, and signals. Their replaceable art is instanced
+  below `PresentationRoot/Asset`.
+- Handhold scenes live under `scenes/handholds/presentation/` and are selected
+  by `resources/config/handhold_presentation_catalog.tres`.
+- Hazard scenes live under `scenes/hazards/presentation/` and are selected by
+  `resources/config/hazard_presentation_catalog.tres`.
+- Presentation scenes must use a `Node2D` root and may contain sprites,
+  polygons, particles, lights, shaders, and animation players. They must not
+  contain 2D or 3D collision objects, collision shapes, collision polygons, or
+  joints. This rule is validated for both packed scenes and live subtrees.
+- Align authored art around the scene origin. Use the presentation
+  definition's offset, scale, and rotation for visual alignment rather than
+  moving the adapter or changing collision from sprite bounds.
+- Replacing art must not consume generator randomness or change
+  `physical_size_meters`, hazard collision dimensions, impulses, or movement
+  rules. See [ADR 0007](adr/0007-generated-presentation-catalogs.md).
+
 ### Mobile Object Budgets
 
 - Cap active generated content by chunk window rather than letting

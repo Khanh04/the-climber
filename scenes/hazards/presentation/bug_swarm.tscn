@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="BugSwarmPresentation" type="Node2D"]
+
+[node name="Visual" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(-16, -6, -4, -14, 10, -8, 16, 4, 4, 12, -10, 8)
+color = Color(0.35, 0.3, 0.14, 0.85)

@@ -2,13 +2,14 @@ class_name GeneratedHandholdAdapter
 extends StaticBody2D
 
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
+const HandholdPresentationDefinitionScript = preload("res://resources/config/handhold_presentation_definition.gd")
+const PresentationSceneValidatorScript = preload("res://resources/config/presentation_scene_validator.gd")
 
 var hold_id: StringName = StringName()
 var definition_id: StringName = StringName()
 var handhold_type: int = HandholdTypeScript.Value.NORMAL
 var stamina_drain_multiplier: float = 1.0
 var body_size_pixels: Vector2 = Vector2.ZERO
-var visual_color: Color = Color.WHITE
 var break_after_attach_seconds: float = 0.0
 var breaks_on_release: bool = false
 var release_impulse_vector_pixels: Vector2 = Vector2.ZERO
@@ -17,6 +18,7 @@ var _handhold_group_name: StringName = &"handhold"
 var _attached_hand_count: int = 0
 var _remaining_break_seconds: float = 0.0
 var _is_broken: bool = false
+var _presentation_definition: HandholdPresentationDefinitionScript
 
 func configure_handhold(
 	hold_id_value: StringName,
@@ -25,10 +27,10 @@ func configure_handhold(
 	local_position_pixels_value: Vector2,
 	body_size_pixels_value: Vector2,
 	stamina_drain_multiplier_value: float,
-	visual_color_value: Color,
 	break_after_attach_seconds_value: float,
 	breaks_on_release_value: bool,
 	release_impulse_vector_pixels_value: Vector2,
+	presentation_definition_value: HandholdPresentationDefinitionScript,
 	handhold_group_name_value: StringName = &"handhold",
 	collision_layer_value: int = 2,
 	collision_mask_value: int = 0
@@ -48,6 +50,12 @@ func configure_handhold(
 		break_after_attach_seconds_value >= 0.0,
 		"GeneratedHandholdAdapter break-after-attach seconds cannot be negative."
 	)
+	Validation.require_condition(presentation_definition_value != null, "GeneratedHandholdAdapter requires a presentation definition.")
+	presentation_definition_value.assert_valid()
+	Validation.require_condition(
+		presentation_definition_value.handhold_type == handhold_type_value,
+		"GeneratedHandholdAdapter presentation type must match its gameplay type."
+	)
 	Validation.require_condition(not String(handhold_group_name_value).is_empty(), "GeneratedHandholdAdapter requires a handhold group name.")
 	Validation.require_condition(collision_layer_value > 0, "GeneratedHandholdAdapter collision layer must be positive.")
 	Validation.require_condition(collision_mask_value >= 0, "GeneratedHandholdAdapter collision mask cannot be negative.")
@@ -57,10 +65,10 @@ func configure_handhold(
 	handhold_type = handhold_type_value
 	stamina_drain_multiplier = stamina_drain_multiplier_value
 	body_size_pixels = body_size_pixels_value
-	visual_color = visual_color_value
 	break_after_attach_seconds = break_after_attach_seconds_value
 	breaks_on_release = breaks_on_release_value
 	release_impulse_vector_pixels = release_impulse_vector_pixels_value
+	_presentation_definition = presentation_definition_value
 	_handhold_group_name = handhold_group_name_value
 	_attached_hand_count = 0
 	_remaining_break_seconds = break_after_attach_seconds
@@ -79,11 +87,11 @@ func configure_handhold(
 	set_meta(&"release_impulse_x", release_impulse_vector_pixels.x)
 	set_meta(&"release_impulse_y", release_impulse_vector_pixels.y)
 	set_meta(&"is_broken", false)
-	_ensure_presentation()
+	_ensure_runtime_nodes()
 
 func _ready() -> void:
 	_validate_required_state()
-	_ensure_presentation()
+	_ensure_runtime_nodes()
 
 func get_body_size_pixels() -> Vector2:
 	return body_size_pixels
@@ -138,9 +146,14 @@ func _validate_required_state() -> void:
 		"GeneratedHandholdAdapter body size must remain positive."
 	)
 	Validation.require_condition(get_node_or_null("CollisionShape2D") is CollisionShape2D, "GeneratedHandholdAdapter requires CollisionShape2D.")
-	Validation.require_condition(get_node_or_null("Visual") is Polygon2D, "GeneratedHandholdAdapter requires Visual.")
+	Validation.require_condition(get_node_or_null("PresentationRoot") is Node2D, "GeneratedHandholdAdapter requires PresentationRoot.")
+	Validation.require_condition(get_node_or_null("PresentationRoot/Asset") is Node2D, "GeneratedHandholdAdapter requires a presentation asset.")
+	PresentationSceneValidatorScript.assert_live_tree_valid(
+		get_node("PresentationRoot/Asset"),
+		"Generated handhold %s" % String(hold_id)
+	)
 
-func _ensure_presentation() -> void:
+func _ensure_runtime_nodes() -> void:
 	var collision_shape: CollisionShape2D = get_node_or_null("CollisionShape2D") as CollisionShape2D
 	if collision_shape == null:
 		collision_shape = CollisionShape2D.new()
@@ -151,16 +164,18 @@ func _ensure_presentation() -> void:
 	rectangle_shape.size = body_size_pixels
 	collision_shape.shape = rectangle_shape
 
-	var visual: Polygon2D = get_node_or_null("Visual") as Polygon2D
-	if visual == null:
-		visual = Polygon2D.new()
-		visual.name = &"Visual"
-		add_child(visual)
+	var presentation_root: Node2D = get_node_or_null("PresentationRoot") as Node2D
+	if presentation_root == null:
+		presentation_root = Node2D.new()
+		presentation_root.name = &"PresentationRoot"
+		add_child(presentation_root)
 
-	visual.color = visual_color
-	visual.polygon = _build_rectangle_polygon(body_size_pixels)
-	visual.visible = not _is_broken
-	visual.queue_redraw()
+	if presentation_root.get_node_or_null("Asset") == null:
+		Validation.require_condition(_presentation_definition != null, "GeneratedHandholdAdapter requires presentation before creating runtime nodes.")
+		var presentation: Node2D = _presentation_definition.instantiate_presentation()
+		presentation.name = &"Asset"
+		presentation_root.add_child(presentation)
+	presentation_root.visible = not _is_broken
 
 func _break_handhold() -> void:
 	if _is_broken:
@@ -177,16 +192,6 @@ func _break_handhold() -> void:
 	if collision_shape != null:
 		collision_shape.disabled = true
 
-	var visual: Polygon2D = get_node_or_null("Visual") as Polygon2D
-	if visual != null:
-		visual.visible = false
-
-func _build_rectangle_polygon(size_pixels: Vector2) -> PackedVector2Array:
-	var half_width: float = size_pixels.x * 0.5
-	var half_height: float = size_pixels.y * 0.5
-	return PackedVector2Array([
-		Vector2(-half_width, -half_height),
-		Vector2(half_width, -half_height),
-		Vector2(half_width, half_height),
-		Vector2(-half_width, half_height),
-	])
+	var presentation_root: Node2D = get_node_or_null("PresentationRoot") as Node2D
+	if presentation_root != null:
+		presentation_root.visible = false

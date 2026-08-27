@@ -1,0 +1,7 @@
+[gd_scene format=3]
+
+[node name="StartlePuffPresentation" type="Node2D"]
+
+[node name="Visual" type="Polygon2D" parent="."]
+polygon = PackedVector2Array(0, -14, 14, 0, 0, 14, -14, 0)
+color = Color(0.98, 0.86, 0.32, 0.85)

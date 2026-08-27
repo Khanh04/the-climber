@@ -11,7 +11,6 @@ var handhold_type: int
 var route_role: int
 var physical_size_meters: Vector2
 var stamina_drain_multiplier: float
-var visual_color: Color
 var break_after_attach_seconds: float
 var breaks_on_release: bool
 var release_impulse_vector_pixels: Vector2
@@ -23,7 +22,6 @@ func _init(
     handhold_type_value: int,
     stamina_drain_multiplier_value: float,
     physical_size_meters_value: Vector2,
-    visual_color_value: Color,
     break_after_attach_seconds_value: float,
     breaks_on_release_value: bool,
     release_impulse_vector_pixels_value: Vector2,
@@ -36,7 +34,6 @@ func _init(
     route_role = route_role_value
     stamina_drain_multiplier = stamina_drain_multiplier_value
     physical_size_meters = physical_size_meters_value
-    visual_color = visual_color_value
     break_after_attach_seconds = break_after_attach_seconds_value
     breaks_on_release = breaks_on_release_value
     release_impulse_vector_pixels = release_impulse_vector_pixels_value

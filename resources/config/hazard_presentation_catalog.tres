@@ -1,0 +1,64 @@
+[gd_resource type="Resource" script_class="HazardPresentationCatalog" load_steps=20 format=3]
+
+[ext_resource type="Script" path="res://resources/config/hazard_presentation_catalog.gd" id="1"]
+[ext_resource type="Script" path="res://resources/config/hazard_presentation_definition.gd" id="2"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/presentation/spike_cluster.tscn" id="3"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/presentation/wind_gust.tscn" id="4"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/presentation/downdraft.tscn" id="5"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/presentation/updraft.tscn" id="6"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/presentation/falling_rock.tscn" id="7"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/presentation/pendulum_log.tscn" id="8"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/presentation/wandering_critter.tscn" id="9"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/presentation/startle_puff.tscn" id="10"]
+[ext_resource type="PackedScene" path="res://scenes/hazards/presentation/bug_swarm.tscn" id="11"]
+
+[sub_resource type="Resource" id="Spike"]
+script = ExtResource("2")
+presentation_scene = ExtResource("3")
+
+[sub_resource type="Resource" id="Wind"]
+script = ExtResource("2")
+hazard_kind = 1
+presentation_scene = ExtResource("4")
+orient_to_impulse = true
+
+[sub_resource type="Resource" id="Down"]
+script = ExtResource("2")
+hazard_kind = 2
+presentation_scene = ExtResource("5")
+orient_to_impulse = true
+
+[sub_resource type="Resource" id="Up"]
+script = ExtResource("2")
+hazard_kind = 3
+presentation_scene = ExtResource("6")
+orient_to_impulse = true
+
+[sub_resource type="Resource" id="Rock"]
+script = ExtResource("2")
+hazard_kind = 4
+presentation_scene = ExtResource("7")
+
+[sub_resource type="Resource" id="Log"]
+script = ExtResource("2")
+hazard_kind = 5
+presentation_scene = ExtResource("8")
+
+[sub_resource type="Resource" id="Critter"]
+script = ExtResource("2")
+hazard_kind = 6
+presentation_scene = ExtResource("9")
+
+[sub_resource type="Resource" id="Puff"]
+script = ExtResource("2")
+hazard_kind = 7
+presentation_scene = ExtResource("10")
+
+[sub_resource type="Resource" id="Bugs"]
+script = ExtResource("2")
+hazard_kind = 8
+presentation_scene = ExtResource("11")
+
+[resource]
+script = ExtResource("1")
+definitions = Array[Resource]([SubResource("Spike"), SubResource("Wind"), SubResource("Down"), SubResource("Up"), SubResource("Rock"), SubResource("Log"), SubResource("Critter"), SubResource("Puff"), SubResource("Bugs")])

@@ -17,6 +17,8 @@
 [ext_resource type="Resource" uid="uid://ou47hb7bijus" path="res://resources/config/cosmetic_item_catalog.tres" id="12_cosmetic_catalog"]
 [ext_resource type="Texture2D" uid="uid://bpisjtreryy8n" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0002.png" id="12_gcfjg"]
 [ext_resource type="Resource" uid="uid://dmuooovvgsc1c" path="res://resources/config/player_appearance_catalog.tres" id="13_appearance_catalog"]
+[ext_resource type="Resource" path="res://resources/config/handhold_presentation_catalog.tres" id="14_handhold_presentation"]
+[ext_resource type="Resource" path="res://resources/config/hazard_presentation_catalog.tres" id="15_hazard_presentation"]
 [ext_resource type="Texture2D" uid="uid://6v1jglojt8p3" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0003.png" id="13_civhj"]
 [ext_resource type="Texture2D" uid="uid://ctes14fu03vho" path="res://assets/PNG/UI/main_menu_scene/Decoration_animation/Cloud/cloud0004.png" id="14_kvdqo"]
 [ext_resource type="Texture2D" uid="uid://bx1g7uomtx24r" path="res://assets/PNG/UI/run_sence/base.png" id="15_oot7o"]
@@ -418,6 +420,8 @@ script = ExtResource("1_dev")
 climb_tuning = SubResource("Resource_climb")
 stamina_tuning = SubResource("Resource_stamina")
 generation_tuning = SubResource("Resource_generation")
+handhold_presentation_catalog = ExtResource("14_handhold_presentation")
+hazard_presentation_catalog = ExtResource("15_hazard_presentation")
 cosmetic_loadout = ExtResource("8_loadout")
 chaser_theme_catalog = ExtResource("9_theme_catalog")
 cosmetic_item_catalog = ExtResource("12_cosmetic_catalog")
