@@ -40,19 +40,19 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 		seed_key.begins_with(_tuning.generator_version + ":"),
         "DailyChunkGenerator seed key must match the configured generator version."
 	)
-	var cache_key: String = _get_chunk_cache_key(seed_key, chunk_index)
-	if _chunk_layout_cache.has(cache_key):
-		var cached_layout_variant: Variant = _chunk_layout_cache[cache_key]
-		Validation.require_condition(cached_layout_variant is GeneratedChunkLayout, "DailyChunkGenerator chunk cache must store GeneratedChunkLayout values.")
-		var cached_layout: GeneratedChunkLayout = cached_layout_variant
-		return cached_layout
+	for pending_chunk_index in range(chunk_index + 1):
+		var pending_cache_key: String = _get_chunk_cache_key(seed_key, pending_chunk_index)
+		if _chunk_layout_cache.has(pending_cache_key):
+			continue
+		if not _build_and_cache_chunk(seed_key, pending_chunk_index, pending_cache_key):
+			return null
 
+	return _get_cached_chunk_layout(seed_key, chunk_index)
+
+func _build_and_cache_chunk(seed_key: String, chunk_index: int, cache_key: String) -> bool:
 	var previous_layout: GeneratedChunkLayout = null
 	if chunk_index > 0:
-		previous_layout = build_chunk(seed_key, chunk_index - 1)
-		if previous_layout == null:
-			push_error("DailyChunkGenerator cannot build chunk %d because its predecessor failed generation." % chunk_index)
-			return null
+		previous_layout = _get_cached_chunk_layout(seed_key, chunk_index - 1)
 
 	var selected_layout: GeneratedChunkLayout = null
 	var selected_score: float = -INF
@@ -74,10 +74,18 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 
 	if selected_layout == null:
 		push_error("DailyChunkGenerator exhausted %d candidate attempts without a valid route and incoming seam for chunk %d: %s" % [_tuning.route_validation_candidate_attempt_count, chunk_index, "; ".join(candidate_failure_reasons)])
-		return null
+		return false
 
 	_chunk_layout_cache[cache_key] = selected_layout
-	return selected_layout
+	return true
+
+func _get_cached_chunk_layout(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
+	var cache_key: String = _get_chunk_cache_key(seed_key, chunk_index)
+	Validation.require_condition(_chunk_layout_cache.has(cache_key), "DailyChunkGenerator requires predecessor chunks to be cached before access.")
+	var cached_layout_variant: Variant = _chunk_layout_cache[cache_key]
+	Validation.require_condition(cached_layout_variant is GeneratedChunkLayout, "DailyChunkGenerator chunk cache must store GeneratedChunkLayout values.")
+	var cached_layout: GeneratedChunkLayout = cached_layout_variant
+	return cached_layout
 
 func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attempt_index: int) -> GeneratedChunkLayout:
 	Validation.require_condition(candidate_attempt_index >= 0, "DailyChunkGenerator candidate attempt index cannot be negative.")
@@ -242,6 +250,9 @@ func get_route_slot_for_chunk(chunk_index: int, difficulty_band: int) -> int:
 	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when calculating a route slot.")
 	ChunkDifficultyBand.assert_valid(difficulty_band)
 	var preview_seed_key: String = "%s:route_profile_preview" % _tuning.generator_version
+	for pending_chunk_index in range(1, chunk_index):
+		var pending_difficulty_band: int = get_difficulty_band_for_chunk(pending_chunk_index)
+		var _pending_route_slot: int = _get_route_slot_for_chunk_seeded(preview_seed_key, pending_chunk_index, pending_difficulty_band)
 	return _get_route_slot_for_chunk_seeded(preview_seed_key, chunk_index, difficulty_band)
 
 func _get_route_slot_for_chunk_seeded(seed_key: String, chunk_index: int, difficulty_band: int) -> int:

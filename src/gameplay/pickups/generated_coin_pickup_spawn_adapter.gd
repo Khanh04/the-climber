@@ -97,6 +97,6 @@ func _on_body_entered(body: Node) -> void:
 		return
 
 	_is_collected = true
-	monitoring = false
+	set_deferred(&"monitoring", false)
 	collected.emit(socket_id, coin_amount, body)
 	queue_free()
