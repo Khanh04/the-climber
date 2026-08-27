@@ -423,9 +423,17 @@ func _sync_torso_collision_mask_for_mode() -> void:
 	Validation.require_condition(_torso != null, "PlayerCharacter requires Torso before syncing collision masks.")
 	if _physics_mode == PlayerPhysicsModeScript.falling_ragdoll():
 		_torso.collision_mask = FALLING_COLLISION_MASK
+		_torso.can_sleep = true
 		return
 
 	_torso.collision_mask = CONTROLLED_COLLISION_MASK
+	# A body that falls asleep between frames silently discards apply_central_force() on every
+	# subsequent frame (verified directly against the engine) until something wakes it again.
+	# While actively climbing, a single frame's swing force is often too small to push velocity
+	# back above the sleep threshold before the next frame's tick -- the body re-sleeps and each
+	# frame's progress is lost, forever, even though it gets woken reactively every frame it's
+	# attached. Disabling sleep outright for the whole controlled-climb mode removes that loop.
+	_torso.can_sleep = false
 
 func _sync_limb_freeze_for_mode() -> void:
 	Validation.require_condition(_head != null and _left_arm != null and _right_arm != null, "PlayerCharacter requires all limb bodies before syncing freeze state.")

@@ -34,3 +34,48 @@ func test_generated_hazard_spawn_adapter_triggers_on_every_body_enter() -> void:
 
 func _capture_triggered_body(body: Node) -> void:
 	_triggered_bodies.append(body)
+
+func test_generated_hazard_spawn_adapter_pendulum_log_moves_over_time() -> void:
+	var hazard_spawn: GeneratedHazardSpawnAdapterScript = GeneratedHazardSpawnAdapterScript.new()
+	hazard_spawn.configure_hazard(&"pendulum_hazard", GeneratedHazardKindScript.Value.PENDULUM_LOG, Vector2(100.0, 100.0))
+	add_child_autofree(hazard_spawn)
+	var origin_position: Vector2 = hazard_spawn.position
+
+	hazard_spawn.call("_physics_process", 0.5)
+
+	assert_false(hazard_spawn.position.is_equal_approx(origin_position))
+
+func test_generated_hazard_spawn_adapter_wandering_critter_moves_over_time() -> void:
+	var hazard_spawn: GeneratedHazardSpawnAdapterScript = GeneratedHazardSpawnAdapterScript.new()
+	hazard_spawn.configure_hazard(&"critter_hazard", GeneratedHazardKindScript.Value.WANDERING_CRITTER, Vector2(50.0, 50.0), Vector2(10.0, -10.0))
+	add_child_autofree(hazard_spawn)
+	var origin_position: Vector2 = hazard_spawn.position
+
+	hazard_spawn.call("_physics_process", 0.5)
+
+	assert_false(hazard_spawn.position.is_equal_approx(origin_position))
+
+func test_generated_hazard_spawn_adapter_falling_rock_repeats_downward_motion() -> void:
+	var hazard_spawn: GeneratedHazardSpawnAdapterScript = GeneratedHazardSpawnAdapterScript.new()
+	hazard_spawn.configure_hazard(&"falling_rock_hazard", GeneratedHazardKindScript.Value.FALLING_ROCK, Vector2(20.0, 30.0))
+	add_child_autofree(hazard_spawn)
+	var origin_position: Vector2 = hazard_spawn.position
+
+	hazard_spawn.call("_physics_process", GeneratedHazardSpawnAdapterScript.FALLING_ROCK_CYCLE_SECONDS * 0.5)
+
+	assert_eq(hazard_spawn.position.x, origin_position.x)
+	assert_gt(hazard_spawn.position.y, origin_position.y)
+
+	hazard_spawn.call("_physics_process", GeneratedHazardSpawnAdapterScript.FALLING_ROCK_CYCLE_SECONDS * 0.5)
+
+	assert_true(hazard_spawn.position.is_equal_approx(origin_position))
+
+func test_generated_hazard_spawn_adapter_static_kinds_do_not_move() -> void:
+	var hazard_spawn: GeneratedHazardSpawnAdapterScript = GeneratedHazardSpawnAdapterScript.new()
+	hazard_spawn.configure_hazard(&"spike_hazard", GeneratedHazardKindScript.Value.SPIKE_CLUSTER, Vector2(20.0, 20.0))
+	add_child_autofree(hazard_spawn)
+	var origin_position: Vector2 = hazard_spawn.position
+
+	hazard_spawn.call("_physics_process", 0.5)
+
+	assert_true(hazard_spawn.position.is_equal_approx(origin_position))

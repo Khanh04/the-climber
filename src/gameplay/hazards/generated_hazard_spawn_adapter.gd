@@ -15,10 +15,25 @@ const SPIKE_CLUSTER_GROUP_NAME: StringName = &"generated_spike_cluster_hazard"
 const WIND_GUST_GROUP_NAME: StringName = &"generated_wind_gust_hazard"
 const DOWNDRAFT_GROUP_NAME: StringName = &"generated_downdraft_hazard"
 const UPDRAFT_GROUP_NAME: StringName = &"generated_updraft_hazard"
+const FALLING_ROCK_GROUP_NAME: StringName = &"generated_falling_rock_hazard"
+const PENDULUM_LOG_GROUP_NAME: StringName = &"generated_pendulum_log_hazard"
+const WANDERING_CRITTER_GROUP_NAME: StringName = &"generated_wandering_critter_hazard"
+const STARTLE_PUFF_GROUP_NAME: StringName = &"generated_startle_puff_hazard"
+const BUG_SWARM_GROUP_NAME: StringName = &"generated_bug_swarm_hazard"
+
+const PENDULUM_ARM_LENGTH_PIXELS: float = 48.0
+const PENDULUM_SWING_AMPLITUDE_RADIANS: float = 0.9
+const PENDULUM_SWING_FREQUENCY_HZ: float = 0.4
+const ROAM_SPAN_PIXELS: float = 140.0
+const ROAM_FREQUENCY_HZ: float = 0.25
+const FALLING_ROCK_DISTANCE_PIXELS: float = 180.0
+const FALLING_ROCK_CYCLE_SECONDS: float = 1.5
 
 var socket_id: StringName = StringName()
 var hazard_kind: int = -1
 var impulse_vector_pixels: Vector2 = Vector2.ZERO
+var _motion_origin_position: Vector2 = Vector2.ZERO
+var _motion_time_seconds: float = 0.0
 
 func configure_hazard(
 	socket_id_value: StringName,
@@ -50,11 +65,41 @@ func configure_hazard(
 	set_meta(&"impulse_vector_x", impulse_vector_pixels.x)
 	set_meta(&"impulse_vector_y", impulse_vector_pixels.y)
 	_ensure_presentation()
+	_motion_origin_position = position
+	_motion_time_seconds = 0.0
 
 func _ready() -> void:
 	_validate_required_state()
 	if not body_entered.is_connected(_on_body_entered):
 		var _connect_result: int = body_entered.connect(_on_body_entered)
+
+func _physics_process(delta: float) -> void:
+	if hazard_kind == GeneratedHazardKindScript.Value.FALLING_ROCK:
+		_advance_falling_rock_motion(delta)
+	elif hazard_kind == GeneratedHazardKindScript.Value.PENDULUM_LOG:
+		_advance_pendulum_motion(delta)
+	elif hazard_kind == GeneratedHazardKindScript.Value.WANDERING_CRITTER:
+		_advance_roaming_motion(delta)
+
+func _advance_falling_rock_motion(delta: float) -> void:
+	_motion_time_seconds = fmod(_motion_time_seconds + delta, FALLING_ROCK_CYCLE_SECONDS)
+	var fall_progress: float = _motion_time_seconds / FALLING_ROCK_CYCLE_SECONDS
+	position = _motion_origin_position + Vector2.DOWN * FALLING_ROCK_DISTANCE_PIXELS * fall_progress
+
+func _advance_pendulum_motion(delta: float) -> void:
+	_motion_time_seconds += delta
+	var swing_angle_radians: float = PENDULUM_SWING_AMPLITUDE_RADIANS * sin(TAU * PENDULUM_SWING_FREQUENCY_HZ * _motion_time_seconds)
+	position = _motion_origin_position + Vector2(
+		PENDULUM_ARM_LENGTH_PIXELS * sin(swing_angle_radians),
+		PENDULUM_ARM_LENGTH_PIXELS * (1.0 - cos(swing_angle_radians))
+	)
+
+func _advance_roaming_motion(delta: float) -> void:
+	_motion_time_seconds += delta
+	position = _motion_origin_position + Vector2(
+		ROAM_SPAN_PIXELS * 0.5 * sin(TAU * ROAM_FREQUENCY_HZ * _motion_time_seconds),
+		0.0
+	)
 
 func _validate_required_state() -> void:
 	Validation.require_condition(not String(socket_id).is_empty(), "GeneratedHazardSpawnAdapter must be configured before entering the scene tree.")
@@ -111,6 +156,46 @@ func _build_visual_polygon() -> PackedVector2Array:
 				Vector2(-18.0, -8.0),
 				Vector2(-30.0, -8.0),
 			])
+		GeneratedHazardKindScript.Value.FALLING_ROCK:
+			return PackedVector2Array([
+				Vector2(-14.0, -8.0),
+				Vector2(-4.0, -16.0),
+				Vector2(10.0, -12.0),
+				Vector2(16.0, 2.0),
+				Vector2(6.0, 14.0),
+				Vector2(-10.0, 12.0),
+			])
+		GeneratedHazardKindScript.Value.PENDULUM_LOG:
+			return PackedVector2Array([
+				Vector2(-22.0, -10.0),
+				Vector2(22.0, -10.0),
+				Vector2(22.0, 10.0),
+				Vector2(-22.0, 10.0),
+			])
+		GeneratedHazardKindScript.Value.WANDERING_CRITTER:
+			return PackedVector2Array([
+				Vector2(0.0, -10.0),
+				Vector2(12.0, -2.0),
+				Vector2(12.0, 8.0),
+				Vector2(-12.0, 8.0),
+				Vector2(-12.0, -2.0),
+			])
+		GeneratedHazardKindScript.Value.STARTLE_PUFF:
+			return PackedVector2Array([
+				Vector2(0.0, -14.0),
+				Vector2(14.0, 0.0),
+				Vector2(0.0, 14.0),
+				Vector2(-14.0, 0.0),
+			])
+		GeneratedHazardKindScript.Value.BUG_SWARM:
+			return PackedVector2Array([
+				Vector2(-16.0, -6.0),
+				Vector2(-4.0, -14.0),
+				Vector2(10.0, -8.0),
+				Vector2(16.0, 4.0),
+				Vector2(4.0, 12.0),
+				Vector2(-10.0, 8.0),
+			])
 		_:
 			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind polygon.")
 			return PackedVector2Array()
@@ -125,6 +210,16 @@ func _build_visual_color() -> Color:
 			return Color(0.96, 0.62, 0.24, 0.9)
 		GeneratedHazardKindScript.Value.UPDRAFT:
 			return Color(0.42, 0.92, 0.55, 0.9)
+		GeneratedHazardKindScript.Value.FALLING_ROCK:
+			return Color(0.5, 0.44, 0.38, 0.95)
+		GeneratedHazardKindScript.Value.PENDULUM_LOG:
+			return Color(0.44, 0.29, 0.17, 0.95)
+		GeneratedHazardKindScript.Value.WANDERING_CRITTER:
+			return Color(0.62, 0.5, 0.34, 0.92)
+		GeneratedHazardKindScript.Value.STARTLE_PUFF:
+			return Color(0.98, 0.86, 0.32, 0.85)
+		GeneratedHazardKindScript.Value.BUG_SWARM:
+			return Color(0.35, 0.3, 0.14, 0.85)
 		_:
 			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind color.")
 			return Color.WHITE
@@ -139,6 +234,16 @@ func _get_collision_size_for_kind() -> Vector2:
 			return Vector2(72.0, 96.0)
 		GeneratedHazardKindScript.Value.UPDRAFT:
 			return Vector2(68.0, 92.0)
+		GeneratedHazardKindScript.Value.FALLING_ROCK:
+			return Vector2(30.0, 28.0)
+		GeneratedHazardKindScript.Value.PENDULUM_LOG:
+			return Vector2(44.0, 20.0)
+		GeneratedHazardKindScript.Value.WANDERING_CRITTER:
+			return Vector2(24.0, 18.0)
+		GeneratedHazardKindScript.Value.STARTLE_PUFF:
+			return Vector2(28.0, 28.0)
+		GeneratedHazardKindScript.Value.BUG_SWARM:
+			return Vector2(32.0, 24.0)
 		_:
 			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind collision size.")
 			return Vector2.ZERO
@@ -153,6 +258,16 @@ func _get_specific_group_name() -> StringName:
 			return DOWNDRAFT_GROUP_NAME
 		GeneratedHazardKindScript.Value.UPDRAFT:
 			return UPDRAFT_GROUP_NAME
+		GeneratedHazardKindScript.Value.FALLING_ROCK:
+			return FALLING_ROCK_GROUP_NAME
+		GeneratedHazardKindScript.Value.PENDULUM_LOG:
+			return PENDULUM_LOG_GROUP_NAME
+		GeneratedHazardKindScript.Value.WANDERING_CRITTER:
+			return WANDERING_CRITTER_GROUP_NAME
+		GeneratedHazardKindScript.Value.STARTLE_PUFF:
+			return STARTLE_PUFF_GROUP_NAME
+		GeneratedHazardKindScript.Value.BUG_SWARM:
+			return BUG_SWARM_GROUP_NAME
 		_:
 			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind group.")
 			return StringName()
@@ -168,6 +283,16 @@ func _hazard_kind_requires_impulse_vector(hazard_kind_value: int) -> bool:
 			return true
 		GeneratedHazardKindScript.Value.UPDRAFT:
 			return true
+		GeneratedHazardKindScript.Value.FALLING_ROCK:
+			return false
+		GeneratedHazardKindScript.Value.PENDULUM_LOG:
+			return false
+		GeneratedHazardKindScript.Value.WANDERING_CRITTER:
+			return true
+		GeneratedHazardKindScript.Value.STARTLE_PUFF:
+			return false
+		GeneratedHazardKindScript.Value.BUG_SWARM:
+			return false
 		_:
 			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind when validating impulse state.")
 			return false

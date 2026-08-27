@@ -425,6 +425,46 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
     for limb_body in _limb_bodies(player):
         assert_true(limb_body.freeze)
 
+func test_player_character_swings_with_one_hand_attached_over_time() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var hold: StaticBody2D = _create_hold(&"LeftHold", player.get_left_hand_anchor_global_position() + Vector2(0.0, -60.0))
+    var attachment_state := HandAttachmentStateScript.new()
+    attachment_state.attach(HandSideScript.Value.LEFT, &"left_hold", hold.global_position, hold.get_path())
+
+    var start_position: Vector2 = player.get_body_global_position()
+    for _frame_index in range(90):
+        var frame_result := ClimbPrototypeFrameResultScript.new(Vector2(2400.0, 0.0), false, 1)
+        player.apply_frame_motion(frame_result, attachment_state)
+        await get_tree().physics_frame
+
+    assert_ne(
+        player.get_body_global_position(),
+        start_position,
+        "One-hand swing input held over time must move the player body, or swinging silently does nothing."
+    )
+
+func test_player_character_swings_when_aim_is_nearly_radial_to_an_overhead_hold() -> void:
+    # Regression for a real reported bug: a hold almost directly overhead plus aim input almost
+    # directly along that same radial line leaves only a tiny tangential force component each
+    # frame -- too small to push velocity back above Godot's sleep threshold before the next
+    # tick, so the body re-slept every frame and every frame's progress was discarded forever.
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var hold: StaticBody2D = _create_hold(&"LeftHold", player.get_left_hand_anchor_global_position() + Vector2(-2.4, -62.65))
+    var attachment_state := HandAttachmentStateScript.new()
+    attachment_state.attach(HandSideScript.Value.LEFT, &"left_hold", hold.global_position, hold.get_path())
+
+    var start_position: Vector2 = player.get_body_global_position()
+    for _frame_index in range(120):
+        var frame_result := ClimbPrototypeFrameResultScript.new(Vector2(0.0, -2400.0), false, 1)
+        player.apply_frame_motion(frame_result, attachment_state)
+        await get_tree().physics_frame
+
+    assert_ne(
+        player.get_body_global_position(),
+        start_position,
+        "A small but real tangential force held over many frames must still eventually move the player body."
+    )
+
 func _limb_bodies(player: PlayerCharacterScript) -> Array[RigidBody2D]:
     return [player.get_head_body(), player.get_left_arm_body(), player.get_right_arm_body()]
 

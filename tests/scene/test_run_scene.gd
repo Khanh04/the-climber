@@ -405,8 +405,8 @@ func test_run_scene_generated_seed_key_tracks_injected_utc_rollover() -> void:
     var first_generator_version: String = _get_required_string_meta(first_generated_chunk, &"generator_version")
     var second_generator_version: String = _get_required_string_meta(second_generated_chunk, &"generator_version")
 
-    assert_eq(first_seed_key, "generator_v4:2026-05-14")
-    assert_eq(second_seed_key, "generator_v4:2026-05-15")
+    assert_eq(first_seed_key, "generator_v5:2026-05-14")
+    assert_eq(second_seed_key, "generator_v5:2026-05-15")
     assert_ne(first_seed_key, second_seed_key)
     assert_eq(first_generator_version, first_playground.generation_tuning.generator_version)
     assert_eq(second_generator_version, second_playground.generation_tuning.generator_version)
@@ -1242,6 +1242,151 @@ func test_run_scene_generated_updraft_hazards_preserve_climb_state() -> void:
     assert_eq(_test_adapter(playground).get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
     assert_true(player_body.linear_velocity.is_equal_approx(impulse_vector_pixels))
 
+func test_run_scene_generated_falling_rock_hazards_end_run() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = _test_adapter(playground).get_player_body_for_test()
+    var hazard_spawn: GeneratedHazardSpawnAdapterScript = _wire_generated_hazard_for_test(
+        playground,
+        GeneratedHazardKindScript.Value.FALLING_ROCK,
+        Vector2.ZERO,
+        &"test_falling_rock_hazard"
+    )
+
+    assert_not_null(player_body)
+    assert_not_null(hazard_spawn)
+    assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+
+    hazard_spawn.triggered.emit(player_body)
+
+    assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.ENDED)
+    assert_eq(_test_adapter(playground).get_run_session_for_test().get_end_reason(), RunEndReasonScript.Value.LETHAL_HAZARD)
+    assert_eq(_test_adapter(playground).get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
+
+func test_run_scene_generated_pendulum_log_hazards_end_run() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = _test_adapter(playground).get_player_body_for_test()
+    var hazard_spawn: GeneratedHazardSpawnAdapterScript = _wire_generated_hazard_for_test(
+        playground,
+        GeneratedHazardKindScript.Value.PENDULUM_LOG,
+        Vector2.ZERO,
+        &"test_pendulum_log_hazard"
+    )
+
+    assert_not_null(player_body)
+    assert_not_null(hazard_spawn)
+    assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+
+    hazard_spawn.triggered.emit(player_body)
+
+    assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.ENDED)
+    assert_eq(_test_adapter(playground).get_run_session_for_test().get_end_reason(), RunEndReasonScript.Value.LETHAL_HAZARD)
+    assert_eq(_test_adapter(playground).get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
+
+func test_run_scene_generated_wandering_critter_hazards_preserve_climb_state() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = _test_adapter(playground).get_player_body_for_test()
+    var impulse_vector_pixels: Vector2 = Vector2(-150.0, -60.0)
+    var hazard_spawn: GeneratedHazardSpawnAdapterScript = _wire_generated_hazard_for_test(
+        playground,
+        GeneratedHazardKindScript.Value.WANDERING_CRITTER,
+        impulse_vector_pixels,
+        &"test_wandering_critter_hazard"
+    )
+
+    assert_not_null(player_body)
+    assert_not_null(hazard_spawn)
+    player_body.linear_velocity = Vector2.ZERO
+    assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_false(_test_adapter(playground).get_run_session_for_test().has_end_reason())
+
+    hazard_spawn.triggered.emit(player_body)
+
+    assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_false(_test_adapter(playground).get_run_session_for_test().has_end_reason())
+    assert_eq(_test_adapter(playground).get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
+    assert_true(player_body.linear_velocity.is_equal_approx(impulse_vector_pixels))
+
+func test_run_scene_generated_startle_puff_hazards_do_not_end_run() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = _test_adapter(playground).get_player_body_for_test()
+    var hazard_spawn: GeneratedHazardSpawnAdapterScript = _wire_generated_hazard_for_test(
+        playground,
+        GeneratedHazardKindScript.Value.STARTLE_PUFF,
+        Vector2.ZERO,
+        &"test_startle_puff_hazard"
+    )
+
+    assert_not_null(player_body)
+    assert_not_null(hazard_spawn)
+    player_body.linear_velocity = Vector2.ZERO
+    assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_false(_test_adapter(playground).get_run_session_for_test().has_end_reason())
+
+    hazard_spawn.triggered.emit(player_body)
+
+    assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_false(_test_adapter(playground).get_run_session_for_test().has_end_reason())
+    assert_eq(_test_adapter(playground).get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
+    assert_true(player_body.linear_velocity.is_equal_approx(Vector2.ZERO))
+
+func test_run_scene_generated_bug_swarm_hazards_do_not_end_run() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var player_body: RigidBody2D = _test_adapter(playground).get_player_body_for_test()
+    var hazard_spawn: GeneratedHazardSpawnAdapterScript = _wire_generated_hazard_for_test(
+        playground,
+        GeneratedHazardKindScript.Value.BUG_SWARM,
+        Vector2.ZERO,
+        &"test_bug_swarm_hazard"
+    )
+
+    assert_not_null(player_body)
+    assert_not_null(hazard_spawn)
+    player_body.linear_velocity = Vector2.ZERO
+    assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_false(_test_adapter(playground).get_run_session_for_test().has_end_reason())
+
+    hazard_spawn.triggered.emit(player_body)
+
+    assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_false(_test_adapter(playground).get_run_session_for_test().has_end_reason())
+    assert_eq(_test_adapter(playground).get_player_for_test().get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
+    assert_true(player_body.linear_velocity.is_equal_approx(Vector2.ZERO))
+
 func test_run_scene_camera_follows_player_upward() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
@@ -1750,6 +1895,48 @@ func test_run_scene_mobile_drag_updates_pull_preview_and_release_clears_it() -> 
     assert_null(playground.get_node_or_null("LeftAimPreview"))
     assert_null(playground.get_node_or_null("RightAimPreview"))
     assert_null(playground.get_node_or_null("AimTargetMarker"))
+
+func test_run_scene_mobile_drag_swings_from_generated_opener_hold() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var touch_press := InputEventScreenTouch.new()
+    touch_press.index = 0
+    touch_press.pressed = true
+    touch_press.position = Vector2(18.0, 180.0)
+    playground._input(touch_press)
+    playground._physics_process(1.0 / 60.0)
+
+    var attachment_state: HandAttachmentState = _test_adapter(playground).get_controller_for_test().get_attachment_state()
+    assert_eq(attachment_state.get_attached_hand_count(), 1)
+    assert_true(attachment_state.is_attached(HandSide.Value.LEFT))
+    assert_lt(attachment_state.get_attach_position(HandSide.Value.LEFT).x, _test_adapter(playground).get_player_body_for_test().global_position.x)
+
+    var start_position: Vector2 = _test_adapter(playground).get_player_body_for_test().global_position
+    var touch_drag := InputEventScreenDrag.new()
+    touch_drag.index = 0
+    touch_drag.position = Vector2(18.0, 100.0)
+    playground._input(touch_drag)
+
+    for _frame_index in range(30):
+        await get_tree().physics_frame
+
+    assert_gt(
+        _test_adapter(playground).get_player_body_for_test().global_position.distance_to(start_position),
+        1.0,
+        "A sustained mobile drag from the normal generated opener must move the player body."
+    )
+
+    var touch_release := InputEventScreenTouch.new()
+    touch_release.index = 0
+    touch_release.pressed = false
+    touch_release.position = touch_drag.position
+    playground._input(touch_release)
 
 func test_run_scene_reset_clears_runtime_attachments_and_restarts_run() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")

@@ -95,11 +95,15 @@ func _select_zigzag_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int
 	return _select_wide_safe_lane(plan, row_index)
 
 func _select_recovery_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	var side: int = _get_recovery_arm_side(plan, row_index)
+	if row_index == plan.get_row_count() - 2:
+		return _get_inner_lane_for_side(side)
+
 	if (row_index % 4) == 1:
-		return _get_alternating_outer_lane(plan, row_index)
+		return _get_outer_lane_for_side(side)
 
 	if (row_index % 2) == 0:
-		return _get_alternating_inner_lane(plan, row_index)
+		return _get_inner_lane_for_side(side)
 
 	return RouteLaneScript.Value.CENTER
 
@@ -135,19 +139,13 @@ func _select_branch_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int
 	var branch_span: int = plan.merge_row_index - plan.split_row_index - 1
 	return _select_branch_lane(branch_side, branch_row_index, branch_span)
 
-func _get_alternating_inner_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	var lane_index: int = (floori(float(row_index) * 0.5) + plan.chunk_index) % 2
-	if lane_index == 0:
-		return RouteLaneScript.Value.INNER_LEFT
+func _get_recovery_arm_side(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	var arm_index: int = floori(float(row_index) / 4.0)
+	var side_index: int = (arm_index + plan.chunk_index) % 2
+	if side_index == 0:
+		return RouteBranchSideScript.Value.LEFT
 
-	return RouteLaneScript.Value.INNER_RIGHT
-
-func _get_alternating_outer_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	var lane_index: int = (floori(float(row_index) * 0.5) + plan.chunk_index) % 2
-	if lane_index == 0:
-		return RouteLaneScript.Value.OUTER_LEFT
-
-	return RouteLaneScript.Value.OUTER_RIGHT
+	return RouteBranchSideScript.Value.RIGHT
 
 func _get_alternating_branch_side(plan: ChunkRoutePlanScript, row_index: int) -> int:
 	var side_index: int = (floori(float(row_index - 1) / 8.0) + plan.chunk_index) % 2

@@ -43,6 +43,9 @@ const HapticFeedbackTypeScript = preload("res://src/platform/haptics/haptic_feed
 const HapticsAdapterScript = preload("res://src/platform/haptics/haptics_adapter.gd")
 const HapticsAdapterFactoryScript = preload("res://src/platform/haptics/haptics_adapter_factory.gd")
 const LethalHazardContactServiceScript = preload("res://src/gameplay/hazards/lethal_hazard_contact_service.gd")
+const StartleHazardContactServiceScript = preload("res://src/gameplay/hazards/startle_hazard_contact_service.gd")
+const BugSwarmHazardContactServiceScript = preload("res://src/gameplay/hazards/bug_swarm_hazard_contact_service.gd")
+const HazardCameraEffectControllerScript = preload("res://src/gameplay/run/hazard_camera_effect_controller.gd")
 const MobileTouchInputAdapterScript = preload("res://src/gameplay/player/mobile_touch_input_adapter.gd")
 const MobileTouchContactScript = preload("res://src/gameplay/player/mobile_touch_contact.gd")
 const NormalCoinPickupServiceScript = preload("res://src/gameplay/pickups/normal_coin_pickup_service.gd")
@@ -151,6 +154,9 @@ var _chaser_contact_service: ChaserContactServiceScript = ChaserContactServiceSc
 var _chaser_pacing_model: ChaserPacingModelScript
 var _bottom_screen_fall_service: BottomScreenFallServiceScript = BottomScreenFallServiceScript.new()
 var _lethal_hazard_contact_service: LethalHazardContactServiceScript = LethalHazardContactServiceScript.new()
+var _startle_hazard_contact_service: StartleHazardContactServiceScript = StartleHazardContactServiceScript.new()
+var _bug_swarm_hazard_contact_service: BugSwarmHazardContactServiceScript = BugSwarmHazardContactServiceScript.new()
+var _hazard_camera_effect_controller: HazardCameraEffectControllerScript = HazardCameraEffectControllerScript.new()
 var _normal_coin_pickup_service: NormalCoinPickupServiceScript = NormalCoinPickupServiceScript.new()
 var _run_loop_coordinator: RunLoopCoordinatorScript = RunLoopCoordinatorScript.new()
 var _run_ui_presenter: RunUiPresenterScript = RunUiPresenterScript.new(_run_loop_coordinator)
@@ -206,6 +212,7 @@ var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
 func _ready() -> void:
 	_launch_mode = _resolve_launch_mode()
 	_validate_required_state()
+	_hazard_camera_effect_controller.ensure_overlay(self)
 	_world_surface_configurator.configure_surface(
 		_gameplay_nodes,
 		_run_hud,
@@ -357,6 +364,7 @@ func _physics_process(delta: float) -> void:
 		return
 
 	var input_frame: PlayerInputFrameScript = _create_input_frame()
+	_hazard_camera_effect_controller.advance(delta)
 	var current_height_meters_before_input: float = _run_frame_runtime.calculate_current_height_meters(
 		_gameplay_nodes,
 		_start_y,
@@ -368,7 +376,8 @@ func _physics_process(delta: float) -> void:
 		_run_session,
 		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
 		_get_climb_tuning_float(&"camera_vertical_dead_zone_pixels"),
-		_get_climb_tuning_float(&"camera_horizontal_dead_zone_pixels")
+		_get_climb_tuning_float(&"camera_horizontal_dead_zone_pixels"),
+		_hazard_camera_effect_controller.get_camera_shake_offset()
 	)
 	_run_frame_runtime.sync_generated_chunks(
 		_gameplay_nodes,
@@ -802,7 +811,8 @@ func _configure_generated_chunks() -> void:
 		2,
 		0
 	)
-	var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(generation_tuning)
+	var static_reach_distance_meters: float = climb_tuning.handhold_detection_radius_pixels / pixels_per_meter
+	var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(generation_tuning, static_reach_distance_meters)
 	_generated_chunk_coordinator.configure(
 		generation_tuning,
 		generator,
@@ -871,15 +881,19 @@ func _on_generated_hazard_triggered(body: Node, hazard_spawn: GeneratedHazardSpa
 		return
 
 	match hazard_spawn.hazard_kind:
-		GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
+		GeneratedHazardKindScript.Value.SPIKE_CLUSTER, GeneratedHazardKindScript.Value.FALLING_ROCK, GeneratedHazardKindScript.Value.PENDULUM_LOG:
 			_lethal_hazard_contact_service.resolve(_controller, _player, _run_session)
-		GeneratedHazardKindScript.Value.WIND_GUST, GeneratedHazardKindScript.Value.DOWNDRAFT, GeneratedHazardKindScript.Value.UPDRAFT:
+		GeneratedHazardKindScript.Value.WIND_GUST, GeneratedHazardKindScript.Value.DOWNDRAFT, GeneratedHazardKindScript.Value.UPDRAFT, GeneratedHazardKindScript.Value.WANDERING_CRITTER:
 			_wind_gust_hazard_contact_service.resolve(
 				_controller,
 				_player,
 				_run_session,
 				hazard_spawn.get_impulse_vector_pixels()
 			)
+		GeneratedHazardKindScript.Value.STARTLE_PUFF:
+			_startle_hazard_contact_service.resolve(_hazard_camera_effect_controller)
+		GeneratedHazardKindScript.Value.BUG_SWARM:
+			_bug_swarm_hazard_contact_service.resolve(_hazard_camera_effect_controller)
 		_:
 			Validation.require_condition(false, "RunScene requires a supported generated hazard kind.")
 	_clear_aim_preview()

@@ -85,6 +85,9 @@ func _ensure_chunk(chunk_index: int) -> void:
 		return
 
 	var layout: GeneratedChunkLayout = _generator.build_chunk(_seed_key, chunk_index)
+	if layout == null:
+		push_error("GeneratedChunkCoordinator could not generate a valid chunk %d." % chunk_index)
+		return
 	var chunk_node: Node2D = _builder.build_chunk_node(layout)
 	chunk_node.set_meta(&"generated_chunk_layout", layout)
 	add_child(chunk_node)

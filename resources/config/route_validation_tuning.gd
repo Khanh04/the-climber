@@ -2,7 +2,9 @@ class_name RouteValidationTuning
 extends Resource
 
 ## Conservative maximum move distance allowed for the safe-path validator.
-@export var max_move_distance_meters: float = 1.2
+@export var max_move_distance_meters: float = 2.2
+## Runtime hand-anchor acquisition radius used to distinguish static grabs from swing-assisted moves.
+@export var static_reach_distance_meters: float = 0.96
 ## Maximum downward-only move allowed before a path is considered too lossy to be safe.
 @export var max_downward_move_meters: float = 0.12
 ## Entry anchors used when validating the opener and any chunk-local starting position.
@@ -12,20 +14,8 @@ extends Resource
 ])
 ## Vertical grouping tolerance for route entry and exit ports derived from generated handholds.
 @export var route_port_row_tolerance_meters: float = 0.3
-## Bounded deterministic retry count before the generator accepts the best available invalid candidate.
-@export var candidate_attempt_count: int = 1
-## Relative weight for vertical movement cost when the route graph starts scoring moves.
-@export var vertical_move_cost_weight: float = 1.0
-## Relative weight for lateral movement cost when the route graph starts scoring moves.
-@export var lateral_move_cost_weight: float = 1.0
-## Relative weight for hand alternation or cross-through penalties.
-@export var hand_switch_cost_weight: float = 0.25
-## Relative weight for hold-type-specific punishment on candidate scoring.
-@export var hold_type_cost_weight: float = 1.0
-## Relative weight for stamina pressure when scoring safe and optional paths.
-@export var stamina_cost_weight: float = 1.0
-## Relative weight for hazard pressure when comparing otherwise valid candidates.
-@export var hazard_pressure_cost_weight: float = 1.0
+## Bounded deterministic candidate count used to select the strongest valid route.
+@export var candidate_attempt_count: int = 3
 ## Upper chunk-height ratio for the setup zone.
 @export var setup_zone_upper_ratio: float = 0.34
 ## Upper chunk-height ratio for the crux zone before top-out space begins.
@@ -35,16 +25,12 @@ extends Resource
 
 func is_valid() -> bool:
 	return max_move_distance_meters > 0.0 \
+		and static_reach_distance_meters > 0.0 \
+		and static_reach_distance_meters <= max_move_distance_meters \
 		and max_downward_move_meters >= 0.0 \
 		and entry_anchor_positions.size() > 0 \
 		and route_port_row_tolerance_meters >= 0.0 \
 		and candidate_attempt_count >= 1 \
-		and vertical_move_cost_weight >= 0.0 \
-		and lateral_move_cost_weight >= 0.0 \
-		and hand_switch_cost_weight >= 0.0 \
-		and hold_type_cost_weight >= 0.0 \
-		and stamina_cost_weight >= 0.0 \
-		and hazard_pressure_cost_weight >= 0.0 \
 		and setup_zone_upper_ratio > 0.0 \
 		and setup_zone_upper_ratio < crux_zone_upper_ratio \
 		and crux_zone_upper_ratio <= top_out_zone_lower_ratio \
@@ -56,16 +42,12 @@ func validate() -> void:
 
 func assert_valid() -> void:
 	Validation.require_condition(max_move_distance_meters > 0.0, "Route validation max move distance must be positive.")
+	Validation.require_condition(static_reach_distance_meters > 0.0, "Route validation static reach distance must be positive.")
+	Validation.require_condition(static_reach_distance_meters <= max_move_distance_meters, "Route validation static reach cannot exceed the swing move envelope.")
 	Validation.require_condition(max_downward_move_meters >= 0.0, "Route validation max downward move cannot be negative.")
 	Validation.require_condition(entry_anchor_positions.size() > 0, "Route validation requires at least one entry anchor position.")
 	Validation.require_condition(route_port_row_tolerance_meters >= 0.0, "Route validation route-port row tolerance cannot be negative.")
 	Validation.require_condition(candidate_attempt_count >= 1, "Route validation candidate attempt count must be at least one.")
-	Validation.require_condition(vertical_move_cost_weight >= 0.0, "Route validation vertical move cost weight cannot be negative.")
-	Validation.require_condition(lateral_move_cost_weight >= 0.0, "Route validation lateral move cost weight cannot be negative.")
-	Validation.require_condition(hand_switch_cost_weight >= 0.0, "Route validation hand-switch cost weight cannot be negative.")
-	Validation.require_condition(hold_type_cost_weight >= 0.0, "Route validation hold-type cost weight cannot be negative.")
-	Validation.require_condition(stamina_cost_weight >= 0.0, "Route validation stamina cost weight cannot be negative.")
-	Validation.require_condition(hazard_pressure_cost_weight >= 0.0, "Route validation hazard-pressure cost weight cannot be negative.")
 	Validation.require_condition(setup_zone_upper_ratio > 0.0, "Route validation setup-zone upper ratio must be positive.")
 	Validation.require_condition(
 		setup_zone_upper_ratio < crux_zone_upper_ratio,

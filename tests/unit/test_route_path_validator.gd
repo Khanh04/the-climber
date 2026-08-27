@@ -17,7 +17,8 @@ const RoutePathValidatorScript: GDScript = preload("res://src/gameplay/generatio
 func test_generated_opener_returns_strict_static_path() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
-    var validator: RefCounted = _build_route_path_validator(1.20)
+    var route_validation_tuning: RouteValidationTuning = tuning.route_validation_tuning as RouteValidationTuning
+    var validator: RefCounted = _build_route_path_validator(route_validation_tuning.max_move_distance_meters)
     var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
     var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
 
@@ -105,6 +106,39 @@ func test_validator_returns_path_hold_sequence_for_simple_layout() -> void:
     var path_hold_ids: PackedStringArray = _require_packed_string_array_property(result, &"path_hold_ids")
     assert_eq(path_hold_ids[path_hold_ids.size() - 1], "top")
     assert_true(path_hold_ids.has("second"))
+
+func test_validator_does_not_use_support_holds_to_rescue_a_broken_safe_path() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var validator: RefCounted = _build_route_path_validator(0.96)
+    var handholds: Array[GeneratedHandholdSocket] = [
+        _build_handhold_socket(tuning, &"safe_start", Vector2(-0.42, -0.40)),
+        _build_handhold_socket(tuning, &"support_bridge", Vector2(0.0, -1.15)),
+        _build_handhold_socket(tuning, &"safe_top", Vector2(0.42, -1.90)),
+    ]
+    var pickup_sockets: Array[GeneratedPickupSocket] = []
+    var hazard_sockets: Array[GeneratedHazardSocket] = []
+    var layout: GeneratedChunkLayoutScript = GeneratedChunkLayoutScript.new(
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.GENERATOR_VERSION,
+        0,
+        ChunkType.Value.LADDER,
+        ChunkRouteSlot.Value.OPENER,
+        ChunkDifficultyBand.Value.EASY,
+        0.0,
+        handholds,
+        pickup_sockets,
+        hazard_sockets,
+        PackedStringArray(["safe_start"]),
+        PackedStringArray(["safe_top"]),
+        null,
+        0,
+        0.0,
+        PackedStringArray(["safe_start", "safe_top"])
+    )
+
+    var result: Object = _validate_layout(validator, layout, _default_entry_anchor_positions())
+
+    assert_false(_require_bool_property(result, &"is_valid"))
 
 func test_validator_accepts_reachable_adjacent_chunk_seam() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()

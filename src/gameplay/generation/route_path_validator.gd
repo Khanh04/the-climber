@@ -7,11 +7,13 @@ const RouteGraphBuilderScript: GDScript = preload("res://src/gameplay/generation
 
 var _max_move_distance_meters: float
 var _max_downward_move_meters: float
+var _static_reach_distance_meters: float
 var _route_graph_builder: RefCounted
 
 func _init(
     max_move_distance_meters_value: float,
-    max_downward_move_meters_value: float = 0.12
+    max_downward_move_meters_value: float = 0.12,
+    static_reach_distance_meters_value: float = 0.96
 ) -> void:
     Validation.require_condition(
         max_move_distance_meters_value > 0.0,
@@ -21,11 +23,15 @@ func _init(
         max_downward_move_meters_value >= 0.0,
         "RoutePathValidator max downward move cannot be negative."
     )
+    Validation.require_condition(static_reach_distance_meters_value > 0.0, "RoutePathValidator static reach distance must be positive.")
+    Validation.require_condition(static_reach_distance_meters_value <= max_move_distance_meters_value, "RoutePathValidator static reach cannot exceed the swing move envelope.")
     _max_move_distance_meters = max_move_distance_meters_value
     _max_downward_move_meters = max_downward_move_meters_value
+    _static_reach_distance_meters = static_reach_distance_meters_value
     var route_graph_builder_variant: Variant = RouteGraphBuilderScript.new(
         max_move_distance_meters_value,
-        max_downward_move_meters_value
+        max_downward_move_meters_value,
+        static_reach_distance_meters_value
     )
     Validation.require_condition(route_graph_builder_variant is RefCounted, "RoutePathValidator must create a RefCounted route graph builder.")
     _route_graph_builder = route_graph_builder_variant
@@ -57,11 +63,14 @@ func validate_layout(
         var _append_predecessor_result: bool = predecessors.append(-1)
         visited.append(false)
 
-    for node_index in range(graph_nodes.size()):
+    var entry_port_hold_ids: PackedStringArray = _require_graph_route_port_hold_ids(route_graph, &"entry_port_hold_ids")
+    for entry_hold_id in entry_port_hold_ids:
+        var node_index: int = _require_graph_node_index(route_graph, entry_hold_id)
         var node: RefCounted = _require_graph_node(graph_nodes[node_index])
-        if _is_reachable_from_any_anchor(node, entry_anchor_positions):
-            visited[node_index] = true
-            frontier.append(node_index)
+        if _require_chunk_index(layout, &"chunk_index") == 0 and not _is_reachable_from_any_anchor(node, entry_anchor_positions):
+            continue
+        visited[node_index] = true
+        frontier.append(node_index)
 
     if frontier.is_empty():
         return GeneratedRouteValidationResultScript.new(
@@ -167,10 +176,16 @@ func validate_chunk_seam(current_layout: RefCounted, next_layout: RefCounted) ->
 
 func _is_reachable_from_any_anchor(node: RefCounted, entry_anchor_positions: Array[Vector2]) -> bool:
     for anchor_position in entry_anchor_positions:
-        if _measure_gap_distance(anchor_position, Vector2.ZERO, _require_graph_node_local_position(node), _require_graph_node_physical_size(node)) <= _max_move_distance_meters:
+        if anchor_position.distance_to(_require_graph_node_local_position(node)) <= _static_reach_distance_meters:
             return true
 
     return false
+
+func _require_graph_node_index(route_graph: RefCounted, hold_id: String) -> int:
+    var raw_node_index: Variant = route_graph.call("get_required_node_index_by_hold_id", hold_id)
+    Validation.require_condition(raw_node_index is int, "RoutePathValidator graph node lookup must return an int.")
+    var node_index: int = raw_node_index
+    return node_index
 
 func _build_path_hold_ids(
     route_graph: RefCounted,

@@ -14,14 +14,19 @@ var _route_slot_cache: Dictionary
 var _chunk_layout_cache: Dictionary
 var _chunk_seam_cache: Dictionary
 
-func _init(tuning_value: GenerationTuning) -> void:
+func _init(tuning_value: GenerationTuning, static_reach_distance_meters: float = -1.0) -> void:
 	Validation.require_condition(tuning_value != null, "DailyChunkGenerator requires generation tuning.")
 	_tuning = tuning_value
 	_tuning.assert_valid()
 	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
+	var effective_static_reach_distance_meters: float = route_validation_tuning.static_reach_distance_meters
+	if static_reach_distance_meters > 0.0:
+		effective_static_reach_distance_meters = static_reach_distance_meters
+	Validation.require_condition(effective_static_reach_distance_meters <= route_validation_tuning.max_move_distance_meters, "DailyChunkGenerator runtime static reach cannot exceed the swing move envelope.")
 	_route_path_validator = _build_route_path_validator(
 		route_validation_tuning.max_move_distance_meters,
-		route_validation_tuning.max_downward_move_meters
+		route_validation_tuning.max_downward_move_meters,
+		effective_static_reach_distance_meters
 	)
 	_route_generation_pipeline = ChunkRouteGenerationPipelineScript.new(_tuning)
 	_route_entry_anchor_positions = route_validation_tuning.duplicate_entry_anchor_positions()
@@ -42,20 +47,37 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 		var cached_layout: GeneratedChunkLayout = cached_layout_variant
 		return cached_layout
 
-	var fallback_layout: GeneratedChunkLayout = null
+	var previous_layout: GeneratedChunkLayout = null
+	if chunk_index > 0:
+		previous_layout = build_chunk(seed_key, chunk_index - 1)
+		if previous_layout == null:
+			push_error("DailyChunkGenerator cannot build chunk %d because its predecessor failed generation." % chunk_index)
+			return null
+
+	var selected_layout: GeneratedChunkLayout = null
+	var selected_score: float = -INF
+	var candidate_failure_reasons: PackedStringArray = PackedStringArray()
 	for candidate_attempt_index in range(_tuning.route_validation_candidate_attempt_count):
 		var candidate_layout: GeneratedChunkLayout = _build_chunk_candidate(seed_key, chunk_index, candidate_attempt_index)
-		if fallback_layout == null:
-			fallback_layout = candidate_layout
-
 		var route_validation_result: RefCounted = candidate_layout.route_validation_result
-		if route_validation_result != null and _route_validation_result_is_valid(route_validation_result):
-			_chunk_layout_cache[cache_key] = candidate_layout
-			return candidate_layout
+		if route_validation_result == null or not _route_validation_result_is_valid(route_validation_result):
+			var _append_route_failure_result: bool = candidate_failure_reasons.append("attempt %d route: %s" % [candidate_attempt_index, _require_validation_failure_reason(route_validation_result)])
+			continue
+		if previous_layout != null:
+			var seam_result: RefCounted = validate_chunk_seam(previous_layout, candidate_layout)
+			if not _seam_validation_result_is_valid(seam_result):
+				var _append_seam_failure_result: bool = candidate_failure_reasons.append("attempt %d seam: %s" % [candidate_attempt_index, _require_validation_failure_reason(seam_result)])
+				continue
+		if selected_layout == null or candidate_layout.candidate_score > selected_score:
+			selected_layout = candidate_layout
+			selected_score = candidate_layout.candidate_score
 
-	Validation.require_condition(fallback_layout != null, "DailyChunkGenerator must produce at least one chunk candidate.")
-	_chunk_layout_cache[cache_key] = fallback_layout
-	return fallback_layout
+	if selected_layout == null:
+		push_error("DailyChunkGenerator exhausted %d candidate attempts without a valid route and incoming seam for chunk %d: %s" % [_tuning.route_validation_candidate_attempt_count, chunk_index, "; ".join(candidate_failure_reasons)])
+		return null
+
+	_chunk_layout_cache[cache_key] = selected_layout
+	return selected_layout
 
 func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attempt_index: int) -> GeneratedChunkLayout:
 	Validation.require_condition(candidate_attempt_index >= 0, "DailyChunkGenerator candidate attempt index cannot be negative.")
@@ -64,6 +86,7 @@ func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attemp
 	var start_height_meters: float = float(chunk_index) * _tuning.segment_height_meters
 	var difficulty_band: int = get_difficulty_band_for_height(start_height_meters)
 	var route_slot: int = _get_route_slot_for_chunk_seeded(seed_key, chunk_index, difficulty_band)
+	var candidate_selection_seed: String = _build_candidate_selection_seed(seed_key, chunk_index, candidate_attempt_index)
 	var preliminary_layout: GeneratedChunkLayout = _route_generation_pipeline.build_layout(
 		seed_key,
 		chunk_index,
@@ -71,9 +94,11 @@ func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attemp
 		difficulty_band,
 		null,
 		candidate_attempt_index,
-		0.0
+		0.0,
+		candidate_selection_seed
 	)
 	var route_validation_result: RefCounted = _validate_generated_layout(preliminary_layout)
+	var candidate_score: float = _build_candidate_score(preliminary_layout, route_validation_result)
 	return _route_generation_pipeline.build_layout(
 		seed_key,
 		chunk_index,
@@ -81,15 +106,23 @@ func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attemp
 		difficulty_band,
 		route_validation_result,
 		candidate_attempt_index,
-		_build_candidate_score(route_validation_result)
+		candidate_score,
+		candidate_selection_seed
 	)
 
-func _build_candidate_score(route_validation_result: RefCounted) -> float:
+func _build_candidate_score(layout: GeneratedChunkLayout, route_validation_result: RefCounted) -> float:
+	Validation.require_condition(layout != null, "DailyChunkGenerator candidate scoring requires a layout.")
 	Validation.require_condition(route_validation_result != null, "DailyChunkGenerator candidate scoring requires a validation result.")
-	if _route_validation_result_is_valid(route_validation_result):
-		return 1.0
-
-	return 0.0
+	if not _route_validation_result_is_valid(route_validation_result):
+		return 0.0
+	var path_hold_ids: PackedStringArray = _require_validation_path_hold_ids(route_validation_result)
+	var maximum_move_distance: float = 0.0
+	for path_index in range(1, path_hold_ids.size()):
+		var from_position: Vector2 = _get_required_handhold_position(layout, path_hold_ids[path_index - 1])
+		var to_position: Vector2 = _get_required_handhold_position(layout, path_hold_ids[path_index])
+		maximum_move_distance = maxf(maximum_move_distance, from_position.distance_to(to_position))
+	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
+	return maxf(0.0, route_validation_tuning.max_move_distance_meters - maximum_move_distance)
 
 func _route_validation_result_is_valid(route_validation_result: RefCounted) -> bool:
 	var raw_is_valid: Variant = route_validation_result.get("is_valid")
@@ -97,8 +130,15 @@ func _route_validation_result_is_valid(route_validation_result: RefCounted) -> b
 	var is_valid: bool = raw_is_valid
 	return is_valid
 
-func _build_route_path_validator(max_move_distance_meters: float, max_downward_move_meters: float) -> RefCounted:
-	var validator_variant: Variant = RoutePathValidatorScript.new(max_move_distance_meters, max_downward_move_meters)
+func _seam_validation_result_is_valid(seam_validation_result: RefCounted) -> bool:
+	Validation.require_condition(seam_validation_result != null, "DailyChunkGenerator seam validation requires a result.")
+	var raw_is_valid: Variant = seam_validation_result.get("is_valid")
+	Validation.require_condition(raw_is_valid is bool, "DailyChunkGenerator seam validation result must expose a bool is_valid property.")
+	var is_valid: bool = raw_is_valid
+	return is_valid
+
+func _build_route_path_validator(max_move_distance_meters: float, max_downward_move_meters: float, static_reach_distance_meters: float) -> RefCounted:
+	var validator_variant: Variant = RoutePathValidatorScript.new(max_move_distance_meters, max_downward_move_meters, static_reach_distance_meters)
 	Validation.require_condition(validator_variant is RefCounted, "DailyChunkGenerator route path validator must be RefCounted.")
 	var validator: RefCounted = validator_variant
 	return validator
@@ -138,7 +178,32 @@ func _get_chunk_cache_key(seed_key: String, chunk_index: int) -> String:
 	return "%s|%d" % [seed_key, chunk_index]
 
 func _get_chunk_seam_cache_key(current_layout: GeneratedChunkLayout, next_layout: GeneratedChunkLayout) -> String:
-	return "%s|%d|%d" % [current_layout.seed_key, current_layout.chunk_index, next_layout.chunk_index]
+	return "%s|%s|%d|%d" % [current_layout.seed_key, next_layout.seed_key, current_layout.get_instance_id(), next_layout.get_instance_id()]
+
+func _build_candidate_selection_seed(seed_key: String, chunk_index: int, candidate_attempt_index: int) -> String:
+	return "%s:candidate:%d:%d" % [seed_key, chunk_index, candidate_attempt_index]
+
+func _require_validation_path_hold_ids(route_validation_result: RefCounted) -> PackedStringArray:
+	var raw_path_hold_ids: Variant = route_validation_result.get("path_hold_ids")
+	Validation.require_condition(raw_path_hold_ids is PackedStringArray, "DailyChunkGenerator validation path must be a PackedStringArray.")
+	var path_hold_ids: PackedStringArray = raw_path_hold_ids
+	Validation.require_condition(not path_hold_ids.is_empty(), "DailyChunkGenerator valid candidate path cannot be empty.")
+	return path_hold_ids
+
+func _require_validation_failure_reason(validation_result: RefCounted) -> String:
+	if validation_result == null:
+		return "missing validation result"
+	var raw_failure_reason: Variant = validation_result.get("failure_reason")
+	Validation.require_condition(raw_failure_reason is String, "DailyChunkGenerator validation failure reason must be a String.")
+	var failure_reason: String = raw_failure_reason
+	return failure_reason
+
+func _get_required_handhold_position(layout: GeneratedChunkLayout, hold_id: String) -> Vector2:
+	for handhold in layout.handholds:
+		if String(handhold.hold_id) == hold_id:
+			return handhold.local_position
+	Validation.require_condition(false, "DailyChunkGenerator candidate path references an unknown handhold.")
+	return Vector2.ZERO
 
 func _get_route_validation_tuning() -> RouteValidationTuningScript:
 	Validation.require_condition(_tuning.route_validation_tuning != null, "DailyChunkGenerator requires route validation tuning.")

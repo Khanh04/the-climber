@@ -184,6 +184,16 @@ func _expected_hazard_position(tuning: GenerationTuningScript, hazard_placement:
             return Vector2(clamped_x, anchor_position.y - 0.85)
         GeneratedHazardKindScript.Value.UPDRAFT:
             return Vector2(clamped_x, anchor_position.y - 1.05)
+        GeneratedHazardKindScript.Value.FALLING_ROCK:
+            return Vector2(clamped_x, anchor_position.y - 0.6)
+        GeneratedHazardKindScript.Value.PENDULUM_LOG:
+            return Vector2(clamped_x, anchor_position.y - 0.75)
+        GeneratedHazardKindScript.Value.WANDERING_CRITTER:
+            return Vector2(clamped_x, anchor_position.y + 0.55)
+        GeneratedHazardKindScript.Value.STARTLE_PUFF:
+            return Vector2(clamped_x, anchor_position.y - 0.55)
+        GeneratedHazardKindScript.Value.BUG_SWARM:
+            return Vector2(clamped_x, anchor_position.y - 0.55)
         _:
             Validation.require_condition(false, "Test helper requires a supported hazard kind.")
             return anchor_position

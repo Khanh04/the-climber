@@ -83,6 +83,26 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     var updraft_collision_shape: CollisionShape2D = updraft_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var updraft_rectangle_shape: RectangleShape2D = updraft_collision_shape.shape as RectangleShape2D
     var updraft_visual: Polygon2D = updraft_spawn.get_node("Visual") as Polygon2D
+    var falling_rock_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_04") as GeneratedHazardSpawnAdapterScript
+    var falling_rock_collision_shape: CollisionShape2D = falling_rock_spawn.get_node("CollisionShape2D") as CollisionShape2D
+    var falling_rock_rectangle_shape: RectangleShape2D = falling_rock_collision_shape.shape as RectangleShape2D
+    var falling_rock_visual: Polygon2D = falling_rock_spawn.get_node("Visual") as Polygon2D
+    var pendulum_log_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_05") as GeneratedHazardSpawnAdapterScript
+    var pendulum_log_collision_shape: CollisionShape2D = pendulum_log_spawn.get_node("CollisionShape2D") as CollisionShape2D
+    var pendulum_log_rectangle_shape: RectangleShape2D = pendulum_log_collision_shape.shape as RectangleShape2D
+    var pendulum_log_visual: Polygon2D = pendulum_log_spawn.get_node("Visual") as Polygon2D
+    var wandering_critter_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_06") as GeneratedHazardSpawnAdapterScript
+    var wandering_critter_collision_shape: CollisionShape2D = wandering_critter_spawn.get_node("CollisionShape2D") as CollisionShape2D
+    var wandering_critter_rectangle_shape: RectangleShape2D = wandering_critter_collision_shape.shape as RectangleShape2D
+    var wandering_critter_visual: Polygon2D = wandering_critter_spawn.get_node("Visual") as Polygon2D
+    var startle_puff_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_07") as GeneratedHazardSpawnAdapterScript
+    var startle_puff_collision_shape: CollisionShape2D = startle_puff_spawn.get_node("CollisionShape2D") as CollisionShape2D
+    var startle_puff_rectangle_shape: RectangleShape2D = startle_puff_collision_shape.shape as RectangleShape2D
+    var startle_puff_visual: Polygon2D = startle_puff_spawn.get_node("Visual") as Polygon2D
+    var bug_swarm_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_08") as GeneratedHazardSpawnAdapterScript
+    var bug_swarm_collision_shape: CollisionShape2D = bug_swarm_spawn.get_node("CollisionShape2D") as CollisionShape2D
+    var bug_swarm_rectangle_shape: RectangleShape2D = bug_swarm_collision_shape.shape as RectangleShape2D
+    var bug_swarm_visual: Polygon2D = bug_swarm_spawn.get_node("Visual") as Polygon2D
 
     assert_not_null(handhold)
     assert_true(handhold is StaticBody2D)
@@ -163,6 +183,57 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_true(updraft_spawn.get_impulse_vector_pixels().is_equal_approx(Vector2(110.0, -320.0)))
     assert_not_null(updraft_visual)
 
+    assert_not_null(falling_rock_spawn)
+    assert_true(falling_rock_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
+    assert_true(falling_rock_spawn.is_in_group(GeneratedHazardSpawnAdapterScript.FALLING_ROCK_GROUP_NAME))
+    assert_eq(falling_rock_spawn.hazard_kind, GeneratedHazardKindScript.Value.FALLING_ROCK)
+    assert_true(falling_rock_spawn.position.is_equal_approx(Vector2(50.0, -290.0)))
+    assert_not_null(falling_rock_collision_shape)
+    assert_not_null(falling_rock_rectangle_shape)
+    assert_eq(falling_rock_rectangle_shape.size, Vector2(30.0, 28.0))
+    assert_not_null(falling_rock_visual)
+
+    assert_not_null(pendulum_log_spawn)
+    assert_true(pendulum_log_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
+    assert_true(pendulum_log_spawn.is_in_group(GeneratedHazardSpawnAdapterScript.PENDULUM_LOG_GROUP_NAME))
+    assert_eq(pendulum_log_spawn.hazard_kind, GeneratedHazardKindScript.Value.PENDULUM_LOG)
+    assert_true(pendulum_log_spawn.position.is_equal_approx(Vector2(-90.0, -220.0)))
+    assert_not_null(pendulum_log_collision_shape)
+    assert_not_null(pendulum_log_rectangle_shape)
+    assert_eq(pendulum_log_rectangle_shape.size, Vector2(44.0, 20.0))
+    assert_not_null(pendulum_log_visual)
+
+    assert_not_null(wandering_critter_spawn)
+    assert_true(wandering_critter_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
+    assert_true(wandering_critter_spawn.is_in_group(GeneratedHazardSpawnAdapterScript.WANDERING_CRITTER_GROUP_NAME))
+    assert_eq(wandering_critter_spawn.hazard_kind, GeneratedHazardKindScript.Value.WANDERING_CRITTER)
+    assert_true(wandering_critter_spawn.position.is_equal_approx(Vector2(30.0, -160.0)))
+    assert_not_null(wandering_critter_collision_shape)
+    assert_not_null(wandering_critter_rectangle_shape)
+    assert_eq(wandering_critter_rectangle_shape.size, Vector2(24.0, 18.0))
+    assert_true(wandering_critter_spawn.get_impulse_vector_pixels().is_equal_approx(Vector2(-150.0, -60.0)))
+    assert_not_null(wandering_critter_visual)
+
+    assert_not_null(startle_puff_spawn)
+    assert_true(startle_puff_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
+    assert_true(startle_puff_spawn.is_in_group(GeneratedHazardSpawnAdapterScript.STARTLE_PUFF_GROUP_NAME))
+    assert_eq(startle_puff_spawn.hazard_kind, GeneratedHazardKindScript.Value.STARTLE_PUFF)
+    assert_true(startle_puff_spawn.position.is_equal_approx(Vector2(-20.0, -340.0)))
+    assert_not_null(startle_puff_collision_shape)
+    assert_not_null(startle_puff_rectangle_shape)
+    assert_eq(startle_puff_rectangle_shape.size, Vector2(28.0, 28.0))
+    assert_not_null(startle_puff_visual)
+
+    assert_not_null(bug_swarm_spawn)
+    assert_true(bug_swarm_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
+    assert_true(bug_swarm_spawn.is_in_group(GeneratedHazardSpawnAdapterScript.BUG_SWARM_GROUP_NAME))
+    assert_eq(bug_swarm_spawn.hazard_kind, GeneratedHazardKindScript.Value.BUG_SWARM)
+    assert_true(bug_swarm_spawn.position.is_equal_approx(Vector2(130.0, -200.0)))
+    assert_not_null(bug_swarm_collision_shape)
+    assert_not_null(bug_swarm_rectangle_shape)
+    assert_eq(bug_swarm_rectangle_shape.size, Vector2(32.0, 24.0))
+    assert_not_null(bug_swarm_visual)
+
 func _build_layout_fixture() -> GeneratedChunkLayoutScript:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var rest_definition: HandholdTypeDefinitionScript = tuning.get_required_handhold_definition(HandholdTypeScript.Value.REST)
@@ -205,6 +276,11 @@ func _build_layout_fixture() -> GeneratedChunkLayoutScript:
         GeneratedHazardSocketScript.new(&"chunk_02_hazard_01", GeneratedHazardKindScript.Value.SPIKE_CLUSTER, Vector2(0.9, -3.1)),
         GeneratedHazardSocketScript.new(&"chunk_02_hazard_02", GeneratedHazardKindScript.Value.DOWNDRAFT, Vector2(0.1, -2.6)),
         GeneratedHazardSocketScript.new(&"chunk_02_hazard_03", GeneratedHazardKindScript.Value.UPDRAFT, Vector2(-1.1, -1.8)),
+        GeneratedHazardSocketScript.new(&"chunk_02_hazard_04", GeneratedHazardKindScript.Value.FALLING_ROCK, Vector2(0.5, -2.9)),
+        GeneratedHazardSocketScript.new(&"chunk_02_hazard_05", GeneratedHazardKindScript.Value.PENDULUM_LOG, Vector2(-0.9, -2.2)),
+        GeneratedHazardSocketScript.new(&"chunk_02_hazard_06", GeneratedHazardKindScript.Value.WANDERING_CRITTER, Vector2(0.3, -1.6)),
+        GeneratedHazardSocketScript.new(&"chunk_02_hazard_07", GeneratedHazardKindScript.Value.STARTLE_PUFF, Vector2(-0.2, -3.4)),
+        GeneratedHazardSocketScript.new(&"chunk_02_hazard_08", GeneratedHazardKindScript.Value.BUG_SWARM, Vector2(1.3, -2.0)),
     ]
     var route_validation_result_variant: Variant = GeneratedRouteValidationResultScript.new(
         true,

@@ -181,6 +181,12 @@ func _build_hazard_impulse_vector(hazard_socket: GeneratedHazardSocket) -> Vecto
                 return Vector2(updraft_horizontal_impulse, -320.0)
 
             return Vector2(-updraft_horizontal_impulse, -320.0)
+        GeneratedHazardKindScript.Value.WANDERING_CRITTER:
+            var critter_horizontal_impulse: float = 150.0
+            if hazard_socket.local_position.x < 0.0:
+                return Vector2(critter_horizontal_impulse, -60.0)
+
+            return Vector2(-critter_horizontal_impulse, -60.0)
         _:
             return Vector2.ZERO
 

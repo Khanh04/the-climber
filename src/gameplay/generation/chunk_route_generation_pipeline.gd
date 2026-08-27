@@ -41,7 +41,8 @@ func build_layout(
 	difficulty_band: int,
 	route_validation_result: RefCounted = null,
 	selected_candidate_attempt_index: int = 0,
-	candidate_score: float = 0.0
+	candidate_score: float = 0.0,
+	candidate_selection_seed: String = ""
 ) -> GeneratedChunkLayoutScript:
 	Validation.require_condition(seed_key != "", "ChunkRouteGenerationPipeline requires a seed key.")
 	Validation.require_condition(chunk_index >= 0, "ChunkRouteGenerationPipeline chunk index cannot be negative.")
@@ -50,7 +51,8 @@ func build_layout(
 	Validation.require_condition(selected_candidate_attempt_index >= 0, "ChunkRouteGenerationPipeline candidate attempt index cannot be negative.")
 	Validation.require_condition(not is_nan(candidate_score), "ChunkRouteGenerationPipeline candidate score cannot be NaN.")
 
-	var plan: ChunkRoutePlanScript = _plan_builder.build_plan(seed_key, chunk_index, route_slot, difficulty_band)
+	var selection_seed: String = seed_key if candidate_selection_seed.is_empty() else candidate_selection_seed
+	var plan: ChunkRoutePlanScript = _plan_builder.build_plan(selection_seed, chunk_index, route_slot, difficulty_band)
 	var first_row_height_meters: float = _calculate_route_first_row_height_meters(plan)
 	var route_row_step_height_meters: float = _calculate_route_row_step_height_meters(plan, first_row_height_meters)
 	var effective_vertical_jitter_meters: float = _calculate_reachable_vertical_jitter_meters(route_row_step_height_meters)
@@ -60,14 +62,14 @@ func build_layout(
 		first_row_height_meters,
 		_tuning.handhold_horizontal_jitter_meters,
 		effective_vertical_jitter_meters,
-		seed_key
+		selection_seed
 	)
 	anchor_graph_builder.set_lane_position_ratios(_tuning.inner_lane_position_ratio, _tuning.outer_lane_position_ratio)
 	var anchor_graph: RouteAnchorGraphScript = anchor_graph_builder.build_graph(plan)
 	var path_solution: ChunkRoutePathSolutionScript = _path_solver.solve(plan, anchor_graph)
 	Validation.require_condition(path_solution.is_valid, path_solution.failure_reason)
 
-	var population_variant: Variant = _population_builder.call("populate", plan, anchor_graph, path_solution, seed_key)
+	var population_variant: Variant = _population_builder.call("populate", plan, anchor_graph, path_solution, selection_seed)
 	Validation.require_condition(population_variant is RefCounted, "ChunkRouteGenerationPipeline population builder must return a RefCounted population.")
 	var population: RefCounted = population_variant
 	var layout_variant: Variant = _layout_emitter.call(

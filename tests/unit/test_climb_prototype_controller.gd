@@ -79,6 +79,20 @@ func test_controller_attaches_from_typed_grip_intents_and_releases_from_typed_re
     assert_eq(release_result.attached_hand_count, 0)
     assert_false(controller.get_attachment_state().is_attached(HandSideScript.Value.LEFT))
 
+func test_controller_does_not_attach_both_hands_to_the_same_hold() -> void:
+    var controller := _create_controller()
+    var shared_target := HandholdTargetScript.new(&"shared_hold", Vector2(100.0, 200.0), NodePath("shared_hold"))
+    var dual_grip_frame := PlayerInputFrameScript.new([
+        GripInputIntentScript.new(HandSideScript.Value.LEFT),
+        GripInputIntentScript.new(HandSideScript.Value.RIGHT),
+    ])
+
+    var result := controller.apply_input_frame(dual_grip_frame, shared_target, shared_target, 0.0)
+
+    assert_eq(result.attached_hand_count, 1)
+    assert_true(controller.get_attachment_state().is_attached(HandSideScript.Value.LEFT))
+    assert_false(controller.get_attachment_state().is_attached(HandSideScript.Value.RIGHT))
+
 func test_controller_generates_control_force_when_aiming_while_attached() -> void:
     var controller := _create_controller()
     var right_target := HandholdTargetScript.new(&"right_hold", Vector2(100.0, 200.0), NodePath("right_hold"))

@@ -27,9 +27,9 @@ func test_anchor_graph_builder_creates_five_lane_rows_from_plan() -> void:
     assert_not_null(inner_left_anchor)
     assert_not_null(outer_right_anchor)
     assert_true(center_anchor.local_position.is_equal_approx(Vector2(0.0, -0.8)))
-    assert_almost_eq(inner_left_anchor.local_position.x, -2.0 * RouteAnchorGraphBuilderScript.DEFAULT_INNER_LANE_POSITION_RATIO, 0.001)
-    assert_almost_eq(outer_left_anchor.local_position.x, -2.0 * RouteAnchorGraphBuilderScript.DEFAULT_OUTER_LANE_POSITION_RATIO, 0.001)
-    assert_almost_eq(outer_right_anchor.local_position.x, 2.0 * RouteAnchorGraphBuilderScript.DEFAULT_OUTER_LANE_POSITION_RATIO, 0.001)
+    assert_almost_eq(inner_left_anchor.local_position.x, -RouteAnchorGraphBuilderScript.STARTING_INNER_LANE_OFFSET_METERS, 0.001)
+    assert_almost_eq(outer_left_anchor.local_position.x, -RouteAnchorGraphBuilderScript.STARTING_OUTER_LANE_OFFSET_METERS, 0.001)
+    assert_almost_eq(outer_right_anchor.local_position.x, RouteAnchorGraphBuilderScript.STARTING_OUTER_LANE_OFFSET_METERS, 0.001)
     assert_lt(outer_left_anchor.local_position.x, inner_left_anchor.local_position.x)
     assert_gt(outer_right_anchor.local_position.x, center_anchor.local_position.x)
 

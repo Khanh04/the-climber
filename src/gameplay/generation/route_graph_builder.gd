@@ -9,22 +9,28 @@ const RouteRoleScript = preload("res://src/gameplay/generation/route_role.gd")
 
 var _max_move_distance_meters: float
 var _max_downward_move_meters: float
+var _static_reach_distance_meters: float
 
 func _init(
 	max_move_distance_meters_value: float,
-	max_downward_move_meters_value: float = 0.12
+	max_downward_move_meters_value: float = 0.12,
+	static_reach_distance_meters_value: float = 0.96
 ) -> void:
 	Validation.require_condition(max_move_distance_meters_value > 0.0, "RouteGraphBuilder max move distance must be positive.")
 	Validation.require_condition(max_downward_move_meters_value >= 0.0, "RouteGraphBuilder max downward move cannot be negative.")
+	Validation.require_condition(static_reach_distance_meters_value > 0.0, "RouteGraphBuilder static reach distance must be positive.")
+	Validation.require_condition(static_reach_distance_meters_value <= max_move_distance_meters_value, "RouteGraphBuilder static reach cannot exceed the swing move envelope.")
 	_max_move_distance_meters = max_move_distance_meters_value
 	_max_downward_move_meters = max_downward_move_meters_value
+	_static_reach_distance_meters = static_reach_distance_meters_value
 
 func build_layout_graph(layout: RefCounted) -> RefCounted:
 	Validation.require_condition(layout != null, "RouteGraphBuilder requires a layout.")
 	Validation.require_condition(layout.has_method("assert_valid"), "RouteGraphBuilder layout must expose assert_valid().")
 	layout.call("assert_valid")
 
-	var nodes: Array[RefCounted] = _build_nodes(layout)
+	var safe_path_hold_ids: PackedStringArray = _require_route_port_hold_ids(layout, &"safe_path_hold_ids")
+	var nodes: Array[RefCounted] = _build_nodes(layout, safe_path_hold_ids)
 	var edges: Array[RefCounted] = _build_edges(nodes)
 	var entry_port_hold_ids: PackedStringArray = _require_route_port_hold_ids(layout, &"route_entry_hold_ids")
 	var exit_port_hold_ids: PackedStringArray = _require_route_port_hold_ids(layout, &"route_exit_hold_ids")
@@ -33,7 +39,7 @@ func build_layout_graph(layout: RefCounted) -> RefCounted:
 	var route_graph: RefCounted = route_graph_variant
 	return route_graph
 
-func _build_nodes(layout: RefCounted) -> Array[RefCounted]:
+func _build_nodes(layout: RefCounted, included_hold_ids: PackedStringArray) -> Array[RefCounted]:
 	var raw_handholds: Variant = layout.get("handholds")
 	Validation.require_condition(raw_handholds is Array, "RouteGraphBuilder layout handholds must be an Array.")
 	var handhold_variants: Array = raw_handholds
@@ -43,6 +49,8 @@ func _build_nodes(layout: RefCounted) -> Array[RefCounted]:
 	for raw_handhold in handhold_variants:
 		Validation.require_condition(raw_handhold is RefCounted, "RouteGraphBuilder handholds must be RefCounted instances.")
 		var handhold: RefCounted = raw_handhold
+		if not included_hold_ids.has(String(_require_hold_id(handhold))):
+			continue
 		Validation.require_condition(handhold.has_method("assert_valid"), "RouteGraphBuilder handholds must expose assert_valid().")
 		handhold.call("assert_valid")
 		var node_variant: Variant = RouteGraphNodeScript.new(
@@ -85,10 +93,12 @@ func _build_edges(nodes: Array[RefCounted]) -> Array[RefCounted]:
 			if downward_gap_meters > _max_downward_move_meters:
 				continue
 
+			var center_distance_meters: float = _require_graph_node_local_position(from_node).distance_to(_require_graph_node_local_position(to_node))
+			var move_kind: int = RouteMoveKindScript.Value.STATIC_REACH if center_distance_meters <= _static_reach_distance_meters else RouteMoveKindScript.Value.SWING_REACH
 			var edge_variant: Variant = RouteGraphEdgeScript.new(
 				from_index,
 				to_index,
-				RouteMoveKindScript.Value.STATIC_REACH,
+				move_kind,
 				gap_distance_meters,
 				downward_gap_meters
 			)

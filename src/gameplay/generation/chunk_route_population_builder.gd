@@ -49,7 +49,7 @@ func populate(
 	_add_support_holds(plan, anchor_graph, path_solution, selection_seed, holds, support_hold_ids)
 
 	var reward_placements: Array[RefCounted] = _build_reward_placements(plan, anchor_graph, path_solution, holds)
-	var hazard_placements: Array[RefCounted] = _build_hazard_placements(plan, anchor_graph, path_solution, reward_placements)
+	var hazard_placements: Array[RefCounted] = _build_hazard_placements(plan, anchor_graph, path_solution, reward_placements, selection_seed)
 
 	var population_variant: Variant = ChunkRoutePopulationScript.new(holds, reward_placements, hazard_placements, safe_hold_ids, optional_hold_ids, support_hold_ids)
 	Validation.require_condition(population_variant is RefCounted, "ChunkRoutePopulationBuilder must create RefCounted population instances.")
@@ -555,12 +555,21 @@ func _build_hazard_placements(
 	plan: ChunkRoutePlanScript,
 	anchor_graph: RouteAnchorGraphScript,
 	path_solution: ChunkRoutePathSolutionScript,
-	reward_placements: Array[RefCounted]
+	reward_placements: Array[RefCounted],
+	selection_seed: String
 ) -> Array[RefCounted]:
 	var hazard_placements: Array[RefCounted] = []
 	for hazard_intent in plan.hazard_intents:
 		var anchor: RouteAnchorCandidateScript = _select_hazard_anchor(plan, anchor_graph, path_solution, reward_placements, hazard_intent)
-		var hazard_kind: int = _get_hazard_kind_for_intent(hazard_intent)
+		var hazard_selection_context: String = "%s:%d:%d:%d:%d:%s:hazard_kind" % [
+			selection_seed,
+			plan.chunk_index,
+			plan.route_slot,
+			plan.difficulty_band,
+			hazard_intent,
+			String(anchor.anchor_id),
+		]
+		var hazard_kind: int = _get_hazard_kind_for_intent(hazard_intent, hazard_selection_context)
 		var hazard_placement_variant: Variant = RouteHazardPlacementScript.new(
 			StringName("hazard_%s_%s" % [GeneratedHazardIntentScript.to_label(hazard_intent).to_lower(), String(anchor.anchor_id)]),
 			anchor.anchor_id,
@@ -621,25 +630,57 @@ func _select_hazard_anchor(
 					_find_first_outer_lane_row_for_path(plan, path_solution.optional_path, plan.route_branch_side)
 				)
 			return _get_required_anchor_for_path_row(anchor_graph, path_solution.safe_path, _find_traverse_force_row(plan))
-		GeneratedHazardIntentScript.Value.RECOVERY_LIFT, GeneratedHazardIntentScript.Value.SAFE_ROUTE_RELIEF:
+		GeneratedHazardIntentScript.Value.RECOVERY_LIFT:
 			return _get_required_anchor_for_path_row(anchor_graph, path_solution.safe_path, _find_first_row_with_role(plan, RouteRowRoleScript.Value.CATCH))
+		GeneratedHazardIntentScript.Value.SAFE_ROUTE_RELIEF:
+			return _get_required_anchor_for_path_row(anchor_graph, path_solution.safe_path, _find_last_row_with_role(plan, RouteRowRoleScript.Value.CATCH))
 		_:
 			Validation.require_condition(false, "ChunkRoutePopulationBuilder requires a supported hazard intent.")
 			return null
 
-func _get_hazard_kind_for_intent(hazard_intent: int) -> int:
+func _get_hazard_kind_for_intent(hazard_intent: int, selection_context: String) -> int:
 	match hazard_intent:
 		GeneratedHazardIntentScript.Value.OPTIONAL_BRANCH_DENIAL:
-			return GeneratedHazardKindScript.Value.SPIKE_CLUSTER
-		GeneratedHazardIntentScript.Value.CRUX_PRESSURE, GeneratedHazardIntentScript.Value.REWARD_GREED_PRESSURE:
+			return _select_hazard_kind([
+				GeneratedHazardKindScript.Value.SPIKE_CLUSTER,
+				GeneratedHazardKindScript.Value.FALLING_ROCK,
+				GeneratedHazardKindScript.Value.PENDULUM_LOG,
+			], selection_context)
+		GeneratedHazardIntentScript.Value.CRUX_PRESSURE:
 			return GeneratedHazardKindScript.Value.DOWNDRAFT
+		GeneratedHazardIntentScript.Value.REWARD_GREED_PRESSURE:
+			return GeneratedHazardKindScript.Value.BUG_SWARM
 		GeneratedHazardIntentScript.Value.TRAVERSE_FORCE:
-			return GeneratedHazardKindScript.Value.WIND_GUST
-		GeneratedHazardIntentScript.Value.RECOVERY_LIFT, GeneratedHazardIntentScript.Value.SAFE_ROUTE_RELIEF:
+			return _select_hazard_kind([
+				GeneratedHazardKindScript.Value.WIND_GUST,
+				GeneratedHazardKindScript.Value.WANDERING_CRITTER,
+			], selection_context)
+		GeneratedHazardIntentScript.Value.RECOVERY_LIFT:
 			return GeneratedHazardKindScript.Value.UPDRAFT
+		GeneratedHazardIntentScript.Value.SAFE_ROUTE_RELIEF:
+			return GeneratedHazardKindScript.Value.STARTLE_PUFF
 		_:
 			Validation.require_condition(false, "ChunkRoutePopulationBuilder requires a supported hazard intent kind.")
 			return GeneratedHazardKindScript.Value.SPIKE_CLUSTER
+
+func _select_hazard_kind(candidate_kinds: Array[int], selection_context: String) -> int:
+	Validation.require_condition(not candidate_kinds.is_empty(), "ChunkRoutePopulationBuilder hazard kind selection requires candidates.")
+	for candidate_kind in candidate_kinds:
+		GeneratedHazardKindScript.assert_valid(candidate_kind)
+
+	if selection_context == "" or candidate_kinds.size() == 1:
+		return candidate_kinds[0]
+
+	var weighted_kinds: Array[int] = []
+	var candidate_count: int = candidate_kinds.size()
+	for candidate_index in range(candidate_count):
+		var candidate_kind: int = candidate_kinds[candidate_index]
+		var weight: int = (candidate_count - candidate_index) * (candidate_count - candidate_index)
+		for weight_index in range(weight):
+			weighted_kinds.append(candidate_kind)
+
+	var selected_index: int = abs(selection_context.hash()) % weighted_kinds.size()
+	return weighted_kinds[selected_index]
 
 func _find_pressure_row(plan: ChunkRoutePlanScript) -> int:
 	var pressure_row_index: int = _try_find_first_row_with_role(plan, RouteRowRoleScript.Value.PRESSURE)
@@ -688,6 +729,15 @@ func _find_first_row_with_role(plan: ChunkRoutePlanScript, row_role: int) -> int
 	var row_index: int = _try_find_first_row_with_role(plan, row_role)
 	Validation.require_condition(row_index != -1, "ChunkRoutePopulationBuilder could not find a required route row role.")
 	return row_index
+
+func _find_last_row_with_role(plan: ChunkRoutePlanScript, row_role: int) -> int:
+	RouteRowRoleScript.assert_valid(row_role)
+	for row_index in range(plan.row_roles.size() - 1, -1, -1):
+		if plan.row_roles[row_index] == row_role:
+			return row_index
+
+	Validation.require_condition(false, "ChunkRoutePopulationBuilder could not find a required route row role.")
+	return -1
 
 func _try_find_first_row_with_role(plan: ChunkRoutePlanScript, row_role: int) -> int:
 	RouteRowRoleScript.assert_valid(row_role)

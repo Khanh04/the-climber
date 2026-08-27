@@ -25,6 +25,38 @@ func test_build_chunk_is_stable_for_same_seed_and_index() -> void:
 
     assert_eq(_layout_signature(first_layout), _layout_signature(second_layout))
 
+func test_build_chunk_is_stable_across_fresh_generators() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var first_generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var second_tuning: GenerationTuningScript = tuning.duplicate(true) as GenerationTuningScript
+    var second_generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(second_tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var first_layout: GeneratedChunkLayoutScript = _require_chunk_layout(first_generator.build_chunk(seed_key, 7))
+    var second_layout: GeneratedChunkLayoutScript = _require_chunk_layout(second_generator.build_chunk(seed_key, 7))
+
+    assert_eq(_layout_signature(first_layout), _layout_signature(second_layout))
+    assert_eq(first_layout.selected_candidate_attempt_index, second_layout.selected_candidate_attempt_index)
+    assert_eq(first_layout.candidate_score, second_layout.candidate_score)
+
+func test_sampled_chunk_sequence_accepts_every_adjacent_seam() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var seed_keys: PackedStringArray = PackedStringArray([
+        DailySeedKey.from_utc_date(2026, 5, 14),
+        DailySeedKey.from_utc_date(2026, 5, 15),
+        DailySeedKey.from_utc_date(2026, 5, 16),
+    ])
+
+    for seed_key in seed_keys:
+        var sampled_tuning: GenerationTuningScript = tuning.duplicate(true) as GenerationTuningScript
+        var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(sampled_tuning)
+        var previous_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 0))
+        for chunk_index in range(1, 16):
+            var next_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, chunk_index))
+            var seam_result: Object = _require_seam_validation_result(generator.validate_chunk_seam(previous_layout, next_layout))
+            assert_true(_require_route_validation_bool(seam_result, &"is_valid"), "Expected a valid seam into chunk %d for %s." % [chunk_index, seed_key])
+            previous_layout = next_layout
+
 func test_build_chunk_reuses_cached_layout_for_same_seed_and_index() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
@@ -169,8 +201,9 @@ func test_first_chunk_uses_configured_opener_first_row_height_for_route_start() 
 
     assert_gte(row_heights.size(), 10)
     assert_true(is_equal_approx(row_heights[0], tuning.opener_first_row_height_meters))
-    assert_gte(row_heights[row_heights.size() - 1], tuning.segment_height_meters - 1.0)
-    assert_lte(_get_max_row_height_gap(row_heights), 1.2)
+    assert_gte(row_heights[row_heights.size() - 1], tuning.segment_height_meters - tuning.opener_top_padding_meters)
+    var route_validation_tuning: RouteValidationTuning = tuning.route_validation_tuning as RouteValidationTuning
+    assert_lte(_get_max_row_height_gap(row_heights), route_validation_tuning.max_move_distance_meters)
 
 func test_first_chunk_spreads_holds_without_flat_bars_on_every_row() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -348,6 +381,22 @@ func test_generated_chunks_include_candidate_selection_metadata() -> void:
     assert_lt(layout.selected_candidate_attempt_index, tuning.route_validation_candidate_attempt_count)
     assert_false(is_nan(layout.candidate_score))
 
+func test_candidate_attempts_use_distinct_deterministic_entropy() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var first_generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
+    var second_tuning: GenerationTuningScript = tuning.duplicate(true) as GenerationTuningScript
+    var second_generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(second_tuning)
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
+
+    var first_attempt_zero: RefCounted = first_generator.call("_build_chunk_candidate", seed_key, 4, 0)
+    var first_attempt_one: RefCounted = first_generator.call("_build_chunk_candidate", seed_key, 4, 1)
+    var second_attempt_zero: RefCounted = second_generator.call("_build_chunk_candidate", seed_key, 4, 0)
+    var second_attempt_one: RefCounted = second_generator.call("_build_chunk_candidate", seed_key, 4, 1)
+
+    assert_ne(_layout_signature(first_attempt_zero), _layout_signature(first_attempt_one))
+    assert_eq(_layout_signature(first_attempt_zero), _layout_signature(second_attempt_zero))
+    assert_eq(_layout_signature(first_attempt_one), _layout_signature(second_attempt_one))
+
 func test_recovery_route_maps_to_dense_recovery_metadata_and_reward_socket() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
@@ -374,8 +423,15 @@ func test_pressure_route_maps_to_swing_gap_metadata_and_pressure_hazards() -> vo
 
     assert_eq(layout.route_slot, ChunkRouteSlotScript.Value.PRESSURE)
     assert_eq(layout.chunk_type, ChunkTypeScript.Value.SWING_GAP)
-    assert_true(_has_hazard_kind(layout.hazard_sockets, GeneratedHazardKindScript.Value.DOWNDRAFT))
-    assert_true(_has_hazard_kind(layout.hazard_sockets, GeneratedHazardKindScript.Value.SPIKE_CLUSTER))
+    assert_true(
+        _has_hazard_kind(layout.hazard_sockets, GeneratedHazardKindScript.Value.DOWNDRAFT)
+        or _has_hazard_kind(layout.hazard_sockets, GeneratedHazardKindScript.Value.BUG_SWARM)
+    )
+    assert_true(
+        _has_hazard_kind(layout.hazard_sockets, GeneratedHazardKindScript.Value.SPIKE_CLUSTER)
+        or _has_hazard_kind(layout.hazard_sockets, GeneratedHazardKindScript.Value.FALLING_ROCK)
+        or _has_hazard_kind(layout.hazard_sockets, GeneratedHazardKindScript.Value.PENDULUM_LOG)
+    )
 
 func test_sampled_daily_generation_distribution_preserves_route_first_shape() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -470,15 +526,15 @@ func test_generator_assigns_specific_hazard_kinds_by_route_pressure() -> void:
     assert_gt(easy_skill_layout.hazard_sockets.size(), 0)
     assert_gt(challenge_skill_layout.hazard_sockets.size(), 0)
     assert_gt(pressure_layout.hazard_sockets.size(), 0)
-    assert_eq(opener_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.UPDRAFT)
+    assert_true([GeneratedHazardKindScript.Value.UPDRAFT, GeneratedHazardKindScript.Value.STARTLE_PUFF].has(opener_layout.hazard_sockets[0].hazard_kind))
     assert_eq(easy_skill_layout.route_slot, ChunkRouteSlotScript.Value.SKILL)
-    assert_eq(easy_skill_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.WIND_GUST)
+    assert_true([GeneratedHazardKindScript.Value.WIND_GUST, GeneratedHazardKindScript.Value.WANDERING_CRITTER].has(easy_skill_layout.hazard_sockets[0].hazard_kind))
     assert_eq(challenge_skill_layout.route_slot, ChunkRouteSlotScript.Value.SKILL)
     assert_eq(challenge_skill_layout.difficulty_band, ChunkDifficultyBandScript.Value.CHALLENGE)
-    assert_eq(challenge_skill_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.WIND_GUST)
-    assert_eq(challenge_skill_layout.hazard_sockets[1].hazard_kind, GeneratedHazardKindScript.Value.DOWNDRAFT)
-    assert_eq(pressure_layout.hazard_sockets[0].hazard_kind, GeneratedHazardKindScript.Value.DOWNDRAFT)
-    assert_eq(pressure_layout.hazard_sockets[1].hazard_kind, GeneratedHazardKindScript.Value.SPIKE_CLUSTER)
+    assert_true([GeneratedHazardKindScript.Value.WIND_GUST, GeneratedHazardKindScript.Value.WANDERING_CRITTER].has(challenge_skill_layout.hazard_sockets[0].hazard_kind))
+    assert_true([GeneratedHazardKindScript.Value.DOWNDRAFT, GeneratedHazardKindScript.Value.BUG_SWARM].has(challenge_skill_layout.hazard_sockets[1].hazard_kind))
+    assert_true([GeneratedHazardKindScript.Value.DOWNDRAFT, GeneratedHazardKindScript.Value.BUG_SWARM].has(pressure_layout.hazard_sockets[0].hazard_kind))
+    assert_true([GeneratedHazardKindScript.Value.SPIKE_CLUSTER, GeneratedHazardKindScript.Value.FALLING_ROCK, GeneratedHazardKindScript.Value.PENDULUM_LOG].has(pressure_layout.hazard_sockets[1].hazard_kind))
 
 func test_recovery_chunks_offer_more_support_than_pressure_chunks() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()

@@ -136,6 +136,11 @@ func _apply_virtual_grip_forces(player_body: RigidBody2D, attachment_state: Hand
 	var attached_hand_count: int = attachment_state.get_attached_hand_count()
 	Validation.require_condition(attached_hand_count > 0, "Virtual grip forces require at least one attached hand.")
 
+	# A RigidBody2D that settles to sleep silently discards apply_central_force() calls, so once
+	# the grip's own pull force stills the body, swing/aim input would otherwise stop doing
+	# anything forever. Explicitly wake it every attached frame before applying the force.
+	player_body.sleeping = false
+
 	if attached_hand_count == 1:
 		player_body.apply_central_force(calculate_one_hand_attachment_force(
 			player_body.global_position,

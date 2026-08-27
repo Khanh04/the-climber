@@ -93,6 +93,33 @@ func test_builder_rejects_edges_that_exceed_downward_move_limit() -> void:
         var to_node_index: int = _require_int_property(edge, &"to_node_index")
         assert_ne(to_node_index, lower_index)
 
+func test_builder_marks_moves_beyond_runtime_grip_radius_as_swing_reach() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var builder: RefCounted = RouteGraphBuilderScript.new(2.2, 0.12, 0.96)
+    var layout: GeneratedChunkLayoutScript = _build_layout_fixture(
+        tuning,
+        [
+            _build_handhold_socket(tuning, &"first", Vector2.ZERO, RouteRoleScript.Value.ENTRY),
+            _build_handhold_socket(tuning, &"swing", Vector2(1.4, -0.6), RouteRoleScript.Value.TOP_OUT),
+        ],
+        PackedStringArray(["first"]),
+        PackedStringArray(["swing"])
+    )
+
+    var route_graph: RefCounted = builder.call("build_layout_graph", layout)
+    var first_index: int = route_graph.call("get_required_node_index_by_hold_id", "first")
+    var swing_index: int = route_graph.call("get_required_node_index_by_hold_id", "swing")
+    var first_outgoing_edges: Array = route_graph.call("get_outgoing_edges", first_index)
+    var found_swing_edge: bool = false
+    for edge_variant in first_outgoing_edges:
+        var edge: RefCounted = edge_variant
+        if _require_int_property(edge, &"to_node_index") != swing_index:
+            continue
+        assert_eq(_require_int_property(edge, &"move_kind"), RouteMoveKindScript.Value.SWING_REACH)
+        found_swing_edge = true
+
+    assert_true(found_swing_edge)
+
 func _require_array_property(source: Object, property_name: StringName) -> Array:
     var raw_value: Variant = source.get(property_name)
     assert_true(raw_value is Array)

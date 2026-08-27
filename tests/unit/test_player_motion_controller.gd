@@ -1,5 +1,6 @@
 extends GutTest
 
+const ClimbPrototypeFrameResultScript = preload("res://src/gameplay/player/climb_prototype_frame_result.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
 const HandAttachmentStateScript = preload("res://src/gameplay/player/hand_attachment_state.gd")
 const HandSideScript = preload("res://src/gameplay/player/hand_side.gd")
@@ -112,3 +113,22 @@ func test_motion_controller_two_hand_force_targets_average_hold_support_position
     )
 
     assert_eq(force, Vector2(20.0, 60.0))
+
+func test_apply_frame_motion_wakes_a_sleeping_body_so_swing_force_takes_effect() -> void:
+    # RigidBody2D.apply_central_force() is a silent no-op on a sleeping body (verified against the
+    # engine directly), so apply_frame_motion must explicitly wake the body whenever a hand is
+    # attached -- otherwise, once the grip settles the body to sleep, swing/aim input stops doing
+    # anything forever.
+    var tuning := ClimbPrototypeTuningScript.new()
+    var controller := PlayerMotionControllerScript.new(tuning)
+    var attachment_state := HandAttachmentStateScript.new()
+    attachment_state.attach(HandSideScript.Value.LEFT, &"left_hold", Vector2.ZERO, NodePath("left_hold"))
+
+    var body := RigidBody2D.new()
+    add_child_autofree(body)
+    body.sleeping = true
+
+    var frame_result := ClimbPrototypeFrameResultScript.new(Vector2(500.0, 0.0), false, 1)
+    controller.apply_frame_motion(body, attachment_state, frame_result)
+
+    assert_false(body.sleeping, "Applying grip forces must wake a sleeping body, or swing input silently does nothing.")

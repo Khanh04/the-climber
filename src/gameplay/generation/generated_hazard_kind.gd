@@ -6,6 +6,11 @@ enum Value {
 	WIND_GUST,
 	DOWNDRAFT,
 	UPDRAFT,
+	FALLING_ROCK,
+	PENDULUM_LOG,
+	WANDERING_CRITTER,
+	STARTLE_PUFF,
+	BUG_SWARM,
 }
 
 static func is_valid(value: int) -> bool:
@@ -17,6 +22,16 @@ static func is_valid(value: int) -> bool:
 		Value.DOWNDRAFT:
 			return true
 		Value.UPDRAFT:
+			return true
+		Value.FALLING_ROCK:
+			return true
+		Value.PENDULUM_LOG:
+			return true
+		Value.WANDERING_CRITTER:
+			return true
+		Value.STARTLE_PUFF:
+			return true
+		Value.BUG_SWARM:
 			return true
 		_:
 			return false
@@ -35,6 +50,16 @@ static func to_label(value: int) -> String:
 			return "DOWNDRAFT"
 		Value.UPDRAFT:
 			return "UPDRAFT"
+		Value.FALLING_ROCK:
+			return "FALLING_ROCK"
+		Value.PENDULUM_LOG:
+			return "PENDULUM_LOG"
+		Value.WANDERING_CRITTER:
+			return "WANDERING_CRITTER"
+		Value.STARTLE_PUFF:
+			return "STARTLE_PUFF"
+		Value.BUG_SWARM:
+			return "BUG_SWARM"
 		_:
 			Validation.require_condition(false, "Unsupported generated hazard kind label.")
 			return ""

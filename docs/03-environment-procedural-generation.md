@@ -47,7 +47,7 @@ for mobile object budgets.
 - All players share the same global layout for each 24-hour period.
 - Seed generation is based on the full UTC date rather than
   day-of-month only.
-- Recommended key format: `generator_v4:YYYY-MM-DD` using UTC.
+- Recommended key format: `generator_v5:YYYY-MM-DD` using UTC.
 - Use a dedicated `RandomNumberGenerator` instance for daily generation
   rather than relying on global RNG state.
 - Include a generator version in the seed key so future layout changes
@@ -64,6 +64,9 @@ for mobile object budgets.
   marker with no starter gap.
 - The opener must place at least one reachable left and right handhold
   pair within the player's initial grip range.
+- The first-row left and right starter holds use fixed physical offsets
+  from the reset anchor before lanes fan outward. Widening the overall
+  chunk must not make the center hold the nearest target for both hands.
 - The opener should bias toward a readable left-right alternation with
   obvious upward intent and minimal need for advanced pendulum timing.
 - Early opener routes should avoid stacking lethal hazards, dense force
@@ -346,6 +349,11 @@ aliases over a smaller ruleset.
   and reward branches, wind gusts shape traverse timing, downdrafts add
   challenge pressure, and updrafts provide recovery or connector relief.
   Hazards must not block the only safe path.
+- Random hazard variants must preserve their intent's mechanic. Crux
+  pressure remains a downdraft, recovery lift remains an updraft, and
+  selection only varies among equivalent denial or traverse-force hazards.
+  Falling rocks repeat a vertical lethal drop so they remain active when
+  their chunk reaches the player.
 - Reject invalid candidates. A generated chunk must not fall back to an
   invalid layout when safe-path, branch, seam, support, hazard, or
   hold-type constraints fail.
@@ -353,9 +361,13 @@ aliases over a smaller ruleset.
   Handhold placement should own route readability; pickup and hazard
   passes should react to route roles rather than redefine the path.
 - Use the runtime grip envelope as a validation input. The first
-  implementation can use a conservative static reach threshold, then
-  expand to dynamic movement allowances only when those allowances are
-  explicit and tested.
+  implementation distinguishes center-to-center `STATIC_REACH` from the
+  larger, explicitly configured `SWING_REACH` envelope. Opener acquisition
+  uses the live player's grip radius, while swing-assisted route edges are
+  separately typed and tested.
+- Preserve the ordered mandatory safe-path hold IDs through emission.
+  Interior validation must not use support or optional-beta holds to hide
+  a broken mandatory route.
 - Validate chunk interiors and chunk seams. A layout is not acceptable
   if rows are locally reachable but the exit-to-entry gap between
   adjacent chunks is not supported by a connector rule.
@@ -363,6 +375,9 @@ aliases over a smaller ruleset.
   generator cannot produce a valid candidate within that budget, fail
   fast with seed, chunk index, profile, and validation reason rather
   than silently falling back to unrelated content.
+- Salt each candidate attempt deterministically and evaluate the full
+  budget. Cache only the best candidate whose interior and incoming seam
+  both validate; exhausted generation returns no layout in release builds.
 - Score accepted candidates for target difficulty, route readability,
   novelty, optional beta quality, recovery availability, object count,
   and hazard fairness. Keep the score deterministic so identical seeds

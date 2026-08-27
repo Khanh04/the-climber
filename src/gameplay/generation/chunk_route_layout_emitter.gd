@@ -48,8 +48,9 @@ func emit_layout(
 	var handholds: Array[GeneratedHandholdSocket] = _build_handhold_sockets(population)
 	var pickup_sockets: Array[GeneratedPickupSocket] = _build_pickup_sockets(plan.chunk_index, population)
 	var hazard_sockets: Array[GeneratedHazardSocket] = _build_hazard_sockets(plan.chunk_index, population)
-	var route_entry_hold_ids: PackedStringArray = _build_route_role_hold_ids(handholds, RouteRoleScript.Value.ENTRY)
-	var route_exit_hold_ids: PackedStringArray = _build_route_role_hold_ids(handholds, RouteRoleScript.Value.TOP_OUT)
+	var safe_path_hold_ids: PackedStringArray = _require_population_hold_ids(population, &"safe_hold_ids")
+	var route_entry_hold_ids: PackedStringArray = PackedStringArray([safe_path_hold_ids[0]])
+	var route_exit_hold_ids: PackedStringArray = PackedStringArray([safe_path_hold_ids[safe_path_hold_ids.size() - 1]])
 	var chunk_type: int = map_movement_style_to_chunk_type(plan.movement_style)
 
 	var layout_variant: Variant = GeneratedChunkLayoutScript.new(
@@ -67,11 +68,19 @@ func emit_layout(
 		route_exit_hold_ids,
 		route_validation_result,
 		selected_candidate_attempt_index,
-		candidate_score
+		candidate_score,
+		safe_path_hold_ids
 	)
 	Validation.require_condition(layout_variant is RefCounted, "ChunkRouteLayoutEmitter must create RefCounted generated layouts.")
 	var layout: RefCounted = layout_variant
 	return layout
+
+func _require_population_hold_ids(population: RefCounted, property_name: StringName) -> PackedStringArray:
+	var raw_hold_ids: Variant = population.get(property_name)
+	Validation.require_condition(raw_hold_ids is PackedStringArray, "ChunkRouteLayoutEmitter population hold ids must be PackedStringArray values.")
+	var hold_ids: PackedStringArray = raw_hold_ids
+	Validation.require_condition(not hold_ids.is_empty(), "ChunkRouteLayoutEmitter population hold ids cannot be empty.")
+	return PackedStringArray(hold_ids)
 
 func map_movement_style_to_chunk_type(movement_style: int) -> int:
 	RouteMovementStyleScript.assert_valid(movement_style)
@@ -185,6 +194,16 @@ func _build_hazard_position(hazard_placement: RefCounted) -> Vector2:
 			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y - 0.85)
 		GeneratedHazardKindScript.Value.UPDRAFT:
 			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y - 1.05)
+		GeneratedHazardKindScript.Value.FALLING_ROCK:
+			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y - 0.6)
+		GeneratedHazardKindScript.Value.PENDULUM_LOG:
+			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y - 0.75)
+		GeneratedHazardKindScript.Value.WANDERING_CRITTER:
+			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y + 0.55)
+		GeneratedHazardKindScript.Value.STARTLE_PUFF:
+			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y - 0.55)
+		GeneratedHazardKindScript.Value.BUG_SWARM:
+			return Vector2(_clamp_local_x(anchor_position.x), anchor_position.y - 0.55)
 		_:
 			Validation.require_condition(false, "ChunkRouteLayoutEmitter requires a supported hazard kind.")
 			return anchor_position

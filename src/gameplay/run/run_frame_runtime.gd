@@ -23,7 +23,8 @@ func update_camera_follow(
 	run_session: RefCounted,
 	camera_player_lower_screen_offset_pixels: float,
 	camera_vertical_dead_zone_pixels: float,
-	camera_horizontal_dead_zone_pixels: float
+	camera_horizontal_dead_zone_pixels: float,
+	camera_shake_offset_pixels: Vector2 = Vector2.ZERO
 ) -> void:
 	var typed_gameplay_nodes: RunGameplayNodeRefsScript = _require_gameplay_nodes(gameplay_nodes)
 	var typed_run_loop_coordinator: RunLoopCoordinatorScript = _require_run_loop_coordinator(run_loop_coordinator)
@@ -41,7 +42,12 @@ func update_camera_follow(
 		camera_vertical_dead_zone_pixels,
 		typed_run_session.get_state()
 	)
-	typed_gameplay_nodes.camera.global_position = Vector2(target_x, target_y)
+	# Shake is layered on top of the clean follow target, applied last. The
+	# small transient offset does feed back into next frame's dead-zone read,
+	# but at this amplitude/duration (see StartleHazardContactService) it
+	# stays well inside the dead zone and self-corrects; not worth tracking a
+	# separate "clean" camera position just to avoid it.
+	typed_gameplay_nodes.camera.global_position = Vector2(target_x, target_y) + camera_shake_offset_pixels
 
 func sync_generated_chunks(
 	gameplay_nodes: RefCounted,

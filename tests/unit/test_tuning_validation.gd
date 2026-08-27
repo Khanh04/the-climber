@@ -247,6 +247,13 @@ func test_generation_tuning_rejects_invalid_route_validation_tuning() -> void:
 
     assert_false(tuning.is_valid())
 
+func test_generation_tuning_rejects_static_reach_above_swing_envelope() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var route_validation_tuning: RouteValidationTuningScript = tuning.route_validation_tuning as RouteValidationTuningScript
+    route_validation_tuning.static_reach_distance_meters = route_validation_tuning.max_move_distance_meters + 0.01
+
+    assert_false(tuning.is_valid())
+
 func test_generation_tuning_restores_missing_default_route_tunings_before_validation() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
 
@@ -272,7 +279,7 @@ func test_generation_tuning_rejects_invalid_route_profile_tuning() -> void:
 
 func test_generation_tuning_rejects_invalid_branch_side_alignment() -> void:
     var tuning = GenerationTuningScript.new()
-    tuning.pickup_branch_side_alignment_meters = 2.0
+    tuning.pickup_branch_side_alignment_meters = 5.0
 
     assert_false(tuning.is_valid())
 

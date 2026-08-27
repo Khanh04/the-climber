@@ -8,6 +8,9 @@ const RouteLaneScript = preload("res://src/gameplay/generation/route_lane.gd")
 
 const DEFAULT_INNER_LANE_POSITION_RATIO: float = 0.28
 const DEFAULT_OUTER_LANE_POSITION_RATIO: float = 0.82
+const STARTING_INNER_LANE_OFFSET_METERS: float = 0.42
+const STARTING_OUTER_LANE_OFFSET_METERS: float = 1.23
+const LANE_FAN_OUT_ROW_COUNT: int = 3
 
 var chunk_width_meters: float
 var row_step_height_meters: float
@@ -85,7 +88,7 @@ func _build_local_position(row_index: int, lane: int, row_count: int) -> Vector2
 	Validation.require_condition(row_count > 0, "RouteAnchorGraphBuilder local positions require a positive row count.")
 	var half_width_meters: float = chunk_width_meters * 0.5
 	var row_height_meters: float = first_row_height_meters + (row_step_height_meters * float(row_index))
-	var base_position: Vector2 = Vector2(half_width_meters * _get_lane_position_ratio(lane), -row_height_meters)
+	var base_position: Vector2 = Vector2(_get_lane_position_meters(lane, row_index, half_width_meters), -row_height_meters)
 	var jittered_x: float = clampf(
 		base_position.x + _build_horizontal_jitter(row_index, lane),
 		-half_width_meters,
@@ -93,21 +96,35 @@ func _build_local_position(row_index: int, lane: int, row_count: int) -> Vector2
 	)
 	return Vector2(jittered_x, base_position.y + _build_vertical_jitter(row_index, lane, row_count))
 
-func _get_lane_position_ratio(lane: int) -> float:
+func _get_lane_position_meters(lane: int, row_index: int, half_width_meters: float) -> float:
+	var inner_position_meters: float = _get_fanned_lane_position(
+		STARTING_INNER_LANE_OFFSET_METERS,
+		half_width_meters * inner_lane_position_ratio,
+		row_index
+	)
+	var outer_position_meters: float = _get_fanned_lane_position(
+		STARTING_OUTER_LANE_OFFSET_METERS,
+		half_width_meters * outer_lane_position_ratio,
+		row_index
+	)
 	match lane:
 		RouteLaneScript.Value.OUTER_LEFT:
-			return -outer_lane_position_ratio
+			return -outer_position_meters
 		RouteLaneScript.Value.INNER_LEFT:
-			return -inner_lane_position_ratio
+			return -inner_position_meters
 		RouteLaneScript.Value.CENTER:
 			return 0.0
 		RouteLaneScript.Value.INNER_RIGHT:
-			return inner_lane_position_ratio
+			return inner_position_meters
 		RouteLaneScript.Value.OUTER_RIGHT:
-			return outer_lane_position_ratio
+			return outer_position_meters
 		_:
 			Validation.require_condition(false, "RouteAnchorGraphBuilder lane positions require a supported lane.")
 			return 0.0
+
+func _get_fanned_lane_position(starting_position_meters: float, target_position_meters: float, row_index: int) -> float:
+	var fan_progress: float = clampf(float(row_index) / float(LANE_FAN_OUT_ROW_COUNT), 0.0, 1.0)
+	return lerpf(starting_position_meters, target_position_meters, fan_progress)
 
 func _build_horizontal_jitter(row_index: int, lane: int) -> float:
 	if horizontal_jitter_meters == 0.0 or seed_key == "":

@@ -91,7 +91,7 @@ func _apply_grip_intents(input_frame: PlayerInputFrameScript, left_target: RefCo
         var typed_target: HandholdTargetScript = target
         typed_target.assert_valid()
 
-        if not _attachments.is_attached(hand_side):
+        if not _attachments.is_attached(hand_side) and not _is_hold_attached_by_other_hand(hand_side, typed_target.hold_path):
             _attachments.attach(hand_side, typed_target.hold_id, typed_target.attach_position, typed_target.hold_path)
             _set_attached_drain_multiplier(hand_side, typed_target.stamina_drain_multiplier)
 
@@ -104,6 +104,10 @@ func _target_for_hand(hand_side: int, left_target: RefCounted, right_target: Ref
         return left_target
 
     return right_target
+
+func _is_hold_attached_by_other_hand(hand_side: int, hold_path: NodePath) -> bool:
+    var other_hand_side: int = HandSideScript.Value.RIGHT if hand_side == HandSideScript.Value.LEFT else HandSideScript.Value.LEFT
+    return _attachments.is_attached(other_hand_side) and _attachments.get_hold_path(other_hand_side) == hold_path
 
 func _refresh_drain_multiplier() -> void:
     _last_drain_multiplier = 1.0

@@ -18,19 +18,19 @@ const DefaultRouteProfileTuningResource = preload("res://resources/config/route_
 ## Vertical meters covered by one generated chunk before the next chunk begins.
 @export var segment_height_meters: float = 12.0
 ## Horizontal meters available for generated lanes inside a chunk.
-@export var chunk_width_meters: float = 3.0
+@export var chunk_width_meters: float = 8.0
 ## Ratio of half-width used for the inner left and inner right lane anchors.
-@export var inner_lane_position_ratio: float = 0.32
+@export var inner_lane_position_ratio: float = 0.425
 ## Ratio of half-width used for the outer left and outer right lane anchors.
-@export var outer_lane_position_ratio: float = 0.88
+@export var outer_lane_position_ratio: float = 0.85
 ## Height of the opener's first reachable row above the reset anchor.
 @export var opener_first_row_height_meters: float = 0.72
 ## Clearance kept between the top of the opener route and the chunk ceiling.
 @export var opener_top_padding_meters: float = 1.5
 ## Maximum lateral meters applied to generated handholds after lane placement; noise is sampled from -1.0 to 1.0 and scaled by this value.
-@export var handhold_horizontal_jitter_meters: float = 0.1
+@export var handhold_horizontal_jitter_meters: float = 0.08
 ## Maximum vertical meters applied to each generated handhold after row placement; noise is sampled from -1.0 to 1.0 and scaled by this value.
-@export var handhold_vertical_jitter_meters: float = 0.25
+@export var handhold_vertical_jitter_meters: float = 0.2
 ## Vertical offset applied before non-opener chunk rows begin climbing away from the chunk base.
 @export var non_opener_row_base_height_meters: float = 1.5
 ## Portion of each chunk's placeholder sockets reserved for pickups before hazards take the remainder.
