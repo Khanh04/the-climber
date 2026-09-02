@@ -3,5 +3,5 @@
 [node name="BreakPresentation" type="Node2D"]
 
 [node name="Visual" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-6, -14, 6, -14, 6, 14, -6, 14)
+polygon = PackedVector2Array(-32, -16, 32, -16, 32, 16, -32, 16)
 color = Color(0.95, 0.64, 0.21, 1)

@@ -16,7 +16,6 @@ const HAZARD_GROUP_NAME: StringName = GeneratedHazardSpawnAdapterScript.GROUP_NA
 
 var _pixels_per_meter: float
 var _handhold_group_name: StringName
-var _hold_size_pixels: Vector2
 var _hold_collision_layer: int
 var _hold_collision_mask: int
 var _handhold_presentation_catalog: HandholdPresentationCatalogScript
@@ -25,7 +24,6 @@ var _hazard_presentation_catalog: HazardPresentationCatalogScript
 func _init(
     pixels_per_meter_value: float,
     handhold_group_name_value: StringName = &"handhold",
-    hold_size_pixels_value: Vector2 = Vector2(128.0, 34.0),
     hold_collision_layer_value: int = 2,
     hold_collision_mask_value: int = 0,
     handhold_presentation_catalog_value: HandholdPresentationCatalogScript = DefaultHandholdPresentationCatalog,
@@ -33,7 +31,6 @@ func _init(
 ) -> void:
     _pixels_per_meter = pixels_per_meter_value
     _handhold_group_name = handhold_group_name_value
-    _hold_size_pixels = hold_size_pixels_value
     _hold_collision_layer = hold_collision_layer_value
     _hold_collision_mask = hold_collision_mask_value
     _handhold_presentation_catalog = handhold_presentation_catalog_value
@@ -78,7 +75,6 @@ func build_chunk_node(layout: GeneratedChunkLayout) -> Node2D:
 func _assert_valid() -> void:
     Validation.require_condition(_pixels_per_meter > 0.0, "GeneratedChunkSceneBuilder pixels-per-meter must be positive.")
     Validation.require_condition(not String(_handhold_group_name).is_empty(), "GeneratedChunkSceneBuilder requires a handhold group name.")
-    Validation.require_condition(_hold_size_pixels.x > 0.0 and _hold_size_pixels.y > 0.0, "GeneratedChunkSceneBuilder hold size must be positive.")
     Validation.require_condition(_hold_collision_layer > 0, "GeneratedChunkSceneBuilder hold collision layer must be positive.")
     Validation.require_condition(_hold_collision_mask >= 0, "GeneratedChunkSceneBuilder hold collision mask cannot be negative.")
     Validation.require_condition(_handhold_presentation_catalog != null, "GeneratedChunkSceneBuilder requires a handhold presentation catalog.")

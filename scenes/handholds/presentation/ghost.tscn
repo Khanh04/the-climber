@@ -3,5 +3,5 @@
 [node name="GhostPresentation" type="Node2D"]
 
 [node name="Visual" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-8, -14, 8, -14, 8, 14, -8, 14)
+polygon = PackedVector2Array(-42, -16, 42, -16, 42, 16, -42, 16)
 color = Color(0.73, 0.84, 0.95, 0.82)

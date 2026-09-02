@@ -14,7 +14,9 @@ const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 func calculate_current_height_meters(gameplay_nodes: RefCounted, start_y: float, pixels_per_meter: float) -> float:
 	var typed_gameplay_nodes: RunGameplayNodeRefsScript = _require_gameplay_nodes(gameplay_nodes)
 	Validation.require_condition(pixels_per_meter > 0.0, "RunFrameRuntime pixels-per-meter must be positive.")
-	var height_pixels: float = maxf(0.0, start_y - typed_gameplay_nodes.player.get_body_global_position().y)
+	var player_position: Vector2 = typed_gameplay_nodes.player.get_body_global_position()
+	Validation.require_condition(player_position.is_finite(), "RunFrameRuntime player position must be finite while calculating height.")
+	var height_pixels: float = maxf(0.0, start_y - player_position.y)
 	return height_pixels / pixels_per_meter
 
 func update_camera_follow(
@@ -24,16 +26,27 @@ func update_camera_follow(
 	camera_player_lower_screen_offset_pixels: float,
 	camera_vertical_dead_zone_pixels: float,
 	camera_horizontal_dead_zone_pixels: float,
+	camera_center_x: float,
+	camera_horizontal_travel_limit_pixels: float,
 	camera_shake_offset_pixels: Vector2 = Vector2.ZERO
 ) -> void:
 	var typed_gameplay_nodes: RunGameplayNodeRefsScript = _require_gameplay_nodes(gameplay_nodes)
 	var typed_run_loop_coordinator: RunLoopCoordinatorScript = _require_run_loop_coordinator(run_loop_coordinator)
 	var typed_run_session: RunSessionScript = _require_run_session(run_session)
+	Validation.require_condition(camera_horizontal_travel_limit_pixels >= 0.0, "RunFrameRuntime camera horizontal travel limit cannot be negative.")
 	var player_position: Vector2 = typed_gameplay_nodes.player.get_body_global_position()
+	if not player_position.is_finite():
+		Validation.require_condition(
+			typed_run_session.get_state() == RunStateScript.Value.ENDED or typed_run_session.get_state() == RunStateScript.Value.RESCUE_OFFERED,
+			"RunFrameRuntime player position must be finite while the run is active."
+		)
+		return
 	var target_x: float = typed_run_loop_coordinator.calculate_camera_target_x(
 		typed_gameplay_nodes.camera.global_position.x,
 		player_position.x,
-		camera_horizontal_dead_zone_pixels
+		camera_horizontal_dead_zone_pixels,
+		camera_center_x - camera_horizontal_travel_limit_pixels,
+		camera_center_x + camera_horizontal_travel_limit_pixels
 	)
 	var target_y: float = typed_run_loop_coordinator.calculate_camera_target_y(
 		typed_gameplay_nodes.camera.global_position.y,
@@ -52,14 +65,19 @@ func update_camera_follow(
 func sync_generated_chunks(
 	gameplay_nodes: RefCounted,
 	controller: RefCounted,
+	run_session: RefCounted,
 	current_height_meters: float,
 	uses_generated_chunks: bool
 ) -> void:
 	if not uses_generated_chunks:
 		return
 
+	var typed_run_session: RunSessionScript = _require_run_session(run_session)
+	if typed_run_session.get_state() != RunStateScript.Value.CLIMBING:
+		return
 	var typed_gameplay_nodes: RunGameplayNodeRefsScript = _require_gameplay_nodes(gameplay_nodes)
 	var typed_controller: ClimbPrototypeControllerScript = _require_controller(controller)
+	Validation.require_condition(not is_nan(current_height_meters) and not is_inf(current_height_meters), "RunFrameRuntime generated chunk height must be finite.")
 	typed_gameplay_nodes.generated_chunk_coordinator.sync_chunks_for_height(
 		current_height_meters,
 		_collect_attached_hold_paths(typed_controller)
@@ -114,7 +132,8 @@ func resolve_bottom_screen_fall_if_needed(
 		typed_gameplay_nodes.player.get_body_global_position().y,
 		typed_gameplay_nodes.camera.global_position.y,
 		viewport_height,
-		bottom_fall_margin_pixels
+		bottom_fall_margin_pixels,
+		typed_gameplay_nodes.camera.zoom.y
 	)
 	if not should_resolve_bottom_fall:
 		return false

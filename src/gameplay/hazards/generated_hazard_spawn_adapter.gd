@@ -131,7 +131,7 @@ func _build_collision_shape() -> Shape2D:
 func _get_collision_size_for_kind() -> Vector2:
 	match hazard_kind:
 		GeneratedHazardKindScript.Value.SPIKE_CLUSTER:
-			return Vector2(28.0, 24.0)
+			return Vector2(36.0, 30.0)
 		GeneratedHazardKindScript.Value.WIND_GUST:
 			return Vector2(96.0, 56.0)
 		GeneratedHazardKindScript.Value.DOWNDRAFT:
@@ -139,15 +139,15 @@ func _get_collision_size_for_kind() -> Vector2:
 		GeneratedHazardKindScript.Value.UPDRAFT:
 			return Vector2(68.0, 92.0)
 		GeneratedHazardKindScript.Value.FALLING_ROCK:
-			return Vector2(30.0, 28.0)
+			return Vector2(38.0, 36.0)
 		GeneratedHazardKindScript.Value.PENDULUM_LOG:
-			return Vector2(44.0, 20.0)
+			return Vector2(56.0, 26.0)
 		GeneratedHazardKindScript.Value.WANDERING_CRITTER:
-			return Vector2(24.0, 18.0)
-		GeneratedHazardKindScript.Value.STARTLE_PUFF:
-			return Vector2(28.0, 28.0)
-		GeneratedHazardKindScript.Value.BUG_SWARM:
 			return Vector2(32.0, 24.0)
+		GeneratedHazardKindScript.Value.STARTLE_PUFF:
+			return Vector2(36.0, 36.0)
+		GeneratedHazardKindScript.Value.BUG_SWARM:
+			return Vector2(40.0, 30.0)
 		_:
 			Validation.require_condition(false, "GeneratedHazardSpawnAdapter requires a supported hazard kind collision size.")
 			return Vector2.ZERO

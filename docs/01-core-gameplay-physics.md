@@ -39,8 +39,8 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 
 ### Player Character
 
-- The ragdoll is 4 real `RigidBody2D` bodies (Torso, Head, LeftArm, RightArm), connected to Torso by 3 scene-authored `PinJoint2D`s. Torso is always dynamic; the other 3 flip between `freeze = true` (kinematic, code-posed while climbing) and `freeze = false` (real ragdoll physics while falling) via `RigidBody2D.freeze_mode = FREEZE_MODE_KINEMATIC`.
-- Each of the 4 bodies owns its own collision shape.
+- The ragdoll is 3 real `RigidBody2D` bodies (Head, LeftArm, RightArm) — the character has no torso. Head is the gameplay anchor body: it is always dynamic, stays on collision layer 1, and is what forces, grip joints, and chaser/hazard/pickup/fall detection act on. The two arms hang off Head via 2 scene-authored `PinJoint2D`s and flip between `freeze = true` (kinematic, code-posed while climbing) and `freeze = false` (real ragdoll physics while falling) via `RigidBody2D.freeze_mode = FREEZE_MODE_KINEMATIC`.
+- Each of the 3 bodies owns its own collision shape.
 - Cosmetics must be visual-only sprite swaps.
 - Cosmetics must not affect collision boundaries, friction, mass, or any other gameplay-relevant value.
 
@@ -50,8 +50,12 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 - There are no checkpoints.
 - Hitting the bottom of the screen ends the run.
 - Contact with a lethal hazard ends the run.
+- Mobile gameplay framing keeps a fixed 900-pixel world width across portrait aspect ratios. Taller phones reveal more vertical route without shrinking the player or interactive objects.
+- Horizontal camera travel is limited to 24 world pixels around the route center so the full 800-pixel route corridor remains readable.
+- Camera-child environment layers scale uniformly to cover the current visible world rectangle rather than assuming a 16:9 viewport.
 - `Camera2D` should use heavy smoothing.
 - On falls, the camera must follow the full descent instead of snapping immediately to a death result state.
+- Bottom-screen fall detection uses the camera's zoom-adjusted visible world height.
 - Death resolution should pass through a recoverable run-ending state so the shared rescue mechanic can offer either a Rewarded Continue or an inventory Mulligan Drone when eligible.
 
 ### Death and Rescue Eligibility

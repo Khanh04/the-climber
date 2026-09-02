@@ -133,6 +133,9 @@ const TUTORIAL_UPPER_HOLD_IDS: Array[StringName] = [
 @onready var _generated_chunk_coordinator: GeneratedChunkCoordinatorScript = %GeneratedChunks
 @onready var _reset_anchor: Marker2D = %ResetAnchor
 @onready var _camera: Camera2D = %DevCamera
+@onready var _background: Sprite2D = get_node("DevCamera/background") as Sprite2D
+@onready var _cloud: AnimatedSprite2D = get_node("DevCamera/cloud") as AnimatedSprite2D
+@onready var _tree_background: Sprite2D = get_node("DevCamera/Tree") as Sprite2D
 @onready var _starter_handholds_root: Node2D = get_node("Handholds") as Node2D
 @onready var _gameplay_nodes: RunGameplayNodeRefsScript = RunGameplayNodeRefsScript.new(
 	_player,
@@ -216,6 +219,8 @@ var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
 func _ready() -> void:
 	_launch_mode = _resolve_launch_mode()
 	_validate_required_state()
+	_configure_mobile_world_framing()
+	var _viewport_size_connect_result: int = get_viewport().size_changed.connect(_configure_mobile_world_framing)
 	_hazard_camera_effect_controller.ensure_overlay(self)
 	_world_surface_configurator.configure_surface(
 		_gameplay_nodes,
@@ -369,11 +374,13 @@ func _physics_process(delta: float) -> void:
 
 	var input_frame: PlayerInputFrameScript = _create_input_frame()
 	_hazard_camera_effect_controller.advance(delta)
-	var current_height_meters_before_input: float = _run_frame_runtime.calculate_current_height_meters(
-		_gameplay_nodes,
-		_start_y,
-		_get_climb_tuning_float(&"pixels_per_meter")
-	)
+	var current_height_meters_before_input: float = _run_session.get_height_meters()
+	if _run_session.get_state() == RunStateScript.Value.CLIMBING:
+		current_height_meters_before_input = _run_frame_runtime.calculate_current_height_meters(
+			_gameplay_nodes,
+			_start_y,
+			_get_climb_tuning_float(&"pixels_per_meter")
+		)
 	_run_frame_runtime.update_camera_follow(
 		_gameplay_nodes,
 		_run_loop_coordinator,
@@ -381,11 +388,14 @@ func _physics_process(delta: float) -> void:
 		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
 		_get_climb_tuning_float(&"camera_vertical_dead_zone_pixels"),
 		_get_climb_tuning_float(&"camera_horizontal_dead_zone_pixels"),
+		_reset_anchor.global_position.x,
+		_get_climb_tuning_float(&"camera_horizontal_travel_limit_pixels"),
 		_hazard_camera_effect_controller.get_camera_shake_offset()
 	)
 	_run_frame_runtime.sync_generated_chunks(
 		_gameplay_nodes,
 		_controller,
+		_run_session,
 		current_height_meters_before_input,
 		_uses_generated_chunks()
 	)
@@ -811,7 +821,6 @@ func _configure_generated_chunks() -> void:
 	var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(
 		pixels_per_meter,
 		climb_tuning.handhold_group_name,
-		Vector2(128.0, 34.0),
 		2,
 		0,
 		handhold_presentation_catalog,
@@ -829,16 +838,41 @@ func _configure_generated_chunks() -> void:
 	)
 	_run_generated_spawn_hookup_runtime.ensure_chunk_spawn_signal_connected(_generated_chunk_coordinator, _on_generated_chunk_spawned)
 
+func _configure_mobile_world_framing() -> void:
+	var viewport_size: Vector2 = get_viewport_rect().size
+	Validation.require_condition(viewport_size.x > 0.0 and viewport_size.y > 0.0, "RunScene mobile framing requires a positive viewport size.")
+	var target_visible_width: float = _get_climb_tuning_float(&"camera_target_visible_width_pixels")
+	var camera_zoom: float = viewport_size.x / target_visible_width
+	_camera.zoom = Vector2(camera_zoom, camera_zoom)
+	var visible_world_size: Vector2 = viewport_size / camera_zoom
+	_scale_sprite_to_cover(_background, visible_world_size)
+	_scale_sprite_to_cover(_tree_background, visible_world_size)
+	var cloud_texture: Texture2D = _cloud.sprite_frames.get_frame_texture(_cloud.animation, _cloud.frame)
+	Validation.require_condition(cloud_texture != null, "RunScene cloud background requires a current animation texture.")
+	_scale_canvas_item_to_cover(_cloud, cloud_texture.get_size(), visible_world_size)
+
+func _scale_sprite_to_cover(sprite: Sprite2D, visible_world_size: Vector2) -> void:
+	Validation.require_condition(sprite.texture != null, "RunScene background sprite requires a texture.")
+	_scale_canvas_item_to_cover(sprite, sprite.texture.get_size(), visible_world_size)
+
+func _scale_canvas_item_to_cover(item: Node2D, texture_size: Vector2, visible_world_size: Vector2) -> void:
+	Validation.require_condition(texture_size.x > 0.0 and texture_size.y > 0.0, "RunScene background texture size must be positive.")
+	var cover_scale: float = maxf(visible_world_size.x / texture_size.x, visible_world_size.y / texture_size.y)
+	item.scale = Vector2(cover_scale, cover_scale)
+
 func _sync_generated_chunks() -> void:
 	if not _uses_generated_chunks():
 		return
 
 	if _generated_chunk_coordinator == null:
 		return
+	if _run_session.get_state() != RunStateScript.Value.CLIMBING:
+		return
 
 	_run_frame_runtime.sync_generated_chunks(
 		_gameplay_nodes,
 		_controller,
+		_run_session,
 		_run_frame_runtime.calculate_current_height_meters(
 			_gameplay_nodes,
 			_start_y,
@@ -1317,6 +1351,7 @@ func _restore_rewarded_continue() -> void:
 	_run_frame_runtime.sync_generated_chunks(
 		_gameplay_nodes,
 		_controller,
+		_run_session,
 		_run_frame_runtime.calculate_current_height_meters(
 			_gameplay_nodes,
 			_start_y,

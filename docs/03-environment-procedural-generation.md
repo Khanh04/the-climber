@@ -160,6 +160,9 @@ for mobile object budgets.
 - Special handholds must stay readable within one grab window through
   distinct silhouette, color, and one primary gameplay effect per
   hold.
+- Generated hold geometry uses mobile-readable world dimensions. Normal,
+  Rest, and Burn holds share the 0.96 m by 0.34 m tutorial baseline;
+  special holds may be narrower but remain at least 0.64 m wide.
 - Deterministic generation must assign handhold types after handhold
   geometry is placed so the same seed reproduces both route pattern
   and hold behavior.

@@ -9,7 +9,7 @@ extends Resource
 @export var swing_control_force: float = 2400.0
 # Default vertical gap between the held grip point and the player's body center.
 # Higher values make the body hang lower under holds; lower values tuck it closer.
-@export var grip_hang_offset_pixels: float = 92.0
+@export var grip_hang_offset_pixels: float = 65.0
 # Debug-only distance the grip target shifts toward the aim direction while attached.
 # Higher values make aiming reshape the body position more aggressively.
 @export var grip_aim_target_offset_pixels: float = 100.0
@@ -55,6 +55,12 @@ extends Resource
 # Horizontal dead-zone around the player before the camera recenters.
 # Higher values reduce side-to-side camera motion; lower values keep the player more centered.
 @export var camera_horizontal_dead_zone_pixels: float = 72.0
+# Width of the gameplay world visible on every portrait device. Camera zoom
+# derives from this value so interactive objects retain a stable screen size.
+@export var camera_target_visible_width_pixels: float = 900.0
+# Small lateral allowance around the route center. Keeping this below the
+# route's side margin prevents mobile screens from exposing empty world.
+@export var camera_horizontal_travel_limit_pixels: float = 24.0
 # Extra distance below the visible bottom edge before a fall is resolved.
 # Higher values are more forgiving; lower values end the run sooner when dropping.
 @export var bottom_fall_margin_pixels: float = 160.0
@@ -87,6 +93,8 @@ func is_valid() -> bool:
         and camera_player_lower_screen_offset_pixels >= 0.0 \
         and camera_vertical_dead_zone_pixels >= 0.0 \
         and camera_horizontal_dead_zone_pixels >= 0.0 \
+        and camera_target_visible_width_pixels > 0.0 \
+        and camera_horizontal_travel_limit_pixels >= 0.0 \
         and bottom_fall_margin_pixels >= 0.0 \
         and pixels_per_meter > 0.0 \
         and not String(handhold_group_name).is_empty()
@@ -125,6 +133,8 @@ func assert_valid() -> void:
     Validation.require_condition(camera_player_lower_screen_offset_pixels >= 0.0, "Camera player lower-screen offset cannot be negative.")
     Validation.require_condition(camera_vertical_dead_zone_pixels >= 0.0, "Camera vertical dead-zone cannot be negative.")
     Validation.require_condition(camera_horizontal_dead_zone_pixels >= 0.0, "Camera horizontal dead-zone cannot be negative.")
+    Validation.require_condition(camera_target_visible_width_pixels > 0.0, "Camera target visible width must be positive.")
+    Validation.require_condition(camera_horizontal_travel_limit_pixels >= 0.0, "Camera horizontal travel limit cannot be negative.")
     Validation.require_condition(bottom_fall_margin_pixels >= 0.0, "Bottom fall margin cannot be negative.")
     Validation.require_condition(pixels_per_meter > 0.0, "Pixels-per-meter conversion must be positive.")
     Validation.require_condition(not String(handhold_group_name).is_empty(), "Handhold group name cannot be empty.")

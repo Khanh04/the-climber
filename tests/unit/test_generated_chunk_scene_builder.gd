@@ -115,7 +115,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_eq(handhold.definition_id, &"REST")
     assert_not_null(collision_shape)
     assert_not_null(rectangle_shape)
-    assert_true(rectangle_shape.size.is_equal_approx(Vector2(18.0, 30.0)))
+    assert_true(rectangle_shape.size.is_equal_approx(Vector2(96.0, 34.0)))
     var handhold_type_meta: Variant = handhold.get_meta(&"handhold_type")
     var handhold_route_role_meta: Variant = handhold.get_meta(&"route_role")
     assert_true(handhold_type_meta is String)
@@ -131,6 +131,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_true(pickup_spawn.position.is_equal_approx(Vector2(-60.0, -240.0)))
     assert_not_null(pickup_collision_shape)
     assert_not_null(pickup_circle_shape)
+    assert_eq(pickup_circle_shape.radius, 18.0)
     assert_eq(pickup_spawn.coin_amount, 1)
     assert_not_null(pickup_visual)
     assert_not_null(pickup_animated_sprite)
@@ -158,7 +159,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_true(spike_cluster_spawn.position.is_equal_approx(Vector2(90.0, -310.0)))
     assert_not_null(spike_collision_shape)
     assert_not_null(spike_rectangle_shape)
-    assert_eq(spike_rectangle_shape.size, Vector2(28.0, 24.0))
+    assert_eq(spike_rectangle_shape.size, Vector2(36.0, 30.0))
     assert_not_null(spike_presentation)
 
     assert_not_null(downdraft_spawn)
@@ -190,7 +191,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_true(falling_rock_spawn.position.is_equal_approx(Vector2(50.0, -290.0)))
     assert_not_null(falling_rock_collision_shape)
     assert_not_null(falling_rock_rectangle_shape)
-    assert_eq(falling_rock_rectangle_shape.size, Vector2(30.0, 28.0))
+    assert_eq(falling_rock_rectangle_shape.size, Vector2(38.0, 36.0))
     assert_not_null(falling_rock_presentation)
 
     assert_not_null(pendulum_log_spawn)
@@ -200,7 +201,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_true(pendulum_log_spawn.position.is_equal_approx(Vector2(-90.0, -220.0)))
     assert_not_null(pendulum_log_collision_shape)
     assert_not_null(pendulum_log_rectangle_shape)
-    assert_eq(pendulum_log_rectangle_shape.size, Vector2(44.0, 20.0))
+    assert_eq(pendulum_log_rectangle_shape.size, Vector2(56.0, 26.0))
     assert_not_null(pendulum_log_presentation)
 
     assert_not_null(wandering_critter_spawn)
@@ -210,7 +211,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_true(wandering_critter_spawn.position.is_equal_approx(Vector2(30.0, -160.0)))
     assert_not_null(wandering_critter_collision_shape)
     assert_not_null(wandering_critter_rectangle_shape)
-    assert_eq(wandering_critter_rectangle_shape.size, Vector2(24.0, 18.0))
+    assert_eq(wandering_critter_rectangle_shape.size, Vector2(32.0, 24.0))
     assert_true(wandering_critter_spawn.get_impulse_vector_pixels().is_equal_approx(Vector2(-150.0, -60.0)))
     assert_not_null(wandering_critter_presentation)
 
@@ -221,7 +222,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_true(startle_puff_spawn.position.is_equal_approx(Vector2(-20.0, -340.0)))
     assert_not_null(startle_puff_collision_shape)
     assert_not_null(startle_puff_rectangle_shape)
-    assert_eq(startle_puff_rectangle_shape.size, Vector2(28.0, 28.0))
+    assert_eq(startle_puff_rectangle_shape.size, Vector2(36.0, 36.0))
     assert_not_null(startle_puff_presentation)
 
     assert_not_null(bug_swarm_spawn)
@@ -231,7 +232,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_true(bug_swarm_spawn.position.is_equal_approx(Vector2(130.0, -200.0)))
     assert_not_null(bug_swarm_collision_shape)
     assert_not_null(bug_swarm_rectangle_shape)
-    assert_eq(bug_swarm_rectangle_shape.size, Vector2(32.0, 24.0))
+    assert_eq(bug_swarm_rectangle_shape.size, Vector2(40.0, 30.0))
     assert_not_null(bug_swarm_presentation)
 
 func _build_layout_fixture() -> GeneratedChunkLayoutScript:

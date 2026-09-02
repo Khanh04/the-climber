@@ -13,6 +13,13 @@ func test_bottom_fall_threshold_uses_camera_viewport_and_margin() -> void:
 
 	assert_eq(threshold_y, 1260.0)
 
+func test_bottom_fall_threshold_uses_visible_world_height_at_camera_zoom() -> void:
+	var coordinator = RunLoopCoordinatorScript.new()
+
+	var threshold_y: float = coordinator.calculate_bottom_fall_threshold_y(800.0, 600.0, 160.0, 1.2)
+
+	assert_eq(threshold_y, 1210.0)
+
 func test_bottom_fall_resolution_requires_active_climb_and_crossing_threshold() -> void:
 	var coordinator = RunLoopCoordinatorScript.new()
 	var typed_coordinator: Object = coordinator
@@ -67,6 +74,13 @@ func test_camera_target_holds_horizontal_position_within_dead_zone() -> void:
 	var target_x: float = coordinator.calculate_camera_target_x(1000.0, 1050.0, 72.0)
 
 	assert_eq(target_x, 1000.0)
+
+func test_camera_target_clamps_to_mobile_route_bounds() -> void:
+	var coordinator = RunLoopCoordinatorScript.new()
+
+	var target_x: float = coordinator.calculate_camera_target_x(540.0, 880.0, 72.0, 516.0, 564.0)
+
+	assert_eq(target_x, 564.0)
 
 
 func test_visibility_flags_follow_run_state_contract() -> void:

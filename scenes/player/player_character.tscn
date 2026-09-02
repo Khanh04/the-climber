@@ -6,12 +6,8 @@
 [sub_resource type="Resource" id="Resource_climb"]
 script = ExtResource("2_climb")
 
-[sub_resource type="CapsuleShape2D" id="CapsuleShape2D_torso"]
-radius = 26.0
-height = 52.0
-
-[sub_resource type="CircleShape2D" id="CircleShape2D_head"]
-radius = 18.0
+[sub_resource type="RectangleShape2D" id="RectangleShape2D_head"]
+size = Vector2(48, 52)
 
 [sub_resource type="CapsuleShape2D" id="CapsuleShape2D_arm"]
 height = 36.0
@@ -20,71 +16,47 @@ height = 36.0
 script = ExtResource("1_player")
 climb_tuning = SubResource("Resource_climb")
 
-[node name="Torso" type="RigidBody2D" parent="." unique_id=392357072]
-continuous_cd = 2
-
-[node name="TorsoCollisionShape" type="CollisionShape2D" parent="Torso" unique_id=2000303583]
-shape = SubResource("CapsuleShape2D_torso")
-
-[node name="LeftShoulderSocket" type="Marker2D" parent="Torso" unique_id=464280409]
-position = Vector2(-18, -34)
-
-[node name="LeftHandAnchor" type="Marker2D" parent="Torso/LeftShoulderSocket" unique_id=318468994]
-position = Vector2(-24, 10)
-
-[node name="LeftHandVisualAnchor" type="Marker2D" parent="Torso/LeftShoulderSocket" unique_id=1827975474]
-position = Vector2(-30, 14)
-
-[node name="TorsoLeftArmJoint" type="PinJoint2D" parent="Torso/LeftShoulderSocket" unique_id=553507030]
-node_a = NodePath("../..")
-node_b = NodePath("../../../LeftArm")
-
-[node name="RightShoulderSocket" type="Marker2D" parent="Torso" unique_id=1579742315]
-position = Vector2(18, -34)
-
-[node name="RightHandAnchor" type="Marker2D" parent="Torso/RightShoulderSocket" unique_id=743865324]
-position = Vector2(24, 10)
-
-[node name="RightHandVisualAnchor" type="Marker2D" parent="Torso/RightShoulderSocket" unique_id=615281957]
-position = Vector2(30, 14)
-
-[node name="TorsoRightArmJoint" type="PinJoint2D" parent="Torso/RightShoulderSocket" unique_id=1172868888]
-node_a = NodePath("../..")
-node_b = NodePath("../../../RightArm")
-
-[node name="NeckSocket" type="Marker2D" parent="Torso" unique_id=2002879162]
-position = Vector2(0, -40)
-
-[node name="TorsoHeadJoint" type="PinJoint2D" parent="Torso/NeckSocket" unique_id=1168592363]
-node_a = NodePath("../..")
-node_b = NodePath("../../../Head")
-
-[node name="VisualRoot" type="Node2D" parent="Torso" unique_id=52935548]
-
-[node name="PlayerVisual" type="Polygon2D" parent="Torso/VisualRoot" unique_id=271829620]
-color = Color(0.165, 0.56, 0.72, 1)
-polygon = PackedVector2Array(-30, -40, 30, -40, 40, 20, 0, 48, -40, 20)
-
-[node name="BodyVisualSprite" type="Sprite2D" parent="Torso/VisualRoot" unique_id=1699808268]
-
-[node name="CosmeticVisualRoot" type="Node2D" parent="Torso/VisualRoot" unique_id=1049433743]
-
 [node name="Head" type="RigidBody2D" parent="." unique_id=1775544273]
-position = Vector2(0, -40)
-collision_layer = 32
-mass = 0.3
-freeze = true
-freeze_mode = 1
+collision_layer = 1
+mass = 1.0
 continuous_cd = 2
 
 [node name="HeadCollisionShape" type="CollisionShape2D" parent="Head" unique_id=1562466120]
-position = Vector2(0, -14)
-shape = SubResource("CircleShape2D_head")
+shape = SubResource("RectangleShape2D_head")
 
 [node name="HeadVisualRoot" type="Node2D" parent="Head" unique_id=1068775153]
 
 [node name="FaceOverlay" type="Sprite2D" parent="Head/HeadVisualRoot" unique_id=280627575]
-position = Vector2(0, -14)
+
+[node name="LeftShoulderSocket" type="Marker2D" parent="Head" unique_id=464280409]
+position = Vector2(-18, -34)
+
+[node name="LeftHandAnchor" type="Marker2D" parent="Head/LeftShoulderSocket" unique_id=318468994]
+position = Vector2(-24, 10)
+
+[node name="LeftHandVisualAnchor" type="Marker2D" parent="Head/LeftShoulderSocket" unique_id=1827975474]
+position = Vector2(-30, 14)
+
+[node name="TorsoLeftArmJoint" type="PinJoint2D" parent="Head/LeftShoulderSocket" unique_id=553507030]
+node_a = NodePath("../..")
+node_b = NodePath("../../../LeftArm")
+
+[node name="RightShoulderSocket" type="Marker2D" parent="Head" unique_id=1579742315]
+position = Vector2(18, -34)
+
+[node name="RightHandAnchor" type="Marker2D" parent="Head/RightShoulderSocket" unique_id=743865324]
+position = Vector2(24, 10)
+
+[node name="RightHandVisualAnchor" type="Marker2D" parent="Head/RightShoulderSocket" unique_id=615281957]
+position = Vector2(30, 14)
+
+[node name="TorsoRightArmJoint" type="PinJoint2D" parent="Head/RightShoulderSocket" unique_id=1172868888]
+node_a = NodePath("../..")
+node_b = NodePath("../../../RightArm")
+
+[node name="VisualRoot" type="Node2D" parent="Head" unique_id=52935548]
+
+[node name="CosmeticVisualRoot" type="Node2D" parent="Head/VisualRoot" unique_id=1049433743]
 
 [node name="LeftArm" type="RigidBody2D" parent="." unique_id=1568666982]
 position = Vector2(-18, -34)

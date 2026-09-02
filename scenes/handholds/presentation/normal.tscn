@@ -1,7 +1,8 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/art/game_object/Normal.png" id="1"]
 
 [node name="NormalPresentation" type="Node2D"]
 
-[node name="Visual" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-9, -15, 9, -15, 9, 15, -9, 15)
-color = Color(0.92, 0.72, 0.23, 1)
+[node name="Visual" type="Sprite2D" parent="."]
+texture = ExtResource("1")

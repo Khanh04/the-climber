@@ -3,5 +3,5 @@
 [node name="SpikeClusterPresentation" type="Node2D"]
 
 [node name="Visual" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(0, -12, 11, 10, -11, 10)
+polygon = PackedVector2Array(0, -15, 16, 13, -16, 13)
 color = Color(0.93, 0.32, 0.27, 0.92)

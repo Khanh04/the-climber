@@ -5,26 +5,26 @@
 
 [sub_resource type="Resource" id="Resource_human"]
 script = ExtResource("2_appearance")
-body_texture_path = "res://assets/PNG/Character/CHR2/back.png"
-body_scale = Vector2(3, 3)
 face_texture_path = "res://assets/PNG/Character/CHR2/head.png"
-face_scale = Vector2(3, 3)
+face_scale = Vector2(5, 5)
 left_upper_arm_texture_path = "res://assets/PNG/Character/CHR2/leftarm.png"
+left_upper_arm_offset = Vector2(6, -2)
 left_upper_arm_scale = Vector2(3, 3)
 right_upper_arm_texture_path = "res://assets/PNG/Character/CHR2/rightarm.png"
+right_upper_arm_offset = Vector2(-6, -2)
 right_upper_arm_scale = Vector2(3, 3)
 
 [sub_resource type="Resource" id="Resource_chr1"]
 script = ExtResource("2_appearance")
 appearance_id = &"chr1"
 display_name = "CHR1"
-body_texture_path = "res://assets/PNG/Character/CHR2/back.png"
-body_scale = Vector2(3, 3)
 face_texture_path = "res://assets/PNG/Character/CHR1/Player/head.png"
-face_scale = Vector2(3, 3)
+face_scale = Vector2(3.5, 3.5)
 left_upper_arm_texture_path = "res://assets/PNG/Character/CHR1/Player/leftarm.png"
+left_upper_arm_offset = Vector2(7, -3)
 left_upper_arm_scale = Vector2(3, 3)
 right_upper_arm_texture_path = "res://assets/PNG/Character/CHR1/Player/rightarm.png"
+right_upper_arm_offset = Vector2(-7, -3)
 right_upper_arm_scale = Vector2(3, 3)
 
 [resource]

@@ -1,7 +1,12 @@
-[gd_scene format=3]
+[gd_scene load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://scenes/handholds/presentation/frame_loop_presentation.gd" id="1"]
 
 [node name="RestPresentation" type="Node2D"]
+script = ExtResource("1")
+frame_path_format = "res://assets/art/game_object/rest/frame_%02d.png"
+frame_count = 24
+animation_name = &"rest"
+frames_per_second = 12.0
 
-[node name="Visual" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-9, -15, 9, -15, 9, 15, -9, 15)
-color = Color(0.41, 0.82, 0.47, 1)
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="."]

@@ -20,11 +20,11 @@ const LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = 2.4674
 const RIGHT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = PI - LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS
 const MIN_ARM_TARGET_DISTANCE_PIXELS: float = 4.0
 
-# Head/LeftArm/RightArm all live on this layer and mask out everything except world
-# geometry, so limbs never collide with each other. They cannot be kept off Torso by layer bits
-# alone (Torso must stay on layer 1 so ChaserKillZone/hazard/pickup detection keeps working) --
-# that exclusion is handled entirely by disable_collision=true on the 3 scene-authored PinJoint2D
-# joints in player_character.tscn. Do not "simplify" this into a layer-only scheme.
+# LeftArm/RightArm live on this layer and mask out everything except world geometry, so the
+# arms never collide with each other or with Head. Head is the gameplay body and stays on
+# layer 1 (ChaserKillZone/hazard/pickup detection keys off it); the arm<->Head exclusion is
+# handled entirely by disable_collision=true on the 2 scene-authored PinJoint2D joints in
+# player_character.tscn. Do not "simplify" this into a layer-only scheme.
 const LIMB_COLLISION_LAYER: int = 32
 
 # ponytail: per-limb mass values (scene-authored in player_character.tscn) are placeholder
@@ -32,13 +32,12 @@ const LIMB_COLLISION_LAYER: int = 32
 
 @export var climb_tuning: ClimbPrototypeTuningScript
 
-var _torso: RigidBody2D
-var _torso_collision_shape: CollisionShape2D
+# _body and _head both reference the Head RigidBody2D: Head is the gameplay anchor body
+# (forces, grip joints, chaser/hazard/pickup/fall detection) as well as the head limb.
+var _body: RigidBody2D
 var _head_collision_shape: CollisionShape2D
 var _left_arm_collision_shape: CollisionShape2D
 var _right_arm_collision_shape: CollisionShape2D
-var _torso_fitted_collision_polygons: Array[CollisionPolygon2D] = []
-var _head_fitted_collision_polygons: Array[CollisionPolygon2D] = []
 var _left_arm_fitted_collision_polygons: Array[CollisionPolygon2D] = []
 var _right_arm_fitted_collision_polygons: Array[CollisionPolygon2D] = []
 var _left_shoulder_socket: Marker2D
@@ -47,14 +46,10 @@ var _left_hand_anchor: Marker2D
 var _right_hand_anchor: Marker2D
 var _left_hand_visual_anchor: Marker2D
 var _right_hand_visual_anchor: Marker2D
-var _neck_socket: Marker2D
-var _torso_head_joint: PinJoint2D
-var _torso_left_arm_joint: PinJoint2D
-var _torso_right_arm_joint: PinJoint2D
+var _left_arm_joint: PinJoint2D
+var _right_arm_joint: PinJoint2D
 var _visual_root: Node2D
 var _cosmetic_visual_root: Node2D
-var _player_visual: Polygon2D
-var _body_visual_sprite: Sprite2D
 
 var _head: RigidBody2D
 var _head_visual_root: Node2D
@@ -88,13 +83,20 @@ var _reset_body_rotation: float = 0.0
 func _ready() -> void:
 	_validate_required_state()
 	set_physics_process(true)
-	_reset_body_rotation = _torso.rotation
+	_reset_body_rotation = _body.rotation
 	_hand_visual_follow_controller = HandVisualFollowControllerScript.new(climb_tuning)
 	_motion_controller = PlayerMotionControllerScript.new(climb_tuning)
 	_capture_hand_visual_offsets()
 	_reset_hand_visual_anchors()
+	# The arms are posed inside the head's collision volume every frame while climbing, and the
+	# body<->arm PinJoint2Ds (which would otherwise exclude them via disable_collision) are
+	# cleared in that mode -- so without an explicit exception the frozen arms shove the dynamic
+	# head around and it slowly rolls off upright. The exception is permanent; the arms still
+	# collide with the world during the ragdoll fall.
+	_body.add_collision_exception_with(_left_arm)
+	_body.add_collision_exception_with(_right_arm)
 	_physics_mode = PlayerPhysicsModeScript.controlled_climb()
-	_sync_torso_collision_mask_for_mode()
+	_sync_body_collision_mask_for_mode()
 	_sync_limb_freeze_for_mode()
 	_sync_kinematic_limb_pose()
 
@@ -127,7 +129,7 @@ func apply_frame_motion(frame_result: RefCounted, attachment_state: RefCounted) 
 	var typed_attachment_state: HandAttachmentStateScript = attachment_state
 
 	_physics_mode = PlayerPhysicsModeTransitionsScript.mode_after_frame(_physics_mode, frame_result)
-	_sync_torso_collision_mask_for_mode()
+	_sync_body_collision_mask_for_mode()
 	_sync_limb_freeze_for_mode()
 	if _physics_mode != PlayerPhysicsModeScript.controlled_climb():
 		clear_runtime_grip_joints()
@@ -136,7 +138,7 @@ func apply_frame_motion(frame_result: RefCounted, attachment_state: RefCounted) 
 
 	sync_runtime_grip_joints(typed_attachment_state)
 	sync_runtime_grip_links(typed_attachment_state)
-	_motion_controller.apply_frame_motion(_torso, typed_attachment_state, frame_result)
+	_motion_controller.apply_frame_motion(_body, typed_attachment_state, frame_result)
 	_sync_kinematic_limb_pose()
 
 func sync_runtime_grip_joints(attachment_state: RefCounted) -> void:
@@ -190,7 +192,7 @@ func clear_runtime_grip_links() -> void:
 func enter_falling(reason: int) -> void:
 	PlayerPhysicsModeTransitionsScript.assert_transition_allowed(_physics_mode, PlayerPhysicsModeScript.falling_ragdoll(), reason)
 	_physics_mode = PlayerPhysicsModeScript.falling_ragdoll()
-	_sync_torso_collision_mask_for_mode()
+	_sync_body_collision_mask_for_mode()
 	_sync_limb_freeze_for_mode()
 	clear_runtime_grip_joints()
 	clear_runtime_grip_links()
@@ -199,11 +201,11 @@ func reset_physics(global_position_value: Vector2) -> void:
 	_physics_mode = PlayerPhysicsModeTransitionsScript.reset_mode(_physics_mode)
 	clear_runtime_grip_joints()
 	clear_runtime_grip_links()
-	_torso.global_position = global_position_value
-	_torso.rotation = _reset_body_rotation
-	_torso.linear_velocity = Vector2.ZERO
-	_torso.angular_velocity = 0.0
-	_sync_torso_collision_mask_for_mode()
+	_body.global_position = global_position_value
+	_body.rotation = _reset_body_rotation
+	_body.linear_velocity = Vector2.ZERO
+	_body.angular_velocity = 0.0
+	_sync_body_collision_mask_for_mode()
 	_sync_limb_freeze_for_mode()
 	_sync_kinematic_limb_pose()
 	_reset_hand_visual_anchors()
@@ -212,7 +214,7 @@ func get_physics_mode() -> int:
 	return _physics_mode
 
 func get_player_body() -> RigidBody2D:
-	return _torso
+	return _body
 
 func get_head_body() -> RigidBody2D:
 	return _head
@@ -224,16 +226,16 @@ func get_right_arm_body() -> RigidBody2D:
 	return _right_arm
 
 func get_body_global_position() -> Vector2:
-	return _torso.global_position
+	return _body.global_position
 
 func set_body_global_position(global_position_value: Vector2) -> void:
-	_torso.global_position = global_position_value
+	_body.global_position = global_position_value
 
 func get_body_linear_velocity() -> Vector2:
-	return _torso.linear_velocity
+	return _body.linear_velocity
 
 func set_body_linear_velocity(linear_velocity_value: Vector2) -> void:
-	_torso.linear_velocity = linear_velocity_value
+	_body.linear_velocity = linear_velocity_value
 
 func get_left_hand_anchor() -> Marker2D:
 	return _left_hand_anchor
@@ -271,12 +273,6 @@ func get_visual_root() -> Node2D:
 func get_cosmetic_visual_root() -> Node2D:
 	return _cosmetic_visual_root
 
-func get_player_visual() -> Polygon2D:
-	return _player_visual
-
-func get_body_visual_sprite() -> Sprite2D:
-	return _body_visual_sprite
-
 func get_face_overlay() -> Sprite2D:
 	return _face_overlay
 
@@ -285,9 +281,6 @@ func get_left_arm_visual() -> Sprite2D:
 
 func get_right_arm_visual() -> Sprite2D:
 	return _right_arm_visual
-
-func get_torso_collision_shape() -> CollisionShape2D:
-	return _torso_collision_shape
 
 func get_head_collision_shape() -> CollisionShape2D:
 	return _head_collision_shape
@@ -298,20 +291,11 @@ func get_left_arm_collision_shape() -> CollisionShape2D:
 func get_right_arm_collision_shape() -> CollisionShape2D:
 	return _right_arm_collision_shape
 
-func get_torso_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
-	return _torso_fitted_collision_polygons
-
-func get_head_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
-	return _head_fitted_collision_polygons
-
 func get_left_arm_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
 	return _left_arm_fitted_collision_polygons
 
 func get_right_arm_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
 	return _right_arm_fitted_collision_polygons
-
-func configure_torso_collision_capsule(radius: float, height: float, collision_offset: Vector2) -> void:
-	_configure_capsule_shape(_torso_collision_shape, "Torso", radius, height, collision_offset)
 
 func configure_arm_collision_capsule(hand_side: int, radius: float, height: float, collision_offset: Vector2) -> void:
 	if hand_side == HandSideScript.Value.LEFT:
@@ -319,31 +303,14 @@ func configure_arm_collision_capsule(hand_side: int, radius: float, height: floa
 		return
 	_configure_capsule_shape(_right_arm_collision_shape, "RightArm", radius, height, collision_offset)
 
-func configure_head_collision_circle(radius: float, collision_offset: Vector2) -> void:
-	Validation.require_condition(radius > 0.0, "PlayerCharacter head collision circle radius must be positive.")
-	Validation.require_condition(_head_collision_shape != null, "PlayerCharacter requires HeadCollisionShape before configuring the circle.")
-	Validation.require_condition(_head_collision_shape.shape != null, "PlayerCharacter requires HeadCollisionShape to have a shape before configuring the circle.")
-	Validation.require_condition(_head_collision_shape.shape is CircleShape2D, "PlayerCharacter head collision shape must remain a CircleShape2D.")
-
-	var duplicated_shape: Resource = _head_collision_shape.shape.duplicate()
-	Validation.require_condition(duplicated_shape is CircleShape2D, "PlayerCharacter failed to duplicate the head collision circle.")
-	var circle_shape: CircleShape2D = duplicated_shape as CircleShape2D
-	circle_shape.radius = radius
-	_head_collision_shape.shape = circle_shape
-	_head_collision_shape.position = collision_offset
-
 # Pixel-silhouette collision: N convex CollisionPolygon2D children replace the fallback
 # primitive shape (disabled, not removed -- it's the always-valid state before any appearance
 # is applied, and stays the shape used by the cutout appearance path). Godot's dynamic
 # RigidBody2D physics doesn't support a single concave shape correctly (no well-defined
 # "inside"), so a traced silhouette must arrive pre-decomposed into convex pieces -- this
 # only assembles what PlayerAppearanceApplicator hands it, it doesn't do the tracing itself.
-func configure_torso_collision_polygons(local_polygons: Array[PackedVector2Array]) -> void:
-	_torso_fitted_collision_polygons = _configure_collision_polygons(_torso, _torso_collision_shape, _torso_fitted_collision_polygons, "Torso", local_polygons)
-
-func configure_head_collision_polygons(local_polygons: Array[PackedVector2Array]) -> void:
-	_head_fitted_collision_polygons = _configure_collision_polygons(_head, _head_collision_shape, _head_fitted_collision_polygons, "Head", local_polygons)
-
+# The head is excluded on purpose: it keeps its round authored CapsuleShape2D so a resting
+# head has no preferred tilt angle (see PlayerAppearanceApplicator.apply_appearance).
 func configure_arm_collision_polygons(hand_side: int, local_polygons: Array[PackedVector2Array]) -> void:
 	if hand_side == HandSideScript.Value.LEFT:
 		_left_arm_fitted_collision_polygons = _configure_collision_polygons(_left_arm, _left_arm_collision_shape, _left_arm_fitted_collision_polygons, "LeftArm", local_polygons)
@@ -419,93 +386,84 @@ func assert_visual_roots_physics_neutral() -> void:
 	_assert_node_tree_has_no_physics_nodes(_right_arm_visual_root)
 	_assert_node_tree_has_no_physics_nodes(_right_hand_cosmetic_root)
 
-func _sync_torso_collision_mask_for_mode() -> void:
-	Validation.require_condition(_torso != null, "PlayerCharacter requires Torso before syncing collision masks.")
+func _sync_body_collision_mask_for_mode() -> void:
+	Validation.require_condition(_body != null, "PlayerCharacter requires the body before syncing collision masks.")
 	if _physics_mode == PlayerPhysicsModeScript.falling_ragdoll():
-		_torso.collision_mask = FALLING_COLLISION_MASK
-		_torso.can_sleep = true
+		_body.collision_mask = FALLING_COLLISION_MASK
+		_body.can_sleep = true
 		return
 
-	_torso.collision_mask = CONTROLLED_COLLISION_MASK
+	_body.collision_mask = CONTROLLED_COLLISION_MASK
 	# A body that falls asleep between frames silently discards apply_central_force() on every
 	# subsequent frame (verified directly against the engine) until something wakes it again.
 	# While actively climbing, a single frame's swing force is often too small to push velocity
 	# back above the sleep threshold before the next frame's tick -- the body re-sleeps and each
 	# frame's progress is lost, forever, even though it gets woken reactively every frame it's
 	# attached. Disabling sleep outright for the whole controlled-climb mode removes that loop.
-	_torso.can_sleep = false
+	_body.can_sleep = false
 
 func _sync_limb_freeze_for_mode() -> void:
-	Validation.require_condition(_head != null and _left_arm != null and _right_arm != null, "PlayerCharacter requires all limb bodies before syncing freeze state.")
+	Validation.require_condition(_left_arm != null and _right_arm != null, "PlayerCharacter requires both arm bodies before syncing freeze state.")
 
 	if _physics_mode == PlayerPhysicsModeScript.controlled_climb():
-		_head.freeze = true
 		_left_arm.freeze = true
 		_right_arm.freeze = true
-		# The torso<->limb joints must stay disabled while limbs are kinematically posed:
-		# a joint between dynamic Torso and a limb that mirrors Torso's own position every
-		# frame constrains Torso to match a body that is, by construction, always wherever
-		# Torso just was -- pinning Torso in place and cancelling any grip/swing force. The
-		# joints only matter once limbs are real dynamic ragdoll bodies (falling).
-		_set_limb_joints_enabled(false)
+		# The body<->arm joints must stay disabled while the arms are kinematically posed:
+		# a joint between the dynamic body and an arm that mirrors a socket on that body every
+		# frame constrains the body to match something that is, by construction, always wherever
+		# the body just was -- pinning it in place and cancelling any grip/swing force. The
+		# joints only matter once the arms are real dynamic ragdoll bodies (falling).
+		_set_arm_joints_enabled(false)
 		return
 
-	if _head.freeze:
-		_unfreeze_limb_with_torso_velocity(_head)
-		_unfreeze_limb_with_torso_velocity(_left_arm)
-		_unfreeze_limb_with_torso_velocity(_right_arm)
+	if _left_arm.freeze:
+		_unfreeze_limb_with_body_velocity(_left_arm)
+		_unfreeze_limb_with_body_velocity(_right_arm)
 
-	_set_limb_joints_enabled(true)
+	_set_arm_joints_enabled(true)
 
-func _unfreeze_limb_with_torso_velocity(limb_body: RigidBody2D) -> void:
+func _unfreeze_limb_with_body_velocity(limb_body: RigidBody2D) -> void:
 	# enter_falling() can run from an Area2D body_entered signal (chaser/hazard contact),
 	# which fires mid physics-step while Godot is flushing collision queries. A direct
 	# `.freeze = false` calls PhysicsServer2D.body_set_mode() synchronously and Godot
 	# rejects that mid-flush, silently leaving the limb kinematic forever. Deferring is
 	# the fix Godot's own error message points at.
 	limb_body.set_deferred(&"freeze", false)
-	limb_body.linear_velocity = _torso.linear_velocity
-	limb_body.angular_velocity = _torso.angular_velocity
+	limb_body.linear_velocity = _body.linear_velocity
+	limb_body.angular_velocity = _body.angular_velocity
 
-func _set_limb_joints_enabled(enabled: bool) -> void:
-	_set_torso_limb_joint_enabled(_torso_head_joint, _head, enabled)
-	_set_torso_limb_joint_enabled(_torso_left_arm_joint, _left_arm, enabled)
-	_set_torso_limb_joint_enabled(_torso_right_arm_joint, _right_arm, enabled)
+func _set_arm_joints_enabled(enabled: bool) -> void:
+	_set_arm_joint_enabled(_left_arm_joint, _left_arm, enabled)
+	_set_arm_joint_enabled(_right_arm_joint, _right_arm, enabled)
 
-func _set_torso_limb_joint_enabled(joint: PinJoint2D, limb_body: RigidBody2D, enabled: bool) -> void:
+func _set_arm_joint_enabled(joint: PinJoint2D, limb_body: RigidBody2D, enabled: bool) -> void:
 	if not enabled:
 		joint.node_a = NodePath()
 		joint.node_b = NodePath()
 		return
 
-	joint.node_a = joint.get_path_to(_torso)
+	joint.node_a = joint.get_path_to(_body)
 	joint.node_b = joint.get_path_to(limb_body)
 
 func _validate_required_state() -> void:
 	Validation.require_condition(climb_tuning != null, "PlayerCharacter requires climb tuning.")
 	climb_tuning.assert_valid()
 
-	_torso = _require_rigid_body_2d("Torso", "PlayerCharacter requires Torso.")
-	_torso_collision_shape = _require_collision_shape_2d("Torso/TorsoCollisionShape", "PlayerCharacter requires TorsoCollisionShape.")
-	_left_shoulder_socket = _require_marker_2d("Torso/LeftShoulderSocket", "PlayerCharacter requires LeftShoulderSocket.")
-	_right_shoulder_socket = _require_marker_2d("Torso/RightShoulderSocket", "PlayerCharacter requires RightShoulderSocket.")
-	_left_hand_anchor = _require_marker_2d("Torso/LeftShoulderSocket/LeftHandAnchor", "PlayerCharacter requires LeftHandAnchor.")
-	_right_hand_anchor = _require_marker_2d("Torso/RightShoulderSocket/RightHandAnchor", "PlayerCharacter requires RightHandAnchor.")
-	_left_hand_visual_anchor = _require_marker_2d("Torso/LeftShoulderSocket/LeftHandVisualAnchor", "PlayerCharacter requires LeftHandVisualAnchor.")
-	_right_hand_visual_anchor = _require_marker_2d("Torso/RightShoulderSocket/RightHandVisualAnchor", "PlayerCharacter requires RightHandVisualAnchor.")
-	_neck_socket = _require_marker_2d("Torso/NeckSocket", "PlayerCharacter requires NeckSocket.")
-	_torso_head_joint = _require_pin_joint_2d("Torso/NeckSocket/TorsoHeadJoint", "PlayerCharacter requires TorsoHeadJoint.")
-	_torso_left_arm_joint = _require_pin_joint_2d("Torso/LeftShoulderSocket/TorsoLeftArmJoint", "PlayerCharacter requires TorsoLeftArmJoint.")
-	_torso_right_arm_joint = _require_pin_joint_2d("Torso/RightShoulderSocket/TorsoRightArmJoint", "PlayerCharacter requires TorsoRightArmJoint.")
-	_visual_root = _require_node_2d("Torso/VisualRoot", "PlayerCharacter requires VisualRoot.")
-	_cosmetic_visual_root = _require_node_2d("Torso/VisualRoot/CosmeticVisualRoot", "PlayerCharacter requires CosmeticVisualRoot.")
-	_player_visual = _require_polygon_2d("Torso/VisualRoot/PlayerVisual", "PlayerCharacter requires PlayerVisual.")
-	_body_visual_sprite = _require_sprite_2d("Torso/VisualRoot/BodyVisualSprite", "PlayerCharacter requires BodyVisualSprite.")
-
-	_head = _require_rigid_body_2d("Head", "PlayerCharacter requires Head.")
+	_body = _require_rigid_body_2d("Head", "PlayerCharacter requires Head.")
+	_head = _body
 	_head_collision_shape = _require_collision_shape_2d("Head/HeadCollisionShape", "PlayerCharacter requires HeadCollisionShape.")
 	_head_visual_root = _require_node_2d("Head/HeadVisualRoot", "PlayerCharacter requires HeadVisualRoot.")
 	_face_overlay = _require_sprite_2d("Head/HeadVisualRoot/FaceOverlay", "PlayerCharacter requires FaceOverlay.")
+	_left_shoulder_socket = _require_marker_2d("Head/LeftShoulderSocket", "PlayerCharacter requires LeftShoulderSocket.")
+	_right_shoulder_socket = _require_marker_2d("Head/RightShoulderSocket", "PlayerCharacter requires RightShoulderSocket.")
+	_left_hand_anchor = _require_marker_2d("Head/LeftShoulderSocket/LeftHandAnchor", "PlayerCharacter requires LeftHandAnchor.")
+	_right_hand_anchor = _require_marker_2d("Head/RightShoulderSocket/RightHandAnchor", "PlayerCharacter requires RightHandAnchor.")
+	_left_hand_visual_anchor = _require_marker_2d("Head/LeftShoulderSocket/LeftHandVisualAnchor", "PlayerCharacter requires LeftHandVisualAnchor.")
+	_right_hand_visual_anchor = _require_marker_2d("Head/RightShoulderSocket/RightHandVisualAnchor", "PlayerCharacter requires RightHandVisualAnchor.")
+	_left_arm_joint = _require_pin_joint_2d("Head/LeftShoulderSocket/TorsoLeftArmJoint", "PlayerCharacter requires TorsoLeftArmJoint.")
+	_right_arm_joint = _require_pin_joint_2d("Head/RightShoulderSocket/TorsoRightArmJoint", "PlayerCharacter requires TorsoRightArmJoint.")
+	_visual_root = _require_node_2d("Head/VisualRoot", "PlayerCharacter requires VisualRoot.")
+	_cosmetic_visual_root = _require_node_2d("Head/VisualRoot/CosmeticVisualRoot", "PlayerCharacter requires CosmeticVisualRoot.")
 
 	_left_arm = _require_rigid_body_2d("LeftArm", "PlayerCharacter requires LeftArm.")
 	_left_arm_collision_shape = _require_collision_shape_2d("LeftArm/LeftArmCollisionShape", "PlayerCharacter requires LeftArmCollisionShape.")
@@ -523,17 +481,15 @@ func _validate_required_state() -> void:
 	_right_grip_joint_anchor = _require_marker_2d("GripJoints/RightGripJointAnchor", "PlayerCharacter requires RightGripJointAnchor.")
 	_debug_anchors = _require_node_2d("DebugAnchors", "PlayerCharacter requires DebugAnchors.")
 
-	Validation.require_condition(_torso_collision_shape.shape != null, "PlayerCharacter TorsoCollisionShape requires a shape.")
-	Validation.require_condition(_torso_collision_shape.get_parent() == _torso, "PlayerCharacter gameplay collision must belong to Torso.")
-	Validation.require_condition(_left_shoulder_socket.get_parent() == _torso, "PlayerCharacter LeftShoulderSocket must belong to Torso.")
-	Validation.require_condition(_right_shoulder_socket.get_parent() == _torso, "PlayerCharacter RightShoulderSocket must belong to Torso.")
+	Validation.require_condition(_head_collision_shape.shape != null, "PlayerCharacter HeadCollisionShape requires a shape.")
+	Validation.require_condition(_left_shoulder_socket.get_parent() == _body, "PlayerCharacter LeftShoulderSocket must belong to Head.")
+	Validation.require_condition(_right_shoulder_socket.get_parent() == _body, "PlayerCharacter RightShoulderSocket must belong to Head.")
 	Validation.require_condition(_left_hand_anchor.get_parent() == _left_shoulder_socket, "PlayerCharacter LeftHandAnchor must belong to LeftShoulderSocket.")
 	Validation.require_condition(_right_hand_anchor.get_parent() == _right_shoulder_socket, "PlayerCharacter RightHandAnchor must belong to RightShoulderSocket.")
 	Validation.require_condition(_left_hand_visual_anchor.get_parent() == _left_shoulder_socket, "PlayerCharacter LeftHandVisualAnchor must belong to LeftShoulderSocket.")
 	Validation.require_condition(_right_hand_visual_anchor.get_parent() == _right_shoulder_socket, "PlayerCharacter RightHandVisualAnchor must belong to RightShoulderSocket.")
-	Validation.require_condition(_neck_socket.get_parent() == _torso, "PlayerCharacter NeckSocket must belong to Torso.")
-	Validation.require_condition(_player_visual.get_parent() == _visual_root, "PlayerCharacter PlayerVisual must belong to VisualRoot.")
-	Validation.require_condition(_body_visual_sprite.get_parent() == _visual_root, "PlayerCharacter BodyVisualSprite must belong to VisualRoot.")
+	Validation.require_condition(_visual_root.get_parent() == _body, "PlayerCharacter VisualRoot must belong to Head.")
+	Validation.require_condition(_cosmetic_visual_root.get_parent() == _visual_root, "PlayerCharacter CosmeticVisualRoot must belong to VisualRoot.")
 	Validation.require_condition(_head_collision_shape.get_parent() == _head, "PlayerCharacter HeadCollisionShape must belong to Head.")
 	Validation.require_condition(_face_overlay.get_parent() == _head_visual_root, "PlayerCharacter FaceOverlay must belong to HeadVisualRoot.")
 	Validation.require_condition(_left_arm_collision_shape.get_parent() == _left_arm, "PlayerCharacter LeftArmCollisionShape must belong to LeftArm.")
@@ -543,10 +499,9 @@ func _validate_required_state() -> void:
 	Validation.require_condition(_right_arm_visual.get_parent() == _right_arm_visual_root, "PlayerCharacter RightArmVisual must belong to RightArmVisualRoot.")
 	Validation.require_condition(_right_hand_cosmetic_root.get_parent() == _right_arm, "PlayerCharacter RightHandCosmeticRoot must belong to RightArm.")
 
-	Validation.require_condition(_head.collision_layer == LIMB_COLLISION_LAYER, "PlayerCharacter Head must be on the ragdoll limb collision layer.")
+	Validation.require_condition(_body.collision_layer == 1, "PlayerCharacter Head (the gameplay body) must be on collision layer 1.")
 	Validation.require_condition(_left_arm.collision_layer == LIMB_COLLISION_LAYER, "PlayerCharacter LeftArm must be on the ragdoll limb collision layer.")
 	Validation.require_condition(_right_arm.collision_layer == LIMB_COLLISION_LAYER, "PlayerCharacter RightArm must be on the ragdoll limb collision layer.")
-	Validation.require_condition(_head.freeze_mode == RigidBody2D.FREEZE_MODE_KINEMATIC, "PlayerCharacter Head must use kinematic freeze mode.")
 	Validation.require_condition(_left_arm.freeze_mode == RigidBody2D.FREEZE_MODE_KINEMATIC, "PlayerCharacter LeftArm must use kinematic freeze mode.")
 	Validation.require_condition(_right_arm.freeze_mode == RigidBody2D.FREEZE_MODE_KINEMATIC, "PlayerCharacter RightArm must use kinematic freeze mode.")
 
@@ -561,7 +516,7 @@ func _reset_hand_visual_anchors() -> void:
 	_right_hand_visual_anchor.position = _right_hand_anchor.position + _right_hand_visual_offset_from_reach
 
 func _sync_hand_visual_anchors(delta: float) -> void:
-	var body_local_velocity: Vector2 = _torso.to_local(_torso.global_position + _torso.linear_velocity)
+	var body_local_velocity: Vector2 = _body.to_local(_body.global_position + _body.linear_velocity)
 	var left_attached_to_hold: bool = _left_runtime_grip_joint != null
 	var right_attached_to_hold: bool = _right_runtime_grip_joint != null
 	var left_attached_hold_local_position: Vector2 = Vector2.ZERO
@@ -596,15 +551,14 @@ func _sync_kinematic_limb_pose() -> void:
 		_sync_arm_kinematic_pose_toward_target(_left_arm, _left_shoulder_socket, _left_runtime_grip_joint.global_position, LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS)
 	if _right_runtime_grip_joint != null:
 		_sync_arm_kinematic_pose_toward_target(_right_arm, _right_shoulder_socket, _right_runtime_grip_joint.global_position, RIGHT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS)
-	_sync_head_kinematic_pose()
 
 func _sync_idle_rest_limb_pose() -> void:
 	if _left_runtime_grip_joint == null:
 		_left_arm.global_position = _left_shoulder_socket.global_position
-		_left_arm.global_rotation = _torso.global_rotation
+		_left_arm.global_rotation = _body.global_rotation
 	if _right_runtime_grip_joint == null:
 		_right_arm.global_position = _right_shoulder_socket.global_position
-		_right_arm.global_rotation = _torso.global_rotation
+		_right_arm.global_rotation = _body.global_rotation
 
 func _sync_arm_kinematic_pose_toward_target(arm_body: RigidBody2D, shoulder_socket: Marker2D, target_global_position: Vector2, bone_forward_angle_offset_radians: float) -> void:
 	Validation.require_condition(arm_body != null, "PlayerCharacter requires an arm body to sync attached pose.")
@@ -617,10 +571,6 @@ func _sync_arm_kinematic_pose_toward_target(arm_body: RigidBody2D, shoulder_sock
 
 	arm_body.global_position = shoulder_socket.global_position
 	arm_body.global_rotation = arm_global_angle
-
-func _sync_head_kinematic_pose() -> void:
-	_head.global_position = _neck_socket.global_position
-	_head.global_rotation = _torso.global_rotation
 
 func _require_rigid_body_2d(node_path: NodePath, message: String) -> RigidBody2D:
 	var node: Node = get_node_or_null(node_path)
@@ -652,18 +602,12 @@ func _require_sprite_2d(node_path: NodePath, message: String) -> Sprite2D:
 	Validation.require_condition(node is Sprite2D, "%s Expected Sprite2D." % message)
 	return node as Sprite2D
 
-func _require_polygon_2d(node_path: NodePath, message: String) -> Polygon2D:
-	var node: Node = get_node_or_null(node_path)
-	Validation.require_condition(node != null, message)
-	Validation.require_condition(node is Polygon2D, "%s Expected Polygon2D." % message)
-	return node as Polygon2D
-
 func _require_pin_joint_2d(node_path: NodePath, message: String) -> PinJoint2D:
 	var node: Node = get_node_or_null(node_path)
 	Validation.require_condition(node != null, message)
 	Validation.require_condition(node is PinJoint2D, "%s Expected PinJoint2D." % message)
 	var joint: PinJoint2D = node as PinJoint2D
-	Validation.require_condition(joint.disable_collision, "%s PinJoint2D must disable collision between Torso and its limb." % message)
+	Validation.require_condition(joint.disable_collision, "%s PinJoint2D must disable collision between the body and its arm." % message)
 	return joint
 
 func _sync_runtime_grip_joint(
@@ -694,7 +638,7 @@ func _sync_runtime_grip_joint(
 		joint_anchor.add_child(active_joint)
 
 	active_joint.global_position = attachment_state.get_attach_position(hand_side)
-	active_joint.node_a = active_joint.get_path_to(_torso)
+	active_joint.node_a = active_joint.get_path_to(_body)
 	active_joint.node_b = active_joint.get_path_to(typed_hold_node)
 	return active_joint
 

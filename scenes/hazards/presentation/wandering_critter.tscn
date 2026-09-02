@@ -3,5 +3,5 @@
 [node name="WanderingCritterPresentation" type="Node2D"]
 
 [node name="Visual" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(0, -10, 12, -2, 12, 8, -12, 8, -12, -2)
+polygon = PackedVector2Array(0, -13, 16, -3, 16, 11, -16, 11, -16, -3)
 color = Color(0.62, 0.5, 0.34, 0.92)

@@ -48,7 +48,7 @@ func reset_chaser_to_player_position(
 		typed_gameplay_nodes.player.get_body_global_position().y,
 		pixels_per_meter,
 		typed_gameplay_nodes.camera.global_position.x,
-		viewport_width
+		viewport_width / typed_gameplay_nodes.camera.zoom.x
 	)
 
 func _require_gameplay_nodes(gameplay_nodes: RefCounted) -> RunGameplayNodeRefsScript:

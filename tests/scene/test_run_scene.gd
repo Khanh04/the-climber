@@ -208,22 +208,16 @@ func test_run_scene_applies_default_human_appearance_and_hides_overlay_cosmetics
     await get_tree().process_frame
 
     var player = _test_adapter(playground).get_player_for_test()
-    var collision_shape: CollisionShape2D = player.get_torso_collision_shape()
 
     assert_eq(_test_adapter(playground).get_cosmetic_loadout_for_test().player_appearance_id, &"human")
-    assert_false(player.get_player_visual().visible)
-    assert_not_null(player.get_body_visual_sprite().texture)
+    assert_not_null(player.get_face_overlay().texture)
     assert_not_null(player.get_left_arm_visual().texture)
-    assert_null(player.get_body_visual_sprite().get_node_or_null("AppearanceCutout"))
     assert_null(player.get_face_overlay().get_node_or_null("AppearanceCutout"))
     assert_null(player.get_left_arm_visual().get_node_or_null("AppearanceCutout"))
     assert_null(player.get_right_arm_visual().get_node_or_null("AppearanceCutout"))
-    # Plain-texture appearances fit pixel-silhouette collision now: the fallback capsule is
-    # disabled (not deleted -- it's what the cutout appearance path still uses), and real
-    # collision comes from one or more convex CollisionPolygon2D children per limb.
-    assert_true(collision_shape.disabled)
-    assert_gt(player.get_torso_fitted_collision_polygons().size(), 0)
-    assert_gt(player.get_head_fitted_collision_polygons().size(), 0)
+    # Plain-texture appearances fit each arm to a pixel-silhouette (fallback primitive disabled,
+    # replaced by convex CollisionPolygon2D children). The head keeps its round authored shape.
+    assert_false(player.get_head_collision_shape().disabled)
     assert_gt(player.get_left_arm_fitted_collision_polygons().size(), 0)
     assert_gt(player.get_right_arm_fitted_collision_polygons().size(), 0)
     assert_null(player.get_cosmetic_visual_root().get_node_or_null("AppliedBodyCosmetic"))
@@ -394,6 +388,11 @@ func test_run_scene_generated_seed_key_tracks_injected_utc_rollover() -> void:
     assert_not_null(second_playground)
     first_playground.set_utc_date_provider(StubUtcDateProvider.new(2026, 5, 14))
     second_playground.set_utc_date_provider(StubUtcDateProvider.new(2026, 5, 15))
+    # Keep the two live game worlds from sharing a spawn point: both players otherwise
+    # instantiate at world origin for one physics step (before reset_physics teleports them
+    # to their own reset anchor) and their dynamic bodies collide. This test only checks
+    # seed-key/UTC determinism, which is independent of world position.
+    second_playground.position = Vector2(100000.0, 0.0)
     add_child_autofree(first_playground)
     add_child_autofree(second_playground)
     await get_tree().process_frame
@@ -802,7 +801,7 @@ func test_run_scene_run_end_screen_requests_rewarded_continue_through_rewarded_a
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
         player_body.global_position.x,
-        camera.global_position.y + (viewport_size.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
+        camera.global_position.y + (viewport_size.y / camera.zoom.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
     )
     playground._physics_process(0.0)
 
@@ -862,7 +861,7 @@ func test_run_scene_restart_resets_run_while_rewarded_continue_is_offered() -> v
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
         player_body.global_position.x,
-        camera.global_position.y + (viewport_size.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
+        camera.global_position.y + (viewport_size.y / camera.zoom.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
     )
     playground._physics_process(0.0)
 
@@ -915,7 +914,7 @@ func test_run_scene_rewarded_continue_stays_available_after_cancelled_ad_attempt
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
         player_body.global_position.x,
-        camera.global_position.y + (viewport_size.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
+        camera.global_position.y + (viewport_size.y / camera.zoom.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
     )
     playground._physics_process(0.0)
 
@@ -965,7 +964,7 @@ func test_run_scene_shows_failed_feedback_after_failed_ad_attempt() -> void:
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
         player_body.global_position.x,
-        camera.global_position.y + (viewport_size.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
+        camera.global_position.y + (viewport_size.y / camera.zoom.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
     )
     playground._physics_process(0.0)
 
@@ -1009,7 +1008,7 @@ func test_run_scene_hides_rewarded_continue_when_ads_are_unavailable() -> void:
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
         player_body.global_position.x,
-        camera.global_position.y + (viewport_size.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
+        camera.global_position.y + (viewport_size.y / camera.zoom.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
     )
     playground._physics_process(0.0)
 
@@ -1049,7 +1048,7 @@ func test_run_scene_restart_resets_run_when_rewarded_continue_is_unavailable() -
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
         player_body.global_position.x,
-        camera.global_position.y + (viewport_size.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
+        camera.global_position.y + (viewport_size.y / camera.zoom.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
     )
     playground._physics_process(0.0)
 
@@ -1103,7 +1102,7 @@ func test_run_scene_second_eligible_fall_after_rewarded_continue_does_not_offer_
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
         player_body.global_position.x,
-        camera.global_position.y + (viewport_size.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
+        camera.global_position.y + (viewport_size.y / camera.zoom.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
     )
     playground._physics_process(0.0)
 
@@ -1113,7 +1112,7 @@ func test_run_scene_second_eligible_fall_after_rewarded_continue_does_not_offer_
 
     player_body.global_position = Vector2(
         player_body.global_position.x,
-        camera.global_position.y + (viewport_size.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 48.0
+        camera.global_position.y + (viewport_size.y / camera.zoom.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 48.0
     )
     playground._physics_process(0.0)
 
@@ -1434,7 +1433,7 @@ func test_run_scene_camera_follows_player_horizontally() -> void:
     assert_gt(camera.global_position.x, starting_camera_x)
     assert_eq(
         camera.global_position.x,
-        player_body.global_position.x - playground.climb_tuning.camera_horizontal_dead_zone_pixels
+        starting_camera_x + playground.climb_tuning.camera_horizontal_travel_limit_pixels
     )
 
 func test_run_scene_camera_holds_horizontal_position_within_dead_zone() -> void:
@@ -1457,6 +1456,24 @@ func test_run_scene_camera_holds_horizontal_position_within_dead_zone() -> void:
     playground._physics_process(0.0)
 
     assert_eq(camera.global_position.x, starting_camera_x)
+
+func test_run_scene_mobile_framing_keeps_fixed_world_width_and_covers_background() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    var camera: Camera2D = playground.get_node("DevCamera") as Camera2D
+    var background: Sprite2D = playground.get_node("DevCamera/background") as Sprite2D
+    var visible_world_size: Vector2 = playground.get_viewport_rect().size / camera.zoom
+    var rendered_background_size: Vector2 = background.texture.get_size() * background.scale
+
+    assert_almost_eq(visible_world_size.x, playground.climb_tuning.camera_target_visible_width_pixels, 0.01)
+    assert_gte(rendered_background_size.x, visible_world_size.x)
+    assert_gte(rendered_background_size.y, visible_world_size.y)
 
 func _wire_generated_hazard_for_test(
     playground: RunSceneScript,
@@ -1511,7 +1528,7 @@ func test_run_scene_bottom_screen_fall_routes_through_run_session() -> void:
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
         player_body.global_position.x,
-        camera.global_position.y + (viewport_size.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
+        camera.global_position.y + (viewport_size.y / camera.zoom.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
     )
     playground._physics_process(0.0)
 
@@ -1525,8 +1542,10 @@ func test_run_scene_hud_displays_initial_run_snapshot() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
+    var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
 
     assert_not_null(playground)
+    playground.set_local_storage_adapter(local_storage)
     add_child_autofree(playground)
     await get_tree().process_frame
 
@@ -1553,8 +1572,10 @@ func test_run_scene_bottom_screen_fall_shows_run_end_screen() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
+    var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
 
     assert_not_null(playground)
+    playground.set_local_storage_adapter(local_storage)
     add_child_autofree(playground)
     await get_tree().process_frame
 
@@ -1567,7 +1588,7 @@ func test_run_scene_bottom_screen_fall_shows_run_end_screen() -> void:
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
         player_body.global_position.x,
-        camera.global_position.y + (viewport_size.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
+        camera.global_position.y + (viewport_size.y / camera.zoom.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
     )
     playground._physics_process(0.0)
 
@@ -1707,7 +1728,7 @@ func test_run_scene_camera_follows_player_downward_after_fall_resolution() -> vo
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
         player_body.global_position.x,
-        camera.global_position.y + (viewport_size.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
+        camera.global_position.y + (viewport_size.y / camera.zoom.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
     )
     playground._physics_process(0.0)
 
@@ -1740,7 +1761,7 @@ func test_run_scene_run_end_restart_button_resets_run() -> void:
     var viewport_size: Vector2 = playground.get_viewport_rect().size
     player_body.global_position = Vector2(
         player_body.global_position.x,
-        camera.global_position.y + (viewport_size.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
+        camera.global_position.y + (viewport_size.y / camera.zoom.y * 0.5) + _test_adapter(playground).get_bottom_fall_margin_for_test() + 24.0
     )
     playground._physics_process(0.0)
 

@@ -76,10 +76,10 @@ func _ensure_presentation() -> void:
 
 	visual.color = Color(0.96, 0.85, 0.24, 0.95)
 	visual.polygon = PackedVector2Array([
-		Vector2(0.0, -12.0),
-		Vector2(10.0, 0.0),
-		Vector2(0.0, 12.0),
-		Vector2(-10.0, 0.0),
+		Vector2(0.0, -16.0),
+		Vector2(14.0, 0.0),
+		Vector2(0.0, 16.0),
+		Vector2(-14.0, 0.0),
 	])
 
 	var animated_sprite: AnimatedSprite2D = get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
@@ -88,6 +88,7 @@ func _ensure_presentation() -> void:
 		animated_sprite.name = &"AnimatedSprite2D"
 		animated_sprite.sprite_frames = SpriteFrameSequenceLoaderScript.build_looping_animation(ANIMATION_FRAME_PATH_FORMAT, ANIMATION_FRAME_COUNT, ANIMATION_NAME, ANIMATION_FRAMES_PER_SECOND)
 		animated_sprite.animation = ANIMATION_NAME
+		animated_sprite.scale = Vector2(1.5, 1.5)
 		add_child(animated_sprite)
 		animated_sprite.play()
 

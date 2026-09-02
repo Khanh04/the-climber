@@ -3,5 +3,5 @@
 [node name="RocketPresentation" type="Node2D"]
 
 [node name="Visual" type="Polygon2D" parent="."]
-polygon = PackedVector2Array(-7, -14, 7, -14, 7, 14, -7, 14)
+polygon = PackedVector2Array(-38, -16, 38, -16, 38, 16, -38, 16)
 color = Color(0.99, 0.48, 0.14, 1)
