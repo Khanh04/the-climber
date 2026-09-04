@@ -115,7 +115,9 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_eq(handhold.definition_id, &"REST")
     assert_not_null(collision_shape)
     assert_not_null(rectangle_shape)
-    assert_true(rectangle_shape.size.is_equal_approx(Vector2(96.0, 34.0)))
+    # Collider mirrors the REST presentation art's drawn size (32x32 animation frames), not the
+    # physical_size_meters route footprint.
+    assert_true(rectangle_shape.size.is_equal_approx(Vector2(32.0, 32.0)))
     var handhold_type_meta: Variant = handhold.get_meta(&"handhold_type")
     var handhold_route_role_meta: Variant = handhold.get_meta(&"route_role")
     assert_true(handhold_type_meta is String)

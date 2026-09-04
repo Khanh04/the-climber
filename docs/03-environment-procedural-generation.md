@@ -162,7 +162,11 @@ for mobile object budgets.
   hold.
 - Generated hold geometry uses mobile-readable world dimensions. Normal,
   Rest, and Burn holds share the 0.96 m by 0.34 m tutorial baseline;
-  special holds may be narrower but remain at least 0.64 m wide.
+  special holds may be narrower but remain at least 0.64 m wide. This
+  `physical_size_meters` value is the route-planning footprint (lane spacing,
+  reachability). The passive collision box the player actually contacts is
+  taken from the presentation art's drawn bounds instead, falling back to this
+  footprint only when a hold has no measurable sprite yet.
 - Deterministic generation must assign handhold types after handhold
   geometry is placed so the same seed reproduces both route pattern
   and hold behavior.
@@ -430,11 +434,20 @@ aliases over a smaller ruleset.
   contain 2D or 3D collision objects, collision shapes, collision polygons, or
   joints. This rule is validated for both packed scenes and live subtrees.
 - Align authored art around the scene origin. Use the presentation
-  definition's offset, scale, and rotation for visual alignment rather than
-  moving the adapter or changing collision from sprite bounds.
+  definition's offset, scale, and rotation for visual alignment.
+- A generated handhold's passive collider is derived from its presentation
+  art's drawn bounds (sprite texture, animation frame, or polygon extents,
+  times the presentation definition's `visual_scale`), so the player collides
+  with exactly what is on screen. It falls back to the `physical_size_meters`
+  footprint only when no sprite is measurable. Handhold art dimensions are
+  therefore gameplay-relevant. Hazard colliders are unaffected and stay
+  adapter-authored.
 - Replacing art must not consume generator randomness or change
-  `physical_size_meters`, hazard collision dimensions, impulses, or movement
-  rules. See [ADR 0007](adr/0007-generated-presentation-catalogs.md).
+  `physical_size_meters` (the handhold route-planning footprint), hazard
+  collision dimensions, impulses, or movement rules. See
+  [ADR 0007](adr/0007-generated-presentation-catalogs.md); the handhold
+  collider-from-art rule above supersedes that ADR's "collision never from
+  sprite bounds" point for handholds.
 
 ### Mobile Object Budgets
 

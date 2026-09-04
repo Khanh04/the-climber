@@ -25,12 +25,14 @@ func test_easy_opener_population_adds_beginner_support_without_flat_bars() -> vo
 
     assert_eq(_call_int(population, &"count_safe_path_holds"), plan.get_row_count())
     assert_eq(_call_int(population, &"count_optional_path_holds"), 0)
-    assert_eq(_call_int(population, &"count_support_holds"), plan.get_row_count() + 2 + decision_and_catch_rows)
+    # Row 0's support fill only adds INNER_RIGHT now (the path hold already covers INNER_LEFT),
+    # one fewer support hold than the old CENTER-entry contract.
+    assert_eq(_call_int(population, &"count_support_holds"), plan.get_row_count() + 1 + decision_and_catch_rows)
 
     for row_index in range(plan.get_row_count()):
         assert_gte(_call_int_with_argument(population, &"count_holds_in_row", row_index), 2)
 
-    assert_gte(_call_int_with_argument(population, &"count_holds_in_row", 0), 3)
+    assert_eq(_call_int_with_argument(population, &"count_holds_in_row", 0), 2)
     assert_gte(_call_int_with_argument(population, &"count_holds_in_row", plan.get_row_count() - 1), 3)
     for row_index in range(plan.get_row_count()):
         var row_role: int = plan.row_roles[row_index]

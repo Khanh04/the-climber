@@ -160,10 +160,6 @@ func _ensure_runtime_nodes() -> void:
 		collision_shape.name = &"CollisionShape2D"
 		add_child(collision_shape)
 
-	var rectangle_shape: RectangleShape2D = RectangleShape2D.new()
-	rectangle_shape.size = body_size_pixels
-	collision_shape.shape = rectangle_shape
-
 	var presentation_root: Node2D = get_node_or_null("PresentationRoot") as Node2D
 	if presentation_root == null:
 		presentation_root = Node2D.new()
@@ -176,6 +172,64 @@ func _ensure_runtime_nodes() -> void:
 		presentation.name = &"Asset"
 		presentation_root.add_child(presentation)
 	presentation_root.visible = not _is_broken
+
+	# The passive collider mirrors the presentation art's drawn size so the player collides with
+	# exactly what is on screen. body_size_pixels (the route-planning footprint from
+	# physical_size_meters) is the fallback when there is no measurable sprite yet -- an animated
+	# presentation seen before its SpriteFrames are built, or a placeholder Polygon2D scene.
+	var rectangle_shape: RectangleShape2D = RectangleShape2D.new()
+	rectangle_shape.size = _resolve_collider_size_pixels(presentation_root.get_node_or_null("Asset") as Node2D)
+	collision_shape.shape = rectangle_shape
+
+
+func _resolve_collider_size_pixels(asset: Node2D) -> Vector2:
+	if asset == null:
+		return body_size_pixels
+	var measured: Vector2 = _measure_presentation_size_pixels(asset)
+	if measured.x > 0.0 and measured.y > 0.0:
+		return measured
+	return body_size_pixels
+
+
+func _measure_presentation_size_pixels(node: Node) -> Vector2:
+	var intrinsic: Vector2 = _visual_intrinsic_size_pixels(node)
+	if intrinsic.x > 0.0 and intrinsic.y > 0.0:
+		var presentation_scale: Vector2 = Vector2.ONE
+		if _presentation_definition != null:
+			presentation_scale = _presentation_definition.visual_scale
+		return (intrinsic * presentation_scale).abs()
+	for child in node.get_children():
+		var child_size: Vector2 = _measure_presentation_size_pixels(child)
+		if child_size.x > 0.0 and child_size.y > 0.0:
+			return child_size
+	return Vector2.ZERO
+
+
+func _visual_intrinsic_size_pixels(node: Node) -> Vector2:
+	if node is Sprite2D:
+		var sprite: Sprite2D = node
+		if sprite.texture == null:
+			return Vector2.ZERO
+		var sprite_size: Vector2 = sprite.region_rect.size if sprite.region_enabled else sprite.texture.get_size()
+		return (sprite_size * sprite.scale).abs()
+	if node is AnimatedSprite2D:
+		var animated: AnimatedSprite2D = node
+		var frames: SpriteFrames = animated.sprite_frames
+		if frames == null or not frames.has_animation(animated.animation) or frames.get_frame_count(animated.animation) == 0:
+			return Vector2.ZERO
+		var frame_texture: Texture2D = frames.get_frame_texture(animated.animation, 0)
+		if frame_texture == null:
+			return Vector2.ZERO
+		return (frame_texture.get_size() * animated.scale).abs()
+	if node is Polygon2D:
+		var points: PackedVector2Array = (node as Polygon2D).polygon
+		if points.size() < 3:
+			return Vector2.ZERO
+		var bounds: Rect2 = Rect2(points[0], Vector2.ZERO)
+		for point in points:
+			bounds = bounds.expand(point)
+		return (bounds.size * (node as Polygon2D).scale).abs()
+	return Vector2.ZERO
 
 func _break_handhold() -> void:
 	if _is_broken:

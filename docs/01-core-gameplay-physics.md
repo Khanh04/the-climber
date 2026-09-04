@@ -41,6 +41,7 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 
 - The ragdoll is 3 real `RigidBody2D` bodies (Head, LeftArm, RightArm) — the character has no torso. Head is the gameplay anchor body: it is always dynamic, stays on collision layer 1, and is what forces, grip joints, and chaser/hazard/pickup/fall detection act on. The two arms hang off Head via 2 scene-authored `PinJoint2D`s and flip between `freeze = true` (kinematic, code-posed while climbing) and `freeze = false` (real ragdoll physics while falling) via `RigidBody2D.freeze_mode = FREEZE_MODE_KINEMATIC`.
 - Each of the 3 bodies owns its own collision shape.
+- The Head and both arms physically collide with handhold bodies (physics layer 2) in both climbing and falling modes, so the player can rest against and bump holds the same way it does floor and platform geometry. The currently-grabbed hold is exempted by `disable_collision` on the runtime grip `PinJoint2D`, so gripping is never pushed off its hold.
 - Cosmetics must be visual-only sprite swaps.
 - Cosmetics must not affect collision boundaries, friction, mass, or any other gameplay-relevant value.
 

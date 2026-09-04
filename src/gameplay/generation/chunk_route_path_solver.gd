@@ -10,6 +10,12 @@ const RouteLaneScript = preload("res://src/gameplay/generation/route_lane.gd")
 const RouteMovementStyleScript = preload("res://src/gameplay/generation/route_movement_style.gd")
 const RoutePlannedPathScript = preload("res://src/gameplay/generation/route_planned_path.gd")
 
+## Lane every chunk enters through (row 0 of both the safe and optional path), instead of
+## CENTER. Shared by _select_safe_lane() and _build_optional_path() so the two paths still
+## collapse onto the same row-0 hold, keeping exactly two holds there for the player to swing
+## between.
+const CHUNK_ENTRY_LANE: int = RouteLaneScript.Value.INNER_LEFT
+
 func solve(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> ChunkRoutePathSolutionScript:
 	Validation.require_condition(plan != null, "ChunkRoutePathSolver requires a route plan.")
 	Validation.require_condition(anchor_graph != null, "ChunkRoutePathSolver requires an anchor graph.")
@@ -71,7 +77,16 @@ func _build_safe_path(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraph
 func _select_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
 	Validation.require_condition(row_index >= 0, "ChunkRoutePathSolver safe lane row cannot be negative.")
 	Validation.require_condition(row_index < plan.get_row_count(), "ChunkRoutePathSolver safe lane row must exist in the plan.")
-	if row_index == 0 or row_index == plan.get_row_count() - 1:
+	if row_index == 0:
+		# Route every chunk's entry row through INNER_LEFT instead of CENTER. The row-0
+		# support-lane fill in ChunkRoutePopulationBuilder always adds whichever inner lane the
+		# safe path is not already on, so this keeps exactly two holds (not three) at the start
+		# of every chunk -- room for the player to swing between them. The exit row stays on
+		# CENTER: its world position is fan-invariant (_get_lane_position_meters returns a flat
+		# 0.0 for CENTER, unlike the fanned INNER_LEFT/INNER_RIGHT), which is what keeps a
+		# chunk's exit seam-aligned with the next chunk's INNER_LEFT entry.
+		return CHUNK_ENTRY_LANE
+	if row_index == plan.get_row_count() - 1:
 		return RouteLaneScript.Value.CENTER
 
 	if plan.optional_route_required:
@@ -160,7 +175,11 @@ func _build_optional_path(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorG
 
 	for row_index in range(plan.get_row_count()):
 		var lane: int = RouteLaneScript.Value.CENTER
-		if row_index > plan.split_row_index and row_index < plan.merge_row_index:
+		if row_index == 0:
+			# Mirror the safe path's entry lane (_select_safe_lane) so the two paths still
+			# collapse onto the same row-0 hold instead of adding a second one.
+			lane = CHUNK_ENTRY_LANE
+		elif row_index > plan.split_row_index and row_index < plan.merge_row_index:
 			var branch_row_index: int = row_index - plan.split_row_index - 1
 			lane = _select_branch_lane(plan.route_branch_side, branch_row_index, branch_span)
 

@@ -61,6 +61,7 @@ node_b = NodePath("../../../RightArm")
 [node name="LeftArm" type="RigidBody2D" parent="." unique_id=1568666982]
 position = Vector2(-18, -34)
 collision_layer = 32
+collision_mask = 3
 mass = 0.4
 freeze = true
 freeze_mode = 1
@@ -81,6 +82,7 @@ position = Vector2(0, 46)
 [node name="RightArm" type="RigidBody2D" parent="." unique_id=1865133889]
 position = Vector2(18, -34)
 collision_layer = 32
+collision_mask = 3
 mass = 0.4
 freeze = true
 freeze_mode = 1

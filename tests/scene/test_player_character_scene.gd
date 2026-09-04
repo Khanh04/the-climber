@@ -67,7 +67,9 @@ func test_player_character_arm_collision_layer_excludes_self_and_body() -> void:
 
     for limb_body in _limb_bodies(player):
         assert_eq(limb_body.collision_layer, PlayerCharacterScript.LIMB_COLLISION_LAYER)
-        assert_eq(limb_body.collision_mask, 1)
+        # World geometry (1) + handhold bodies (2). Layer 32 stays unmasked, so arms still
+        # never collide with each other or with Head.
+        assert_eq(limb_body.collision_mask, 3)
 
     assert_true((player.get_node("Head/LeftShoulderSocket/TorsoLeftArmJoint") as PinJoint2D).disable_collision)
     assert_true((player.get_node("Head/RightShoulderSocket/TorsoRightArmJoint") as PinJoint2D).disable_collision)
@@ -383,7 +385,7 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
     var player_body: RigidBody2D = player.get_player_body()
     var starting_rotation: float = player_body.global_rotation
 
-    assert_eq(player_body.collision_mask, 1)
+    assert_eq(player_body.collision_mask, 3)
 
     player.apply_frame_motion(frame_result, attachment_state)
     await get_tree().process_frame
@@ -399,7 +401,7 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
     player.reset_physics(Vector2(25.0, 50.0))
 
     assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
-    assert_eq(player_body.collision_mask, 1)
+    assert_eq(player_body.collision_mask, 3)
     assert_eq(player.get_body_global_position(), Vector2(25.0, 50.0))
     assert_eq(player_body.global_rotation, starting_rotation)
     assert_eq(player.get_body_linear_velocity(), Vector2.ZERO)

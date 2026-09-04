@@ -156,18 +156,20 @@ const DefaultRouteProfileTuningResource = preload("res://resources/config/route_
 	PackedInt32Array([0]),
 	PackedInt32Array([2]),
 ]
-## Handhold rows for LADDER opener chunks; rows keep the first pair close before climbing upward.
+## Handhold rows for LADDER opener chunks. Paired rows use INNER_LEFT + INNER_RIGHT (not the
+## adjacent INNER_LEFT + CENTER) so the now-solid holds leave a clear centre corridor the
+## player body can swing up through.
 @export var opener_ladder_hold_rows: Array[PackedInt32Array] = [
-	PackedInt32Array([1, 2]),
+	PackedInt32Array([1, 3]),
 	PackedInt32Array([1]),
 	PackedInt32Array([2]),
 	PackedInt32Array([0]),
 	PackedInt32Array([3]),
-	PackedInt32Array([1, 2]),
+	PackedInt32Array([1, 3]),
 ]
 ## Handhold rows for ZIGZAG opener chunks; rows keep the start readable while widening later choices.
 @export var opener_zigzag_hold_rows: Array[PackedInt32Array] = [
-	PackedInt32Array([1, 2]),
+	PackedInt32Array([1, 3]),
 	PackedInt32Array([0]),
 	PackedInt32Array([3]),
 	PackedInt32Array([1]),

@@ -10,7 +10,11 @@ const PlayerMotionControllerScript = preload("res://src/gameplay/player/player_m
 const PlayerPhysicsModeScript = preload("res://src/gameplay/player/player_physics_mode.gd")
 const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/player_physics_mode_transitions.gd")
 
-const CONTROLLED_COLLISION_MASK: int = 1
+# Head collides with world geometry (layer 1) + handhold bodies (layer 2) in both modes. The
+# currently-grabbed hold is exempted by disable_collision on the runtime grip PinJoint2D, so
+# grabbing is unaffected. These two are equal today; keep them separate so climb-only collision
+# can be dialled back without touching the falling path.
+const CONTROLLED_COLLISION_MASK: int = 3
 const FALLING_COLLISION_MASK: int = 3
 # ponytail: measured from the CHR2 arm sprites' pixel content (opaque-pixel centroid of the
 # shoulder half vs. the hand half of each cropped frame) rather than an exact art-authored
@@ -20,11 +24,11 @@ const LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = 2.4674
 const RIGHT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = PI - LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS
 const MIN_ARM_TARGET_DISTANCE_PIXELS: float = 4.0
 
-# LeftArm/RightArm live on this layer and mask out everything except world geometry, so the
-# arms never collide with each other or with Head. Head is the gameplay body and stays on
-# layer 1 (ChaserKillZone/hazard/pickup detection keys off it); the arm<->Head exclusion is
-# handled entirely by disable_collision=true on the 2 scene-authored PinJoint2D joints in
-# player_character.tscn. Do not "simplify" this into a layer-only scheme.
+# LeftArm/RightArm live on this layer and mask only world geometry (layer 1) + handhold bodies
+# (layer 2), so the arms never collide with each other or with Head. Head is the gameplay body
+# and stays on layer 1 (ChaserKillZone/hazard/pickup detection keys off it); the arm<->Head
+# exclusion is handled entirely by disable_collision=true on the 2 scene-authored PinJoint2D
+# joints in player_character.tscn. Do not "simplify" this into a layer-only scheme.
 const LIMB_COLLISION_LAYER: int = 32
 
 # ponytail: per-limb mass values (scene-authored in player_character.tscn) are placeholder

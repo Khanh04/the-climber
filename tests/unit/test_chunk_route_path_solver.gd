@@ -71,7 +71,9 @@ func test_solver_accepts_non_branch_opener_with_gentle_safe_path_spread() -> voi
     assert_eq(solution.optional_path, null)
     assert_eq(solution.safe_path.get_row_count(), plan.get_row_count())
     assert_gt(solution.safe_path.total_lateral_lane_steps, 0)
-    assert_eq(solution.safe_path.get_lane_at_row(0), RouteLaneScript.Value.CENTER)
+    # Entry row uses INNER_LEFT (not CENTER) so the row-0 support fill leaves exactly two
+    # starting holds instead of three; the exit row stays on CENTER for chunk-seam continuity.
+    assert_eq(solution.safe_path.get_lane_at_row(0), RouteLaneScript.Value.INNER_LEFT)
     assert_eq(solution.safe_path.get_lane_at_row(plan.get_row_count() - 1), RouteLaneScript.Value.CENTER)
     assert_true(_path_has_lane(solution.safe_path, RouteLaneScript.Value.INNER_LEFT))
     assert_true(_path_has_lane(solution.safe_path, RouteLaneScript.Value.INNER_RIGHT))

@@ -8,7 +8,10 @@ const RouteLaneScript = preload("res://src/gameplay/generation/route_lane.gd")
 
 const DEFAULT_INNER_LANE_POSITION_RATIO: float = 0.28
 const DEFAULT_OUTER_LANE_POSITION_RATIO: float = 0.82
-const STARTING_INNER_LANE_OFFSET_METERS: float = 0.42
+# Row-0 anchor for the inner lanes, before the fan-out toward inner_lane_position_ratio. Wide
+# enough that an INNER_LEFT + INNER_RIGHT starting pair leaves a clear centre corridor for the
+# now-solid player body to climb through, while both holds stay inside the start reach.
+const STARTING_INNER_LANE_OFFSET_METERS: float = 0.82
 const STARTING_OUTER_LANE_OFFSET_METERS: float = 1.23
 const LANE_FAN_OUT_ROW_COUNT: int = 3
 

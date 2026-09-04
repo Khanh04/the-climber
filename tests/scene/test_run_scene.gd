@@ -287,7 +287,7 @@ func test_run_scene_generated_opener_holds_are_in_initial_grip_range() -> void:
     assert_lte(left_anchor.global_position.distance_to(left_hold.global_position), playground.climb_tuning.handhold_detection_radius_pixels)
     assert_lte(right_anchor.global_position.distance_to(right_hold.global_position), playground.climb_tuning.handhold_detection_radius_pixels)
 
-func test_run_scene_climb_holds_collide_with_player_body_only_while_falling() -> void:
+func test_run_scene_climb_holds_collide_with_player_body_in_both_modes() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
@@ -306,8 +306,8 @@ func test_run_scene_climb_holds_collide_with_player_body_only_while_falling() ->
     assert_not_null(left_hold)
     assert_not_null(right_hold)
     assert_not_null(safe_platform)
-    assert_false((player_body.collision_mask & left_hold.collision_layer) != 0)
-    assert_false((player_body.collision_mask & right_hold.collision_layer) != 0)
+    assert_true((player_body.collision_mask & left_hold.collision_layer) != 0)
+    assert_true((player_body.collision_mask & right_hold.collision_layer) != 0)
     assert_true((player_body.collision_mask & safe_platform.collision_layer) != 0)
 
     _test_adapter(playground).get_player_for_test().enter_falling(PlayerPhysicsModeTransitionsScript.Reason.FALL_DETECTED)
