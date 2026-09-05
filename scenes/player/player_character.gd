@@ -14,7 +14,7 @@ const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/pl
 # currently-grabbed hold is exempted by disable_collision on the runtime grip PinJoint2D, so
 # grabbing is unaffected. These two are equal today; keep them separate so climb-only collision
 # can be dialled back without touching the falling path.
-const CONTROLLED_COLLISION_MASK: int = 3
+const CONTROLLED_COLLISION_MASK: int = 1
 const FALLING_COLLISION_MASK: int = 3
 # ponytail: measured from the CHR2 arm sprites' pixel content (opaque-pixel centroid of the
 # shoulder half vs. the hand half of each cropped frame) rather than an exact art-authored
