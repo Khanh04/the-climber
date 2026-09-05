@@ -115,6 +115,8 @@ const TUTORIAL_UPPER_HOLD_IDS: Array[StringName] = [
 	&"TutorialHoldUpperRight",
 	&"TutorialHoldTopCenter",
 ]
+const RUN_SCENE_PATH: String = "res://scenes/main/run_scene.tscn"
+const MAIN_MENU_SCENE_PATH: String = "res://scenes/main/main_menu_scene.tscn"
 
 @export var climb_tuning: ClimbPrototypeTuningScript
 @export var stamina_tuning: StaminaTuningScript
@@ -199,6 +201,7 @@ var _left_aim_preview: Line2D = null
 var _right_aim_preview: Line2D = null
 var _aim_target_marker: Polygon2D = null
 var _restart_requested: bool = false
+var _scene_change_callable: Callable = Callable()
 const AppSettingsAndSaveStorageRuntimeScript = preload("res://src/platform/storage/app_settings_and_save_storage_runtime.gd")
 var _storage_runtime: AppSettingsAndSaveStorageRuntime = AppSettingsAndSaveStorageRuntimeScript.new()
 var _overlay_runtime: RunOverlayRuntimeScript = RunOverlayRuntimeScript.new()
@@ -241,6 +244,8 @@ func _ready() -> void:
 		_cosmetic_loadout_service
 	)
 	var _connect_result: int = _run_end_screen.connect(&"restart_requested", _on_run_end_restart_requested)
+	var _run_end_new_seed_connect_result: int = _run_end_screen.connect(&"new_seed_run_requested", _on_new_seed_run_requested)
+	var _run_end_main_menu_connect_result: int = _run_end_screen.connect(&"main_menu_requested", _on_main_menu_requested)
 	var _rewarded_continue_connect_result: int = _run_end_screen.connect(&"rewarded_continue_requested", _on_rewarded_continue_requested)
 	var _post_run_coin_doubler_connect_result: int = _run_end_screen.connect(&"post_run_coin_doubler_requested", _on_post_run_coin_doubler_requested)
 	var _store_connect_result: int = _run_end_screen.connect(&"store_requested", _on_store_requested)
@@ -553,7 +558,9 @@ func _build_test_adapter() -> RunSceneTestAdapterScript:
 		Callable(self, "_consume_app_lifecycle_events"),
 		Callable(self, "_reset_playground"),
 		Callable(self, "_resolve_chaser_contact_for_test_adapter"),
-		Callable(self, "_sync_aim_preview")
+		Callable(self, "_sync_aim_preview"),
+		Callable(self, "_on_new_seed_run_requested"),
+		Callable(self, "_on_main_menu_requested")
 	)
 
 func _get_run_session_for_test_adapter() -> RunSessionScript:
@@ -1079,6 +1086,8 @@ func _ensure_pause_menu() -> void:
 	_ui_layer.add_child(_pause_menu)
 	var _resume_connect_result: int = _pause_menu.connect(&"resume_requested", _on_pause_resume_requested)
 	var _restart_connect_result: int = _pause_menu.connect(&"restart_requested", _on_pause_restart_requested)
+	var _new_seed_run_connect_result: int = _pause_menu.connect(&"new_seed_run_requested", _on_new_seed_run_requested)
+	var _main_menu_connect_result: int = _pause_menu.connect(&"main_menu_requested", _on_main_menu_requested)
 	var _settings_connect_result: int = _pause_menu.connect(&"settings_requested", _on_pause_settings_requested)
 
 func _refresh_pause_menu_ui() -> void:
@@ -1180,6 +1189,26 @@ func _refresh_store_ui() -> void:
 
 func _on_run_end_restart_requested() -> void:
 	_request_restart()
+
+func _on_new_seed_run_requested() -> void:
+	_change_scene(RUN_SCENE_PATH)
+
+func _on_main_menu_requested() -> void:
+	_change_scene(MAIN_MENU_SCENE_PATH)
+
+func set_scene_change_callable_for_test(scene_change_callable: Callable) -> void:
+	Validation.require_condition(scene_change_callable.is_valid(), "RunScene test scene-change callable must be valid.")
+	_scene_change_callable = scene_change_callable
+
+func _change_scene(scene_path: String) -> void:
+	if get_tree().paused:
+		get_tree().paused = false
+	if _scene_change_callable.is_valid():
+		_scene_change_callable.call(scene_path)
+		return
+
+	var change_result: Error = get_tree().change_scene_to_file(scene_path)
+	Validation.require_condition(change_result == OK, "RunScene could not load scene: " + scene_path)
 
 func _on_pause_requested() -> void:
 	_show_pause_menu()

@@ -121,6 +121,30 @@ class StubAppLifecycleAdapter extends AppLifecycleAdapterScript:
 func _test_adapter(run_scene: RunSceneScript) -> RunSceneTestAdapterScript:
     return run_scene.get_test_adapter_for_test()
 
+var _recorded_scene_path: String = ""
+
+func _record_scene_change(scene_path: String) -> void:
+    _recorded_scene_path = scene_path
+
+func test_run_scene_menu_actions_route_to_new_seed_run_and_main_menu() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground_node: Node = scene.instantiate()
+    var playground: RunSceneScript = playground_node as RunSceneScript
+
+    assert_not_null(playground)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    playground.set_scene_change_callable_for_test(Callable(self, "_record_scene_change"))
+
+    _recorded_scene_path = ""
+    _test_adapter(playground).request_new_seed_run_for_test()
+    assert_eq(_recorded_scene_path, "res://scenes/main/run_scene.tscn")
+
+    _recorded_scene_path = ""
+    _test_adapter(playground).request_main_menu_for_test()
+    assert_eq(_recorded_scene_path, "res://scenes/main/main_menu_scene.tscn")
+
 func test_run_scene_wires_required_nodes_and_starts_run() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()

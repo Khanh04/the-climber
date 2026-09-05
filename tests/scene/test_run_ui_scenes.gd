@@ -15,6 +15,8 @@ const InMemoryLocalStorageAdapterScript = preload("res://src/platform/storage/in
 const PauseMenuStateScript = preload("res://src/ui/pause_menu_state.gd")
 
 var _restart_requested: bool = false
+var _new_seed_run_requested: bool = false
+var _main_menu_requested: bool = false
 var _start_requested: bool = false
 var _tutorial_requested: bool = false
 var _rewarded_continue_requested: bool = false
@@ -349,10 +351,14 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	await get_tree().process_frame
 
 	_restart_requested = false
+	_new_seed_run_requested = false
+	_main_menu_requested = false
 	_rewarded_continue_requested = false
 	_post_run_coin_doubler_requested = false
 	_store_requested = false
 	var _connect_result: int = screen.connect(&"restart_requested", Callable(self, "_mark_restart_requested"))
+	var _new_seed_run_connect_result: int = screen.connect(&"new_seed_run_requested", Callable(self, "_mark_new_seed_run_requested"))
+	var _main_menu_connect_result: int = screen.connect(&"main_menu_requested", Callable(self, "_mark_main_menu_requested"))
 	var _rewarded_continue_connect_result: int = screen.connect(&"rewarded_continue_requested", Callable(self, "_mark_rewarded_continue_requested"))
 	var _post_run_coin_doubler_connect_result: int = screen.connect(&"post_run_coin_doubler_requested", Callable(self, "_mark_post_run_coin_doubler_requested"))
 	var _store_connect_result: int = screen.connect(&"store_requested", Callable(self, "_mark_store_requested"))
@@ -376,6 +382,8 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	var post_run_coin_doubler_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
 	var store_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/StoreButton") as Button
 	var restart_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
+	var new_seed_run_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/NewSeedRunButton") as Button
+	var main_menu_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/MainMenuButton") as Button
 
 	assert_true(screen.visible)
 	assert_not_null(title_label)
@@ -385,6 +393,8 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	assert_not_null(post_run_coin_doubler_button)
 	assert_not_null(store_button)
 	assert_not_null(restart_button)
+	assert_not_null(new_seed_run_button)
+	assert_not_null(main_menu_button)
 	assert_eq(title_label.text, "Rescue Offered")
 	assert_eq(reason_label.text, "Reason: Bottom-screen fall")
 	assert_string_contains(summary_label.text, "Height: 23.0 m")
@@ -394,8 +404,12 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 	assert_false(post_run_coin_doubler_button.visible)
 
 	var _emit_result: int = restart_button.emit_signal("pressed")
+	var _new_seed_run_emit_result: int = new_seed_run_button.emit_signal("pressed")
+	var _main_menu_emit_result: int = main_menu_button.emit_signal("pressed")
 
 	assert_true(_restart_requested)
+	assert_true(_new_seed_run_requested)
+	assert_true(_main_menu_requested)
 	assert_false(_rewarded_continue_requested)
 	assert_false(_post_run_coin_doubler_requested)
 	assert_false(_store_requested)
@@ -654,29 +668,41 @@ func test_pause_menu_displays_state_and_emits_actions() -> void:
 
 	_resume_requested = false
 	_restart_requested = false
+	_new_seed_run_requested = false
+	_main_menu_requested = false
 	_settings_requested = false
 	var _resume_connect_result: int = menu.connect(&"resume_requested", Callable(self, "_mark_resume_requested"))
 	var _restart_connect_result: int = menu.connect(&"restart_requested", Callable(self, "_mark_restart_requested"))
+	var _new_seed_run_connect_result: int = menu.connect(&"new_seed_run_requested", Callable(self, "_mark_new_seed_run_requested"))
+	var _main_menu_connect_result: int = menu.connect(&"main_menu_requested", Callable(self, "_mark_main_menu_requested"))
 	var _settings_connect_result: int = menu.connect(&"settings_requested", Callable(self, "_mark_settings_requested"))
 	menu.call("apply_state", PauseMenuStateScript.new(true, 18.5, 22, 5))
 
 	var summary_label: Label = menu.get_node("CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
 	var resume_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/ResumeButton") as Button
 	var restart_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
+	var new_seed_run_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/NewSeedRunButton") as Button
+	var main_menu_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/MainMenuButton") as Button
 	var settings_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
 
 	assert_true(menu.visible)
 	assert_eq(summary_label.text, "Height: 18.5 m\nWallet Coins: 22\nRun Coins: 5")
 	assert_not_null(resume_button)
 	assert_not_null(restart_button)
+	assert_not_null(new_seed_run_button)
+	assert_not_null(main_menu_button)
 	assert_not_null(settings_button)
 
 	var _resume_emit_result: int = resume_button.emit_signal("pressed")
 	var _restart_emit_result: int = restart_button.emit_signal("pressed")
+	var _new_seed_run_emit_result: int = new_seed_run_button.emit_signal("pressed")
+	var _main_menu_emit_result: int = main_menu_button.emit_signal("pressed")
 	var _settings_emit_result: int = settings_button.emit_signal("pressed")
 
 	assert_true(_resume_requested)
 	assert_true(_restart_requested)
+	assert_true(_new_seed_run_requested)
+	assert_true(_main_menu_requested)
 	assert_true(_settings_requested)
 
 func test_settings_menu_displays_state_and_emits_setting_intents() -> void:
@@ -738,6 +764,12 @@ func test_settings_menu_displays_state_and_emits_setting_intents() -> void:
 
 func _mark_restart_requested() -> void:
 	_restart_requested = true
+
+func _mark_new_seed_run_requested() -> void:
+	_new_seed_run_requested = true
+
+func _mark_main_menu_requested() -> void:
+	_main_menu_requested = true
 
 func _mark_start_requested() -> void:
 	_start_requested = true

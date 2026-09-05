@@ -2,6 +2,8 @@ class_name RunEndScreen
 extends Control
 
 signal restart_requested
+signal new_seed_run_requested
+signal main_menu_requested
 signal rewarded_continue_requested
 signal post_run_coin_doubler_requested
 signal store_requested
@@ -17,6 +19,8 @@ const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
 @onready var _post_run_coin_doubler_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
 @onready var _store_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/StoreButton") as Button
 @onready var _restart_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
+@onready var _new_seed_run_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/NewSeedRunButton") as Button
+@onready var _main_menu_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/MainMenuButton") as Button
 
 func _ready() -> void:
 	_validate_required_nodes()
@@ -24,6 +28,8 @@ func _ready() -> void:
 	var _post_run_coin_doubler_connect_result: int = _post_run_coin_doubler_button.connect(&"pressed", Callable(self, "_on_post_run_coin_doubler_button_pressed"))
 	var _store_connect_result: int = _store_button.connect(&"pressed", Callable(self, "_on_store_button_pressed"))
 	var _connect_result: int = _restart_button.connect(&"pressed", Callable(self, "_on_restart_button_pressed"))
+	var _new_seed_run_connect_result: int = _new_seed_run_button.connect(&"pressed", Callable(self, "_on_new_seed_run_button_pressed"))
+	var _main_menu_connect_result: int = _main_menu_button.connect(&"pressed", Callable(self, "_on_main_menu_button_pressed"))
 
 func apply_state(state: RefCounted) -> void:
 	Validation.require_condition(state != null, "RunEndScreen requires a state snapshot.")
@@ -92,6 +98,12 @@ func _format_end_reason(reason: int) -> String:
 func _on_restart_button_pressed() -> void:
 	restart_requested.emit()
 
+func _on_new_seed_run_button_pressed() -> void:
+	new_seed_run_requested.emit()
+
+func _on_main_menu_button_pressed() -> void:
+	main_menu_requested.emit()
+
 func _validate_required_nodes() -> void:
 	Validation.require_condition(_title_label != null, "RunEndScreen requires TitleLabel.")
 	Validation.require_condition(_reason_label != null, "RunEndScreen requires ReasonLabel.")
@@ -101,3 +113,5 @@ func _validate_required_nodes() -> void:
 	Validation.require_condition(_post_run_coin_doubler_button != null, "RunEndScreen requires PostRunCoinDoublerButton.")
 	Validation.require_condition(_store_button != null, "RunEndScreen requires StoreButton.")
 	Validation.require_condition(_restart_button != null, "RunEndScreen requires RestartButton.")
+	Validation.require_condition(_new_seed_run_button != null, "RunEndScreen requires NewSeedRunButton.")
+	Validation.require_condition(_main_menu_button != null, "RunEndScreen requires MainMenuButton.")

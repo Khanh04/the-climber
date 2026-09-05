@@ -40,6 +40,8 @@ var _consume_app_lifecycle_events_callable: Callable
 var _reset_playground_callable: Callable
 var _resolve_chaser_contact_callable: Callable
 var _sync_aim_preview_callable: Callable
+var _new_seed_run_callable: Callable
+var _main_menu_callable: Callable
 
 func _init(
 	player: PlayerCharacterScript,
@@ -64,7 +66,9 @@ func _init(
 	consume_app_lifecycle_events_callable: Callable,
 	reset_playground_callable: Callable,
 	resolve_chaser_contact_callable: Callable,
-	sync_aim_preview_callable: Callable
+	sync_aim_preview_callable: Callable,
+	new_seed_run_callable: Callable,
+	main_menu_callable: Callable
 ) -> void:
 	Validation.require_condition(player != null, "RunSceneTestAdapter requires a player.")
 	Validation.require_condition(controller != null, "RunSceneTestAdapter requires a climb controller.")
@@ -94,6 +98,8 @@ func _init(
 	Validation.require_condition(reset_playground_callable.is_valid(), "RunSceneTestAdapter requires a reset action.")
 	Validation.require_condition(resolve_chaser_contact_callable.is_valid(), "RunSceneTestAdapter requires a chaser-contact action.")
 	Validation.require_condition(sync_aim_preview_callable.is_valid(), "RunSceneTestAdapter requires an aim-preview sync action.")
+	Validation.require_condition(new_seed_run_callable.is_valid(), "RunSceneTestAdapter requires a new-seed-run action.")
+	Validation.require_condition(main_menu_callable.is_valid(), "RunSceneTestAdapter requires a main-menu action.")
 
 	_player = player
 	_controller = controller
@@ -118,9 +124,17 @@ func _init(
 	_reset_playground_callable = reset_playground_callable
 	_resolve_chaser_contact_callable = resolve_chaser_contact_callable
 	_sync_aim_preview_callable = sync_aim_preview_callable
+	_new_seed_run_callable = new_seed_run_callable
+	_main_menu_callable = main_menu_callable
 
 func reset_for_test() -> void:
 	_reset_playground_callable.call()
+
+func request_new_seed_run_for_test() -> void:
+	_new_seed_run_callable.call()
+
+func request_main_menu_for_test() -> void:
+	_main_menu_callable.call()
 
 func get_launch_mode_for_test() -> int:
 	return _launch_mode

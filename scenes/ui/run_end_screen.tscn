@@ -75,3 +75,11 @@ text = "Store"
 [node name="RestartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1239121422]
 layout_mode = 2
 text = "Restart Run"
+
+[node name="NewSeedRunButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 2
+text = "New Seed Run"
+
+[node name="MainMenuButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 2
+text = "Main Menu"
