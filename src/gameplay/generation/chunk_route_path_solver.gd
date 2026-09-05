@@ -7,18 +7,38 @@ const RouteAnchorCandidateScript = preload("res://src/gameplay/generation/route_
 const RouteAnchorGraphScript = preload("res://src/gameplay/generation/route_anchor_graph.gd")
 const RouteBranchSideScript = preload("res://src/gameplay/generation/route_branch_side.gd")
 const RouteLaneScript = preload("res://src/gameplay/generation/route_lane.gd")
-const RouteMovementStyleScript = preload("res://src/gameplay/generation/route_movement_style.gd")
 const RoutePlannedPathScript = preload("res://src/gameplay/generation/route_planned_path.gd")
+const RouteRowRoleScript = preload("res://src/gameplay/generation/route_row_role.gd")
 
 ## Lane every chunk enters through (row 0 of both the safe and optional path), instead of
-## CENTER. Shared by _select_safe_lane() and _build_optional_path() so the two paths still
+## CENTER. Shared by _build_safe_path() and _build_optional_path() so the two paths still
 ## collapse onto the same row-0 hold, keeping exactly two holds there for the player to swing
 ## between.
 const CHUNK_ENTRY_LANE: int = RouteLaneScript.Value.INNER_LEFT
 
-func solve(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> ChunkRoutePathSolutionScript:
+## Solves the safe path as a deterministic walk: each row's lane is chosen only from lanes
+## actually reachable (real anchor distance) from the previous row, with a minimum lateral
+## clearance so a lateral move always leaves room for the player's body to swing rather than
+## squeeze past the wall. Row purpose (CRUX/CATCH/DECISION/...) weights the choice among
+## whatever survives that filter -- so reachability is a generation-time guarantee, not a
+## pass/fail check applied after the fact.
+##
+## The optional (branch) path keeps its original deterministic alternating pattern: it has a
+## hard downstream requirement (at least one outer-lane row, or hazard/reward placement fails)
+## that pattern already guarantees by construction, and it stays on the branch side opposite
+## the safe path's own restricted lanes -- so the two paths can never collide.
+func solve(
+	plan: ChunkRoutePlanScript,
+	anchor_graph: RouteAnchorGraphScript,
+	selection_seed: String,
+	max_move_distance_meters: float,
+	player_body_width_meters: float
+) -> ChunkRoutePathSolutionScript:
 	Validation.require_condition(plan != null, "ChunkRoutePathSolver requires a route plan.")
 	Validation.require_condition(anchor_graph != null, "ChunkRoutePathSolver requires an anchor graph.")
+	Validation.require_condition(selection_seed != "", "ChunkRoutePathSolver requires a selection seed.")
+	Validation.require_condition(max_move_distance_meters > 0.0, "ChunkRoutePathSolver max move distance must be positive.")
+	Validation.require_condition(player_body_width_meters > 0.0, "ChunkRoutePathSolver player body width must be positive.")
 	plan.assert_valid()
 	anchor_graph.assert_valid()
 	Validation.require_condition(
@@ -26,7 +46,7 @@ func solve(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> 
 		"ChunkRoutePathSolver anchor graph row count must match the plan."
 	)
 
-	var safe_path: RoutePlannedPathScript = _build_safe_path(plan, anchor_graph)
+	var safe_path: RoutePlannedPathScript = _build_safe_path(plan, anchor_graph, selection_seed, max_move_distance_meters, player_body_width_meters)
 	if safe_path == null:
 		return ChunkRoutePathSolutionScript.new(false, "No safe path can be built from the anchor graph.", null, null, 0, 0)
 
@@ -68,106 +88,204 @@ func solve(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> 
 
 	return ChunkRoutePathSolutionScript.new(true, "", safe_path, optional_path, branch_separation_rows, optional_outer_lane_rows)
 
-func _build_safe_path(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> RoutePlannedPathScript:
+# ---------------------------------------------------------------------------
+# Safe path: reachability + clearance-filtered, row-purpose-weighted walk.
+# ---------------------------------------------------------------------------
+
+func _build_safe_path(
+	plan: ChunkRoutePlanScript,
+	anchor_graph: RouteAnchorGraphScript,
+	selection_seed: String,
+	max_move_distance_meters: float,
+	player_body_width_meters: float
+) -> RoutePlannedPathScript:
 	var lanes: Array[int] = []
 	for row_index in range(plan.get_row_count()):
-		lanes.append(_select_safe_lane(plan, row_index))
+		var lane: int
+		if _row_is_fixed(plan, row_index):
+			lane = _get_fixed_lane(row_index)
+		else:
+			var previous_position: Vector2 = anchor_graph.get_anchor_for_row_and_lane(row_index - 1, lanes[row_index - 1]).local_position
+			var allowed_lanes: Array[int] = RouteLaneScript.get_all_values()
+			var is_branch_interior: bool = plan.optional_route_required and row_index > plan.split_row_index and row_index < plan.merge_row_index
+			if is_branch_interior:
+				# Stay on the side opposite the optional path's branch side so the two lines
+				# can never land on the same lane -- disjoint lane pools, not a runtime check.
+				var opposite_side: int = _get_opposite_branch_side(plan.route_branch_side)
+				allowed_lanes = [_get_inner_lane_for_side(opposite_side), _get_outer_lane_for_side(opposite_side)]
+
+			if is_branch_interior and row_index == plan.split_row_index + 1:
+				# The one transition with no "stay on this lane" fallback: leaving the fixed
+				# CENTER pivot for the branch side. INNER is always the closer of the two (the
+				# same conservative choice the old fixed pattern always made here), so pick it
+				# directly rather than filtering -- reachability into a wider OUTER lane from a
+				# jittered CENTER anchor isn't reliably provable, and doesn't need to be.
+				lane = _get_inner_lane_for_side(_get_opposite_branch_side(plan.route_branch_side))
+			else:
+				var next_fixed_anchor: RouteAnchorCandidateScript = null
+				if _row_is_fixed(plan, row_index + 1):
+					next_fixed_anchor = anchor_graph.get_anchor_for_row_and_lane(row_index + 1, _get_fixed_lane(row_index + 1))
+				var candidates: Array[RouteAnchorCandidateScript] = _get_valid_candidates(
+					anchor_graph,
+					row_index,
+					previous_position,
+					lanes[row_index - 1],
+					next_fixed_anchor,
+					max_move_distance_meters,
+					player_body_width_meters,
+					allowed_lanes
+				)
+				var two_rows_back_lane: int = lanes[row_index - 2] if row_index >= 2 else -1
+				var weights: Array[float] = []
+				for candidate in candidates:
+					weights.append(_get_row_weight(candidate, previous_position, plan.row_roles[row_index], max_move_distance_meters, two_rows_back_lane))
+
+				var selection_context: String = "%s:safe:%d:%d" % [selection_seed, plan.chunk_index, row_index]
+				lane = _pick_weighted_anchor(candidates, weights, selection_context).lane
+		lanes.append(lane)
+
 	return _build_path_from_lanes(&"safe_path", lanes, anchor_graph)
 
-func _select_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	Validation.require_condition(row_index >= 0, "ChunkRoutePathSolver safe lane row cannot be negative.")
-	Validation.require_condition(row_index < plan.get_row_count(), "ChunkRoutePathSolver safe lane row must exist in the plan.")
+## Row 0 always enters through CHUNK_ENTRY_LANE and the last row always exits through CENTER
+## (CENTER's world x is fan-invariant, keeping the exit seam-aligned with the next chunk's
+## entry). When a branch is required, every row at or outside [split_row_index, merge_row_index]
+## also collapses onto CENTER -- the shared pivot the two paths split from and rejoin at.
+func _row_is_fixed(plan: ChunkRoutePlanScript, row_index: int) -> bool:
+	if row_index == 0 or row_index == plan.get_row_count() - 1:
+		return true
+	if plan.optional_route_required and (row_index <= plan.split_row_index or row_index >= plan.merge_row_index):
+		return true
+	return false
+
+func _get_fixed_lane(row_index: int) -> int:
 	if row_index == 0:
-		# Route every chunk's entry row through INNER_LEFT instead of CENTER. The row-0
-		# support-lane fill in ChunkRoutePopulationBuilder always adds whichever inner lane the
-		# safe path is not already on, so this keeps exactly two holds (not three) at the start
-		# of every chunk -- room for the player to swing between them. The exit row stays on
-		# CENTER: its world position is fan-invariant (_get_lane_position_meters returns a flat
-		# 0.0 for CENTER, unlike the fanned INNER_LEFT/INNER_RIGHT), which is what keeps a
-		# chunk's exit seam-aligned with the next chunk's INNER_LEFT entry.
 		return CHUNK_ENTRY_LANE
-	if row_index == plan.get_row_count() - 1:
-		return RouteLaneScript.Value.CENTER
-
-	if plan.optional_route_required:
-		return _select_branch_safe_lane(plan, row_index)
-
-	match plan.movement_style:
-		RouteMovementStyleScript.Value.LADDER:
-			return _select_ladder_safe_lane(plan, row_index)
-		RouteMovementStyleScript.Value.ZIGZAG:
-			return _select_zigzag_safe_lane(plan, row_index)
-		RouteMovementStyleScript.Value.RECOVERY:
-			return _select_recovery_safe_lane(plan, row_index)
-		_:
-			RouteMovementStyleScript.assert_valid(plan.movement_style)
-			return RouteLaneScript.Value.CENTER
-
-func _select_ladder_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	return _select_wide_safe_lane(plan, row_index)
-
-func _select_zigzag_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	return _select_wide_safe_lane(plan, row_index)
-
-func _select_recovery_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	var side: int = _get_recovery_arm_side(plan, row_index)
-	if row_index == plan.get_row_count() - 2:
-		return _get_inner_lane_for_side(side)
-
-	if (row_index % 4) == 1:
-		return _get_outer_lane_for_side(side)
-
-	if (row_index % 2) == 0:
-		return _get_inner_lane_for_side(side)
-
 	return RouteLaneScript.Value.CENTER
 
-func _select_wide_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	var sequence_index: int = (row_index - 1) % 8
-	var primary_side: int = _get_alternating_branch_side(plan, row_index)
-	var secondary_side: int = _get_opposite_branch_side(primary_side)
-	match sequence_index:
-		0:
-			return _get_inner_lane_for_side(primary_side)
-		1:
-			return _get_outer_lane_for_side(primary_side)
-		2:
-			return _get_inner_lane_for_side(primary_side)
-		3:
-			return RouteLaneScript.Value.CENTER
-		4:
-			return _get_inner_lane_for_side(secondary_side)
-		5:
-			return _get_outer_lane_for_side(secondary_side)
-		6:
-			return _get_inner_lane_for_side(secondary_side)
+## Filters the row's lanes down to those actually reachable from the previous row's chosen
+## anchor. Staying on previous_lane always passes -- it's a pure vertical move (jitter aside),
+## always inside the envelope -- so every row always has at least one candidate. Moving to a
+## different lane must clear player_body_width_meters laterally so a swing never squeezes past
+## the wall; lane identity (not a positional epsilon) decides "same lane", since horizontal
+## jitter alone can shift one lane's x by more than a naive distance threshold would allow.
+##
+## When the next row is fixed (the chunk's exit, or a branch split/merge pivot), candidates are
+## further narrowed to those that can also reach it -- an OUTER lane is otherwise a dead end
+## right before the walk is forced back onto CENTER. If that narrowing would leave nothing (a
+## real but rare jitter edge case), it's dropped rather than asserted on: the post-hoc route
+## validator already exists to catch a genuinely unreachable seam and have the caller reroll
+## with a new candidate salt, the same safety net the layout has always relied on for jitter.
+func _get_valid_candidates(
+	anchor_graph: RouteAnchorGraphScript,
+	row_index: int,
+	previous_position: Vector2,
+	previous_lane: int,
+	next_fixed_anchor: RouteAnchorCandidateScript,
+	max_move_distance_meters: float,
+	player_body_width_meters: float,
+	allowed_lanes: Array[int]
+) -> Array[RouteAnchorCandidateScript]:
+	var candidates: Array[RouteAnchorCandidateScript] = []
+	var candidates_reaching_next_fixed_anchor: Array[RouteAnchorCandidateScript] = []
+	for lane in allowed_lanes:
+		var anchor: RouteAnchorCandidateScript = anchor_graph.get_anchor_for_row_and_lane(row_index, lane)
+		if anchor == null:
+			continue
+
+		if anchor.local_position.distance_to(previous_position) > max_move_distance_meters:
+			continue
+
+		if lane != previous_lane:
+			var lateral_delta: float = absf(anchor.local_position.x - previous_position.x)
+			if lateral_delta < player_body_width_meters:
+				continue
+
+		candidates.append(anchor)
+		if next_fixed_anchor == null or anchor.local_position.distance_to(next_fixed_anchor.local_position) <= max_move_distance_meters:
+			candidates_reaching_next_fixed_anchor.append(anchor)
+
+	Validation.require_condition(
+		not candidates.is_empty(),
+		"ChunkRoutePathSolver could not find a reachable lane for row %d; check that row-step height and lane spread stay inside the move envelope." % row_index
+	)
+	if not candidates_reaching_next_fixed_anchor.is_empty():
+		return candidates_reaching_next_fixed_anchor
+	return candidates
+
+## Weights a candidate by how well its move distance suits the row's purpose: CRUX/PRESSURE
+## rows favor bigger, more committing moves; CATCH rows favor a short "rest" move; DECISION and
+## TRAVERSE rows favor lateral movement. A mild penalty discourages repeating the lane from two
+## rows back, so a run of SUPPORT/TOP_OUT rows doesn't settle into a straight ladder.
+func _get_row_weight(
+	anchor: RouteAnchorCandidateScript,
+	previous_position: Vector2,
+	row_role: int,
+	max_move_distance_meters: float,
+	two_rows_back_lane: int
+) -> float:
+	var distance: float = anchor.local_position.distance_to(previous_position)
+	var reach_fraction: float = clampf(distance / max_move_distance_meters, 0.0, 1.0)
+	var lateral_fraction: float = clampf(absf(anchor.local_position.x - previous_position.x) / max_move_distance_meters, 0.0, 1.0)
+
+	var weight: float = 1.0
+	match row_role:
+		RouteRowRoleScript.Value.CRUX, RouteRowRoleScript.Value.PRESSURE:
+			weight = 0.2 + reach_fraction
+		RouteRowRoleScript.Value.CATCH:
+			weight = 1.2 - reach_fraction
+		RouteRowRoleScript.Value.DECISION:
+			weight = 0.3 + lateral_fraction
+		RouteRowRoleScript.Value.TRAVERSE:
+			weight = 0.15 + (lateral_fraction * 1.5)
+		RouteRowRoleScript.Value.SUPPORT, RouteRowRoleScript.Value.TOP_OUT:
+			# Mild lateral preference rather than flat neutrality -- SUPPORT is the majority
+			# role in most chunks (openers especially), so a pure coin-flip here can still
+			# leave a chunk hugging the centre for its whole length. This nudges the wall's
+			# width into use without committing as hard as DECISION/TRAVERSE do.
+			weight = 0.6 + lateral_fraction
 		_:
-			return RouteLaneScript.Value.CENTER
+			RouteRowRoleScript.assert_valid(row_role)
+			weight = 1.0
 
-func _select_branch_safe_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	Validation.require_condition(plan.optional_route_required, "ChunkRoutePathSolver branch safe lanes require an optional route plan.")
-	if row_index <= plan.split_row_index or row_index >= plan.merge_row_index:
-		return RouteLaneScript.Value.CENTER
+	if two_rows_back_lane != -1 and anchor.lane == two_rows_back_lane:
+		weight *= 0.5
 
-	var branch_side: int = _get_opposite_branch_side(plan.route_branch_side)
-	var branch_row_index: int = row_index - plan.split_row_index - 1
-	var branch_span: int = plan.merge_row_index - plan.split_row_index - 1
-	return _select_branch_lane(branch_side, branch_row_index, branch_span)
+	return maxf(weight, 0.05)
 
-func _get_recovery_arm_side(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	var arm_index: int = floori(float(row_index) / 4.0)
-	var side_index: int = (arm_index + plan.chunk_index) % 2
-	if side_index == 0:
-		return RouteBranchSideScript.Value.LEFT
+## Deterministic weighted pick: hashes selection_context to a stable value in [0, 1) and walks
+## the cumulative weights, so the same (seed, chunk, row) always resolves to the same anchor.
+func _pick_weighted_anchor(
+	candidates: Array[RouteAnchorCandidateScript],
+	weights: Array[float],
+	selection_context: String
+) -> RouteAnchorCandidateScript:
+	Validation.require_condition(not candidates.is_empty(), "ChunkRoutePathSolver weighted selection requires candidates.")
+	Validation.require_condition(candidates.size() == weights.size(), "ChunkRoutePathSolver weighted selection requires aligned weights.")
 
-	return RouteBranchSideScript.Value.RIGHT
+	var total_weight: float = 0.0
+	for weight in weights:
+		total_weight += maxf(weight, 0.0001)
 
-func _get_alternating_branch_side(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	var side_index: int = (floori(float(row_index - 1) / 8.0) + plan.chunk_index) % 2
-	if side_index == 0:
-		return RouteBranchSideScript.Value.LEFT
+	var selection_value: float = _hash_unit_float(selection_context) * total_weight
+	var accumulated_weight: float = 0.0
+	for candidate_index in range(candidates.size()):
+		accumulated_weight += maxf(weights[candidate_index], 0.0001)
+		if selection_value <= accumulated_weight:
+			return candidates[candidate_index]
 
-	return RouteBranchSideScript.Value.RIGHT
+	return candidates[candidates.size() - 1]
+
+static func _hash_unit_float(context: String) -> float:
+	var hash_value: int = context.hash()
+	if hash_value < 0:
+		hash_value = -hash_value
+	return float(hash_value % 1000000) / 1000000.0
+
+# ---------------------------------------------------------------------------
+# Optional (branch) path: unchanged deterministic alternating pattern. It already guarantees
+# the hard downstream requirement (at least one outer-lane row) and stays on the branch side
+# opposite the safe path's restricted lanes above, so the two paths never collide.
+# ---------------------------------------------------------------------------
 
 func _build_optional_path(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> RoutePlannedPathScript:
 	var lanes: Array[int] = []
@@ -176,8 +294,8 @@ func _build_optional_path(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorG
 	for row_index in range(plan.get_row_count()):
 		var lane: int = RouteLaneScript.Value.CENTER
 		if row_index == 0:
-			# Mirror the safe path's entry lane (_select_safe_lane) so the two paths still
-			# collapse onto the same row-0 hold instead of adding a second one.
+			# Mirror the safe path's entry lane so the two paths still collapse onto the same
+			# row-0 hold instead of adding a second one.
 			lane = CHUNK_ENTRY_LANE
 		elif row_index > plan.split_row_index and row_index < plan.merge_row_index:
 			var branch_row_index: int = row_index - plan.split_row_index - 1

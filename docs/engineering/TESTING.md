@@ -15,7 +15,7 @@ New gameplay systems need unit tests for rule behavior. Systems that depend on s
 
 Initial required tests:
 
-- UTC daily seed key format.
+- Per-run seed key format.
 - Rescue eligibility matrix.
 - Wallet grant/spend rules.
 - Invalid tuning config fails validation.

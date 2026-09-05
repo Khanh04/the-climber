@@ -66,10 +66,17 @@ func build_layout(
 	)
 	anchor_graph_builder.set_lane_position_ratios(_tuning.inner_lane_position_ratio, _tuning.outer_lane_position_ratio)
 	var anchor_graph: RouteAnchorGraphScript = anchor_graph_builder.build_graph(plan)
-	var path_solution: ChunkRoutePathSolutionScript = _path_solver.solve(plan, anchor_graph)
+	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
+	var path_solution: ChunkRoutePathSolutionScript = _path_solver.solve(
+		plan,
+		anchor_graph,
+		selection_seed,
+		route_validation_tuning.max_move_distance_meters,
+		route_validation_tuning.player_body_width_meters
+	)
 	Validation.require_condition(path_solution.is_valid, path_solution.failure_reason)
 
-	var population_variant: Variant = _population_builder.call("populate", plan, anchor_graph, path_solution, selection_seed)
+	var population_variant: Variant = _population_builder.call("populate", plan, anchor_graph, path_solution, route_validation_tuning.player_body_width_meters, selection_seed)
 	Validation.require_condition(population_variant is RefCounted, "ChunkRouteGenerationPipeline population builder must return a RefCounted population.")
 	var population: RefCounted = population_variant
 	var layout_variant: Variant = _layout_emitter.call(

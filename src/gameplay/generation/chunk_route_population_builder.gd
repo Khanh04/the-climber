@@ -14,7 +14,6 @@ const RouteAnchorGraphScript = preload("res://src/gameplay/generation/route_anch
 const RouteBranchSideScript = preload("res://src/gameplay/generation/route_branch_side.gd")
 const RouteHazardPlacementScript: GDScript = preload("res://src/gameplay/generation/route_hazard_placement.gd")
 const RouteLaneScript = preload("res://src/gameplay/generation/route_lane.gd")
-const RouteMovementStyleScript = preload("res://src/gameplay/generation/route_movement_style.gd")
 const RoutePlannedPathScript = preload("res://src/gameplay/generation/route_planned_path.gd")
 const RoutePopulatedHoldScript: GDScript = preload("res://src/gameplay/generation/route_populated_hold.gd")
 const RouteRewardPlacementScript: GDScript = preload("res://src/gameplay/generation/route_reward_placement.gd")
@@ -25,6 +24,7 @@ func populate(
 	plan: ChunkRoutePlanScript,
 	anchor_graph: RouteAnchorGraphScript,
 	path_solution: ChunkRoutePathSolutionScript,
+	player_body_width_meters: float,
 	selection_seed: String = ""
 ) -> RefCounted:
 	Validation.require_condition(plan != null, "ChunkRoutePopulationBuilder requires a route plan.")
@@ -46,7 +46,7 @@ func populate(
 	if path_solution.optional_path != null:
 		_add_path_holds(plan, anchor_graph, path_solution.optional_path, true, selection_seed, holds, optional_hold_ids)
 
-	_add_support_holds(plan, anchor_graph, path_solution, selection_seed, holds, support_hold_ids)
+	_add_support_holds(plan, anchor_graph, path_solution, player_body_width_meters, selection_seed, holds, support_hold_ids)
 
 	var reward_placements: Array[RefCounted] = _build_reward_placements(plan, anchor_graph, path_solution, holds)
 	var hazard_placements: Array[RefCounted] = _build_hazard_placements(plan, anchor_graph, path_solution, reward_placements, selection_seed)
@@ -112,13 +112,14 @@ func _add_support_holds(
 	plan: ChunkRoutePlanScript,
 	anchor_graph: RouteAnchorGraphScript,
 	path_solution: ChunkRoutePathSolutionScript,
+	player_body_width_meters: float,
 	selection_seed: String,
 	holds: Array[RefCounted],
 	support_hold_ids: PackedStringArray
 ) -> void:
 	Validation.require_condition(path_solution != null, "ChunkRoutePopulationBuilder support holds require a path solution.")
 	for row_index in range(plan.get_row_count()):
-		var support_lanes: Array[int] = _get_support_lanes_for_row(plan, path_solution, row_index)
+		var support_lanes: Array[int] = _get_support_lanes_for_row(plan, anchor_graph, path_solution, row_index, player_body_width_meters)
 		for support_lane in support_lanes:
 			var support_anchor: RouteAnchorCandidateScript = anchor_graph.get_anchor_for_row_and_lane(row_index, support_lane)
 			Validation.require_condition(support_anchor != null, "ChunkRoutePopulationBuilder support anchor must exist in the graph.")
@@ -153,286 +154,98 @@ func _add_support_holds(
 			holds.append(support_hold)
 			_append_unique_hold_id(support_hold_ids, _require_string_name_property(support_hold, &"hold_id"))
 
+## Picks 0-2 non-path lanes to decorate a row with, favoring lanes closest to the lanes the
+## path already uses (keeps support holds visually grouped near the climb) and clear of the
+## player's swing envelope around whichever path anchor sits on this row. How many is driven by
+## row purpose and difficulty band -- generous on easy rest/decision rows, sparse to none once
+## crux/pressure/traverse rows or higher bands ask for a cleaner wall.
 func _get_support_lanes_for_row(
 	plan: ChunkRoutePlanScript,
-	path_solution: ChunkRoutePathSolutionScript,
-	row_index: int
-) -> Array[int]:
-	var row_role: int = plan.row_roles[row_index]
-	match plan.difficulty_band:
-		ChunkDifficultyBandScript.Value.EASY:
-			if row_role == RouteRowRoleScript.Value.SUPPORT or row_role == RouteRowRoleScript.Value.DECISION or row_role == RouteRowRoleScript.Value.CATCH or row_role == RouteRowRoleScript.Value.TOP_OUT:
-				return _get_easy_support_lanes_for_row(plan, path_solution, row_index, row_role)
-		ChunkDifficultyBandScript.Value.BASELINE:
-			if row_role == RouteRowRoleScript.Value.SUPPORT or row_role == RouteRowRoleScript.Value.CATCH or row_role == RouteRowRoleScript.Value.TOP_OUT:
-				return [_get_support_lane_opposite_branch(plan, row_index)]
-		ChunkDifficultyBandScript.Value.CHALLENGE:
-			if row_role == RouteRowRoleScript.Value.CATCH:
-				return [_get_support_lane_opposite_branch(plan, row_index)]
-		_:
-			Validation.require_condition(false, "ChunkRoutePopulationBuilder support lanes require a supported difficulty band.")
-
-	return []
-
-func _get_easy_support_lanes_for_row(
-	plan: ChunkRoutePlanScript,
+	anchor_graph: RouteAnchorGraphScript,
 	path_solution: ChunkRoutePathSolutionScript,
 	row_index: int,
-	row_role: int
+	player_body_width_meters: float
 ) -> Array[int]:
+	var row_role: int = plan.row_roles[row_index]
+	var max_support_lanes: int = _get_max_support_lane_count(plan.difficulty_band, row_role)
+	if max_support_lanes <= 0:
+		return []
+
 	var safe_lane: int = path_solution.safe_path.get_lane_at_row(row_index)
-	var support_lanes: Array[int] = []
-	if row_index == 0 or row_index == plan.get_row_count() - 1:
-		_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-		_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		return support_lanes
-
-	RouteRowRoleScript.assert_valid(row_role)
-	if row_role == RouteRowRoleScript.Value.DECISION:
-		return _get_easy_decision_support_lanes(plan, row_index, safe_lane)
-	if row_role == RouteRowRoleScript.Value.CATCH:
-		return _get_easy_catch_support_lanes(plan, row_index, safe_lane)
-
-	_append_unique_support_lane(support_lanes, _get_easy_single_support_lane(plan, row_index, safe_lane), safe_lane)
-	return support_lanes
-
-func _get_easy_single_support_lane(plan: ChunkRoutePlanScript, row_index: int, safe_lane: int) -> int:
-	Validation.require_condition(plan != null, "ChunkRoutePopulationBuilder easy single supports require a route plan.")
-	RouteLaneScript.assert_valid(safe_lane)
-	match plan.movement_style:
-		RouteMovementStyleScript.Value.LADDER:
-			return _get_beginner_single_support_lane(plan, row_index, safe_lane)
-		RouteMovementStyleScript.Value.ZIGZAG:
-			return _get_easy_zigzag_support_lane(plan, row_index, safe_lane)
-		RouteMovementStyleScript.Value.RECOVERY:
-			return _get_easy_recovery_support_lane(plan, row_index, safe_lane)
-		_:
-			RouteMovementStyleScript.assert_valid(plan.movement_style)
-			return _get_beginner_single_support_lane(plan, row_index, safe_lane)
-
-func _get_easy_decision_support_lanes(plan: ChunkRoutePlanScript, row_index: int, safe_lane: int) -> Array[int]:
-	Validation.require_condition(plan != null, "ChunkRoutePopulationBuilder easy decision supports require a route plan.")
-	RouteLaneScript.assert_valid(safe_lane)
-	match plan.movement_style:
-		RouteMovementStyleScript.Value.LADDER:
-			return _get_easy_wide_side_support_lanes(safe_lane)
-		RouteMovementStyleScript.Value.ZIGZAG:
-			return _get_easy_zigzag_decision_support_lanes(plan, row_index, safe_lane)
-		RouteMovementStyleScript.Value.RECOVERY:
-			return _get_easy_recovery_decision_support_lanes(safe_lane)
-		_:
-			RouteMovementStyleScript.assert_valid(plan.movement_style)
-			return _get_easy_wide_side_support_lanes(safe_lane)
-
-func _get_easy_wide_side_support_lanes(safe_lane: int) -> Array[int]:
-	RouteLaneScript.assert_valid(safe_lane)
-	var support_lanes: Array[int] = []
-	match safe_lane:
-		RouteLaneScript.Value.CENTER:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_RIGHT, safe_lane)
-		RouteLaneScript.Value.INNER_LEFT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_RIGHT, safe_lane)
-		RouteLaneScript.Value.OUTER_LEFT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_RIGHT, safe_lane)
-		RouteLaneScript.Value.INNER_RIGHT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_RIGHT, safe_lane)
-		RouteLaneScript.Value.OUTER_RIGHT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		_:
-			Validation.require_condition(false, "ChunkRoutePopulationBuilder easy wide supports require a supported safe lane.")
-
-	return support_lanes
-
-func _get_easy_zigzag_decision_support_lanes(plan: ChunkRoutePlanScript, row_index: int, safe_lane: int) -> Array[int]:
-	Validation.require_condition(plan != null, "ChunkRoutePopulationBuilder zigzag decision supports require a route plan.")
-	RouteLaneScript.assert_valid(safe_lane)
-	var support_lanes: Array[int] = []
-	var leans_left: bool = ((row_index + plan.chunk_index) % 2) == 0
-	match safe_lane:
-		RouteLaneScript.Value.CENTER:
-			if leans_left:
-				_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_LEFT, safe_lane)
-				_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-			else:
-				_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-				_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_RIGHT, safe_lane)
-		RouteLaneScript.Value.INNER_LEFT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		RouteLaneScript.Value.OUTER_LEFT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		RouteLaneScript.Value.INNER_RIGHT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_RIGHT, safe_lane)
-		RouteLaneScript.Value.OUTER_RIGHT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		_:
-			Validation.require_condition(false, "ChunkRoutePopulationBuilder zigzag decision supports require a supported safe lane.")
-
-	return support_lanes
-
-func _get_easy_recovery_decision_support_lanes(safe_lane: int) -> Array[int]:
-	RouteLaneScript.assert_valid(safe_lane)
-	var support_lanes: Array[int] = []
-	match safe_lane:
-		RouteLaneScript.Value.CENTER:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		RouteLaneScript.Value.INNER_LEFT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		RouteLaneScript.Value.OUTER_LEFT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		RouteLaneScript.Value.INNER_RIGHT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_RIGHT, safe_lane)
-		RouteLaneScript.Value.OUTER_RIGHT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		_:
-			Validation.require_condition(false, "ChunkRoutePopulationBuilder recovery decision supports require a supported safe lane.")
-
-	return support_lanes
-
-func _get_easy_catch_support_lanes(plan: ChunkRoutePlanScript, row_index: int, safe_lane: int) -> Array[int]:
-	Validation.require_condition(plan != null, "ChunkRoutePopulationBuilder easy catch supports require a route plan.")
-	RouteLaneScript.assert_valid(safe_lane)
-	var support_lanes: Array[int] = []
-	match safe_lane:
-		RouteLaneScript.Value.CENTER:
-			if ((row_index + plan.chunk_index) % 2) == 0:
-				_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-				_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_RIGHT, safe_lane)
-			else:
-				_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_LEFT, safe_lane)
-				_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		RouteLaneScript.Value.INNER_LEFT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		RouteLaneScript.Value.OUTER_LEFT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		RouteLaneScript.Value.INNER_RIGHT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.OUTER_RIGHT, safe_lane)
-		RouteLaneScript.Value.OUTER_RIGHT:
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_LEFT, safe_lane)
-			_append_unique_support_lane(support_lanes, RouteLaneScript.Value.INNER_RIGHT, safe_lane)
-		_:
-			Validation.require_condition(false, "ChunkRoutePopulationBuilder easy catch supports require a supported safe lane.")
-
-	return support_lanes
-
-func _get_beginner_single_support_lane(plan: ChunkRoutePlanScript, row_index: int, safe_lane: int) -> int:
-	RouteLaneScript.assert_valid(safe_lane)
-	match safe_lane:
-		RouteLaneScript.Value.CENTER:
-			if plan.optional_route_required:
-				return _get_wide_support_lane_opposite_branch(plan, row_index)
-
-			return _get_alternating_beginner_outer_lane(plan, row_index)
-		RouteLaneScript.Value.INNER_LEFT:
-			return RouteLaneScript.Value.OUTER_LEFT
-		RouteLaneScript.Value.OUTER_LEFT:
-			return RouteLaneScript.Value.INNER_LEFT
-		RouteLaneScript.Value.INNER_RIGHT:
-			return RouteLaneScript.Value.OUTER_RIGHT
-		RouteLaneScript.Value.OUTER_RIGHT:
-			return RouteLaneScript.Value.INNER_RIGHT
-		_:
-			Validation.require_condition(false, "ChunkRoutePopulationBuilder beginner support lanes require a supported safe lane.")
-			return RouteLaneScript.Value.CENTER
-
-func _get_easy_zigzag_support_lane(plan: ChunkRoutePlanScript, row_index: int, safe_lane: int) -> int:
-	Validation.require_condition(plan != null, "ChunkRoutePopulationBuilder zigzag supports require a route plan.")
-	RouteLaneScript.assert_valid(safe_lane)
-	match safe_lane:
-		RouteLaneScript.Value.CENTER:
-			return _get_alternating_beginner_inner_lane(plan, row_index)
-		RouteLaneScript.Value.INNER_LEFT:
-			return RouteLaneScript.Value.INNER_RIGHT
-		RouteLaneScript.Value.OUTER_LEFT:
-			return RouteLaneScript.Value.INNER_LEFT
-		RouteLaneScript.Value.INNER_RIGHT:
-			return RouteLaneScript.Value.INNER_LEFT
-		RouteLaneScript.Value.OUTER_RIGHT:
-			return RouteLaneScript.Value.INNER_RIGHT
-		_:
-			Validation.require_condition(false, "ChunkRoutePopulationBuilder zigzag supports require a supported safe lane.")
-			return RouteLaneScript.Value.CENTER
-
-func _get_easy_recovery_support_lane(plan: ChunkRoutePlanScript, row_index: int, safe_lane: int) -> int:
-	Validation.require_condition(plan != null, "ChunkRoutePopulationBuilder recovery supports require a route plan.")
-	RouteLaneScript.assert_valid(safe_lane)
-	match safe_lane:
-		RouteLaneScript.Value.CENTER:
-			return _get_alternating_beginner_inner_lane(plan, row_index)
-		RouteLaneScript.Value.INNER_LEFT:
-			return RouteLaneScript.Value.OUTER_LEFT
-		RouteLaneScript.Value.OUTER_LEFT:
-			return RouteLaneScript.Value.INNER_LEFT
-		RouteLaneScript.Value.INNER_RIGHT:
-			return RouteLaneScript.Value.OUTER_RIGHT
-		RouteLaneScript.Value.OUTER_RIGHT:
-			return RouteLaneScript.Value.INNER_RIGHT
-		_:
-			Validation.require_condition(false, "ChunkRoutePopulationBuilder recovery supports require a supported safe lane.")
-			return RouteLaneScript.Value.CENTER
-
-func _get_alternating_beginner_inner_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	Validation.require_condition(plan != null, "ChunkRoutePopulationBuilder alternating inner supports require a route plan.")
-	var lane_index: int = (row_index + plan.chunk_index) % 2
-	if lane_index == 0:
-		return RouteLaneScript.Value.INNER_LEFT
-
-	return RouteLaneScript.Value.INNER_RIGHT
-
-func _get_alternating_beginner_outer_lane(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	var lane_index: int = (row_index + plan.chunk_index) % 2
-	if lane_index == 0:
-		return RouteLaneScript.Value.OUTER_LEFT
-
-	return RouteLaneScript.Value.OUTER_RIGHT
-
-func _get_wide_support_lane_opposite_branch(plan: ChunkRoutePlanScript, row_index: int) -> int:
-	Validation.require_condition(plan.optional_route_required, "ChunkRoutePopulationBuilder wide branch supports require an optional route plan.")
-	if plan.route_branch_side == RouteBranchSideScript.Value.LEFT:
-		if ((row_index + plan.chunk_index) % 2) == 0:
-			return RouteLaneScript.Value.OUTER_RIGHT
-		return RouteLaneScript.Value.INNER_RIGHT
-
-	if ((row_index + plan.chunk_index) % 2) == 0:
-		return RouteLaneScript.Value.OUTER_LEFT
-	return RouteLaneScript.Value.INNER_LEFT
-
-func _append_unique_support_lane(support_lanes: Array[int], candidate_lane: int, excluded_lane: int) -> void:
-	RouteLaneScript.assert_valid(candidate_lane)
-	RouteLaneScript.assert_valid(excluded_lane)
-	if candidate_lane == excluded_lane:
-		return
-
-	if support_lanes.has(candidate_lane):
-		return
-
-	support_lanes.append(candidate_lane)
-
-func _get_support_lane_opposite_branch(plan: ChunkRoutePlanScript, row_index: int) -> int:
+	var excluded_lanes: Array[int] = [safe_lane]
 	if plan.optional_route_required:
-		if plan.route_branch_side == RouteBranchSideScript.Value.LEFT:
-			return RouteLaneScript.Value.INNER_RIGHT
-		return RouteLaneScript.Value.INNER_LEFT
+		var optional_lane: int = path_solution.optional_path.get_lane_at_row(row_index)
+		if not excluded_lanes.has(optional_lane):
+			excluded_lanes.append(optional_lane)
 
-	if (row_index % 2) == 0:
-		return RouteLaneScript.Value.INNER_LEFT
-	return RouteLaneScript.Value.INNER_RIGHT
+	var path_position: Vector2 = anchor_graph.get_anchor_for_row_and_lane(row_index, safe_lane).local_position
+	var candidate_lanes: Array[int] = []
+	for lane in RouteLaneScript.get_all_values():
+		if excluded_lanes.has(lane):
+			continue
+
+		var anchor: RouteAnchorCandidateScript = anchor_graph.get_anchor_for_row_and_lane(row_index, lane)
+		if anchor == null:
+			continue
+
+		if absf(anchor.local_position.x - path_position.x) < player_body_width_meters:
+			continue
+
+		candidate_lanes.append(lane)
+
+	candidate_lanes.sort_custom(func(a: int, b: int) -> bool: return _get_support_lane_pick_priority(a, safe_lane) < _get_support_lane_pick_priority(b, safe_lane))
+	if candidate_lanes.size() > max_support_lanes:
+		candidate_lanes = candidate_lanes.slice(0, max_support_lanes)
+	return candidate_lanes
+
+## The path's mirror lane (same distance, opposite side) ranks first -- it frames the path
+## symmetrically, e.g. row 0's fixed INNER_LEFT entry pairs with an INNER_RIGHT support hold so
+## the centre corridor between them stays clear for the player's body. CENTER has no mirror;
+## everything else ranks by how close it sits to the middle of the wall.
+func _get_support_lane_pick_priority(lane: int, safe_lane: int) -> int:
+	if lane == _get_mirror_lane(safe_lane):
+		return 0
+	return 1 + absi(RouteLaneScript.to_offset(lane))
+
+func _get_mirror_lane(lane: int) -> int:
+	match lane:
+		RouteLaneScript.Value.INNER_LEFT:
+			return RouteLaneScript.Value.INNER_RIGHT
+		RouteLaneScript.Value.INNER_RIGHT:
+			return RouteLaneScript.Value.INNER_LEFT
+		RouteLaneScript.Value.OUTER_LEFT:
+			return RouteLaneScript.Value.OUTER_RIGHT
+		RouteLaneScript.Value.OUTER_RIGHT:
+			return RouteLaneScript.Value.OUTER_LEFT
+		_:
+			return -1
+
+func _get_max_support_lane_count(difficulty_band: int, row_role: int) -> int:
+	RouteRowRoleScript.assert_valid(row_role)
+	match difficulty_band:
+		ChunkDifficultyBandScript.Value.EASY:
+			match row_role:
+				RouteRowRoleScript.Value.CRUX, RouteRowRoleScript.Value.PRESSURE, RouteRowRoleScript.Value.TRAVERSE:
+					return 0
+				RouteRowRoleScript.Value.DECISION:
+					return 2
+				_:
+					return 1
+		ChunkDifficultyBandScript.Value.BASELINE:
+			match row_role:
+				RouteRowRoleScript.Value.SUPPORT, RouteRowRoleScript.Value.CATCH, RouteRowRoleScript.Value.TOP_OUT:
+					return 1
+				_:
+					return 0
+		ChunkDifficultyBandScript.Value.CHALLENGE:
+			match row_role:
+				RouteRowRoleScript.Value.CATCH:
+					return 1
+				_:
+					return 0
+		_:
+			Validation.require_condition(false, "ChunkRoutePopulationBuilder support lanes require a supported difficulty band.")
+			return 0
 
 func _select_path_route_role(plan: ChunkRoutePlanScript, anchor: RouteAnchorCandidateScript, is_optional_path: bool) -> int:
 	if anchor.row_index == 0:

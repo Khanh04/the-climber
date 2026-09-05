@@ -112,7 +112,7 @@ func _build_graph(plan: ChunkRoutePlanScript) -> RouteAnchorGraphScript:
 
 func _solve(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> ChunkRoutePathSolutionScript:
     var solver: ChunkRoutePathSolverScript = ChunkRoutePathSolverScript.new()
-    return solver.solve(plan, anchor_graph)
+    return solver.solve(plan, anchor_graph, _seed_key(), 2.2, 0.48)
 
 func _build_population(plan: ChunkRoutePlanScript) -> RefCounted:
     var anchor_graph: RouteAnchorGraphScript = _build_graph(plan)
@@ -122,7 +122,7 @@ func _build_population(plan: ChunkRoutePlanScript) -> RefCounted:
     var builder_variant: Variant = ChunkRoutePopulationBuilderScript.new()
     assert_true(builder_variant is RefCounted)
     var builder: RefCounted = builder_variant
-    var population_variant: Variant = builder.call("populate", plan, anchor_graph, path_solution)
+    var population_variant: Variant = builder.call("populate", plan, anchor_graph, path_solution, 0.48)
     assert_true(population_variant is RefCounted)
     var population: RefCounted = population_variant
     return population

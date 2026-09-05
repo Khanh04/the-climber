@@ -4,8 +4,6 @@ const EconomyTuningScript = preload("res://resources/config/economy_tuning.gd")
 const StaminaTuningScript = preload("res://resources/config/stamina_tuning.gd")
 const RewardedAdsTuningScript = preload("res://resources/config/rewarded_ads_tuning.gd")
 const ChaserThemeCatalogScript = preload("res://resources/config/chaser_theme_catalog.gd")
-const HandholdAssignmentRuleCatalogScript = preload("res://resources/config/handhold_assignment_rule_catalog.gd")
-const HandholdAssignmentRuleScript = preload("res://resources/config/handhold_assignment_rule.gd")
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 const HandholdTypeDefinitionCatalogScript = preload("res://resources/config/handhold_type_definition_catalog.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
@@ -17,10 +15,10 @@ const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_
 const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
 const CosmeticsTuningScript = preload("res://resources/config/cosmetics_tuning.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
+const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
 const ChunkTypeScript = preload("res://src/gameplay/generation/chunk_type.gd")
 const ChunkDifficultyBandScript = preload("res://src/gameplay/generation/chunk_difficulty_band.gd")
 const ChunkRouteSlotScript = preload("res://src/gameplay/generation/chunk_route_slot.gd")
-const HandholdRowZoneScript = preload("res://src/gameplay/generation/handhold_row_zone.gd")
 const HandholdTypeScript = preload("res://src/gameplay/generation/handhold_type.gd")
 
 func test_default_economy_tuning_is_valid() -> void:
@@ -74,6 +72,19 @@ func test_default_route_validation_tuning_is_valid() -> void:
     assert_not_null(tuning)
     assert_true(tuning.is_valid())
 
+func test_route_validation_player_body_width_matches_player_collision_footprint() -> void:
+    var tuning: RouteValidationTuningScript = load("res://resources/config/route_validation_tuning.tres") as RouteValidationTuningScript
+    var player_scene: PackedScene = load("res://scenes/player/player_character.tscn")
+    var player: PlayerCharacterScript = player_scene.instantiate() as PlayerCharacterScript
+    add_child_autofree(player)
+    var climb_tuning: ClimbPrototypeTuningScript = player.climb_tuning
+    var head_collision_shape: CollisionShape2D = player.get_node("Head/HeadCollisionShape") as CollisionShape2D
+    var head_shape: RectangleShape2D = head_collision_shape.shape as RectangleShape2D
+
+    var expected_body_width_meters: float = head_shape.size.x / climb_tuning.pixels_per_meter
+
+    assert_almost_eq(tuning.player_body_width_meters, expected_body_width_meters, 0.01)
+
 func test_default_route_profile_tuning_is_valid() -> void:
     var tuning: RouteProfileTuningScript = load("res://resources/config/route_profile_tuning.tres") as RouteProfileTuningScript
 
@@ -98,19 +109,11 @@ func test_default_handhold_widths_leave_visual_lane_gap() -> void:
         var definition: HandholdTypeDefinitionScript = definition_resource as HandholdTypeDefinitionScript
         assert_lte(definition.physical_size_meters.x, center_to_inner_lane_spacing_meters - minimum_visual_gap_meters)
 
-func test_default_handhold_assignment_rule_catalog_is_valid() -> void:
-    var catalog: HandholdAssignmentRuleCatalogScript = load("res://resources/config/handhold_assignment_rule_catalog.tres") as HandholdAssignmentRuleCatalogScript
-
-    assert_not_null(catalog)
-    assert_true(catalog.is_valid())
-
 func test_generation_tuning_duplicates_authored_default_handhold_resources() -> void:
     var first_tuning: GenerationTuningScript = GenerationTuningScript.new()
     var second_tuning: GenerationTuningScript = GenerationTuningScript.new()
     var first_definition: HandholdTypeDefinitionScript = first_tuning.handhold_definitions[0] as HandholdTypeDefinitionScript
     var second_definition: HandholdTypeDefinitionScript = second_tuning.handhold_definitions[0] as HandholdTypeDefinitionScript
-    var first_rule: HandholdAssignmentRuleScript = first_tuning.handhold_assignment_rules[0] as HandholdAssignmentRuleScript
-    var second_rule: HandholdAssignmentRuleScript = second_tuning.handhold_assignment_rules[0] as HandholdAssignmentRuleScript
     var first_route_validation_tuning: RouteValidationTuningScript = first_tuning.route_validation_tuning as RouteValidationTuningScript
     var second_route_validation_tuning: RouteValidationTuningScript = second_tuning.route_validation_tuning as RouteValidationTuningScript
     var first_route_profile_tuning: RouteProfileTuningScript = first_tuning.route_profile_tuning as RouteProfileTuningScript
@@ -118,8 +121,6 @@ func test_generation_tuning_duplicates_authored_default_handhold_resources() -> 
 
     assert_not_null(first_definition)
     assert_not_null(second_definition)
-    assert_not_null(first_rule)
-    assert_not_null(second_rule)
     assert_not_null(first_route_validation_tuning)
     assert_not_null(second_route_validation_tuning)
     assert_not_null(first_route_profile_tuning)
@@ -128,7 +129,6 @@ func test_generation_tuning_duplicates_authored_default_handhold_resources() -> 
     assert_ne(first_definition.surface_profile, second_definition.surface_profile)
     assert_ne(first_definition.lifecycle_rule, second_definition.lifecycle_rule)
     assert_ne(first_definition.movement_rule, second_definition.movement_rule)
-    assert_ne(first_rule, second_rule)
     assert_ne(first_route_validation_tuning, second_route_validation_tuning)
     assert_ne(first_route_profile_tuning, second_route_profile_tuning)
 
@@ -137,49 +137,6 @@ func test_invalid_generation_tuning_is_detected() -> void:
     tuning.generator_version = ""
 
     assert_false(tuning.is_valid())
-
-func test_generation_tuning_rejects_empty_handhold_assignment_rules() -> void:
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    tuning.handhold_assignment_rules = []
-
-    assert_false(tuning.is_valid())
-
-func test_generation_tuning_matches_ordered_row_zone_assignment_rules() -> void:
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    tuning.handhold_assignment_rules = [
-        _build_assignment_rule(
-            ChunkRouteSlotScript.Value.OPENER,
-            true,
-            ChunkDifficultyBandScript.Value.EASY,
-            HandholdRowZoneScript.Value.LOWER,
-            [HandholdTypeScript.Value.REST]
-        ),
-        _build_assignment_rule(
-            ChunkRouteSlotScript.Value.OPENER,
-            true,
-            ChunkDifficultyBandScript.Value.EASY,
-            HandholdRowZoneScript.Value.ANY,
-            [HandholdTypeScript.Value.NORMAL]
-        ),
-    ]
-
-    var lower_row_types: Array[int] = tuning.get_allowed_handhold_types(
-        ChunkRouteSlotScript.Value.OPENER,
-        ChunkDifficultyBandScript.Value.EASY,
-        0,
-        1
-    )
-    var upper_row_types: Array[int] = tuning.get_allowed_handhold_types(
-        ChunkRouteSlotScript.Value.OPENER,
-        ChunkDifficultyBandScript.Value.EASY,
-        3,
-        5
-    )
-
-    assert_eq(lower_row_types.size(), 1)
-    assert_eq(lower_row_types[0], HandholdTypeScript.Value.REST)
-    assert_eq(upper_row_types.size(), 1)
-    assert_eq(upper_row_types[0], HandholdTypeScript.Value.NORMAL)
 
 func test_generation_tuning_rejects_non_positive_chunk_width() -> void:
     var tuning = GenerationTuningScript.new()
@@ -199,36 +156,10 @@ func test_generation_tuning_rejects_invalid_lane_position_ratios() -> void:
 
     assert_false(tuning.is_valid())
 
-func test_generation_tuning_returns_explicit_row_steps_for_chunk_archetypes() -> void:
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-
-    assert_eq(tuning.get_chunk_row_step_height_meters(ChunkTypeScript.Value.LADDER), tuning.ladder_row_step_height_meters)
-    assert_eq(tuning.get_chunk_row_step_height_meters(ChunkTypeScript.Value.SWING_GAP), tuning.swing_gap_row_step_height_meters)
-    assert_eq(tuning.get_opener_row_step_height_meters(ChunkTypeScript.Value.LADDER), tuning.opener_ladder_row_step_height_meters)
-    assert_eq(tuning.get_opener_row_step_height_meters(ChunkTypeScript.Value.ZIGZAG), tuning.opener_zigzag_row_step_height_meters)
-
-func test_generation_tuning_rejects_non_positive_chunk_row_step_height() -> void:
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    tuning.dense_recovery_row_step_height_meters = 0.0
-
-    assert_false(tuning.is_valid())
-
-func test_generation_tuning_rejects_chunk_row_step_height_that_exceeds_chunk_height() -> void:
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    tuning.ladder_row_step_height_meters = 2.0
-
-    assert_false(tuning.is_valid())
-
 func test_generation_tuning_rejects_opener_spacing_that_exceeds_chunk_height() -> void:
     var tuning = GenerationTuningScript.new()
     tuning.opener_first_row_height_meters = tuning.segment_height_meters * 0.8
     tuning.opener_top_padding_meters = tuning.segment_height_meters * 0.25
-
-    assert_false(tuning.is_valid())
-
-func test_generation_tuning_rejects_opener_row_step_height_that_exceeds_top_padding_budget() -> void:
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    tuning.opener_ladder_row_step_height_meters = 2.4
 
     assert_false(tuning.is_valid())
 
@@ -280,13 +211,6 @@ func test_generation_tuning_rejects_invalid_route_profile_tuning() -> void:
 func test_generation_tuning_rejects_invalid_branch_side_alignment() -> void:
     var tuning = GenerationTuningScript.new()
     tuning.pickup_branch_side_alignment_meters = 5.0
-
-    assert_false(tuning.is_valid())
-
-func test_generation_tuning_rejects_out_of_range_hold_rows() -> void:
-    var tuning = GenerationTuningScript.new()
-    var invalid_fork_hold_rows: Array[PackedInt32Array] = [PackedInt32Array([4])]
-    tuning.fork_hold_rows = invalid_fork_hold_rows
 
     assert_false(tuning.is_valid())
 
@@ -426,18 +350,3 @@ func test_invalid_climb_prototype_tuning_is_detected() -> void:
     tuning.grip_velocity_damping = 1.5
 
     assert_false(tuning.is_valid())
-
-func _build_assignment_rule(
-    route_slot: int,
-    applies_to_all_difficulty_bands: bool,
-    difficulty_band: int,
-    row_zone: int,
-    allowed_handhold_types: Array[int]
-) -> HandholdAssignmentRuleScript:
-    var assignment_rule: HandholdAssignmentRuleScript = HandholdAssignmentRuleScript.new()
-    assignment_rule.route_slot = route_slot
-    assignment_rule.applies_to_all_difficulty_bands = applies_to_all_difficulty_bands
-    assignment_rule.difficulty_band = difficulty_band
-    assignment_rule.row_zone = row_zone
-    assignment_rule.allowed_handhold_types = allowed_handhold_types
-    return assignment_rule

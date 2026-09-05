@@ -16,7 +16,7 @@ The Climber is a Godot 4.4+ mobile-first 2D physics game. The MVP architecture p
 - `src/gameplay/player/`: ragdoll, grip, stamina, hand attachment, and player-facing rescue hooks.
 - `src/gameplay/run/`: run state, death taxonomy, fall timing, retry flow, and rescue orchestration.
 - `src/gameplay/chaser/`: Chaser motion, pacing, kill-zone behavior, and theme hooks.
-- `src/gameplay/generation/`: UTC daily seed keys, generator versions, altitude-band placement, and debug metadata.
+- `src/gameplay/generation/`: per-run seed keys, generator versions, altitude-band placement, and debug metadata.
 - `src/gameplay/hazards/`: hazard-specific behavior.
 - `src/gameplay/pickups/`: normal coins, special coin stacks, scatter behavior, and pickup events.
 - `src/economy/`: wallet, inventory, consumables, reward grants, and entitlement state.

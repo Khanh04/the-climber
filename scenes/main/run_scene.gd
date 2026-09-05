@@ -102,8 +102,6 @@ const RunOverlayRuntimeScript = preload("res://src/ui/run_overlay_runtime.gd")
 const StorePresenterScript = preload("res://src/ui/store_presenter.gd")
 const StoreShellScript = preload("res://scenes/ui/store_shell.gd")
 const StoreShellScene = preload("res://scenes/ui/store_shell.tscn")
-const UtcDateProviderScript = preload("res://src/platform/clock/utc_date_provider.gd")
-const SystemUtcDateProviderScript = preload("res://src/platform/clock/system_utc_date_provider.gd")
 const RunUiPresenterScript = preload("res://src/ui/run_ui_presenter.gd")
 const RunUiViewScript = preload("res://src/ui/run_ui_view.gd")
 const WalletScript = preload("res://src/economy/wallet.gd")
@@ -214,7 +212,6 @@ var _start_y: float = 0.0
 var _launch_mode: int = RunLaunchModeScript.Value.NORMAL
 var _launch_mode_override: int = RunLaunchModeScript.Value.NORMAL
 var _has_launch_mode_override: bool = false
-var utc_date_provider: UtcDateProviderScript = SystemUtcDateProviderScript.new()
 
 func _ready() -> void:
 	_launch_mode = _resolve_launch_mode()
@@ -349,18 +346,6 @@ func set_save_snapshot(snapshot: RefCounted) -> void:
 		_cosmetic_loadout_service
 	)
 	_apply_cosmetic_loadout()
-	_refresh_ui()
-
-func set_utc_date_provider(date_provider: RefCounted) -> void:
-	Validation.require_condition(date_provider != null, "RunScene requires a UTC date provider.")
-	Validation.require_condition(date_provider is UtcDateProviderScript, "RunScene requires a UtcDateProvider implementation.")
-	utc_date_provider = date_provider as UtcDateProviderScript
-	if not is_node_ready():
-		return
-
-	if _uses_generated_chunks():
-		_configure_generated_chunks()
-	_reset_playground()
 	_refresh_ui()
 
 func _physics_process(delta: float) -> void:
@@ -817,7 +802,7 @@ func _configure_generated_chunks() -> void:
 	var pixels_per_meter: float = _get_climb_tuning_float(&"pixels_per_meter")
 	var generated_world_origin: Vector2 = _reset_anchor.global_position
 	var chunk_start_height_offset_meters: float = 0.0
-	var seed_key: String = DailySeedKey.current_utc(utc_date_provider)
+	var seed_key: String = DailySeedKey.current_run()
 	var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(
 		pixels_per_meter,
 		climb_tuning.handhold_group_name,

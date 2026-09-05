@@ -11,6 +11,10 @@ const RouteAnchorGraphBuilderScript = preload("res://src/gameplay/generation/rou
 const RouteAnchorGraphScript = preload("res://src/gameplay/generation/route_anchor_graph.gd")
 const RouteBranchSideScript = preload("res://src/gameplay/generation/route_branch_side.gd")
 const RouteLaneScript = preload("res://src/gameplay/generation/route_lane.gd")
+const RoutePlannedPathScript = preload("res://src/gameplay/generation/route_planned_path.gd")
+
+const MAX_MOVE_DISTANCE_METERS: float = 2.2
+const PLAYER_BODY_WIDTH_METERS: float = 0.48
 
 func test_anchor_graph_builder_creates_five_lane_rows_from_plan() -> void:
     var plan: ChunkRoutePlanScript = _build_plan(1, ChunkRouteSlotScript.Value.BASELINE, ChunkDifficultyBandScript.Value.EASY)
@@ -70,15 +74,10 @@ func test_solver_accepts_non_branch_opener_with_gentle_safe_path_spread() -> voi
     assert_not_null(solution.safe_path)
     assert_eq(solution.optional_path, null)
     assert_eq(solution.safe_path.get_row_count(), plan.get_row_count())
-    assert_gt(solution.safe_path.total_lateral_lane_steps, 0)
     # Entry row uses INNER_LEFT (not CENTER) so the row-0 support fill leaves exactly two
     # starting holds instead of three; the exit row stays on CENTER for chunk-seam continuity.
     assert_eq(solution.safe_path.get_lane_at_row(0), RouteLaneScript.Value.INNER_LEFT)
     assert_eq(solution.safe_path.get_lane_at_row(plan.get_row_count() - 1), RouteLaneScript.Value.CENTER)
-    assert_true(_path_has_lane(solution.safe_path, RouteLaneScript.Value.INNER_LEFT))
-    assert_true(_path_has_lane(solution.safe_path, RouteLaneScript.Value.INNER_RIGHT))
-    assert_true(_path_has_lane(solution.safe_path, RouteLaneScript.Value.OUTER_LEFT))
-    assert_true(_path_has_lane(solution.safe_path, RouteLaneScript.Value.OUTER_RIGHT))
 
 func test_solver_builds_branch_path_with_required_separation_and_outer_lane_rows() -> void:
     var plan: ChunkRoutePlanScript = _build_plan(7, ChunkRouteSlotScript.Value.RISK, ChunkDifficultyBandScript.Value.BASELINE)
@@ -93,7 +92,6 @@ func test_solver_builds_branch_path_with_required_separation_and_outer_lane_rows
     assert_eq(solution.optional_path.get_lane_at_row(plan.merge_row_index), RouteLaneScript.Value.CENTER)
 
     var branch_outer_lane: int = _get_outer_lane_for_branch_side(plan.route_branch_side)
-    var safe_outer_lane: int = _get_outer_lane_for_branch_side(_get_opposite_branch_side(plan.route_branch_side))
     var outer_lane_rows: int = solution.optional_path.count_outer_lane_rows_for_side(
         plan.route_branch_side,
         plan.split_row_index + 1,
@@ -102,7 +100,14 @@ func test_solver_builds_branch_path_with_required_separation_and_outer_lane_rows
 
     assert_eq(outer_lane_rows, solution.optional_outer_lane_rows)
     assert_true(_path_has_lane(solution.optional_path, branch_outer_lane))
-    assert_true(_path_has_lane(solution.safe_path, safe_outer_lane))
+    # The safe path and the optional path must never land on the same lane while separated --
+    # they are drawn from disjoint (opposite-side) lane pools throughout the branch span.
+    for row_index in range(plan.split_row_index + 1, plan.merge_row_index):
+        assert_ne(
+            solution.safe_path.get_lane_at_row(row_index),
+            solution.optional_path.get_lane_at_row(row_index),
+            "safe and optional paths collided at row %d" % row_index
+        )
     assert_eq(RouteLaneScript.to_branch_side(solution.optional_path.get_lane_at_row(plan.split_row_index + 1)), plan.route_branch_side)
     assert_eq(RouteLaneScript.to_branch_side(solution.safe_path.get_lane_at_row(plan.split_row_index + 1)), _get_opposite_branch_side(plan.route_branch_side))
 
@@ -126,6 +131,46 @@ func test_solver_rejects_branch_graph_without_required_outer_lane() -> void:
     assert_not_null(solution.safe_path)
     assert_eq(solution.optional_path, null)
 
+func test_safe_path_moves_stay_within_the_move_envelope_across_many_seeds_and_slots() -> void:
+    var route_slots: Array[int] = [
+        ChunkRouteSlotScript.Value.BASELINE,
+        ChunkRouteSlotScript.Value.SKILL,
+        ChunkRouteSlotScript.Value.RISK,
+        ChunkRouteSlotScript.Value.PRESSURE,
+        ChunkRouteSlotScript.Value.RECOVERY,
+    ]
+    var difficulty_bands: Array[int] = [
+        ChunkDifficultyBandScript.Value.EASY,
+        ChunkDifficultyBandScript.Value.BASELINE,
+        ChunkDifficultyBandScript.Value.CHALLENGE,
+    ]
+
+    for route_slot in route_slots:
+        for difficulty_band in difficulty_bands:
+            for chunk_index in range(1, 6):
+                var plan: ChunkRoutePlanScript = _build_plan(chunk_index, route_slot, difficulty_band)
+                var anchor_graph: RouteAnchorGraphScript = _build_graph(plan)
+                var solution: ChunkRoutePathSolutionScript = _solve(plan, anchor_graph)
+
+                assert_true(solution.is_valid, "chunk %d slot %d band %d: %s" % [chunk_index, route_slot, difficulty_band, solution.failure_reason])
+                _assert_path_moves_are_reachable_and_clear(solution.safe_path, anchor_graph, plan.chunk_index)
+                if solution.optional_path != null:
+                    _assert_path_moves_are_reachable_and_clear(solution.optional_path, anchor_graph, plan.chunk_index)
+
+func test_safe_path_lane_choice_varies_with_seed() -> void:
+    var plan: ChunkRoutePlanScript = _build_plan(4, ChunkRouteSlotScript.Value.BASELINE, ChunkDifficultyBandScript.Value.BASELINE)
+    var anchor_graph: RouteAnchorGraphScript = _build_graph(plan)
+    var solver: ChunkRoutePathSolverScript = ChunkRoutePathSolverScript.new()
+    var lane_sequences: Dictionary = {}
+
+    for seed_index in range(12):
+        var seed_key: String = "%s:variety:%d" % [DailySeedKey.GENERATOR_VERSION, seed_index]
+        var solution: ChunkRoutePathSolutionScript = solver.solve(plan, anchor_graph, seed_key, MAX_MOVE_DISTANCE_METERS, PLAYER_BODY_WIDTH_METERS)
+        assert_true(solution.is_valid)
+        lane_sequences[str(solution.safe_path.lanes)] = true
+
+    assert_gt(lane_sequences.size(), 1, "expected different seeds to produce different safe-path shapes")
+
 func _build_plan(chunk_index: int, route_slot: int, difficulty_band: int) -> ChunkRoutePlanScript:
     var builder: ChunkRoutePlanBuilderScript = ChunkRoutePlanBuilderScript.new()
     return builder.build_plan(_seed_key(), chunk_index, route_slot, difficulty_band)
@@ -143,7 +188,7 @@ func _build_jittered_graph(plan: ChunkRoutePlanScript, seed_key: String) -> Rout
 
 func _solve(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> ChunkRoutePathSolutionScript:
     var solver: ChunkRoutePathSolverScript = ChunkRoutePathSolverScript.new()
-    return solver.solve(plan, anchor_graph)
+    return solver.solve(plan, anchor_graph, _seed_key(), MAX_MOVE_DISTANCE_METERS, PLAYER_BODY_WIDTH_METERS)
 
 func _build_graph_without_lane(anchor_graph: RouteAnchorGraphScript, lane: int) -> RouteAnchorGraphScript:
     RouteLaneScript.assert_valid(lane)
@@ -194,3 +239,18 @@ func _path_has_lane(path: RefCounted, lane: int) -> bool:
             return true
 
     return false
+
+func _assert_path_moves_are_reachable_and_clear(path: RoutePlannedPathScript, anchor_graph: RouteAnchorGraphScript, chunk_index: int) -> void:
+    for row_index in range(1, path.get_row_count()):
+        var previous_lane: int = path.get_lane_at_row(row_index - 1)
+        var current_lane: int = path.get_lane_at_row(row_index)
+        var previous_position: Vector2 = anchor_graph.get_anchor_for_row_and_lane(row_index - 1, previous_lane).local_position
+        var current_position: Vector2 = anchor_graph.get_anchor_for_row_and_lane(row_index, current_lane).local_position
+        var distance: float = previous_position.distance_to(current_position)
+        var lateral_delta: float = absf(current_position.x - previous_position.x)
+
+        assert_lte(distance, MAX_MOVE_DISTANCE_METERS, "chunk %d row %d exceeded the move envelope" % [chunk_index, row_index])
+        assert_true(
+            current_lane == previous_lane or lateral_delta >= PLAYER_BODY_WIDTH_METERS,
+            "chunk %d row %d moved laterally without enough swing clearance" % [chunk_index, row_index]
+        )

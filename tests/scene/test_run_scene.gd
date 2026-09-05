@@ -34,18 +34,6 @@ const SaveStorageScript = preload("res://src/platform/storage/save_storage.gd")
 const StaminaFallServiceScript = preload("res://src/gameplay/run/stamina_fall_service.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const TransactionSourceScript = preload("res://src/economy/transaction_source.gd")
-const UtcDateScript = preload("res://src/platform/clock/utc_date.gd")
-const UtcDateProviderScript = preload("res://src/platform/clock/utc_date_provider.gd")
-
-class StubUtcDateProvider extends UtcDateProviderScript:
-    var _utc_date: UtcDateScript
-
-    func _init(year: int, month: int, day: int) -> void:
-        _utc_date = UtcDateScript.new(year, month, day)
-
-    func get_current_utc_date() -> UtcDateScript:
-        return _utc_date
-
 class StubRewardedAdsAdapter extends RewardedAdsAdapterScript:
     var _can_show_continue: bool = false
     var _continue_rewarded_ad_result: RewardedAdResultScript = null
@@ -377,7 +365,7 @@ func test_run_scene_starts_generated_chunks_from_reset_anchor_without_authored_s
         assert_not_null(hazard_root)
         assert_gte(generated_handhold_root.get_child_count(), 1)
 
-func test_run_scene_generated_seed_key_tracks_injected_utc_rollover() -> void:
+func test_run_scene_generated_seed_key_is_random_per_run() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var first_playground_node: Node = scene.instantiate()
     var first_playground: RunSceneScript = first_playground_node as RunSceneScript
@@ -386,12 +374,10 @@ func test_run_scene_generated_seed_key_tracks_injected_utc_rollover() -> void:
 
     assert_not_null(first_playground)
     assert_not_null(second_playground)
-    first_playground.set_utc_date_provider(StubUtcDateProvider.new(2026, 5, 14))
-    second_playground.set_utc_date_provider(StubUtcDateProvider.new(2026, 5, 15))
     # Keep the two live game worlds from sharing a spawn point: both players otherwise
     # instantiate at world origin for one physics step (before reset_physics teleports them
     # to their own reset anchor) and their dynamic bodies collide. This test only checks
-    # seed-key/UTC determinism, which is independent of world position.
+    # seed-key randomness, which is independent of world position.
     second_playground.position = Vector2(100000.0, 0.0)
     add_child_autofree(first_playground)
     add_child_autofree(second_playground)
@@ -404,8 +390,8 @@ func test_run_scene_generated_seed_key_tracks_injected_utc_rollover() -> void:
     var first_generator_version: String = _get_required_string_meta(first_generated_chunk, &"generator_version")
     var second_generator_version: String = _get_required_string_meta(second_generated_chunk, &"generator_version")
 
-    assert_eq(first_seed_key, "generator_v5:2026-05-14")
-    assert_eq(second_seed_key, "generator_v5:2026-05-15")
+    assert_true(first_seed_key.begins_with(first_playground.generation_tuning.generator_version + ":"))
+    assert_true(second_seed_key.begins_with(second_playground.generation_tuning.generator_version + ":"))
     assert_ne(first_seed_key, second_seed_key)
     assert_eq(first_generator_version, first_playground.generation_tuning.generator_version)
     assert_eq(second_generator_version, second_playground.generation_tuning.generator_version)

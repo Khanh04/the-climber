@@ -6,18 +6,20 @@ Level Designer / Systems Programmer
 
 ## Goal
 
-Generate a daily-shared tower layout that feels like a chain of
+Generate a fresh tower layout every run that feels like a chain of
 short, readable bouldering problems: clear starts, intentional movement
 sequences, a fair crux, recoverable top-outs, optional risky beta, and
-enough hazard interaction to support replayability, friend ghosts, and
-social comparison without requiring MVP leaderboards. The opening
-route must stay readable for onboarding and the runtime must stay safe
-for mobile object budgets.
+enough hazard interaction to support replayability without requiring
+MVP leaderboards. The opening route must stay readable for onboarding
+and the runtime must stay safe for mobile object budgets. A shared,
+seed-keyed layout (for friend ghosts, daily challenges, or similar) is
+a possible future direction, not current scope -- see
+[ADR 0008](adr/0008-per-run-seed.md).
 
 ## MVP Scope
 
-- UTC daily seed and generator version drive deterministic chunk
-  layouts.
+- A per-run seed and generator version drive deterministic chunk
+  layouts for that run; two runs never share a layout.
 - Layouts include a generated opener at the reset anchor, generated
   handholds, normal coin sockets, and hazard sockets.
 - Generated chunks should be evaluated as climbable route problems,
@@ -42,20 +44,20 @@ for mobile object budgets.
 
 ## Core Requirements
 
-### Daily Seed Generation
+### Run Seed Generation
 
-- All players share the same global layout for each 24-hour period.
-- Seed generation is based on the full UTC date rather than
-  day-of-month only.
-- Recommended key format: `generator_v5:YYYY-MM-DD` using UTC.
-- Use a dedicated `RandomNumberGenerator` instance for daily generation
-  rather than relying on global RNG state.
+- Each run gets its own fresh seed; runs never share a layout with
+  each other, even started back to back.
+- Key format: `generator_v5:run:<entropy>`. `DailySeedKey.from_utc_date`
+  remains available as a deterministic seed-string factory (used
+  directly by tests) but no longer means "today" to any live code path.
 - Include a generator version in the seed key so future layout changes
   do not corrupt old ghost or replay data.
 - The seed drives handhold placement, hazard placement, and coin
   placement across every chunk, including the opener.
-- The same seed should allow friends to compare routes and death
-  locations on identical layouts.
+- See [ADR 0008](adr/0008-per-run-seed.md) for why the daily-shared
+  seed was replaced and what a future shared/challenge layout would
+  need to reintroduce it.
 
 ### Generated Opener And Chunk Flow
 
@@ -138,8 +140,7 @@ for mobile object budgets.
 - Daily layouts should support local daily best and lifetime personal
   best tracking without requiring account services.
 - The generation model should create enough route, hazard, and coin
-  variation inside the daily seed framework that one day feels worth
-  multiple attempts.
+  variation across runs that replaying feels worth multiple attempts.
 - Difficulty should ramp from onboarding-safe opener routes into the
   normal baseline and challenge cadence without a sudden fairness cliff.
 - Distribution should include recovery after high-pressure or high-crux
@@ -148,9 +149,7 @@ for mobile object budgets.
 - If streaks or simple achievement-style goals ship, they should align
   with behaviors the generator can support consistently, such as
   height milestones, clean fall recovery, or hazard-survival goals.
-- Player-facing UI may surface the active daily seed context and next
-  UTC reset timing, but the generator must not depend on live service
-  availability.
+- The generator must not depend on live service availability.
 
 ### Planned Handhold Type Expansion
 
@@ -303,7 +302,7 @@ aliases over a smaller ruleset.
 
 - Keep generation order stable so content placement remains
   reproducible from the same seed.
-- Build a dedicated RNG from the daily seed plus chunk index rather
+- Build a dedicated RNG from the run seed plus chunk index rather
   than sharing mutable global RNG state.
 - Avoid mixing non-deterministic runtime events into layout generation.
 - Separate layout generation from runtime hazard state so daily layout
@@ -335,6 +334,21 @@ aliases over a smaller ruleset.
   center, inner-right, and outer-right. The center lane keeps beginner
   safe routes readable, while outer lanes make optional traverses visibly
   distinct.
+- Solve the safe path as a reachability-filtered, row-purpose-weighted
+  walk rather than a fixed per-archetype lane pattern: each row's lane
+  is chosen only from lanes actually within reach of the previous row
+  (real anchor distance, not just an index step), so a valid path is a
+  generation-time guarantee rather than a property checked afterward.
+  Row purpose weights the choice among whatever survives that filter --
+  crux/pressure rows favor bigger, more committing moves; catch rows
+  favor a short rest move; decision/traverse rows favor lateral
+  movement -- so the path's shape actually reflects the row roles it
+  was planned from. See [ADR 0009](adr/0009-reachability-driven-path-solver.md).
+- Keep a minimum lateral clearance, sized to the player's collision
+  footprint, on every lateral move: a lane change must clear that width
+  or it isn't a valid candidate, so a swing is never a near-miss squeeze
+  past the wall. The same clearance excludes support holds from a row's
+  swing envelope around its path anchor.
 - Build each chunk from row roles rather than raw hold counts. MVP row
   roles are support, decision, traverse, crux, pressure, catch, and
   top-out. Easy chunks should preserve frequent support and catch rows;
@@ -392,9 +406,9 @@ aliases over a smaller ruleset.
 - Candidate scoring should include route-role coverage, route-intent
   socket alignment, and hazard fairness so the accepted chunk is not
   merely valid, but also readable as a compact bouldering problem.
-- Weighted chunk-type selection should use authored lane-row shape
-  metrics, not only flat membership in an allowed list, so profile
-  pacing and geometry reinforce one another.
+- Weighted route-slot selection should account for altitude, recent
+  profile history, and recovery needs, not only flat membership in an
+  allowed list, so profile pacing and route shape reinforce one another.
 - Add distribution tests across multiple dates and chunk ranges so
   weighted profile changes do not accidentally remove recovery chunks,
   overproduce hazards, or create repeated crux styles.
