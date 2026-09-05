@@ -162,17 +162,6 @@ func test_chunk_generation_is_independent_of_call_order() -> void:
 
     assert_eq(_layout_signature(first_layout), _layout_signature(second_layout))
 
-func test_route_slot_lookup_handles_large_uncached_index_without_recursion() -> void:
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
-    var chunk_index: int = 2048
-
-    var route_slot: int = generator.get_route_slot_for_chunk(
-        chunk_index,
-        generator.get_difficulty_band_for_chunk(chunk_index)
-    )
-
-    assert_true(ChunkRouteSlotScript.is_valid(route_slot))
 
 func test_first_chunk_provides_reachable_generated_starter_holds() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()

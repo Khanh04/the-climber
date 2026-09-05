@@ -119,17 +119,6 @@ one_hand_seconds = 100.0
 [sub_resource type="Resource" id="Resource_generation"]
 script = ExtResource("10_generation")
 handhold_definitions = null
-handhold_assignment_rules = null
-ladder_hold_rows = null
-zigzag_hold_rows = null
-wide_traverse_hold_rows = null
-sparse_reach_hold_rows = null
-dense_recovery_hold_rows = null
-fork_hold_rows = null
-risk_lane_hold_rows = null
-swing_gap_hold_rows = null
-opener_ladder_hold_rows = null
-opener_zigzag_hold_rows = null
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_uj04i"]
 animations = [{

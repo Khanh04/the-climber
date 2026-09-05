@@ -245,8 +245,6 @@ func _get_split_row_index(difficulty_band: int) -> int:
 func _get_merge_row_index(row_roles: Array[int], difficulty_band: int) -> int:
 	Validation.require_condition(row_roles.size() >= 2, "ChunkRoutePlanBuilder merge rows require route rows.")
 	ChunkDifficultyBandScript.assert_valid(difficulty_band)
-	if difficulty_band == ChunkDifficultyBandScript.Value.CHALLENGE:
-		return row_roles.size() - 2
 	return row_roles.size() - 2
 
 func _get_minimum_branch_separation_rows(difficulty_band: int) -> int:

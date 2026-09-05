@@ -246,15 +246,6 @@ func get_difficulty_band_for_height(height_meters: float) -> int:
 
 	return ChunkDifficultyBand.Value.CHALLENGE
 
-func get_route_slot_for_chunk(chunk_index: int, difficulty_band: int) -> int:
-	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when calculating a route slot.")
-	ChunkDifficultyBand.assert_valid(difficulty_band)
-	var preview_seed_key: String = "%s:route_profile_preview" % _tuning.generator_version
-	for pending_chunk_index in range(1, chunk_index):
-		var pending_difficulty_band: int = get_difficulty_band_for_chunk(pending_chunk_index)
-		var _pending_route_slot: int = _get_route_slot_for_chunk_seeded(preview_seed_key, pending_chunk_index, pending_difficulty_band)
-	return _get_route_slot_for_chunk_seeded(preview_seed_key, chunk_index, difficulty_band)
-
 func _get_route_slot_for_chunk_seeded(seed_key: String, chunk_index: int, difficulty_band: int) -> int:
 	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when calculating a seeded route slot.")
 	ChunkDifficultyBand.assert_valid(difficulty_band)
