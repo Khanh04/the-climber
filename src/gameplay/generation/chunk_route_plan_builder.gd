@@ -70,7 +70,7 @@ func _select_movement_style(seed_key: String, chunk_index: int, route_slot: int,
 		ChunkRouteSlotScript.Value.PRESSURE:
 			return RouteMovementStyleScript.Value.PRESSURE
 		ChunkRouteSlotScript.Value.BASELINE:
-			if (_hash_int("%s:movement:%d" % [seed_key, chunk_index]) % 2) == 0:
+			if (DeterministicHash.of_string("%s:movement:%d" % [seed_key, chunk_index]) % 2) == 0:
 				return RouteMovementStyleScript.Value.LADDER
 			return RouteMovementStyleScript.Value.ZIGZAG
 		_:
@@ -231,7 +231,7 @@ func _route_slot_requires_optional_route(route_slot: int) -> bool:
 			return false
 
 func _select_branch_side(seed_key: String, chunk_index: int, route_slot: int) -> int:
-	var side_seed_hash: int = _hash_int("%s:route_plan:%d:%d:branch_side" % [seed_key, chunk_index, route_slot])
+	var side_seed_hash: int = DeterministicHash.of_string("%s:route_plan:%d:%d:branch_side" % [seed_key, chunk_index, route_slot])
 	if (side_seed_hash % 2) == 0:
 		return RouteBranchSideScript.Value.LEFT
 	return RouteBranchSideScript.Value.RIGHT
@@ -377,9 +377,3 @@ func _build_optional_path_allowed_handhold_types(difficulty_band: int) -> Array[
 		_:
 			Validation.require_condition(false, "ChunkRoutePlanBuilder optional hold types require a supported difficulty band.")
 			return []
-
-func _hash_int(seed_text: String) -> int:
-	var seed_hash: int = seed_text.hash()
-	if seed_hash < 0:
-		seed_hash = -seed_hash
-	return seed_hash

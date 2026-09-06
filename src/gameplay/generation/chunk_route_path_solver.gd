@@ -276,10 +276,7 @@ func _pick_weighted_anchor(
 	return candidates[candidates.size() - 1]
 
 static func _hash_unit_float(context: String) -> float:
-	var hash_value: int = context.hash()
-	if hash_value < 0:
-		hash_value = -hash_value
-	return float(hash_value % 1000000) / 1000000.0
+	return DeterministicHash.unit_float(context)
 
 # ---------------------------------------------------------------------------
 # Optional (branch) path: unchanged deterministic alternating pattern. It already guarantees

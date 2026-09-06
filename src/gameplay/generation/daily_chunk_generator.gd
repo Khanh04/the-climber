@@ -484,10 +484,7 @@ func _select_weighted_route_slot(
 func _build_route_slot_rng(seed_key: String, chunk_index: int) -> RandomNumberGenerator:
 	var route_slot_rng: RandomNumberGenerator = RandomNumberGenerator.new()
 	var route_slot_seed_key: String = "%s:route_profile:%d" % [seed_key, chunk_index]
-	var route_slot_seed_hash: int = route_slot_seed_key.hash()
-	if route_slot_seed_hash < 0:
-		route_slot_seed_hash = -route_slot_seed_hash
-	route_slot_rng.seed = route_slot_seed_hash
+	route_slot_rng.seed = DeterministicHash.of_string(route_slot_seed_key)
 	return route_slot_rng
 
 func _get_route_slot_cache_key(seed_key: String, chunk_index: int) -> String:

@@ -146,14 +146,6 @@ func _build_vertical_jitter(row_index: int, lane: int, row_count: int) -> float:
 
 func _build_signed_jitter(jitter_key: String, maximum_abs_jitter_meters: float) -> float:
 	Validation.require_condition(maximum_abs_jitter_meters >= 0.0, "RouteAnchorGraphBuilder jitter amount cannot be negative.")
-	var jitter_hash: int = _hash_int("%s:%s" % [seed_key, jitter_key])
+	var jitter_hash: int = DeterministicHash.of_string("%s:%s" % [seed_key, jitter_key])
 	var normalized_jitter: float = (float(jitter_hash % 20001) / 10000.0) - 1.0
 	return normalized_jitter * maximum_abs_jitter_meters
-
-func _hash_int(seed_text: String) -> int:
-	var hash_value: int = 2166136261
-	for character_index in range(seed_text.length()):
-		hash_value = hash_value ^ seed_text.unicode_at(character_index)
-		hash_value = (hash_value * 16777619) & 0x7fffffff
-
-	return hash_value

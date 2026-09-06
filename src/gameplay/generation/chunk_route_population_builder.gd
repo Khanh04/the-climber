@@ -336,7 +336,7 @@ func _select_allowed_handhold_type(preferred_types: Array[int], allowed_types: A
 		for weight_index in range(weight):
 			weighted_types.append(eligible_type)
 
-	var selected_index: int = abs(selection_context.hash()) % weighted_types.size()
+	var selected_index: int = DeterministicHash.of_string(selection_context) % weighted_types.size()
 	return weighted_types[selected_index]
 
 func _build_reward_placements(
@@ -492,7 +492,7 @@ func _select_hazard_kind(candidate_kinds: Array[int], selection_context: String)
 		for weight_index in range(weight):
 			weighted_kinds.append(candidate_kind)
 
-	var selected_index: int = abs(selection_context.hash()) % weighted_kinds.size()
+	var selected_index: int = DeterministicHash.of_string(selection_context) % weighted_kinds.size()
 	return weighted_kinds[selected_index]
 
 func _find_pressure_row(plan: ChunkRoutePlanScript) -> int:

@@ -20,8 +20,4 @@ static func current_run() -> String:
 static func to_rng_seed(seed_key: String) -> int:
     Validation.require_condition(seed_key.begins_with(GENERATOR_VERSION + ":"), "Daily seed key has an unsupported generator version.")
 
-    var raw_hash: int = seed_key.hash()
-    if raw_hash < 0:
-        return -raw_hash
-
-    return raw_hash
+    return DeterministicHash.of_string(seed_key)
