@@ -121,6 +121,16 @@ func test_risk_population_places_reward_and_branch_denial_hazard_on_outer_branch
     assert_eq(RouteLaneScript.to_branch_side(_require_int_property(denial_hazard, &"lane")), plan.route_branch_side)
     assert_true(RouteLaneScript.is_outer(_require_int_property(denial_hazard, &"lane")))
 
+func test_hazard_placements_never_share_an_anchor() -> void:
+    for route_slot: int in [ChunkRouteSlotScript.Value.RISK, ChunkRouteSlotScript.Value.PRESSURE, ChunkRouteSlotScript.Value.SKILL, ChunkRouteSlotScript.Value.RECOVERY]:
+        var plan: ChunkRoutePlanScript = _build_plan(9, route_slot, ChunkDifficultyBandScript.Value.CHALLENGE)
+        var population: RefCounted = _build_population(plan)
+        var seen_anchor_ids: Dictionary[StringName, bool] = {}
+        for hazard_placement in _require_ref_counted_array_property(population, &"hazard_placements"):
+            var anchor_id: StringName = _require_string_name_property(hazard_placement, &"anchor_id")
+            assert_false(seen_anchor_ids.has(anchor_id), "route slot %d stacked two hazards on %s" % [route_slot, anchor_id])
+            seen_anchor_ids[anchor_id] = true
+
 func test_pressure_population_maps_crux_and_branch_hazard_intents_to_specific_kinds() -> void:
     var plan: ChunkRoutePlanScript = _build_plan(12, ChunkRouteSlotScript.Value.PRESSURE, ChunkDifficultyBandScript.Value.CHALLENGE)
     var population: RefCounted = _build_population(plan)

@@ -141,21 +141,21 @@ func validate_chunk_seam(current_layout: RefCounted, next_layout: RefCounted) ->
     for current_exit_hold_id in current_exit_hold_ids:
         var current_exit_node: RefCounted = _get_required_graph_node_by_hold_id(current_route_graph, current_exit_hold_id)
         var exit_world_position: Vector2 = _to_world_position(current_start_height_meters, _require_graph_node_local_position(current_exit_node))
+        var exit_physical_size: Vector2 = _require_graph_node_physical_size(current_exit_node)
         for next_entry_hold_id in next_entry_hold_ids:
             var entry_node: RefCounted = _get_required_graph_node_by_hold_id(next_route_graph, next_entry_hold_id)
             var entry_world_position: Vector2 = _to_world_position(next_start_height_meters, _require_graph_node_local_position(entry_node))
-            var gap_distance: float = _measure_gap_distance(
-                exit_world_position,
-                _require_graph_node_physical_size(current_exit_node),
-                entry_world_position,
-                _require_graph_node_physical_size(entry_node)
-            )
+            var entry_physical_size: Vector2 = _require_graph_node_physical_size(entry_node)
+            var gap_distance: float = _measure_gap_distance(exit_world_position, exit_physical_size, entry_world_position, entry_physical_size)
+            # The next chunk sits above this one; a seam whose entry is below the exit
+            # (world +Y) beyond the downward move budget is not a real climb move.
+            var downward_gap: float = _measure_downward_gap(exit_world_position, exit_physical_size, entry_world_position, entry_physical_size)
             if gap_distance < closest_gap_distance:
                 closest_gap_distance = gap_distance
                 exit_node = current_exit_node
                 closest_entry_node = entry_node
 
-            if gap_distance <= _max_move_distance_meters:
+            if gap_distance <= _max_move_distance_meters and downward_gap <= _max_downward_move_meters:
                 return GeneratedChunkSeamValidationResultScript.new(
                     true,
                     "",

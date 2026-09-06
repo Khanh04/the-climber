@@ -382,8 +382,11 @@ func _build_hazard_placements(
 	selection_seed: String
 ) -> Array[RefCounted]:
 	var hazard_placements: Array[RefCounted] = []
+	var placed_hazard_anchor_ids: Dictionary[StringName, bool] = {}
 	for hazard_intent in plan.hazard_intents:
 		var anchor: RouteAnchorCandidateScript = _select_hazard_anchor(plan, anchor_graph, path_solution, reward_placements, hazard_intent)
+		anchor = _nudge_hazard_anchor_clear_of_placed_hazards(plan, anchor_graph, path_solution, anchor, placed_hazard_anchor_ids)
+		placed_hazard_anchor_ids[anchor.anchor_id] = true
 		var hazard_selection_context: String = "%s:%d:%d:%d:%d:%s:hazard_kind" % [
 			selection_seed,
 			plan.chunk_index,
@@ -407,6 +410,57 @@ func _build_hazard_placements(
 		hazard_placements.append(hazard_placement)
 
 	return hazard_placements
+
+## Two hazard intents can resolve to the same anchor (e.g. a RISK chunk's branch
+## denial and reward-greed pressure both land on the last outer branch row). Move
+## the second one one or two rows off along a path it can stay on, so hazards never
+## stack (audit B4). Prefer the optional path -- keeping a branch-side hazard on the
+## branch side -- then fall back to the safe path; both hold a placed hold on every
+## row they cover, which the ChunkRoutePopulation contract requires.
+func _nudge_hazard_anchor_clear_of_placed_hazards(
+	plan: ChunkRoutePlanScript,
+	anchor_graph: RouteAnchorGraphScript,
+	path_solution: ChunkRoutePathSolutionScript,
+	preferred_anchor: RouteAnchorCandidateScript,
+	placed_hazard_anchor_ids: Dictionary[StringName, bool]
+) -> RouteAnchorCandidateScript:
+	Validation.require_condition(preferred_anchor != null, "ChunkRoutePopulationBuilder hazard nudge requires an anchor.")
+	if not placed_hazard_anchor_ids.has(preferred_anchor.anchor_id):
+		return preferred_anchor
+
+	if path_solution.optional_path != null:
+		var branch_nudge: RouteAnchorCandidateScript = _nudge_along_path(
+			anchor_graph, path_solution.optional_path, preferred_anchor, placed_hazard_anchor_ids,
+			plan.split_row_index + 1, plan.merge_row_index - 1
+		)
+		if branch_nudge != null:
+			return branch_nudge
+
+	var safe_nudge: RouteAnchorCandidateScript = _nudge_along_path(
+		anchor_graph, path_solution.safe_path, preferred_anchor, placed_hazard_anchor_ids,
+		1, path_solution.safe_path.get_row_count() - 2
+	)
+	if safe_nudge != null:
+		return safe_nudge
+
+	return preferred_anchor
+
+func _nudge_along_path(
+	anchor_graph: RouteAnchorGraphScript,
+	path: RoutePlannedPathScript,
+	preferred_anchor: RouteAnchorCandidateScript,
+	placed_hazard_anchor_ids: Dictionary[StringName, bool],
+	minimum_row_index: int,
+	maximum_row_index: int
+) -> RouteAnchorCandidateScript:
+	for row_offset in [1, -1, 2, -2]:
+		var row_index: int = preferred_anchor.row_index + row_offset
+		if row_index < minimum_row_index or row_index > maximum_row_index:
+			continue
+		var candidate: RouteAnchorCandidateScript = anchor_graph.get_anchor_for_row_and_lane(row_index, path.get_lane_at_row(row_index))
+		if candidate != null and not placed_hazard_anchor_ids.has(candidate.anchor_id):
+			return candidate
+	return null
 
 func _select_reward_anchor(
 	plan: ChunkRoutePlanScript,
