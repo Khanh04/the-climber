@@ -112,7 +112,7 @@ func test_risk_population_places_reward_and_branch_denial_hazard_on_outer_branch
         GeneratedHazardIntentScript.Value.REWARD_GREED_PRESSURE
     )
 
-    assert_eq(reward_placements.size(), 1)
+    assert_gte(reward_placements.size(), 1)
     assert_gte(_call_int_with_argument(population, &"count_holds_with_route_role", RouteRoleScript.Value.HAZARD_DENIAL), plan.minimum_branch_separation_rows)
     assert_not_null(denial_hazard)
     assert_not_null(greed_hazard)
@@ -120,6 +120,34 @@ func test_risk_population_places_reward_and_branch_denial_hazard_on_outer_branch
     assert_eq(_require_int_property(greed_hazard, &"hazard_kind"), GeneratedHazardKindScript.Value.BUG_SWARM)
     assert_eq(RouteLaneScript.to_branch_side(_require_int_property(denial_hazard, &"lane")), plan.route_branch_side)
     assert_true(RouteLaneScript.is_outer(_require_int_property(denial_hazard, &"lane")))
+
+func test_reward_count_varies_and_no_slot_is_excluded() -> void:
+    var builder: ChunkRoutePlanBuilderScript = ChunkRoutePlanBuilderScript.new()
+    var observed_reward_counts: Dictionary[int, bool] = {}
+    var baseline_slot_carried_a_reward: bool = false
+
+    for day in range(1, 17):
+        var seed_key: String = DailySeedKey.from_utc_date(2026, 5, day)
+        var skill_plan: ChunkRoutePlanScript = builder.build_plan(seed_key, 6, ChunkRouteSlotScript.Value.SKILL, ChunkDifficultyBandScript.Value.CHALLENGE)
+        var skill_population: RefCounted = _build_population(skill_plan, seed_key)
+        observed_reward_counts[_require_ref_counted_array_property(skill_population, &"reward_placements").size()] = true
+
+        var plan: ChunkRoutePlanScript = builder.build_plan(seed_key, 6, ChunkRouteSlotScript.Value.BASELINE, ChunkDifficultyBandScript.Value.CHALLENGE)
+        var population: RefCounted = _build_population(plan, seed_key)
+        if not _require_ref_counted_array_property(population, &"reward_placements").is_empty():
+            baseline_slot_carried_a_reward = true
+
+        for checked_population: RefCounted in [skill_population, population]:
+            var hazard_anchor_ids: Dictionary[StringName, bool] = {}
+            for hazard_placement in _require_ref_counted_array_property(checked_population, &"hazard_placements"):
+                if _require_int_property(hazard_placement, &"hazard_intent") == GeneratedHazardIntentScript.Value.REWARD_GREED_PRESSURE:
+                    continue
+                hazard_anchor_ids[_require_string_name_property(hazard_placement, &"anchor_id")] = true
+            for reward_placement in _require_ref_counted_array_property(checked_population, &"reward_placements"):
+                assert_false(hazard_anchor_ids.has(_require_string_name_property(reward_placement, &"anchor_id")), "a reward landed on a hazard anchor")
+
+    assert_gt(observed_reward_counts.size(), 1, "reward count never varied across seeds")
+    assert_true(baseline_slot_carried_a_reward, "the BASELINE slot never carried a reward")
 
 func test_hazard_placements_never_share_an_anchor() -> void:
     for route_slot: int in [ChunkRouteSlotScript.Value.RISK, ChunkRouteSlotScript.Value.PRESSURE, ChunkRouteSlotScript.Value.SKILL, ChunkRouteSlotScript.Value.RECOVERY]:
@@ -167,7 +195,7 @@ func test_recovery_population_places_semantic_hazards_on_distinct_first_and_last
         GeneratedHazardIntentScript.Value.SAFE_ROUTE_RELIEF
     )
 
-    assert_eq(reward_placements.size(), 1)
+    assert_gte(reward_placements.size(), 1)
     assert_not_null(recovery_lift_hazard)
     assert_not_null(safe_relief_hazard)
     assert_eq(_require_int_property(recovery_lift_hazard, &"hazard_kind"), GeneratedHazardKindScript.Value.UPDRAFT)

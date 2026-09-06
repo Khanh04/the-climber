@@ -48,7 +48,7 @@ func populate(
 
 	_add_support_holds(plan, anchor_graph, path_solution, player_body_width_meters, selection_seed, holds, support_hold_ids)
 
-	var reward_placements: Array[RefCounted] = _build_reward_placements(plan, anchor_graph, path_solution, holds)
+	var reward_placements: Array[RefCounted] = _build_reward_placements(plan, anchor_graph, path_solution, holds, selection_seed)
 	var hazard_placements: Array[RefCounted] = _build_hazard_placements(plan, anchor_graph, path_solution, reward_placements, selection_seed)
 
 	var population_variant: Variant = ChunkRoutePopulationScript.new(holds, reward_placements, hazard_placements, safe_hold_ids, optional_hold_ids, support_hold_ids)
@@ -353,26 +353,101 @@ func _build_reward_placements(
 	plan: ChunkRoutePlanScript,
 	anchor_graph: RouteAnchorGraphScript,
 	path_solution: ChunkRoutePathSolutionScript,
-	holds: Array[RefCounted]
+	holds: Array[RefCounted],
+	selection_seed: String
 ) -> Array[RefCounted]:
 	var reward_placements: Array[RefCounted] = []
-	if plan.route_slot == ChunkRouteSlotScript.Value.OPENER or plan.route_slot == ChunkRouteSlotScript.Value.BASELINE:
+	var reward_count: int = _get_reward_count(plan, selection_seed)
+	if reward_count <= 0:
 		return reward_placements
 
-	var reward_anchor: RouteAnchorCandidateScript = _select_reward_anchor(plan, anchor_graph, path_solution)
-	Validation.require_condition(reward_anchor != null, "ChunkRoutePopulationBuilder reward anchor must exist.")
-	Validation.require_condition(_find_hold_by_anchor_id(holds, reward_anchor.anchor_id) != null, "ChunkRoutePopulationBuilder reward anchor must reference a selected hold.")
-	var reward_placement_variant: Variant = RouteRewardPlacementScript.new(
-		StringName("reward_%s" % String(reward_anchor.anchor_id)),
-		reward_anchor.anchor_id,
-		reward_anchor.row_index,
-		reward_anchor.lane,
-		reward_anchor.local_position
-	)
-	Validation.require_condition(reward_placement_variant is RefCounted, "ChunkRoutePopulationBuilder must create RefCounted reward placements.")
-	var reward_placement: RefCounted = reward_placement_variant
-	reward_placements.append(reward_placement)
+	for reward_anchor in _select_reward_anchors(plan, anchor_graph, path_solution, reward_count, selection_seed):
+		Validation.require_condition(reward_anchor != null, "ChunkRoutePopulationBuilder reward anchor must exist.")
+		Validation.require_condition(_find_hold_by_anchor_id(holds, reward_anchor.anchor_id) != null, "ChunkRoutePopulationBuilder reward anchor must reference a selected hold.")
+		var reward_placement_variant: Variant = RouteRewardPlacementScript.new(
+			StringName("reward_%s" % String(reward_anchor.anchor_id)),
+			reward_anchor.anchor_id,
+			reward_anchor.row_index,
+			reward_anchor.lane,
+			reward_anchor.local_position
+		)
+		Validation.require_condition(reward_placement_variant is RefCounted, "ChunkRoutePopulationBuilder must create RefCounted reward placements.")
+		var reward_placement: RefCounted = reward_placement_variant
+		reward_placements.append(reward_placement)
 	return reward_placements
+
+## Seeded, band-scaled coin count. Opener stays sparse (onboarding); higher bands
+## carry more. No slot is excluded any more -- see docs/route-generation-audit.md A9.
+func _get_reward_count(plan: ChunkRoutePlanScript, selection_seed: String) -> int:
+	var base_reward_count: int = 1
+	if plan.difficulty_band == ChunkDifficultyBandScript.Value.CHALLENGE:
+		base_reward_count = 2
+	if plan.route_slot == ChunkRouteSlotScript.Value.OPENER:
+		base_reward_count = maxi(0, base_reward_count - 1)
+	var seeded_bump: int = DeterministicHash.of_string("%s:reward_count:%d" % [selection_seed, plan.chunk_index]) % 2
+	return base_reward_count + seeded_bump
+
+func _select_reward_anchors(
+	plan: ChunkRoutePlanScript,
+	anchor_graph: RouteAnchorGraphScript,
+	path_solution: ChunkRoutePathSolutionScript,
+	reward_count: int,
+	selection_seed: String
+) -> Array[RouteAnchorCandidateScript]:
+	var reward_anchors: Array[RouteAnchorCandidateScript] = []
+	var used_anchor_ids: Dictionary[StringName, bool] = {}
+	var primary_anchor: RouteAnchorCandidateScript = _select_reward_anchor(plan, anchor_graph, path_solution)
+	reward_anchors.append(primary_anchor)
+	used_anchor_ids[primary_anchor.anchor_id] = true
+	if reward_count <= 1:
+		return reward_anchors
+
+	# Extras go off the safe path where a branch exists -- the optional line's outer
+	# rows -- so the coins pull players onto the risky route; otherwise onto other
+	# catch rows.
+	var extra_anchors: Array[RouteAnchorCandidateScript] = _collect_extra_reward_anchors(plan, anchor_graph, path_solution, primary_anchor)
+	if extra_anchors.is_empty():
+		return reward_anchors
+
+	var start_offset: int = DeterministicHash.of_string("%s:reward_offset:%d" % [selection_seed, plan.chunk_index]) % extra_anchors.size()
+	for step in range(extra_anchors.size()):
+		if reward_anchors.size() >= reward_count:
+			break
+		var candidate: RouteAnchorCandidateScript = extra_anchors[(start_offset + step) % extra_anchors.size()]
+		if candidate != null and not used_anchor_ids.has(candidate.anchor_id):
+			reward_anchors.append(candidate)
+			used_anchor_ids[candidate.anchor_id] = true
+	return reward_anchors
+
+func _collect_extra_reward_anchors(
+	plan: ChunkRoutePlanScript,
+	anchor_graph: RouteAnchorGraphScript,
+	path_solution: ChunkRoutePathSolutionScript,
+	primary_anchor: RouteAnchorCandidateScript
+) -> Array[RouteAnchorCandidateScript]:
+	var extra_anchors: Array[RouteAnchorCandidateScript] = []
+	if path_solution.optional_path != null:
+		# The first and last outer branch rows carry the traverse-force / branch-denial
+		# hazards; leave them so an extra coin never lands on top of a hazard.
+		var first_outer_row_index: int = _find_first_outer_lane_row_for_path(plan, path_solution.optional_path, plan.route_branch_side)
+		var last_outer_row_index: int = _find_last_outer_lane_row_for_path(plan, path_solution.optional_path, plan.route_branch_side)
+		for row_index in range(plan.split_row_index + 1, plan.merge_row_index):
+			if row_index == primary_anchor.row_index or row_index == first_outer_row_index or row_index == last_outer_row_index:
+				continue
+			var branch_lane: int = path_solution.optional_path.get_lane_at_row(row_index)
+			if RouteLaneScript.is_outer(branch_lane):
+				extra_anchors.append(anchor_graph.get_anchor_for_row_and_lane(row_index, branch_lane))
+		return extra_anchors
+
+	# The first and last catch rows carry the recovery-lift and safe-relief hazards;
+	# only interior catch rows are free for an extra coin.
+	var last_catch_row_index: int = _find_last_row_with_role(plan, RouteRowRoleScript.Value.CATCH)
+	for row_index in range(1, plan.get_row_count() - 1):
+		if row_index == primary_anchor.row_index or row_index == last_catch_row_index:
+			continue
+		if plan.row_roles[row_index] == RouteRowRoleScript.Value.CATCH:
+			extra_anchors.append(anchor_graph.get_anchor_for_row_and_lane(row_index, path_solution.safe_path.get_lane_at_row(row_index)))
+	return extra_anchors
 
 func _build_hazard_placements(
 	plan: ChunkRoutePlanScript,
