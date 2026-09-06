@@ -429,19 +429,22 @@ func _physics_process(delta: float) -> void:
 		right_previous_hold_path = attachment_state.get_hold_path(HandSideScript.Value.RIGHT)
 
 	var handholds: Array = get_tree().get_nodes_in_group(climb_tuning.handhold_group_name)
+	var aim_vector: Vector2 = _get_input_frame_aim_vector(input_frame)
 	var left_target: RefCounted = _run_handhold_targeting_runtime.find_nearest_handhold(
 		_player.get_left_hand_anchor_global_position(),
 		handholds,
 		climb_tuning.handhold_detection_radius_pixels,
 		_starter_handholds_root,
-		generation_tuning
+		generation_tuning,
+		aim_vector
 	)
 	var right_target: RefCounted = _run_handhold_targeting_runtime.find_nearest_handhold(
 		_player.get_right_hand_anchor_global_position(),
 		handholds,
 		climb_tuning.handhold_detection_radius_pixels,
 		_starter_handholds_root,
-		generation_tuning
+		generation_tuning,
+		aim_vector
 	)
 	var result: ClimbPrototypeFrameResultScript = _controller.apply_input_frame(input_frame, left_target, right_target, delta)
 	var current_attachment_state: HandAttachmentState = _controller.get_attachment_state()
@@ -758,9 +761,18 @@ func _sync_aim_preview(input_frame: PlayerInputFrameScript) -> void:
 	_right_aim_preview = _sync_aim_preview_line(_right_aim_preview, right_visible, _player.get_right_hand_anchor_global_position(), aim_target_position, &"RightAimPreview")
 	_aim_target_marker = _sync_aim_target_marker(_aim_target_marker, left_visible or right_visible, aim_target_position)
 
+func _get_input_frame_aim_vector(input_frame: PlayerInputFrameScript) -> Vector2:
+	if not input_frame.has_aim_intent():
+		return Vector2.ZERO
+	var aim_intent: Object = input_frame.aim_intent
+	var raw_aim_vector: Variant = aim_intent.get("aim_vector")
+	Validation.require_condition(raw_aim_vector is Vector2, "RunScene aim intent must expose a Vector2 aim_vector.")
+	return raw_aim_vector
+
 func _calculate_aim_preview_target_position(aim_vector: Vector2) -> Vector2:
 	Validation.require_condition(aim_vector != Vector2.ZERO, "Aim preview target requires a non-zero aim vector.")
-	var preview_distance: float = maxf(160.0, climb_tuning.handhold_detection_radius_pixels * 1.75)
+	# The preview ray must show the real grab reach, not an inflated one.
+	var preview_distance: float = climb_tuning.handhold_detection_radius_pixels
 	var hand_midpoint: Vector2 = (_player.get_left_hand_anchor_global_position() + _player.get_right_hand_anchor_global_position()) * 0.5
 	return hand_midpoint + (aim_vector.normalized() * preview_distance)
 

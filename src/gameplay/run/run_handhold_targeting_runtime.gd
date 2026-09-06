@@ -13,20 +13,37 @@ func find_nearest_handhold(
 	handholds: Array,
 	handhold_detection_radius_pixels: float,
 	starter_handholds_root: Node,
-	generation_tuning: Resource
+	generation_tuning: Resource,
+	aim_vector: Vector2 = Vector2.ZERO
 ) -> HandholdTargetScript:
 	var typed_generation_tuning: GenerationTuningScript = _require_generation_tuning(generation_tuning)
 	Validation.require_condition(handhold_detection_radius_pixels > 0.0, "RunHandholdTargetingRuntime detection radius must be positive.")
 	Validation.require_condition(starter_handholds_root != null, "RunHandholdTargetingRuntime requires starter handholds root.")
 
+	var aim_direction: Vector2 = Vector2.ZERO
+	if aim_vector != Vector2.ZERO:
+		aim_direction = aim_vector.normalized()
+
 	var nearest_target: HandholdTargetScript = null
-	var nearest_distance: float = handhold_detection_radius_pixels
+	var best_score: float = INF
 
 	for handhold in handholds:
 		Validation.require_condition(handhold is Node2D, "RunHandholdTargetingRuntime handholds must be Node2D instances.")
 		var handhold_node: Node2D = handhold
 		var distance: float = anchor_position.distance_to(handhold_node.global_position)
-		if distance <= nearest_distance:
+		if distance > handhold_detection_radius_pixels:
+			continue
+
+		# Bias toward the hold the player is aiming at so an overshoot no longer
+		# snaps to a hold below the hand. Misaligned holds cost up to 10x their
+		# distance but are never fully excluded -- a grab in range always resolves.
+		var score: float = distance
+		if aim_direction != Vector2.ZERO and distance > 0.0:
+			var hold_direction: Vector2 = (handhold_node.global_position - anchor_position) / distance
+			var alignment: float = clampf(0.5 + 0.5 * aim_direction.dot(hold_direction), 0.1, 1.0)
+			score = distance / alignment
+
+		if score <= best_score:
 			nearest_target = HandholdTargetScript.new(
 				StringName(handhold_node.name),
 				handhold_node.global_position,
@@ -34,7 +51,7 @@ func find_nearest_handhold(
 				_require_handhold_drain_multiplier(handhold_node, starter_handholds_root, typed_generation_tuning),
 				_require_handhold_type(handhold_node, starter_handholds_root)
 			)
-			nearest_distance = distance
+			best_score = score
 
 	return nearest_target
 

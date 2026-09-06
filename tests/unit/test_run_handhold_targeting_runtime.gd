@@ -89,3 +89,37 @@ func test_find_nearest_handhold_uses_normal_definition_for_authored_starter_hold
 	assert_eq(target.hold_path, starter_hold.get_path())
 	assert_eq(target.stamina_drain_multiplier, normal_surface_profile.stamina_drain_multiplier)
 	assert_eq(target.handhold_type, HandholdTypeScript.Value.NORMAL)
+
+func test_aimed_grab_favours_the_hold_in_the_aim_direction() -> void:
+	var root: Node2D = Node2D.new()
+	root.name = &"AimTargetingFixture"
+	add_child_autofree(root)
+
+	var starter_handholds_root: Node2D = Node2D.new()
+	starter_handholds_root.name = &"Handholds"
+	root.add_child(starter_handholds_root)
+
+	var below_hold: StaticBody2D = StaticBody2D.new()
+	below_hold.name = &"BelowHold"
+	below_hold.global_position = Vector2(100.0, 130.0)
+	below_hold.set_meta(&"stamina_drain_multiplier", 1.0)
+	below_hold.set_meta(&"handhold_type", HandholdTypeScript.to_label(HandholdTypeScript.Value.NORMAL))
+	root.add_child(below_hold)
+
+	var above_hold: StaticBody2D = StaticBody2D.new()
+	above_hold.name = &"AboveHold"
+	above_hold.global_position = Vector2(100.0, 100.0)
+	above_hold.set_meta(&"stamina_drain_multiplier", 1.0)
+	above_hold.set_meta(&"handhold_type", HandholdTypeScript.to_label(HandholdTypeScript.Value.NORMAL))
+	root.add_child(above_hold)
+	await get_tree().process_frame
+
+	var runtime: RunHandholdTargetingRuntimeScript = RunHandholdTargetingRuntimeScript.new()
+	var anchor_position: Vector2 = Vector2(100.0, 120.0)
+	var generation_tuning: GenerationTuningScript = GenerationTuningScript.new()
+
+	var without_aim: HandholdTargetScript = runtime.find_nearest_handhold(anchor_position, [below_hold, above_hold], 64.0, starter_handholds_root, generation_tuning)
+	assert_eq(without_aim.hold_id, &"BelowHold")
+
+	var aimed_up: HandholdTargetScript = runtime.find_nearest_handhold(anchor_position, [below_hold, above_hold], 64.0, starter_handholds_root, generation_tuning, Vector2(0.0, -1.0))
+	assert_eq(aimed_up.hold_id, &"AboveHold")
