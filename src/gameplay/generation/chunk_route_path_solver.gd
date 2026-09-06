@@ -138,7 +138,7 @@ func _build_safe_path(
 				var two_rows_back_lane: int = lanes[row_index - 2] if row_index >= 2 else -1
 				var weights: Array[float] = []
 				for candidate in candidates:
-					weights.append(_get_row_weight(candidate, previous_position, plan.row_roles[row_index], max_move_distance_meters, two_rows_back_lane))
+					weights.append(_get_row_weight(candidate, previous_position, plan.row_roles[row_index], max_move_distance_meters, lanes[row_index - 1], two_rows_back_lane))
 
 				var selection_context: String = "%s:safe:%d:%d" % [selection_seed, plan.chunk_index, row_index]
 				lane = _pick_weighted_anchor(candidates, weights, selection_context).lane
@@ -221,6 +221,7 @@ func _get_row_weight(
 	previous_position: Vector2,
 	row_role: int,
 	max_move_distance_meters: float,
+	previous_lane: int,
 	two_rows_back_lane: int
 ) -> float:
 	var distance: float = anchor.local_position.distance_to(previous_position)
@@ -247,6 +248,13 @@ func _get_row_weight(
 			RouteRowRoleScript.assert_valid(row_role)
 			weight = 1.0
 
+	# Anti-ladder: an occasional straight move is fine, but a same-lane run reads as
+	# a boring vertical ladder. Discount repeating the previous row's lane, and
+	# suppress hard anything that would extend a run to three rows straight.
+	if previous_lane != -1 and two_rows_back_lane != -1 and anchor.lane == previous_lane and anchor.lane == two_rows_back_lane:
+		return 0.05
+	if previous_lane != -1 and anchor.lane == previous_lane:
+		weight *= 0.6
 	if two_rows_back_lane != -1 and anchor.lane == two_rows_back_lane:
 		weight *= 0.5
 

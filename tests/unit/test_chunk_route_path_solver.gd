@@ -193,6 +193,23 @@ func test_optional_branch_lane_choice_varies_with_seed_but_keeps_its_contract() 
 
     assert_gt(branch_lane_sequences.size(), 1, "expected different seeds to produce different branch-lane shapes")
 
+func test_safe_path_never_runs_the_same_lane_three_rows_straight() -> void:
+    var plan: ChunkRoutePlanScript = _build_plan(6, ChunkRouteSlotScript.Value.BASELINE, ChunkDifficultyBandScript.Value.BASELINE)
+    var anchor_graph: RouteAnchorGraphScript = _build_graph(plan)
+    var solver: ChunkRoutePathSolverScript = ChunkRoutePathSolverScript.new()
+
+    for seed_index in range(24):
+        var seed_key: String = "%s:ladder_check:%d" % [DailySeedKey.GENERATOR_VERSION, seed_index]
+        var solution: ChunkRoutePathSolutionScript = solver.solve(plan, anchor_graph, seed_key, MAX_MOVE_DISTANCE_METERS, PLAYER_BODY_WIDTH_METERS)
+        assert_true(solution.is_valid)
+        var run_length: int = 1
+        for row_index in range(1, solution.safe_path.get_row_count()):
+            if solution.safe_path.get_lane_at_row(row_index) == solution.safe_path.get_lane_at_row(row_index - 1):
+                run_length += 1
+                assert_lt(run_length, 3, "seed %d ran lane %d for %d rows straight" % [seed_index, solution.safe_path.get_lane_at_row(row_index), run_length])
+            else:
+                run_length = 1
+
 func _get_inner_lane_for_branch_side(branch_side: int) -> int:
     if branch_side == RouteBranchSideScript.Value.LEFT:
         return RouteLaneScript.Value.INNER_LEFT

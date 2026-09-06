@@ -7,6 +7,9 @@ extends Resource
 @export var static_reach_distance_meters: float = 0.96
 ## Maximum downward-only move allowed before a path is considered too lossy to be safe.
 @export var max_downward_move_meters: float = 0.12
+## Reach headroom kept clear of the move envelope when sizing handhold jitter, so a
+## bad jitter roll can never push a real move past max_move_distance_meters.
+@export var jitter_safety_margin_meters: float = 0.15
 ## Minimum lateral clearance a swing move must keep, so the player's body has room to swing
 ## between two holds instead of squeezing past the wall. Sourced from the player's collision
 ## footprint (scenes/player/player_character.tscn HeadCollisionShape: 48px wide at
@@ -25,6 +28,7 @@ func is_valid() -> bool:
 		and static_reach_distance_meters > 0.0 \
 		and static_reach_distance_meters <= max_move_distance_meters \
 		and max_downward_move_meters >= 0.0 \
+		and jitter_safety_margin_meters >= 0.0 \
 		and player_body_width_meters > 0.0 \
 		and player_body_width_meters < max_move_distance_meters \
 		and entry_anchor_positions.size() > 0 \
@@ -39,6 +43,7 @@ func assert_valid() -> void:
 	Validation.require_condition(static_reach_distance_meters > 0.0, "Route validation static reach distance must be positive.")
 	Validation.require_condition(static_reach_distance_meters <= max_move_distance_meters, "Route validation static reach cannot exceed the swing move envelope.")
 	Validation.require_condition(max_downward_move_meters >= 0.0, "Route validation max downward move cannot be negative.")
+	Validation.require_condition(jitter_safety_margin_meters >= 0.0, "Route validation jitter safety margin cannot be negative.")
 	Validation.require_condition(player_body_width_meters > 0.0, "Route validation player body width must be positive.")
 	Validation.require_condition(player_body_width_meters < max_move_distance_meters, "Route validation player body width cannot exceed the swing move envelope.")
 	Validation.require_condition(entry_anchor_positions.size() > 0, "Route validation requires at least one entry anchor position.")

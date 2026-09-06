@@ -19,7 +19,7 @@ const DefaultRouteProfileTuningResource = preload("res://resources/config/route_
 ## Ratio of half-width used for the inner left and inner right lane anchors.
 @export var inner_lane_position_ratio: float = 0.425
 ## Ratio of half-width used for the outer left and outer right lane anchors.
-@export var outer_lane_position_ratio: float = 0.85
+@export var outer_lane_position_ratio: float = 0.8
 ## Height of the opener's first reachable row above the reset anchor.
 @export var opener_first_row_height_meters: float = 0.72
 ## Clearance kept between the top of the opener route and the chunk ceiling.

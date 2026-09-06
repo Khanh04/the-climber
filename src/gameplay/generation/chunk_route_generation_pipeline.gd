@@ -135,7 +135,7 @@ func _calculate_reachable_vertical_jitter_meters(row_step_height_meters: float) 
 	Validation.require_condition(row_step_height_meters > 0.0, "ChunkRouteGenerationPipeline reachable jitter requires a positive row step.")
 	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
 	var jitter_budget_meters: float = (route_validation_tuning.max_move_distance_meters - row_step_height_meters) * 0.5
-	var safe_jitter_meters: float = maxf(0.0, jitter_budget_meters - 0.02)
+	var safe_jitter_meters: float = maxf(0.0, jitter_budget_meters - route_validation_tuning.jitter_safety_margin_meters)
 	return minf(_tuning.handhold_vertical_jitter_meters, safe_jitter_meters)
 
 func _calculate_altitude_difficulty_bonus(start_height_meters: float) -> float:
