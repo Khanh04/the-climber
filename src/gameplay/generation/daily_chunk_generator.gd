@@ -373,14 +373,20 @@ func _get_route_slot_for_chunk_seeded(seed_key: String, chunk_index: int, diffic
 		var previous_difficulty_band: int = get_difficulty_band_for_chunk(chunk_index - 1)
 		previous_route_slot = _get_route_slot_for_chunk_seeded(seed_key, chunk_index - 1, previous_difficulty_band)
 
-	if previous_route_slot == ChunkRouteSlot.Value.PRESSURE:
-		_route_slot_cache[cache_key] = ChunkRouteSlot.Value.RECOVERY
-		return ChunkRouteSlot.Value.RECOVERY
-
 	var candidate_slots: Array[int] = []
 	var candidate_weights: Array[float] = []
 	_append_route_profile_candidates(route_profile_tuning, difficulty_band, candidate_slots, candidate_weights)
 	_apply_route_profile_history_biases(seed_key, chunk_index, candidate_slots, candidate_weights)
+
+	# After a PRESSURE chunk relief is very likely but no longer forced: RECOVERY is
+	# heavily favoured, a back-to-back PRESSURE is ruled out and RISK is dampened,
+	# but a normal slot can still follow (audit C5).
+	if previous_route_slot == ChunkRouteSlot.Value.PRESSURE:
+		_add_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RECOVERY, route_profile_tuning.novelty_bonus_weight + 6.0)
+		_scale_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.PRESSURE, 0.0)
+		_scale_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, 0.2)
+		_scale_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.SKILL, 0.5)
+		_scale_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.BASELINE, 0.5)
 	var route_slot_rng: RandomNumberGenerator = _build_route_slot_rng(seed_key, chunk_index)
 	var selected_route_slot: int = _select_weighted_route_slot(candidate_slots, candidate_weights, route_slot_rng)
 	_route_slot_cache[cache_key] = selected_route_slot

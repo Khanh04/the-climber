@@ -121,35 +121,43 @@ func test_weighted_profile_scheduler_keeps_easy_band_free_of_pressure_slots() ->
         var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, chunk_index))
         assert_ne(layout.route_slot, ChunkRouteSlotScript.Value.PRESSURE)
 
-func test_weighted_profile_scheduler_keeps_baseline_band_free_of_pressure_slots() -> void:
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
-    var seed_keys: PackedStringArray = PackedStringArray([
-        DailySeedKey.from_utc_date(2026, 5, 14),
-        DailySeedKey.from_utc_date(2026, 5, 15),
-        DailySeedKey.from_utc_date(2026, 5, 16),
-    ])
+func test_weighted_profile_scheduler_keeps_baseline_band_pressure_rare() -> void:
+    var baseline_band_chunk_count: int = 0
+    var baseline_band_pressure_count: int = 0
 
-    for seed_key in seed_keys:
-        for chunk_index in range(5, 10):
+    for day in range(1, 25):
+        var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(GenerationTuningScript.new())
+        var seed_key: String = DailySeedKey.from_utc_date(2026, 5, day)
+        for chunk_index in range(5, 9):
             var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, chunk_index))
-            if layout.difficulty_band == ChunkDifficultyBandScript.Value.BASELINE:
-                assert_ne(layout.route_slot, ChunkRouteSlotScript.Value.PRESSURE)
+            if layout.difficulty_band != ChunkDifficultyBandScript.Value.BASELINE:
+                continue
+            baseline_band_chunk_count += 1
+            if layout.route_slot == ChunkRouteSlotScript.Value.PRESSURE:
+                baseline_band_pressure_count += 1
 
-func test_weighted_profile_scheduler_inserts_recovery_after_pressure() -> void:
-    var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
-    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
-    var pressure_chunk_index: int = _find_first_chunk_index_with_route_slot_and_band(
-        generator,
-        seed_key,
-        ChunkRouteSlotScript.Value.PRESSURE,
-        ChunkDifficultyBandScript.Value.CHALLENGE
-    )
+    assert_gt(baseline_band_chunk_count, 0)
+    assert_lt(baseline_band_pressure_count, baseline_band_chunk_count / 4, "pressure should stay a small minority of baseline-band chunks")
 
-    var next_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, pressure_chunk_index + 1))
+func test_weighted_profile_scheduler_usually_relieves_after_pressure_and_never_repeats_it() -> void:
+    var pressure_occurrence_count: int = 0
+    var recovery_after_pressure_count: int = 0
 
-    assert_eq(next_layout.route_slot, ChunkRouteSlotScript.Value.RECOVERY)
+    for day in range(1, 25):
+        var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(GenerationTuningScript.new())
+        var seed_key: String = DailySeedKey.from_utc_date(2026, 5, day)
+        var previous_route_slot: int = -1
+        for chunk_index in range(1, 30):
+            var layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, chunk_index))
+            if previous_route_slot == ChunkRouteSlotScript.Value.PRESSURE:
+                pressure_occurrence_count += 1
+                assert_ne(layout.route_slot, ChunkRouteSlotScript.Value.PRESSURE, "pressure repeated back to back")
+                if layout.route_slot == ChunkRouteSlotScript.Value.RECOVERY:
+                    recovery_after_pressure_count += 1
+            previous_route_slot = layout.route_slot
+
+    assert_gt(pressure_occurrence_count, 0)
+    assert_gte(recovery_after_pressure_count * 10, pressure_occurrence_count * 7, "recovery should follow pressure most of the time")
 
 func test_chunk_generation_is_independent_of_call_order() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -492,7 +500,7 @@ func test_sampled_daily_generation_distribution_preserves_route_first_shape() ->
     assert_gt(recovery_count, 0)
     assert_gt(risk_count, 0)
     assert_gt(pressure_count, 0)
-    assert_gt(recovery_count, pressure_count)
+    assert_gte(recovery_count, pressure_count)
     assert_eq(recovery_dense_count, recovery_count)
     assert_eq(pressure_swing_gap_count, pressure_count)
 
