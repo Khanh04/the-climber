@@ -158,7 +158,10 @@ func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attemp
 	var difficulty_band: int = get_difficulty_band_for_height(start_height_meters)
 	var route_slot: int = _get_route_slot_for_chunk_seeded(seed_key, chunk_index, difficulty_band)
 	var candidate_selection_seed: String = _build_candidate_selection_seed(seed_key, chunk_index, candidate_attempt_index)
-	var preliminary_layout: GeneratedChunkLayout = _route_generation_pipeline.build_layout(
+	# Build once. route_validation_result and candidate_score are pure passthrough
+	# fields the emitter just copies onto the layout, so bake them in afterwards
+	# instead of running the whole pipeline a second time (audit T12).
+	var candidate_layout: GeneratedChunkLayout = _route_generation_pipeline.build_layout(
 		seed_key,
 		chunk_index,
 		route_slot,
@@ -169,19 +172,11 @@ func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attemp
 		0.0,
 		candidate_selection_seed
 	)
-	var route_validation_result: RefCounted = _validate_generated_layout(preliminary_layout)
-	var candidate_score: float = _build_candidate_score(preliminary_layout, route_validation_result)
-	return _route_generation_pipeline.build_layout(
-		seed_key,
-		chunk_index,
-		route_slot,
-		difficulty_band,
-		start_height_meters,
-		route_validation_result,
-		candidate_attempt_index,
-		candidate_score,
-		candidate_selection_seed
-	)
+	var route_validation_result: RefCounted = _validate_generated_layout(candidate_layout)
+	candidate_layout.route_validation_result = route_validation_result
+	candidate_layout.candidate_score = _build_candidate_score(candidate_layout, route_validation_result)
+	candidate_layout.assert_valid()
+	return candidate_layout
 
 ## Scores a candidate by how close its observed route difficulty sits to the
 ## chunk's target for its (route_slot, difficulty_band). Returned as a value the
