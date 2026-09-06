@@ -28,16 +28,6 @@ const DefaultRouteProfileTuningResource = preload("res://resources/config/route_
 @export var handhold_horizontal_jitter_meters: float = 0.08
 ## Maximum vertical meters applied to each generated handhold after row placement; noise is sampled from -1.0 to 1.0 and scaled by this value.
 @export var handhold_vertical_jitter_meters: float = 0.2
-## Vertical offset applied before non-opener chunk rows begin climbing away from the chunk base.
-@export var non_opener_row_base_height_meters: float = 1.5
-## Portion of each chunk's placeholder sockets reserved for pickups before hazards take the remainder.
-@export var pickup_socket_ratio: float = 0.6
-## Maximum lateral meters a generated pickup can drift from its anchor handhold.
-@export var pickup_lateral_offset_meters: float = 0.28
-## Minimum side alignment a handhold must satisfy before pickup placement treats it as part of the risky branch.
-@export var pickup_branch_side_alignment_meters: float = 0.25
-## Minimum side alignment a handhold must satisfy before hazard placement treats it as part of the risky branch.
-@export var hazard_branch_side_alignment_meters: float = 0.25
 ## Height ceiling for the easy difficulty band.
 @export var easy_band_max_height_meters: float = 50.0
 ## Height ceiling for the baseline difficulty band before challenge-band rules begin.
@@ -46,20 +36,12 @@ const DefaultRouteProfileTuningResource = preload("res://resources/config/route_
 @export var chunk_spawn_ahead_count: int = 3
 ## Number of chunks retained behind the current camera anchor.
 @export var chunk_keep_behind_count: int = 1
-## Total placeholder sockets per chunk before pickup and hazard splits are applied.
-@export var socket_count_per_chunk: int = 12
 ## Conservative route validation envelope, role-zone boundaries, and retry budget.
 @export var route_validation_tuning: Resource = _duplicate_default_route_validation_tuning()
 ## Weighted profile scheduling knobs for future bouldering-aware chunk selection.
 @export var route_profile_tuning: Resource = _duplicate_default_route_profile_tuning()
 ## Typed handhold definitions keyed by HandholdType for generation and runtime setup.
 @export var handhold_definitions: Array[Resource] = _duplicate_default_handhold_definitions()
-
-var route_port_row_tolerance_meters: float:
-	get:
-		return _get_required_route_validation_tuning().route_port_row_tolerance_meters
-	set(value):
-		_get_required_route_validation_tuning().route_port_row_tolerance_meters = value
 
 var route_validation_candidate_attempt_count: int:
 	get:
@@ -82,22 +64,13 @@ func is_valid() -> bool:
 		and handhold_horizontal_jitter_meters < chunk_width_meters * 0.25 \
 		and handhold_vertical_jitter_meters >= 0.0 \
 		and handhold_vertical_jitter_meters < opener_first_row_height_meters * 0.5 \
-		and non_opener_row_base_height_meters > 0.0 \
-		and pickup_socket_ratio > 0.0 \
-		and pickup_socket_ratio < 1.0 \
-		and pickup_lateral_offset_meters >= 0.0 \
-		and pickup_branch_side_alignment_meters >= 0.0 \
-		and pickup_branch_side_alignment_meters < _max_lane_alignment_meters() \
-		and hazard_branch_side_alignment_meters >= 0.0 \
-		and hazard_branch_side_alignment_meters < _max_lane_alignment_meters() \
 		and easy_band_max_height_meters > 0.0 \
 		and baseline_band_max_height_meters > easy_band_max_height_meters \
 		and chunk_spawn_ahead_count >= 1 \
 		and chunk_keep_behind_count >= 0 \
 		and _route_validation_tuning_is_valid() \
 		and _route_profile_tuning_is_valid() \
-		and _handhold_definitions_are_valid() \
-		and socket_count_per_chunk > 0
+		and _handhold_definitions_are_valid()
 
 func validate() -> void:
 	assert_valid()
@@ -129,26 +102,6 @@ func assert_valid() -> void:
 		handhold_vertical_jitter_meters < opener_first_row_height_meters * 0.5,
         "Generation handhold vertical jitter must stay below half the first-row height."
 	)
-	Validation.require_condition(non_opener_row_base_height_meters > 0.0, "Generation non-opener row base height must be positive.")
-	Validation.require_condition(pickup_socket_ratio > 0.0, "Generation pickup socket ratio must be positive.")
-	Validation.require_condition(pickup_socket_ratio < 1.0, "Generation pickup socket ratio must leave room for hazards.")
-	Validation.require_condition(pickup_lateral_offset_meters >= 0.0, "Generation pickup lateral offset cannot be negative.")
-	Validation.require_condition(
-		pickup_branch_side_alignment_meters >= 0.0,
-        "Generation pickup branch-side alignment cannot be negative."
-	)
-	Validation.require_condition(
-		pickup_branch_side_alignment_meters < _max_lane_alignment_meters(),
-        "Generation pickup branch-side alignment must stay inside the outer lane width."
-	)
-	Validation.require_condition(
-		hazard_branch_side_alignment_meters >= 0.0,
-        "Generation hazard branch-side alignment cannot be negative."
-	)
-	Validation.require_condition(
-		hazard_branch_side_alignment_meters < _max_lane_alignment_meters(),
-        "Generation hazard branch-side alignment must stay inside the outer lane width."
-	)
 	Validation.require_condition(easy_band_max_height_meters > 0.0, "Generation easy-band max height must be positive.")
 	Validation.require_condition(
 		baseline_band_max_height_meters > easy_band_max_height_meters,
@@ -159,13 +112,6 @@ func assert_valid() -> void:
 	_assert_valid_route_validation_tuning()
 	_assert_valid_route_profile_tuning()
 	_assert_valid_handhold_definitions()
-	Validation.require_condition(socket_count_per_chunk > 0, "Generation config must provide at least one socket per chunk.")
-
-func get_pickup_socket_count() -> int:
-	return ceili(float(socket_count_per_chunk) * pickup_socket_ratio)
-
-func get_hazard_socket_count() -> int:
-	return maxi(0, socket_count_per_chunk - get_pickup_socket_count())
 
 func get_required_handhold_definition(handhold_type: int) -> HandholdTypeDefinitionScript:
 	HandholdTypeScript.assert_valid(handhold_type)
@@ -269,9 +215,6 @@ func _assert_valid_route_profile_tuning() -> void:
 	)
 	var typed_tuning: RouteProfileTuningScript = route_profile_tuning as RouteProfileTuningScript
 	typed_tuning.assert_valid()
-
-func _max_lane_alignment_meters() -> float:
-	return (chunk_width_meters * 0.5) * outer_lane_position_ratio
 
 func _ensure_required_default_backing_resources() -> void:
 	if route_validation_tuning == null:

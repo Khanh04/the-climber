@@ -643,7 +643,6 @@ func test_challenge_generation_emits_ghost_and_rocket_holds() -> void:
 
 func test_route_first_generation_uses_intent_sockets_over_legacy_socket_split() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    tuning.pickup_socket_ratio = 0.75
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
     var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 14)
 
@@ -653,10 +652,8 @@ func test_route_first_generation_uses_intent_sockets_over_legacy_socket_split() 
     assert_eq(recovery_layout.pickup_sockets.size(), 1)
     assert_eq(recovery_layout.hazard_sockets.size(), 2)
 
-func test_custom_branch_alignment_threshold_pushes_biased_sockets_to_outer_lanes() -> void:
+func test_risk_lane_biased_sockets_sit_in_outer_lanes() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    tuning.pickup_branch_side_alignment_meters = 0.8
-    tuning.hazard_branch_side_alignment_meters = 0.8
     var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
     var seed_keys: PackedStringArray = PackedStringArray([
         DailySeedKey.from_utc_date(2026, 5, 14),

@@ -40,14 +40,45 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 		seed_key.begins_with(_tuning.generator_version + ":"),
         "DailyChunkGenerator seed key must match the configured generator version."
 	)
-	for pending_chunk_index in range(chunk_index + 1):
+	for pending_chunk_index in range(_get_first_uncached_predecessor_index(seed_key, chunk_index), chunk_index + 1):
 		var pending_cache_key: String = _get_chunk_cache_key(seed_key, pending_chunk_index)
 		if _chunk_layout_cache.has(pending_cache_key):
 			continue
 		if not _build_and_cache_chunk(seed_key, pending_chunk_index, pending_cache_key):
 			return null
 
+	_evict_chunk_caches_before(seed_key, chunk_index - _retained_chunk_history_count())
 	return _get_cached_chunk_layout(seed_key, chunk_index)
+
+## Walks back from chunk_index only as far as the nearest cached chunk. Predecessors
+## are required for the incoming-seam check and the route-slot history walk; anything
+## further back was already retired by _evict_chunk_caches_before on an earlier call.
+func _get_first_uncached_predecessor_index(seed_key: String, chunk_index: int) -> int:
+	var earliest_required_index: int = chunk_index
+	while earliest_required_index > 0 and not _chunk_layout_cache.has(_get_chunk_cache_key(seed_key, earliest_required_index - 1)):
+		earliest_required_index -= 1
+	return earliest_required_index
+
+## Chunks kept behind the highest built index. Covers the coordinator's keep-behind
+## window plus its spawn-ahead reach so a steady climb never rebuilds a retired chunk.
+func _retained_chunk_history_count() -> int:
+	return _tuning.chunk_keep_behind_count + _tuning.chunk_spawn_ahead_count + 1
+
+func _evict_chunk_caches_before(seed_key: String, min_retained_chunk_index: int) -> void:
+	if min_retained_chunk_index <= 0:
+		return
+	_evict_indexed_cache_before(_chunk_layout_cache, seed_key, min_retained_chunk_index, 1)
+	_evict_indexed_cache_before(_route_slot_cache, seed_key, min_retained_chunk_index, 1)
+	_evict_indexed_cache_before(_chunk_seam_cache, seed_key, min_retained_chunk_index, 2)
+
+## Drops cache entries for a different run or below the retained window. Layout and
+## route-slot keys are "<seed>|<index>"; seam keys are "<seed>|<current>|<next>".
+func _evict_indexed_cache_before(cache: Dictionary, seed_key: String, min_retained_chunk_index: int, index_field_count: int) -> void:
+	for cache_key in cache.keys():
+		var key_parts: PackedStringArray = str(cache_key).rsplit("|", true, index_field_count)
+		var is_stale: bool = key_parts.size() != index_field_count + 1 or key_parts[0] != seed_key or key_parts[1].to_int() < min_retained_chunk_index
+		if is_stale:
+			var _erased: bool = cache.erase(cache_key)
 
 func _build_and_cache_chunk(seed_key: String, chunk_index: int, cache_key: String) -> bool:
 	var previous_layout: GeneratedChunkLayout = null
@@ -186,7 +217,7 @@ func _get_chunk_cache_key(seed_key: String, chunk_index: int) -> String:
 	return "%s|%d" % [seed_key, chunk_index]
 
 func _get_chunk_seam_cache_key(current_layout: GeneratedChunkLayout, next_layout: GeneratedChunkLayout) -> String:
-	return "%s|%s|%d|%d" % [current_layout.seed_key, next_layout.seed_key, current_layout.get_instance_id(), next_layout.get_instance_id()]
+	return "%s|%d|%d" % [current_layout.seed_key, current_layout.chunk_index, next_layout.chunk_index]
 
 func _build_candidate_selection_seed(seed_key: String, chunk_index: int, candidate_attempt_index: int) -> String:
 	return "%s:candidate:%d:%d" % [seed_key, chunk_index, candidate_attempt_index]

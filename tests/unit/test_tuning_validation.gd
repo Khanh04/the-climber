@@ -163,12 +163,6 @@ func test_generation_tuning_rejects_opener_spacing_that_exceeds_chunk_height() -
 
     assert_false(tuning.is_valid())
 
-func test_generation_tuning_rejects_invalid_pickup_socket_ratio() -> void:
-    var tuning = GenerationTuningScript.new()
-    tuning.pickup_socket_ratio = 1.0
-
-    assert_false(tuning.is_valid())
-
 func test_generation_tuning_rejects_invalid_route_validation_tuning() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var route_validation_tuning: RouteValidationTuningScript = tuning.route_validation_tuning as RouteValidationTuningScript
@@ -205,12 +199,6 @@ func test_generation_tuning_rejects_invalid_route_profile_tuning() -> void:
     route_profile_tuning.easy_recovery_weight = 0.0
     route_profile_tuning.easy_risk_weight = 0.0
     route_profile_tuning.easy_pressure_weight = 0.0
-
-    assert_false(tuning.is_valid())
-
-func test_generation_tuning_rejects_invalid_branch_side_alignment() -> void:
-    var tuning = GenerationTuningScript.new()
-    tuning.pickup_branch_side_alignment_meters = 5.0
 
     assert_false(tuning.is_valid())
 

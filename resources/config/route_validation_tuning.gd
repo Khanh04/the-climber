@@ -17,16 +17,8 @@ extends Resource
 	Vector2(-0.42, -0.24),
 	Vector2(0.42, -0.24),
 ])
-## Vertical grouping tolerance for route entry and exit ports derived from generated handholds.
-@export var route_port_row_tolerance_meters: float = 0.3
 ## Bounded deterministic candidate count used to select the strongest valid route.
 @export var candidate_attempt_count: int = 3
-## Upper chunk-height ratio for the setup zone.
-@export var setup_zone_upper_ratio: float = 0.34
-## Upper chunk-height ratio for the crux zone before top-out space begins.
-@export var crux_zone_upper_ratio: float = 0.76
-## Lower chunk-height ratio where top-out roles can begin.
-@export var top_out_zone_lower_ratio: float = 0.76
 
 func is_valid() -> bool:
 	return max_move_distance_meters > 0.0 \
@@ -36,12 +28,7 @@ func is_valid() -> bool:
 		and player_body_width_meters > 0.0 \
 		and player_body_width_meters < max_move_distance_meters \
 		and entry_anchor_positions.size() > 0 \
-		and route_port_row_tolerance_meters >= 0.0 \
 		and candidate_attempt_count >= 1 \
-		and setup_zone_upper_ratio > 0.0 \
-		and setup_zone_upper_ratio < crux_zone_upper_ratio \
-		and crux_zone_upper_ratio <= top_out_zone_lower_ratio \
-		and top_out_zone_lower_ratio < 1.0 \
 		and _entry_anchor_positions_are_valid()
 
 func validate() -> void:
@@ -55,18 +42,7 @@ func assert_valid() -> void:
 	Validation.require_condition(player_body_width_meters > 0.0, "Route validation player body width must be positive.")
 	Validation.require_condition(player_body_width_meters < max_move_distance_meters, "Route validation player body width cannot exceed the swing move envelope.")
 	Validation.require_condition(entry_anchor_positions.size() > 0, "Route validation requires at least one entry anchor position.")
-	Validation.require_condition(route_port_row_tolerance_meters >= 0.0, "Route validation route-port row tolerance cannot be negative.")
 	Validation.require_condition(candidate_attempt_count >= 1, "Route validation candidate attempt count must be at least one.")
-	Validation.require_condition(setup_zone_upper_ratio > 0.0, "Route validation setup-zone upper ratio must be positive.")
-	Validation.require_condition(
-		setup_zone_upper_ratio < crux_zone_upper_ratio,
-		"Route validation setup-zone ratio must be lower than the crux-zone ratio."
-	)
-	Validation.require_condition(
-		crux_zone_upper_ratio <= top_out_zone_lower_ratio,
-		"Route validation crux-zone ratio must not exceed the top-out lower ratio."
-	)
-	Validation.require_condition(top_out_zone_lower_ratio < 1.0, "Route validation top-out lower ratio must stay below 1.0.")
 	_assert_valid_entry_anchor_positions()
 
 func duplicate_entry_anchor_positions() -> Array[Vector2]:
