@@ -45,7 +45,7 @@ func build_plan(seed_key: String, chunk_index: int, route_slot: int, difficulty_
 		minimum_branch_separation_rows,
 		minimum_outer_lane_rows,
 		_get_max_sparse_row_streak(difficulty_band),
-		_get_target_difficulty_score(route_slot, difficulty_band),
+		target_difficulty_score_for(route_slot, difficulty_band),
 		_get_target_support_score(route_slot, difficulty_band),
 		_build_hazard_intents(route_slot),
 		_build_safe_path_allowed_handhold_types(difficulty_band),
@@ -283,7 +283,10 @@ func _get_max_sparse_row_streak(difficulty_band: int) -> int:
 			Validation.require_condition(false, "ChunkRoutePlanBuilder sparse row limits require a supported difficulty band.")
 			return 0
 
-func _get_target_difficulty_score(route_slot: int, difficulty_band: int) -> float:
+## Target route difficulty in [0, 1] for a (route_slot, difficulty_band) pair.
+## Static so the candidate selector can score a layout against its own target
+## without rebuilding a plan.
+static func target_difficulty_score_for(route_slot: int, difficulty_band: int) -> float:
 	var score: float = 0.25
 	match difficulty_band:
 		ChunkDifficultyBandScript.Value.EASY:

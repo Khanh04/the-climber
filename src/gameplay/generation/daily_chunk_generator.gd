@@ -2,9 +2,15 @@ class_name DailyChunkGenerator
 extends RefCounted
 
 const ChunkRouteGenerationPipelineScript = preload("res://src/gameplay/generation/chunk_route_generation_pipeline.gd")
+const ChunkRoutePlanBuilderScript = preload("res://src/gameplay/generation/chunk_route_plan_builder.gd")
 const RouteProfileTuningScript = preload("res://resources/config/route_profile_tuning.gd")
 const RouteValidationTuningScript = preload("res://resources/config/route_validation_tuning.gd")
 const RoutePathValidatorScript: GDScript = preload("res://src/gameplay/generation/route_path_validator.gd")
+
+## Candidates whose observed difficulty lands this close to the best are treated
+## as tied and settled by the seeded tie-break.
+# ponytail: fixed heuristic band; Phase 7 retunes it alongside the reach envelope.
+const CANDIDATE_DIFFICULTY_TOLERANCE: float = 0.05
 
 var _tuning: GenerationTuning
 var _route_path_validator: RefCounted
@@ -85,8 +91,7 @@ func _build_and_cache_chunk(seed_key: String, chunk_index: int, cache_key: Strin
 	if chunk_index > 0:
 		previous_layout = _get_cached_chunk_layout(seed_key, chunk_index - 1)
 
-	var selected_layout: GeneratedChunkLayout = null
-	var selected_score: float = -INF
+	var valid_candidates: Array[GeneratedChunkLayout] = []
 	var candidate_failure_reasons: PackedStringArray = PackedStringArray()
 	for candidate_attempt_index in range(_tuning.route_validation_candidate_attempt_count):
 		var candidate_layout: GeneratedChunkLayout = _build_chunk_candidate(seed_key, chunk_index, candidate_attempt_index)
@@ -99,16 +104,43 @@ func _build_and_cache_chunk(seed_key: String, chunk_index: int, cache_key: Strin
 			if not _seam_validation_result_is_valid(seam_result):
 				var _append_seam_failure_result: bool = candidate_failure_reasons.append("attempt %d seam: %s" % [candidate_attempt_index, _require_validation_failure_reason(seam_result)])
 				continue
-		if selected_layout == null or candidate_layout.candidate_score > selected_score:
-			selected_layout = candidate_layout
-			selected_score = candidate_layout.candidate_score
+		valid_candidates.append(candidate_layout)
 
-	if selected_layout == null:
+	if valid_candidates.is_empty():
 		push_error("DailyChunkGenerator exhausted %d candidate attempts without a valid route and incoming seam for chunk %d: %s" % [_tuning.route_validation_candidate_attempt_count, chunk_index, "; ".join(candidate_failure_reasons)])
 		return false
 
-	_chunk_layout_cache[cache_key] = selected_layout
+	if chunk_index == 0:
+		_chunk_layout_cache[cache_key] = _select_strict_best_candidate(valid_candidates)
+	else:
+		_chunk_layout_cache[cache_key] = _select_candidate_closest_to_target(valid_candidates, seed_key, chunk_index)
 	return true
+
+## Legacy selection: single highest candidate_score, earliest attempt wins a tie.
+## Kept for the opener so chunk 0 stays byte-identical to pre-A7 output.
+func _select_strict_best_candidate(candidates: Array[GeneratedChunkLayout]) -> GeneratedChunkLayout:
+	var selected: GeneratedChunkLayout = candidates[0]
+	for candidate_index in range(1, candidates.size()):
+		if candidates[candidate_index].candidate_score > selected.candidate_score:
+			selected = candidates[candidate_index]
+	return selected
+
+## Highest candidate_score = closest to the chunk's target difficulty. Among the
+## candidates tied within CANDIDATE_DIFFICULTY_TOLERANCE of the best, pick one by
+## a per-chunk seeded hash so two runs at the same (slot, band) diverge instead of
+## both taking the earliest attempt.
+func _select_candidate_closest_to_target(candidates: Array[GeneratedChunkLayout], seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
+	var best_score: float = -INF
+	for candidate in candidates:
+		best_score = maxf(best_score, candidate.candidate_score)
+
+	var contenders: Array[GeneratedChunkLayout] = []
+	for candidate in candidates:
+		if best_score - candidate.candidate_score <= CANDIDATE_DIFFICULTY_TOLERANCE:
+			contenders.append(candidate)
+
+	var tie_break_index: int = DeterministicHash.of_string("%s:candidate_tiebreak:%d" % [seed_key, chunk_index]) % contenders.size()
+	return contenders[tie_break_index]
 
 func _get_cached_chunk_layout(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 	var cache_key: String = _get_chunk_cache_key(seed_key, chunk_index)
@@ -149,11 +181,29 @@ func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attemp
 		candidate_selection_seed
 	)
 
+## Scores a candidate by how close its observed route difficulty sits to the
+## chunk's target for its (route_slot, difficulty_band). Returned as a value the
+## selector maximizes: 0.0 is on target, -1.0 is as far off as possible. The old
+## metric rewarded the least-committing candidate, which flattened difficulty and
+## variety -- see docs/route-generation-audit.md A7.
+##
+## The OPENER keeps the legacy least-committing metric: chunk 0 is an onboarding
+## chunk that must stay gentle and spread, not part of the difficulty ramp. Its
+## spread guarantee is Phase 2's job (A3/A8), not the selector's.
 func _build_candidate_score(layout: GeneratedChunkLayout, route_validation_result: RefCounted) -> float:
 	Validation.require_condition(layout != null, "DailyChunkGenerator candidate scoring requires a layout.")
 	Validation.require_condition(route_validation_result != null, "DailyChunkGenerator candidate scoring requires a validation result.")
 	if not _route_validation_result_is_valid(route_validation_result):
-		return 0.0
+		return -1.0
+	if layout.route_slot == ChunkRouteSlot.Value.OPENER:
+		return _least_committing_candidate_score(layout, route_validation_result)
+	var observed_difficulty: float = _observed_route_difficulty(layout, route_validation_result)
+	var target_difficulty: float = ChunkRoutePlanBuilderScript.target_difficulty_score_for(layout.route_slot, layout.difficulty_band)
+	return -absf(observed_difficulty - target_difficulty)
+
+## Legacy metric: swing envelope minus the largest safe-path hop. Higher = more
+## slack on the hardest move.
+func _least_committing_candidate_score(layout: GeneratedChunkLayout, route_validation_result: RefCounted) -> float:
 	var path_hold_ids: PackedStringArray = _require_validation_path_hold_ids(route_validation_result)
 	var maximum_move_distance: float = 0.0
 	for path_index in range(1, path_hold_ids.size()):
@@ -162,6 +212,21 @@ func _build_candidate_score(layout: GeneratedChunkLayout, route_validation_resul
 		maximum_move_distance = maxf(maximum_move_distance, from_position.distance_to(to_position))
 	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
 	return maxf(0.0, route_validation_tuning.max_move_distance_meters - maximum_move_distance)
+
+## Cheap difficulty proxy in [0, 1]: mean safe-path hop length normalized by the
+## swing move envelope.
+func _observed_route_difficulty(layout: GeneratedChunkLayout, route_validation_result: RefCounted) -> float:
+	var path_hold_ids: PackedStringArray = _require_validation_path_hold_ids(route_validation_result)
+	if path_hold_ids.size() < 2:
+		return 0.0
+	var total_move_distance: float = 0.0
+	for path_index in range(1, path_hold_ids.size()):
+		var from_position: Vector2 = _get_required_handhold_position(layout, path_hold_ids[path_index - 1])
+		var to_position: Vector2 = _get_required_handhold_position(layout, path_hold_ids[path_index])
+		total_move_distance += from_position.distance_to(to_position)
+	var mean_move_distance: float = total_move_distance / float(path_hold_ids.size() - 1)
+	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
+	return clampf(mean_move_distance / route_validation_tuning.max_move_distance_meters, 0.0, 1.0)
 
 func _route_validation_result_is_valid(route_validation_result: RefCounted) -> bool:
 	var raw_is_valid: Variant = route_validation_result.get("is_valid")
