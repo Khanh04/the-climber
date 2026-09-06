@@ -171,6 +171,33 @@ func test_safe_path_lane_choice_varies_with_seed() -> void:
 
     assert_gt(lane_sequences.size(), 1, "expected different seeds to produce different safe-path shapes")
 
+func test_optional_branch_lane_choice_varies_with_seed_but_keeps_its_contract() -> void:
+    var plan: ChunkRoutePlanScript = _build_plan(7, ChunkRouteSlotScript.Value.RISK, ChunkDifficultyBandScript.Value.BASELINE)
+    var anchor_graph: RouteAnchorGraphScript = _build_graph(plan)
+    var solver: ChunkRoutePathSolverScript = ChunkRoutePathSolverScript.new()
+    var branch_lane_sequences: Dictionary = {}
+
+    for seed_index in range(12):
+        var seed_key: String = "%s:branch_variety:%d" % [DailySeedKey.GENERATOR_VERSION, seed_index]
+        var solution: ChunkRoutePathSolutionScript = solver.solve(plan, anchor_graph, seed_key, MAX_MOVE_DISTANCE_METERS, PLAYER_BODY_WIDTH_METERS)
+        assert_true(solution.is_valid)
+        assert_gte(solution.optional_outer_lane_rows, plan.minimum_outer_lane_rows)
+        _assert_path_moves_are_reachable_and_clear(solution.optional_path, anchor_graph, plan.chunk_index)
+        assert_eq(solution.optional_path.get_lane_at_row(plan.split_row_index + 1), _get_inner_lane_for_branch_side(plan.route_branch_side))
+        assert_eq(solution.optional_path.get_lane_at_row(plan.merge_row_index - 1), _get_inner_lane_for_branch_side(plan.route_branch_side))
+
+        var branch_lanes: Array[int] = []
+        for row_index in range(plan.split_row_index + 1, plan.merge_row_index):
+            branch_lanes.append(solution.optional_path.get_lane_at_row(row_index))
+        branch_lane_sequences[str(branch_lanes)] = true
+
+    assert_gt(branch_lane_sequences.size(), 1, "expected different seeds to produce different branch-lane shapes")
+
+func _get_inner_lane_for_branch_side(branch_side: int) -> int:
+    if branch_side == RouteBranchSideScript.Value.LEFT:
+        return RouteLaneScript.Value.INNER_LEFT
+    return RouteLaneScript.Value.INNER_RIGHT
+
 func _build_plan(chunk_index: int, route_slot: int, difficulty_band: int) -> ChunkRoutePlanScript:
     var builder: ChunkRoutePlanBuilderScript = ChunkRoutePlanBuilderScript.new()
     return builder.build_plan(_seed_key(), chunk_index, route_slot, difficulty_band)

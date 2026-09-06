@@ -53,7 +53,7 @@ func solve(
 	if not plan.optional_route_required:
 		return ChunkRoutePathSolutionScript.new(true, "", safe_path, null, 0, 0)
 
-	var optional_path: RoutePlannedPathScript = _build_optional_path(plan, anchor_graph)
+	var optional_path: RoutePlannedPathScript = _build_optional_path(plan, anchor_graph, selection_seed)
 	if optional_path == null:
 		return ChunkRoutePathSolutionScript.new(false, "No optional branch path can satisfy the route plan anchors.", safe_path, null, 0, 0)
 
@@ -279,14 +279,16 @@ static func _hash_unit_float(context: String) -> float:
 	return DeterministicHash.unit_float(context)
 
 # ---------------------------------------------------------------------------
-# Optional (branch) path: unchanged deterministic alternating pattern. It already guarantees
-# the hard downstream requirement (at least one outer-lane row) and stays on the branch side
-# opposite the safe path's restricted lanes above, so the two paths never collide.
+# Optional (branch) path: a seeded inner/outer walk on the branch side, opposite the safe
+# path's restricted lanes above -- so the two paths never collide. The first and last branch
+# rows stay INNER (the only lanes reachable to/from the fixed CENTER pivot in production
+# geometry); the interior rows are seeded, keeping at least minimum_outer_lane_rows on OUTER.
 # ---------------------------------------------------------------------------
 
-func _build_optional_path(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript) -> RoutePlannedPathScript:
+func _build_optional_path(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorGraphScript, selection_seed: String) -> RoutePlannedPathScript:
 	var lanes: Array[int] = []
 	var branch_span: int = plan.merge_row_index - plan.split_row_index - 1
+	var branch_lane_sequence: Array[int] = _build_branch_lane_sequence(plan, selection_seed, branch_span)
 
 	for row_index in range(plan.get_row_count()):
 		var lane: int = RouteLaneScript.Value.CENTER
@@ -295,24 +297,32 @@ func _build_optional_path(plan: ChunkRoutePlanScript, anchor_graph: RouteAnchorG
 			# row-0 hold instead of adding a second one.
 			lane = CHUNK_ENTRY_LANE
 		elif row_index > plan.split_row_index and row_index < plan.merge_row_index:
-			var branch_row_index: int = row_index - plan.split_row_index - 1
-			lane = _select_branch_lane(plan.route_branch_side, branch_row_index, branch_span)
+			lane = branch_lane_sequence[row_index - plan.split_row_index - 1]
 
 		lanes.append(lane)
 
 	return _build_path_from_lanes(&"optional_path", lanes, anchor_graph)
 
-func _select_branch_lane(branch_side: int, branch_row_index: int, branch_span: int) -> int:
-	Validation.require_condition(branch_row_index >= 0, "ChunkRoutePathSolver branch row index cannot be negative.")
+func _build_branch_lane_sequence(plan: ChunkRoutePlanScript, selection_seed: String, branch_span: int) -> Array[int]:
 	Validation.require_condition(branch_span > 0, "ChunkRoutePathSolver branch span must be positive.")
-	Validation.require_condition(branch_row_index < branch_span, "ChunkRoutePathSolver branch row index must be inside the branch span.")
-	if branch_row_index == 0 or branch_row_index == branch_span - 1:
-		return _get_inner_lane_for_side(branch_side)
+	var inner_lane: int = _get_inner_lane_for_side(plan.route_branch_side)
+	var outer_lane: int = _get_outer_lane_for_side(plan.route_branch_side)
 
-	if (branch_row_index % 2) == 1:
-		return _get_outer_lane_for_side(branch_side)
+	var branch_lanes: Array[int] = []
+	for _branch_row_index in range(branch_span):
+		branch_lanes.append(inner_lane)
 
-	return _get_inner_lane_for_side(branch_side)
+	var middle_count: int = branch_span - 2
+	if middle_count <= 0:
+		return branch_lanes
+
+	var outer_start: int = DeterministicHash.of_string("%s:branch_lane:%d" % [selection_seed, plan.chunk_index]) % middle_count
+	var extra_outer_rows: int = DeterministicHash.of_string("%s:branch_outer_extra:%d" % [selection_seed, plan.chunk_index]) % 2
+	var outer_row_count: int = mini(middle_count, plan.minimum_outer_lane_rows + extra_outer_rows)
+	for offset in range(outer_row_count):
+		branch_lanes[1 + ((outer_start + offset) % middle_count)] = outer_lane
+
+	return branch_lanes
 
 func _get_inner_lane_for_side(branch_side: int) -> int:
 	RouteBranchSideScript.assert_valid(branch_side)

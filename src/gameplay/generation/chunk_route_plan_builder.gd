@@ -27,8 +27,8 @@ func build_plan(seed_key: String, chunk_index: int, route_slot: int, difficulty_
 
 	if optional_route_required:
 		branch_side = _select_branch_side(seed_key, chunk_index, route_slot)
-		split_row_index = _get_split_row_index(difficulty_band)
-		merge_row_index = _get_merge_row_index(row_roles, difficulty_band)
+		split_row_index = _get_split_row_index(seed_key, chunk_index, difficulty_band)
+		merge_row_index = _get_merge_row_index(seed_key, chunk_index, row_roles, difficulty_band)
 		minimum_branch_separation_rows = _get_minimum_branch_separation_rows(difficulty_band)
 		minimum_outer_lane_rows = _get_minimum_outer_lane_rows(difficulty_band)
 
@@ -265,16 +265,24 @@ func _select_branch_side(seed_key: String, chunk_index: int, route_slot: int) ->
 		return RouteBranchSideScript.Value.LEFT
 	return RouteBranchSideScript.Value.RIGHT
 
-func _get_split_row_index(difficulty_band: int) -> int:
+## Row the safe and optional paths diverge at. Earlier split = more rows with free
+## lane choice. EASY is seeded 1..2 (BASELINE/CHALLENGE are already at the minimum).
+func _get_split_row_index(seed_key: String, chunk_index: int, difficulty_band: int) -> int:
 	ChunkDifficultyBandScript.assert_valid(difficulty_band)
-	if difficulty_band == ChunkDifficultyBandScript.Value.EASY:
-		return 2
-	return 1
+	if difficulty_band != ChunkDifficultyBandScript.Value.EASY:
+		return 1
+	if DeterministicHash.of_string("%s:split_row:%d" % [seed_key, chunk_index]) % 2 == 0:
+		return 1
+	return 2
 
-func _get_merge_row_index(row_roles: Array[int], difficulty_band: int) -> int:
+## Row the paths rejoin at. Later merge = more branch rows. Seeded between the last
+## two interior rows; both keep ChunkRoutePlan's branch contract satisfied.
+func _get_merge_row_index(seed_key: String, chunk_index: int, row_roles: Array[int], difficulty_band: int) -> int:
 	Validation.require_condition(row_roles.size() >= 2, "ChunkRoutePlanBuilder merge rows require route rows.")
 	ChunkDifficultyBandScript.assert_valid(difficulty_band)
-	return row_roles.size() - 2
+	if DeterministicHash.of_string("%s:merge_row:%d" % [seed_key, chunk_index]) % 2 == 0:
+		return row_roles.size() - 2
+	return row_roles.size() - 1
 
 func _get_minimum_branch_separation_rows(difficulty_band: int) -> int:
 	match difficulty_band:
