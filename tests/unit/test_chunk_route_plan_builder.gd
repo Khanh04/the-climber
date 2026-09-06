@@ -92,6 +92,38 @@ func test_route_plan_validation_rejects_branch_without_outer_lane_requirement() 
 
     assert_false(plan.is_valid())
 
+func test_seeded_template_variant_yields_distinct_structures_but_stable_role_multiset() -> void:
+    var builder: ChunkRoutePlanBuilderScript = ChunkRoutePlanBuilderScript.new()
+    var base_plan: ChunkRoutePlanScript = builder.build_plan(
+        DailySeedKey.from_utc_date(2026, 5, 1), 6, ChunkRouteSlotScript.Value.BASELINE, ChunkDifficultyBandScript.Value.BASELINE
+    )
+    var base_role_multiset: Dictionary[int, int] = _count_roles(base_plan.row_roles)
+    var distinct_sequences: Dictionary[String, bool] = {}
+
+    for day in range(1, 21):
+        var plan: ChunkRoutePlanScript = builder.build_plan(
+            DailySeedKey.from_utc_date(2026, 5, day), 6, ChunkRouteSlotScript.Value.BASELINE, ChunkDifficultyBandScript.Value.BASELINE
+        )
+        assert_eq(plan.get_row_count(), base_plan.get_row_count())
+        assert_eq(plan.row_roles[0], base_plan.row_roles[0])
+        assert_eq(plan.row_roles[plan.get_row_count() - 1], RouteRowRoleScript.Value.TOP_OUT)
+        assert_eq(_count_roles(plan.row_roles), base_role_multiset)
+        distinct_sequences[",".join(_ints_to_strings(plan.row_roles))] = true
+
+    assert_gt(distinct_sequences.size(), 1, "Seeded template variant produced only one structure across seeds.")
+
+func _count_roles(row_roles: Array[int]) -> Dictionary[int, int]:
+    var counts: Dictionary[int, int] = {}
+    for row_role in row_roles:
+        counts[row_role] = counts.get(row_role, 0) + 1
+    return counts
+
+func _ints_to_strings(values: Array[int]) -> PackedStringArray:
+    var text_values: PackedStringArray = PackedStringArray()
+    for value in values:
+        var _appended: bool = text_values.append(str(value))
+    return text_values
+
 func _build_plan(chunk_index: int, route_slot: int, difficulty_band: int) -> ChunkRoutePlanScript:
     var builder: ChunkRoutePlanBuilderScript = ChunkRoutePlanBuilderScript.new()
     return builder.build_plan(DailySeedKey.from_utc_date(2026, 5, 16), chunk_index, route_slot, difficulty_band)

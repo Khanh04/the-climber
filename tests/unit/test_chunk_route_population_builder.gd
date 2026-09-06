@@ -162,8 +162,11 @@ func test_recovery_population_places_semantic_hazards_on_distinct_first_and_last
     assert_not_null(safe_relief_hazard)
     assert_eq(_require_int_property(recovery_lift_hazard, &"hazard_kind"), GeneratedHazardKindScript.Value.UPDRAFT)
     assert_eq(_require_int_property(safe_relief_hazard, &"hazard_kind"), GeneratedHazardKindScript.Value.STARTLE_PUFF)
-    assert_eq(_require_int_property(recovery_lift_hazard, &"row_index"), 2)
-    assert_eq(_require_int_property(safe_relief_hazard, &"row_index"), 9)
+    var lift_row_index: int = _require_int_property(recovery_lift_hazard, &"row_index")
+    var relief_row_index: int = _require_int_property(safe_relief_hazard, &"row_index")
+    assert_eq(plan.row_roles[lift_row_index], RouteRowRoleScript.Value.CATCH)
+    assert_eq(plan.row_roles[relief_row_index], RouteRowRoleScript.Value.CATCH)
+    assert_lt(lift_row_index, relief_row_index)
     assert_ne(_require_string_name_property(recovery_lift_hazard, &"anchor_id"), _require_string_name_property(safe_relief_hazard, &"anchor_id"))
     assert_false(RouteLaneScript.is_outer(_require_int_property(recovery_lift_hazard, &"lane")))
 

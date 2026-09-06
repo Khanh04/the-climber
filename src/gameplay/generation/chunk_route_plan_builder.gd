@@ -17,7 +17,7 @@ func build_plan(seed_key: String, chunk_index: int, route_slot: int, difficulty_
 	ChunkDifficultyBandScript.assert_valid(difficulty_band)
 
 	var movement_style: int = _select_movement_style(seed_key, chunk_index, route_slot, difficulty_band)
-	var row_roles: Array[int] = _build_row_roles(route_slot, difficulty_band)
+	var row_roles: Array[int] = _build_row_roles(seed_key, chunk_index, route_slot, difficulty_band)
 	var optional_route_required: bool = _route_slot_requires_optional_route(route_slot)
 	var branch_side: int = RouteBranchSideScript.Value.NONE
 	var split_row_index: int = -1
@@ -77,10 +77,14 @@ func _select_movement_style(seed_key: String, chunk_index: int, route_slot: int,
 			Validation.require_condition(false, "ChunkRoutePlanBuilder requires a supported route slot.")
 			return RouteMovementStyleScript.Value.LADDER
 
-func _build_row_roles(route_slot: int, difficulty_band: int) -> Array[int]:
+func _build_row_roles(seed_key: String, chunk_index: int, route_slot: int, difficulty_band: int) -> Array[int]:
 	ChunkRouteSlotScript.assert_valid(route_slot)
 	ChunkDifficultyBandScript.assert_valid(difficulty_band)
 
+	var base_row_roles: Array[int] = _base_row_roles(route_slot, difficulty_band)
+	return _apply_seeded_template_variant(base_row_roles, seed_key, chunk_index)
+
+func _base_row_roles(route_slot: int, difficulty_band: int) -> Array[int]:
 	if route_slot == ChunkRouteSlotScript.Value.OPENER:
 		return _opener_row_roles()
 
@@ -91,6 +95,31 @@ func _build_row_roles(route_slot: int, difficulty_band: int) -> Array[int]:
 		return _branch_row_roles(difficulty_band)
 
 	return _baseline_row_roles(difficulty_band)
+
+## Rotates the interior rows (keeping the entry, its follow-up, and the top-out
+## fixed) by a seeded amount. Same authored template, a few distinct structures
+## across runs -- see docs/route-generation-audit.md A2/A3. Rotation preserves the
+## role multiset, so every count-based invariant and required-role lookup still
+## holds and no template needs re-authoring per length.
+func _apply_seeded_template_variant(row_roles: Array[int], seed_key: String, chunk_index: int) -> Array[int]:
+	var interior_start: int = 2
+	var interior_end: int = row_roles.size() - 1
+	var interior_length: int = interior_end - interior_start
+	if interior_length <= 1:
+		return row_roles
+
+	var rotation: int = DeterministicHash.of_string("%s:template_variant:%d" % [seed_key, chunk_index]) % interior_length
+	if rotation == 0:
+		return row_roles
+
+	var rotated_row_roles: Array[int] = []
+	for row_index in range(row_roles.size()):
+		if row_index < interior_start or row_index >= interior_end:
+			rotated_row_roles.append(row_roles[row_index])
+			continue
+		var local_index: int = row_index - interior_start
+		rotated_row_roles.append(row_roles[interior_start + ((local_index + rotation) % interior_length)])
+	return rotated_row_roles
 
 func _opener_row_roles() -> Array[int]:
 	return [

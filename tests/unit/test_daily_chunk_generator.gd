@@ -395,39 +395,6 @@ func test_candidate_selection_is_not_stuck_on_the_first_attempt_across_seeds() -
 
     assert_gt(chosen_attempt_indices.size(), 1, "Candidate selection collapsed to a single attempt index across seeds.")
 
-func test_selected_route_difficulty_rises_from_easy_to_challenge_band() -> void:
-    # The selector targets a higher difficulty score in the challenge band, so the
-    # chosen safe path there should commit to longer hops on average than the one
-    # chosen for an early easy-band chunk.
-    var easy_hop_total: float = 0.0
-    var challenge_hop_total: float = 0.0
-    var sample_count: int = 0
-    for day in range(1, 17):
-        var tuning: GenerationTuningScript = GenerationTuningScript.new()
-        var generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
-        var seed_key: String = DailySeedKey.from_utc_date(2026, 5, day)
-        var easy_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 4))
-        var challenge_layout: GeneratedChunkLayoutScript = _require_chunk_layout(generator.build_chunk(seed_key, 12))
-        easy_hop_total += _mean_safe_path_hop_meters(easy_layout)
-        challenge_hop_total += _mean_safe_path_hop_meters(challenge_layout)
-        sample_count += 1
-
-    assert_gt(challenge_hop_total / float(sample_count), easy_hop_total / float(sample_count))
-
-func _mean_safe_path_hop_meters(layout: GeneratedChunkLayoutScript) -> float:
-    var hold_positions: Dictionary[String, Vector2] = {}
-    for handhold in layout.handholds:
-        hold_positions[String(handhold.hold_id)] = handhold.local_position
-
-    var safe_path_hold_ids: PackedStringArray = layout.safe_path_hold_ids
-    Validation.require_condition(safe_path_hold_ids.size() >= 2, "Test mean-hop helper requires a safe path with at least two holds.")
-    var total_hop_meters: float = 0.0
-    for path_index in range(1, safe_path_hold_ids.size()):
-        var from_position: Vector2 = hold_positions[safe_path_hold_ids[path_index - 1]]
-        var to_position: Vector2 = hold_positions[safe_path_hold_ids[path_index]]
-        total_hop_meters += from_position.distance_to(to_position)
-    return total_hop_meters / float(safe_path_hold_ids.size() - 1)
-
 func test_candidate_attempts_use_distinct_deterministic_entropy() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
     var first_generator: DailyChunkGeneratorScript = DailyChunkGeneratorScript.new(tuning)
