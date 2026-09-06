@@ -36,6 +36,38 @@ func test_speed_intensity_ratio_tracks_clamped_rise_speed() -> void:
     assert_eq(ChaserPacingModelScript.calculate_speed_intensity_ratio(4.0, tuning), 0.5)
     assert_eq(ChaserPacingModelScript.calculate_speed_intensity_ratio(9.0, tuning), 0.0)
 
+func test_rise_speed_increases_with_altitude_at_a_fixed_pace() -> void:
+    var tuning := ChaserTuningScript.new()
+    var neutral_progress: float = (tuning.camping_progress_meters + tuning.rapid_progress_meters) * 0.5
+
+    var low_altitude_speed: float = ChaserPacingModelScript.calculate_rise_speed_meters_per_second(neutral_progress, tuning, tuning.altitude_rise_speed_onset_meters)
+    var mid_altitude_speed: float = ChaserPacingModelScript.calculate_rise_speed_meters_per_second(neutral_progress, tuning, 300.0)
+    var high_altitude_speed: float = ChaserPacingModelScript.calculate_rise_speed_meters_per_second(neutral_progress, tuning, 800.0)
+
+    assert_almost_eq(low_altitude_speed, tuning.base_rise_speed_meters_per_second, 0.0001)
+    assert_gt(mid_altitude_speed, low_altitude_speed)
+    assert_gt(high_altitude_speed, mid_altitude_speed)
+
+func test_camping_deterrent_still_applies_near_the_ground() -> void:
+    var tuning := ChaserTuningScript.new()
+    var camping_progress: float = tuning.camping_progress_meters - 0.1
+    var neutral_progress: float = tuning.camping_progress_meters + 0.1
+
+    var camping_speed: float = ChaserPacingModelScript.calculate_rise_speed_meters_per_second(camping_progress, tuning, 10.0)
+    var neutral_speed: float = ChaserPacingModelScript.calculate_rise_speed_meters_per_second(neutral_progress, tuning, 10.0)
+
+    assert_gt(camping_speed, neutral_speed)
+
+func test_camping_stall_up_high_no_longer_outpaces_steady_climbing() -> void:
+    var tuning := ChaserTuningScript.new()
+    var camping_progress: float = tuning.camping_progress_meters - 0.1
+    var steady_progress: float = tuning.camping_progress_meters + 0.1
+
+    var stalled_speed: float = ChaserPacingModelScript.calculate_rise_speed_meters_per_second(camping_progress, tuning, 900.0)
+    var steady_speed: float = ChaserPacingModelScript.calculate_rise_speed_meters_per_second(steady_progress, tuning, 900.0)
+
+    assert_almost_eq(stalled_speed, steady_speed, 0.0001)
+
 func test_recent_progress_only_uses_samples_inside_the_active_window() -> void:
     var model := ChaserPacingModelScript.new(ChaserTuningScript.new())
 

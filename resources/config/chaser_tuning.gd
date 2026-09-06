@@ -7,6 +7,11 @@ extends Resource
 @export var base_rise_speed_meters_per_second: float = 0.5
 @export var camping_speed_bonus_meters_per_second: float = 0.5
 @export var rapid_climb_slowdown_meters_per_second: float = 1.0
+## Rise speed added per 100 m climbed above the onset height, so the chaser becomes
+## a real escalating threat instead of flatlining at 1.0 m/s.
+@export var altitude_rise_speed_gain_per_100m: float = 0.35
+## Height below which altitude does not scale the chaser (the tutorial/early zone).
+@export var altitude_rise_speed_onset_meters: float = 50.0
 @export var min_rise_speed_meters_per_second: float = 0.5
 @export var max_rise_speed_meters_per_second: float = 5.0
 @export var initial_spawn_offset_meters: float = 8.0
@@ -27,6 +32,8 @@ func is_valid() -> bool:
         and base_rise_speed_meters_per_second <= max_rise_speed_meters_per_second \
         and camping_speed_bonus_meters_per_second >= 0.0 \
         and rapid_climb_slowdown_meters_per_second >= 0.0 \
+        and altitude_rise_speed_gain_per_100m >= 0.0 \
+        and altitude_rise_speed_onset_meters >= 0.0 \
         and min_rise_speed_meters_per_second > 0.0 \
         and max_rise_speed_meters_per_second >= min_rise_speed_meters_per_second \
         and initial_spawn_offset_meters > 0.0 \
@@ -53,6 +60,8 @@ func assert_valid() -> void:
     Validation.require_condition(base_rise_speed_meters_per_second <= max_rise_speed_meters_per_second, "Chaser base rise speed must not exceed the maximum rise speed.")
     Validation.require_condition(camping_speed_bonus_meters_per_second >= 0.0, "Chaser camping speed bonus cannot be negative.")
     Validation.require_condition(rapid_climb_slowdown_meters_per_second >= 0.0, "Chaser rapid-climb slowdown cannot be negative.")
+    Validation.require_condition(altitude_rise_speed_gain_per_100m >= 0.0, "Chaser altitude rise-speed gain cannot be negative.")
+    Validation.require_condition(altitude_rise_speed_onset_meters >= 0.0, "Chaser altitude rise-speed onset cannot be negative.")
     Validation.require_condition(initial_spawn_offset_meters > 0.0, "Chaser initial spawn offset must be positive.")
     Validation.require_condition(far_distance_for_min_intensity_meters > near_distance_for_max_intensity_meters, "Chaser far intensity distance must exceed the near intensity distance.")
     Validation.require_condition(near_distance_for_max_intensity_meters >= 0.0, "Chaser near intensity distance cannot be negative.")
