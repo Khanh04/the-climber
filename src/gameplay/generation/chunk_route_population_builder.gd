@@ -167,7 +167,7 @@ func _get_support_lanes_for_row(
 	player_body_width_meters: float
 ) -> Array[int]:
 	var row_role: int = plan.row_roles[row_index]
-	var max_support_lanes: int = _get_max_support_lane_count(plan.difficulty_band, row_role)
+	var max_support_lanes: int = _get_max_support_lane_count(plan, row_role)
 	if max_support_lanes <= 0:
 		return []
 
@@ -220,7 +220,17 @@ func _get_mirror_lane(lane: int) -> int:
 		_:
 			return -1
 
-func _get_max_support_lane_count(difficulty_band: int, row_role: int) -> int:
+## Once altitude has pushed the target difficulty past the top authored band, thin
+## the wall by one more support lane per row -- see docs/route-generation-audit.md C6.
+const HIGH_ALTITUDE_SUPPORT_CUTOFF: float = 0.1
+
+func _get_max_support_lane_count(plan: ChunkRoutePlanScript, row_role: int) -> int:
+	var base_support_lane_count: int = _base_max_support_lane_count(plan.difficulty_band, row_role)
+	if plan.altitude_difficulty_bonus >= HIGH_ALTITUDE_SUPPORT_CUTOFF:
+		return maxi(0, base_support_lane_count - 1)
+	return base_support_lane_count
+
+func _base_max_support_lane_count(difficulty_band: int, row_role: int) -> int:
 	RouteRowRoleScript.assert_valid(row_role)
 	match difficulty_band:
 		ChunkDifficultyBandScript.Value.EASY:

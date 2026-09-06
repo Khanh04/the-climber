@@ -10,9 +10,10 @@ const RouteBranchSideScript = preload("res://src/gameplay/generation/route_branc
 const RouteMovementStyleScript = preload("res://src/gameplay/generation/route_movement_style.gd")
 const RouteRowRoleScript = preload("res://src/gameplay/generation/route_row_role.gd")
 
-func build_plan(seed_key: String, chunk_index: int, route_slot: int, difficulty_band: int) -> ChunkRoutePlanScript:
+func build_plan(seed_key: String, chunk_index: int, route_slot: int, difficulty_band: int, altitude_difficulty_bonus: float = 0.0) -> ChunkRoutePlanScript:
 	Validation.require_condition(seed_key != "", "ChunkRoutePlanBuilder requires a seed key.")
 	Validation.require_condition(chunk_index >= 0, "ChunkRoutePlanBuilder chunk index cannot be negative.")
+	Validation.require_condition(altitude_difficulty_bonus >= 0.0, "ChunkRoutePlanBuilder altitude difficulty bonus cannot be negative.")
 	ChunkRouteSlotScript.assert_valid(route_slot)
 	ChunkDifficultyBandScript.assert_valid(difficulty_band)
 
@@ -44,9 +45,8 @@ func build_plan(seed_key: String, chunk_index: int, route_slot: int, difficulty_
 		merge_row_index,
 		minimum_branch_separation_rows,
 		minimum_outer_lane_rows,
-		_get_max_sparse_row_streak(difficulty_band),
-		target_difficulty_score_for(route_slot, difficulty_band),
-		_get_target_support_score(route_slot, difficulty_band),
+		target_difficulty_score_for(route_slot, difficulty_band, altitude_difficulty_bonus),
+		altitude_difficulty_bonus,
 		_build_hazard_intents(route_slot),
 		_build_safe_path_allowed_handhold_types(difficulty_band),
 		_build_optional_path_allowed_handhold_types(difficulty_band)
@@ -308,22 +308,11 @@ func _get_minimum_outer_lane_rows(difficulty_band: int) -> int:
 			Validation.require_condition(false, "ChunkRoutePlanBuilder outer lane rows require a supported difficulty band.")
 			return 0
 
-func _get_max_sparse_row_streak(difficulty_band: int) -> int:
-	match difficulty_band:
-		ChunkDifficultyBandScript.Value.EASY:
-			return 1
-		ChunkDifficultyBandScript.Value.BASELINE:
-			return 2
-		ChunkDifficultyBandScript.Value.CHALLENGE:
-			return 3
-		_:
-			Validation.require_condition(false, "ChunkRoutePlanBuilder sparse row limits require a supported difficulty band.")
-			return 0
-
-## Target route difficulty in [0, 1] for a (route_slot, difficulty_band) pair.
-## Static so the candidate selector can score a layout against its own target
-## without rebuilding a plan.
-static func target_difficulty_score_for(route_slot: int, difficulty_band: int) -> float:
+## Target route difficulty in [0, 1] for a (route_slot, difficulty_band) pair, plus
+## an optional continuous altitude bonus so difficulty keeps rising past the top
+## authored band. Static so the candidate selector can score a layout against its
+## own target without rebuilding a plan.
+static func target_difficulty_score_for(route_slot: int, difficulty_band: int, altitude_difficulty_bonus: float = 0.0) -> float:
 	var score: float = 0.25
 	match difficulty_band:
 		ChunkDifficultyBandScript.Value.EASY:
@@ -342,26 +331,17 @@ static func target_difficulty_score_for(route_slot: int, difficulty_band: int) -
 	elif route_slot == ChunkRouteSlotScript.Value.PRESSURE:
 		score += 0.18
 
-	return clampf(score, 0.0, 1.0)
+	return clampf(score + maxf(0.0, altitude_difficulty_bonus), 0.0, 1.0)
 
-func _get_target_support_score(route_slot: int, difficulty_band: int) -> float:
-	var score: float = 0.85
-	match difficulty_band:
-		ChunkDifficultyBandScript.Value.EASY:
-			score = 0.85
-		ChunkDifficultyBandScript.Value.BASELINE:
-			score = 0.65
-		ChunkDifficultyBandScript.Value.CHALLENGE:
-			score = 0.45
-		_:
-			Validation.require_condition(false, "ChunkRoutePlanBuilder support score requires a supported difficulty band.")
-
-	if route_slot == ChunkRouteSlotScript.Value.RECOVERY:
-		score += 0.15
-	elif route_slot == ChunkRouteSlotScript.Value.PRESSURE:
-		score -= 0.1
-
-	return clampf(score, 0.0, 1.0)
+## Continuous difficulty added above the baseline band ceiling, capped. Static so
+## both the pipeline (folding it into the plan) and the candidate selector (scoring
+## a layout) derive it from the same formula -- see docs/route-generation-audit.md C1.
+static func altitude_difficulty_bonus_for(start_height_meters: float, ramp_per_100m: float, bonus_cap: float, baseline_band_ceiling_meters: float) -> float:
+	Validation.require_condition(start_height_meters >= 0.0, "ChunkRoutePlanBuilder altitude bonus requires a non-negative height.")
+	Validation.require_condition(ramp_per_100m >= 0.0, "ChunkRoutePlanBuilder altitude ramp cannot be negative.")
+	Validation.require_condition(bonus_cap >= 0.0, "ChunkRoutePlanBuilder altitude bonus cap cannot be negative.")
+	var meters_above_bands: float = maxf(0.0, start_height_meters - baseline_band_ceiling_meters)
+	return minf(ramp_per_100m * (meters_above_bands / 100.0), bonus_cap)
 
 func _build_hazard_intents(route_slot: int) -> Array[int]:
 	match route_slot:

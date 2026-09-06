@@ -32,6 +32,11 @@ const DefaultRouteProfileTuningResource = preload("res://resources/config/route_
 @export var easy_band_max_height_meters: float = 50.0
 ## Height ceiling for the baseline difficulty band before challenge-band rules begin.
 @export var baseline_band_max_height_meters: float = 100.0
+## Continuous difficulty added to the target score per 100 m climbed above the
+## baseline band ceiling, so routes keep getting harder past the top authored band.
+@export var altitude_difficulty_ramp_per_100m: float = 0.15
+## Ceiling on the altitude difficulty bonus.
+@export var altitude_difficulty_bonus_cap: float = 0.6
 ## Number of chunks kept spawned ahead of the current camera anchor.
 @export var chunk_spawn_ahead_count: int = 3
 ## Number of chunks retained behind the current camera anchor.
@@ -66,6 +71,8 @@ func is_valid() -> bool:
 		and handhold_vertical_jitter_meters < opener_first_row_height_meters * 0.5 \
 		and easy_band_max_height_meters > 0.0 \
 		and baseline_band_max_height_meters > easy_band_max_height_meters \
+		and altitude_difficulty_ramp_per_100m >= 0.0 \
+		and altitude_difficulty_bonus_cap >= 0.0 \
 		and chunk_spawn_ahead_count >= 1 \
 		and chunk_keep_behind_count >= 0 \
 		and _route_validation_tuning_is_valid() \
@@ -107,6 +114,8 @@ func assert_valid() -> void:
 		baseline_band_max_height_meters > easy_band_max_height_meters,
         "Generation baseline-band max height must be greater than the easy-band max height."
 	)
+	Validation.require_condition(altitude_difficulty_ramp_per_100m >= 0.0, "Generation altitude difficulty ramp cannot be negative.")
+	Validation.require_condition(altitude_difficulty_bonus_cap >= 0.0, "Generation altitude difficulty bonus cap cannot be negative.")
 	Validation.require_condition(chunk_spawn_ahead_count >= 1, "Generation config must keep at least one chunk ahead of the camera.")
 	Validation.require_condition(chunk_keep_behind_count >= 0, "Generation config cannot keep a negative number of chunks behind the camera.")
 	_assert_valid_route_validation_tuning()

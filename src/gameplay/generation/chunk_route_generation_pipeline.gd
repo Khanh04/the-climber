@@ -39,6 +39,7 @@ func build_layout(
 	chunk_index: int,
 	route_slot: int,
 	difficulty_band: int,
+	start_height_meters: float = 0.0,
 	route_validation_result: RefCounted = null,
 	selected_candidate_attempt_index: int = 0,
 	candidate_score: float = 0.0,
@@ -46,13 +47,15 @@ func build_layout(
 ) -> GeneratedChunkLayoutScript:
 	Validation.require_condition(seed_key != "", "ChunkRouteGenerationPipeline requires a seed key.")
 	Validation.require_condition(chunk_index >= 0, "ChunkRouteGenerationPipeline chunk index cannot be negative.")
+	Validation.require_condition(start_height_meters >= 0.0, "ChunkRouteGenerationPipeline start height cannot be negative.")
 	ChunkRouteSlotScript.assert_valid(route_slot)
 	ChunkDifficultyBandScript.assert_valid(difficulty_band)
 	Validation.require_condition(selected_candidate_attempt_index >= 0, "ChunkRouteGenerationPipeline candidate attempt index cannot be negative.")
 	Validation.require_condition(not is_nan(candidate_score), "ChunkRouteGenerationPipeline candidate score cannot be NaN.")
 
 	var selection_seed: String = seed_key if candidate_selection_seed.is_empty() else candidate_selection_seed
-	var plan: ChunkRoutePlanScript = _plan_builder.build_plan(selection_seed, chunk_index, route_slot, difficulty_band)
+	var altitude_difficulty_bonus: float = _calculate_altitude_difficulty_bonus(start_height_meters)
+	var plan: ChunkRoutePlanScript = _plan_builder.build_plan(selection_seed, chunk_index, route_slot, difficulty_band, altitude_difficulty_bonus)
 	var first_row_height_meters: float = _calculate_route_first_row_height_meters(plan)
 	var route_row_step_height_meters: float = _calculate_route_row_step_height_meters(plan, first_row_height_meters)
 	var effective_vertical_jitter_meters: float = _calculate_reachable_vertical_jitter_meters(route_row_step_height_meters)
@@ -134,6 +137,14 @@ func _calculate_reachable_vertical_jitter_meters(row_step_height_meters: float) 
 	var jitter_budget_meters: float = (route_validation_tuning.max_move_distance_meters - row_step_height_meters) * 0.5
 	var safe_jitter_meters: float = maxf(0.0, jitter_budget_meters - 0.02)
 	return minf(_tuning.handhold_vertical_jitter_meters, safe_jitter_meters)
+
+func _calculate_altitude_difficulty_bonus(start_height_meters: float) -> float:
+	return ChunkRoutePlanBuilderScript.altitude_difficulty_bonus_for(
+		start_height_meters,
+		_tuning.altitude_difficulty_ramp_per_100m,
+		_tuning.altitude_difficulty_bonus_cap,
+		_tuning.baseline_band_max_height_meters
+	)
 
 func _get_route_validation_tuning() -> RouteValidationTuningScript:
 	Validation.require_condition(_tuning.route_validation_tuning != null, "ChunkRouteGenerationPipeline requires route validation tuning.")

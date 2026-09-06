@@ -199,6 +199,18 @@ func test_variable_hazard_kinds_are_repeatable_per_seed_and_vary_across_seeds() 
     assert_gt(selected_denial_kinds.size(), 1)
     assert_gt(selected_traverse_kinds.size(), 1)
 
+func test_altitude_difficulty_bonus_thins_support_holds() -> void:
+    var builder: ChunkRoutePlanBuilderScript = ChunkRoutePlanBuilderScript.new()
+    var seed_key: String = DailySeedKey.from_utc_date(2026, 5, 16)
+    var ground_plan: ChunkRoutePlanScript = builder.build_plan(seed_key, 9, ChunkRouteSlotScript.Value.BASELINE, ChunkDifficultyBandScript.Value.CHALLENGE, 0.0)
+    var high_plan: ChunkRoutePlanScript = builder.build_plan(seed_key, 9, ChunkRouteSlotScript.Value.BASELINE, ChunkDifficultyBandScript.Value.CHALLENGE, 0.4)
+
+    assert_gt(high_plan.target_difficulty_score, ground_plan.target_difficulty_score)
+    assert_lt(
+        _call_int(_build_population(high_plan), &"count_support_holds"),
+        _call_int(_build_population(ground_plan), &"count_support_holds")
+    )
+
 func _build_plan(chunk_index: int, route_slot: int, difficulty_band: int) -> ChunkRoutePlanScript:
     var builder: ChunkRoutePlanBuilderScript = ChunkRoutePlanBuilderScript.new()
     return builder.build_plan(DailySeedKey.from_utc_date(2026, 5, 16), chunk_index, route_slot, difficulty_band)

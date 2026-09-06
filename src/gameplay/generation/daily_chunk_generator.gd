@@ -163,6 +163,7 @@ func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attemp
 		chunk_index,
 		route_slot,
 		difficulty_band,
+		start_height_meters,
 		null,
 		candidate_attempt_index,
 		0.0,
@@ -175,6 +176,7 @@ func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attemp
 		chunk_index,
 		route_slot,
 		difficulty_band,
+		start_height_meters,
 		route_validation_result,
 		candidate_attempt_index,
 		candidate_score,
@@ -198,7 +200,15 @@ func _build_candidate_score(layout: GeneratedChunkLayout, route_validation_resul
 	if layout.route_slot == ChunkRouteSlot.Value.OPENER:
 		return _least_committing_candidate_score(layout, route_validation_result)
 	var observed_difficulty: float = _observed_route_difficulty(layout, route_validation_result)
-	var target_difficulty: float = ChunkRoutePlanBuilderScript.target_difficulty_score_for(layout.route_slot, layout.difficulty_band)
+	var altitude_difficulty_bonus: float = ChunkRoutePlanBuilderScript.altitude_difficulty_bonus_for(
+		layout.start_height_meters,
+		_tuning.altitude_difficulty_ramp_per_100m,
+		_tuning.altitude_difficulty_bonus_cap,
+		_tuning.baseline_band_max_height_meters
+	)
+	var target_difficulty: float = ChunkRoutePlanBuilderScript.target_difficulty_score_for(
+		layout.route_slot, layout.difficulty_band, altitude_difficulty_bonus
+	)
 	return -absf(observed_difficulty - target_difficulty)
 
 ## Legacy metric: swing envelope minus the largest safe-path hop. Higher = more

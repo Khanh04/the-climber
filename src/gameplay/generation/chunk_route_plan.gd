@@ -20,9 +20,10 @@ var split_row_index: int
 var merge_row_index: int
 var minimum_branch_separation_rows: int
 var minimum_outer_lane_rows: int
-var max_sparse_row_streak: int
 var target_difficulty_score: float
-var target_support_score: float
+## Continuous altitude component already folded into target_difficulty_score, kept
+## separately so population can tell "hard band" from "hard because high up".
+var altitude_difficulty_bonus: float
 var hazard_intents: Array[int]
 var safe_path_allowed_handhold_types: Array[int]
 var optional_path_allowed_handhold_types: Array[int]
@@ -39,9 +40,8 @@ func _init(
 	merge_row_index_value: int,
 	minimum_branch_separation_rows_value: int,
 	minimum_outer_lane_rows_value: int,
-	max_sparse_row_streak_value: int,
 	target_difficulty_score_value: float,
-	target_support_score_value: float,
+	altitude_difficulty_bonus_value: float,
 	hazard_intents_value: Array[int],
 	safe_path_allowed_handhold_types_value: Array[int],
 	optional_path_allowed_handhold_types_value: Array[int]
@@ -57,9 +57,8 @@ func _init(
 	merge_row_index = merge_row_index_value
 	minimum_branch_separation_rows = minimum_branch_separation_rows_value
 	minimum_outer_lane_rows = minimum_outer_lane_rows_value
-	max_sparse_row_streak = max_sparse_row_streak_value
 	target_difficulty_score = target_difficulty_score_value
-	target_support_score = target_support_score_value
+	altitude_difficulty_bonus = altitude_difficulty_bonus_value
 	hazard_intents = _duplicate_int_array(hazard_intents_value)
 	safe_path_allowed_handhold_types = _duplicate_int_array(safe_path_allowed_handhold_types_value)
 	optional_path_allowed_handhold_types = _duplicate_int_array(optional_path_allowed_handhold_types_value)
@@ -72,9 +71,8 @@ func is_valid() -> bool:
 		and RouteMovementStyleScript.is_valid(movement_style) \
 		and _row_roles_are_valid() \
 		and _branch_contract_is_valid() \
-		and max_sparse_row_streak >= 0 \
 		and target_difficulty_score >= 0.0 \
-		and target_support_score >= 0.0 \
+		and altitude_difficulty_bonus >= 0.0 \
 		and _hazard_intents_are_valid() \
 		and _handhold_types_are_valid(safe_path_allowed_handhold_types) \
 		and _handhold_types_are_valid(optional_path_allowed_handhold_types)
@@ -86,9 +84,8 @@ func assert_valid() -> void:
 	RouteMovementStyleScript.assert_valid(movement_style)
 	_assert_valid_row_roles()
 	_assert_valid_branch_contract()
-	Validation.require_condition(max_sparse_row_streak >= 0, "ChunkRoutePlan max sparse row streak cannot be negative.")
 	Validation.require_condition(target_difficulty_score >= 0.0, "ChunkRoutePlan target difficulty score cannot be negative.")
-	Validation.require_condition(target_support_score >= 0.0, "ChunkRoutePlan target support score cannot be negative.")
+	Validation.require_condition(altitude_difficulty_bonus >= 0.0, "ChunkRoutePlan altitude difficulty bonus cannot be negative.")
 	_assert_valid_hazard_intents()
 	_assert_valid_handhold_types(safe_path_allowed_handhold_types, "safe path")
 	_assert_valid_handhold_types(optional_path_allowed_handhold_types, "optional path")
