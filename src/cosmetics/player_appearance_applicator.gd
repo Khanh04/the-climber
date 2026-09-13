@@ -58,15 +58,16 @@ func _apply_cutout_appearance(player: PlayerCharacterScript, appearance: PlayerA
 	var left_upper_arm_source: CutoutSource = _load_cutout_source(appearance.left_upper_arm_texture_path)
 	var right_upper_arm_source: CutoutSource = _load_cutout_source(appearance.right_upper_arm_texture_path)
 
-	_apply_cutout_part(player.get_face_overlay(), atlas_texture, face_source, appearance.face_offset, appearance.face_scale)
-	_apply_cutout_part(player.get_left_arm_visual(), atlas_texture, left_upper_arm_source, appearance.left_upper_arm_offset, appearance.left_upper_arm_scale)
-	_apply_cutout_part(player.get_right_arm_visual(), atlas_texture, right_upper_arm_source, appearance.right_upper_arm_offset, appearance.right_upper_arm_scale)
+	_apply_cutout_part(player.get_face_overlay(), player.get_head_body(), atlas_texture, face_source, appearance.face_offset, appearance.face_scale)
+	_apply_cutout_part(player.get_left_arm_visual(), player.get_left_arm_body(), atlas_texture, left_upper_arm_source, appearance.left_upper_arm_offset, appearance.left_upper_arm_scale)
+	_apply_cutout_part(player.get_right_arm_visual(), player.get_right_arm_body(), atlas_texture, right_upper_arm_source, appearance.right_upper_arm_offset, appearance.right_upper_arm_scale)
 	# Head keeps its authored round shape -- see apply_appearance().
 	_fit_arm_collision_to_cutout_bounds(player, HandSideScript.Value.LEFT, left_upper_arm_source, appearance.left_upper_arm_offset, appearance.left_upper_arm_scale)
 	_fit_arm_collision_to_cutout_bounds(player, HandSideScript.Value.RIGHT, right_upper_arm_source, appearance.right_upper_arm_offset, appearance.right_upper_arm_scale)
 
-func _apply_cutout_part(anchor: Sprite2D, atlas_texture: Texture2D, source: CutoutSource, offset: Vector2, scale_value: Vector2) -> void:
+func _apply_cutout_part(anchor: Sprite2D, owning_body: Node2D, atlas_texture: Texture2D, source: CutoutSource, offset: Vector2, scale_value: Vector2) -> void:
 	Validation.require_condition(anchor != null, "PlayerAppearanceApplicator requires a cutout anchor.")
+	Validation.require_condition(owning_body != null, "PlayerAppearanceApplicator requires an owning body for a cutout anchor.")
 	Validation.require_condition(atlas_texture != null, "PlayerAppearanceApplicator requires an atlas texture for cutout application.")
 	Validation.require_condition(source != null, "PlayerAppearanceApplicator requires a cutout source.")
 	Validation.require_condition(source.used_rect.size.x > 0.0 and source.used_rect.size.y > 0.0, "PlayerAppearanceApplicator requires a non-empty cutout source rectangle.")
@@ -79,7 +80,7 @@ func _apply_cutout_part(anchor: Sprite2D, atlas_texture: Texture2D, source: Cuto
 	var cutout_node: Polygon2D = _get_or_create_cutout_node(anchor)
 	cutout_node.texture = atlas_texture
 	cutout_node.color = Color(1.0, 1.0, 1.0, 1.0)
-	cutout_node.polygon = _build_cutout_polygon(anchor, source, offset, scale_value)
+	cutout_node.polygon = _build_cutout_polygon(anchor, owning_body, source, offset, scale_value)
 	cutout_node.uv = _build_cutout_uv(source.used_rect)
 	cutout_node.visible = true
 
@@ -94,9 +95,9 @@ func _get_or_create_cutout_node(anchor: Sprite2D) -> Polygon2D:
 	anchor.add_child(cutout_node)
 	return cutout_node
 
-func _build_cutout_polygon(anchor: Sprite2D, source: CutoutSource, offset: Vector2, scale_value: Vector2) -> PackedVector2Array:
+func _build_cutout_polygon(anchor: Sprite2D, owning_body: Node2D, source: CutoutSource, offset: Vector2, scale_value: Vector2) -> PackedVector2Array:
 	var assembled_center: Vector2 = _get_cutout_center_in_visual_frame(source) + offset
-	var anchor_center: Vector2 = _sum_local_positions(anchor, _require_visual_root(anchor))
+	var anchor_center: Vector2 = _sum_local_positions(anchor, owning_body)
 	var local_center: Vector2 = assembled_center - anchor_center
 	var half_size: Vector2 = (source.used_rect.size * scale_value) / 2.0
 	return PackedVector2Array([
@@ -160,15 +161,6 @@ func _get_cutout_center_in_visual_frame(source: CutoutSource) -> Vector2:
 # from its intended attachment point. Shared by both the plain and cutout part paths.
 func _resolve_crop_center_offset(frame_size: Vector2, used_rect_position: Vector2, used_rect_size: Vector2) -> Vector2:
 	return used_rect_position + (used_rect_size / 2.0) - (frame_size / 2.0)
-
-func _require_visual_root(anchor: Sprite2D) -> Node2D:
-	var current: Node = anchor
-	while current != null:
-		if current is Node2D and current.name == &"VisualRoot":
-			return current as Node2D
-		current = current.get_parent()
-	Validation.require_condition(false, "PlayerAppearanceApplicator could not resolve VisualRoot for a cutout anchor.")
-	return anchor
 
 func _apply_part(sprite: Sprite2D, asset_path: String, offset: Vector2, scale_value: Vector2) -> Image:
 	Validation.require_condition(sprite != null, "PlayerAppearanceApplicator requires a sprite target.")

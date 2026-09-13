@@ -308,6 +308,40 @@ func test_player_appearance_applicator_applies_human_appearance_without_changing
     assert_eq(body.collision_layer, starting_collision_layer)
     assert_eq(body.collision_mask, starting_collision_mask)
 
+func test_player_appearance_applicator_applies_atlas_cutout_appearance_without_changing_physics() -> void:
+    var player: PlayerCharacterScript = await _instantiate_player()
+    var applicator := PlayerAppearanceApplicatorScript.new()
+    var body: RigidBody2D = player.get_player_body()
+    var starting_mass: float = body.mass
+    var starting_collision_layer: int = body.collision_layer
+    var starting_collision_mask: int = body.collision_mask
+
+    # Regression test for the cutout path resolving each part's owning body directly, instead
+    # of searching ancestors for a node literally named "VisualRoot" (that name only exists on
+    # the unrelated hat-cosmetic socket, so the old lookup always failed for these anchors).
+    var atlas_appearance := PlayerAppearanceScript.new()
+    atlas_appearance.atlas_texture_path = "res://assets/PNG/Character/CHR2/head.png"
+    atlas_appearance.face_texture_path = "res://assets/PNG/Character/CHR2/head.png"
+    atlas_appearance.left_upper_arm_texture_path = "res://assets/PNG/Character/CHR2/leftarm.png"
+    atlas_appearance.right_upper_arm_texture_path = "res://assets/PNG/Character/CHR2/rightarm.png"
+    applicator.apply_appearance(player, atlas_appearance)
+
+    var face_cutout: Polygon2D = player.get_face_overlay().get_node_or_null("AppearanceCutout") as Polygon2D
+    var left_arm_cutout: Polygon2D = player.get_left_arm_visual().get_node_or_null("AppearanceCutout") as Polygon2D
+    var right_arm_cutout: Polygon2D = player.get_right_arm_visual().get_node_or_null("AppearanceCutout") as Polygon2D
+    assert_not_null(face_cutout)
+    assert_not_null(left_arm_cutout)
+    assert_not_null(right_arm_cutout)
+    assert_not_null(face_cutout.texture)
+    assert_eq(face_cutout.polygon.size(), 4)
+    assert_eq(left_arm_cutout.polygon.size(), 4)
+    assert_eq(right_arm_cutout.polygon.size(), 4)
+
+    player.assert_visual_roots_physics_neutral()
+    assert_eq(body.mass, starting_mass)
+    assert_eq(body.collision_layer, starting_collision_layer)
+    assert_eq(body.collision_mask, starting_collision_mask)
+
 func test_player_character_grip_joints_target_player_body() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
 
