@@ -1,11 +1,11 @@
 [gd_scene format=3 uid="uid://b7y1m41fyw3oa"]
 
 [ext_resource type="Script" uid="uid://c64k3agxnuki" path="res://scenes/ui/run_hud.gd" id="1_run_hud"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/HUD/icon_Height.png" id="2_6el0o"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/HUD/panel_HUD.png" id="2_my1ax"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/HUD/icon_Stamina.png" id="3_my1ax"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/HUD/icon_coin.png" id="5_88klh"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/HUD/btn_pause.png" id="5_sfsch"]
+[ext_resource type="Texture2D" uid="uid://fs45muiihnpj" path="res://assets/PNG/UI/run_scene/HUD/icon_Height.png" id="2_6el0o"]
+[ext_resource type="Texture2D" uid="uid://dd8aluvwmqfuv" path="res://assets/PNG/UI/run_scene/HUD/panel_HUD.png" id="2_my1ax"]
+[ext_resource type="Texture2D" uid="uid://c8ulv8ks6apn" path="res://assets/PNG/UI/run_scene/HUD/icon_Stamina.png" id="3_my1ax"]
+[ext_resource type="Texture2D" uid="uid://cyevy8f68wpj8" path="res://assets/PNG/UI/run_scene/HUD/icon_coin.png" id="5_88klh"]
+[ext_resource type="Texture2D" uid="uid://fca52xeof1c" path="res://assets/PNG/UI/run_scene/HUD/btn_pause.png" id="5_sfsch"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_tjuia"]
 texture = ExtResource("2_my1ax")
@@ -21,17 +21,27 @@ texture = ExtResource("5_sfsch")
 
 [node name="RunHud" type="Control" unique_id=1366138304]
 layout_mode = 3
-anchors_preset = 0
-offset_top = 27.0
-offset_bottom = 27.0
 mouse_filter = 2
 script = ExtResource("1_run_hud")
+anchors_preset = 15
+anchor_right = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+anchor_bottom = 1.0
 
 [node name="Panel" type="PanelContainer" parent="." unique_id=1406237050]
 layout_mode = 1
-offset_right = 470.0
-offset_bottom = 120.0
 theme_override_styles/panel = SubResource("StyleBoxTexture_tjuia")
+anchors_preset = 5
+anchor_left = 0.5
+anchor_right = 0.5
+offset_top = 120.0
+offset_right = 235.0
+scale = Vector2(2, 2)
+offset_left = -235.0
+theme_override_font_sizes/font_size = 18
+offset_bottom = 240.0
+pivot_offset = Vector2(235, 0)
 
 [node name="ContentMargin" type="MarginContainer" parent="Panel" unique_id=272178618]
 layout_mode = 2
@@ -42,20 +52,22 @@ theme_override_constants/margin_bottom = 12
 
 [node name="Metrics" type="HBoxContainer" parent="Panel/ContentMargin" unique_id=90775577]
 layout_mode = 2
-theme_override_constants/separation = 24
+theme_override_constants/separation = 16
 
 [node name="Wrapper_Stamina" type="Control" parent="Panel/ContentMargin/Metrics" unique_id=1193660554]
 layout_mode = 2
+custom_minimum_size = Vector2(178, 96)
 
 [node name="StaminaMetric" type="TextureRect" parent="Panel/ContentMargin/Metrics/Wrapper_Stamina" unique_id=1856381252]
 layout_mode = 0
-offset_left = 70.0
-offset_top = 8.0
-offset_right = 91.0
-offset_bottom = 28.0
 size_flags_horizontal = 3
 texture = ExtResource("3_my1ax")
-stretch_mode = 2
+offset_bottom = 24.0
+expand_mode = 1
+stretch_mode = 5
+offset_right = 24.0
+offset_top = 0.0
+offset_left = 0.0
 
 [node name="StaminaLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric" unique_id=280311379]
 visible = false
@@ -66,33 +78,34 @@ text = "Stamina"
 
 [node name="StaminaValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric" unique_id=528492686]
 layout_mode = 0
-offset_top = 27.0
-offset_right = 255.0
-offset_bottom = 50.0
 text = "0.0 / 0.0"
+offset_bottom = 56.0
+offset_top = 30.0
+offset_right = 178.0
 
 [node name="StaminaBar" type="ProgressBar" parent="Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric" unique_id=571715783]
 layout_mode = 0
-offset_top = 54.0
-offset_right = 255.0
-offset_bottom = 58.0
 size_flags_horizontal = 3
 max_value = 20.0
 value = 20.0
 show_percentage = false
+offset_bottom = 76.0
+offset_top = 66.0
+offset_right = 162.0
 
 [node name="Wrapper_Height" type="Control" parent="Panel/ContentMargin/Metrics" unique_id=163337302]
 layout_mode = 2
+custom_minimum_size = Vector2(64, 96)
 
 [node name="HeightMetric" type="TextureRect" parent="Panel/ContentMargin/Metrics/Wrapper_Height" unique_id=1362811927]
-custom_minimum_size = Vector2(30, 0)
 layout_mode = 0
-offset_left = -21.0
-offset_top = 8.0
-offset_right = 9.0
-offset_bottom = 28.0
 texture = ExtResource("2_6el0o")
-stretch_mode = 2
+offset_bottom = 24.0
+expand_mode = 1
+stretch_mode = 5
+offset_right = 24.0
+offset_top = 0.0
+offset_left = 0.0
 
 [node name="HeightLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric" unique_id=182329227]
 visible = false
@@ -103,25 +116,28 @@ text = "Height"
 
 [node name="HeightValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric" unique_id=1547813144]
 layout_mode = 0
-offset_top = 27.0
-offset_right = 52.0
-offset_bottom = 50.0
 text = "0.0 m"
+offset_bottom = 56.0
+offset_top = 30.0
+offset_right = 64.0
 
 [node name="Wrapper_Wallet" type="Control" parent="Panel/ContentMargin/Metrics" unique_id=515428915]
 layout_mode = 2
+custom_minimum_size = Vector2(64, 96)
 
 [node name="WalletMetric" type="VBoxContainer" parent="Panel/ContentMargin/Metrics/Wrapper_Wallet" unique_id=1329934871]
 layout_mode = 0
-offset_left = 292.0
-offset_top = 10.0
-offset_right = 310.0
-offset_bottom = 57.0
+offset_bottom = 96.0
+offset_top = 0.0
+offset_left = 0.0
+offset_right = 64.0
 
 [node name="icon_coin" type="TextureRect" parent="Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric" unique_id=1825362056]
 layout_mode = 2
 texture = ExtResource("5_88klh")
-stretch_mode = 2
+stretch_mode = 5
+expand_mode = 1
+custom_minimum_size = Vector2(24, 24)
 
 [node name="WalletLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric" unique_id=243998180]
 visible = false
@@ -138,14 +154,15 @@ text = "+0"
 
 [node name="Wrapper_BtnPause" type="Control" parent="Panel/ContentMargin/Metrics" unique_id=973305931]
 layout_mode = 2
+custom_minimum_size = Vector2(84, 96)
 
 [node name="PauseButton" type="Button" parent="Panel/ContentMargin/Metrics/Wrapper_BtnPause" unique_id=613756386]
 layout_mode = 0
-offset_left = 305.0
-offset_top = -2.9999995
-offset_right = 349.008
-offset_bottom = 100.74535
-scale = Vector2(1.6360661, 0.98317665)
 theme_override_styles/normal = SubResource("StyleBoxTexture_my1ax")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_88klh")
 theme_override_styles/hover = SubResource("StyleBoxTexture_sfsch")
+offset_bottom = 96.0
+offset_top = 0.0
+offset_left = 0.0
+offset_right = 84.0
+

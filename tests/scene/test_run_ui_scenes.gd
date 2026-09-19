@@ -171,7 +171,7 @@ func test_menu_buttons_use_mobile_sized_touch_targets() -> void:
 	var resume_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/ResumeButton") as Button
 	var restart_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
 	var pause_settings_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
-	var close_button: Button = settings_menu.get_node("CenterContainer/Panel/ControlPosition/CloseButton") as Button
+	var close_button: Button = settings_menu.get_node("CloseButton") as Button
 
 	assert_not_null(start_button)
 	assert_not_null(tutorial_button)
@@ -736,7 +736,7 @@ func test_settings_menu_displays_state_and_emits_setting_intents() -> void:
 	var haptics_check_box: CheckBox = menu.get_node("CenterContainer/Panel/ControlPosition/HapicControl/HapticsCheckBox") as CheckBox
 	var touch_split_slider: HSlider = menu.get_node("CenterContainer/Panel/ControlPosition/TouchSplitControl/TouchSplitSlider") as HSlider
 	var touch_dead_zone_slider: HSlider = menu.get_node("CenterContainer/Panel/ControlPosition/TouchDeadZoneControl/TouchDeadZoneSlider") as HSlider
-	var close_button: Button = menu.get_node("CenterContainer/Panel/ControlPosition/CloseButton") as Button
+	var close_button: Button = menu.get_node("CloseButton") as Button
 
 	# Sliders run 0-100 in this scene; SettingsState stores 0.0-1.0 ratios.
 	assert_true(menu.visible)

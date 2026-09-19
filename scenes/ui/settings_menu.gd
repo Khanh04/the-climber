@@ -10,7 +10,7 @@ signal touch_center_dead_zone_changed(touch_center_dead_zone_ratio: float)
 
 const SettingsStateScript = preload("res://src/ui/settings_state.gd")
 
-@onready var _close_button: BaseButton = $CenterContainer/Panel/ControlPosition/CloseButton
+@onready var _close_button: BaseButton = $CloseButton
 
 @onready var _audio_mute_check_box: CheckBox = $CenterContainer/Panel/ControlPosition/AudioControl/AudioMuteCheckBox
 
@@ -28,7 +28,7 @@ const SettingsStateScript = preload("res://src/ui/settings_state.gd")
 var _applying_state: bool = false
 
 func _ready() -> void:
-	_validate_required_nodes()
+	_validate_required_nodes() 
 	var _close_connect_result: int = _close_button.connect(&"pressed", Callable(self, "_on_close_requested"))
 	var _audio_connect_result: int = _audio_mute_check_box.connect(&"toggled", Callable(self, "_on_audio_mute_toggled"))
 	var _volume_connect_result: int = _volume_slider.connect(&"value_changed", Callable(self, "_on_volume_value_changed"))
@@ -98,6 +98,7 @@ func _on_haptics_toggled(button_pressed: bool) -> void:
 		return
 
 	haptics_enabled_changed.emit(button_pressed)
+	
 
 func _on_touch_split_value_changed(value: float) -> void:
 	_refresh_value_labels()

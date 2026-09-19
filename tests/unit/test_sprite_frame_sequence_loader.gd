@@ -4,7 +4,7 @@ const SpriteFrameSequenceLoaderScript = preload("res://src/core/sprite_frame_seq
 
 func test_build_looping_animation_loads_all_frames_with_loop_and_speed() -> void:
 	var frames: SpriteFrames = SpriteFrameSequenceLoaderScript.build_looping_animation(
-		"res://assets/PNG/UI/run_sence/buff_point/buff_animation/frame_%02d.png",
+		"res://assets/PNG/UI/run_scene/buff_point/buff_animation/frame_%02d.png",
 		48,
 		&"buff",
 		24.0

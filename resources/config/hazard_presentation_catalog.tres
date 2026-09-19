@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="HazardPresentationCatalog" load_steps=20 format=3]
+[gd_resource type="Resource" script_class="HazardPresentationCatalog" format=3 uid="uid://cufv58t1x564w"]
 
-[ext_resource type="Script" path="res://resources/config/hazard_presentation_catalog.gd" id="1"]
-[ext_resource type="Script" path="res://resources/config/hazard_presentation_definition.gd" id="2"]
+[ext_resource type="Script" uid="uid://bvmykcquu3ftq" path="res://resources/config/hazard_presentation_catalog.gd" id="1"]
+[ext_resource type="Script" uid="uid://5p22gk6i4bso" path="res://resources/config/hazard_presentation_definition.gd" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/hazards/presentation/spike_cluster.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/hazards/presentation/wind_gust.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/hazards/presentation/downdraft.tscn" id="5"]

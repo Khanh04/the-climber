@@ -675,7 +675,7 @@ func test_run_scene_pause_settings_overlay_keeps_run_paused() -> void:
     assert_true(get_tree().paused)
 
     var haptics_check_box: CheckBox = settings_menu.get_node("CenterContainer/Panel/ControlPosition/HapicControl/HapticsCheckBox") as CheckBox
-    var close_button: Button = settings_menu.get_node("CenterContainer/Panel/ControlPosition/CloseButton") as Button
+    var close_button: Button = settings_menu.get_node("CloseButton") as Button
     assert_not_null(haptics_check_box)
     assert_not_null(close_button)
     var _haptics_emit_result: int = haptics_check_box.emit_signal("toggled", false)

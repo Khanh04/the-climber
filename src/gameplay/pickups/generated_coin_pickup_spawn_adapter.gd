@@ -6,7 +6,7 @@ const SpriteFrameSequenceLoaderScript = preload("res://src/core/sprite_frame_seq
 signal collected(socket_id: StringName, coin_amount: int, body: Node)
 
 const GROUP_NAME: StringName = &"generated_coin_pickup"
-const ANIMATION_FRAME_PATH_FORMAT: String = "res://assets/PNG/UI/run_sence/buff_point/buff_animation/frame_%02d.png"
+const ANIMATION_FRAME_PATH_FORMAT: String = "res://assets/PNG/UI/run_scene/buff_point/buff_animation/frame_%02d.png"
 const ANIMATION_FRAME_COUNT: int = 48
 const ANIMATION_NAME: StringName = &"buff"
 const ANIMATION_FRAMES_PER_SECOND: float = 24.0

@@ -12,7 +12,14 @@ const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
 @onready var _coins_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/CoinsValueLabel") as Label
 @onready var _pause_button: Button = get_node("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton") as Button
 
+func _align_panel() -> void:
+	var panel: Control = get_node("Panel") as Control
+	var artwork_height: float = size.x * 16.0 / 9.0
+	panel.position.y = maxf(0.0, (size.y - artwork_height) * 0.5) + 120.0
+
 func _ready() -> void:
+	var _resize_connect_result: int = resized.connect(_align_panel)
+	_align_panel.call_deferred()
 	_validate_required_nodes()
 	var _pause_connect_result: int = _pause_button.connect(&"pressed", Callable(self, "_on_pause_button_pressed"))
 
@@ -35,7 +42,7 @@ func apply_state(state: RefCounted) -> void:
 	_stamina_bar.value = current_stamina_seconds
 	_wallet_value_label.text = str(wallet_coins)
 	_coins_value_label.text = "+%d" % run_earned_coins
-
+	
 func _validate_required_nodes() -> void:
 	Validation.require_condition(_height_value_label != null, "RunHud requires HeightValueLabel.")
 	Validation.require_condition(_stamina_value_label != null, "RunHud requires StaminaValueLabel.")

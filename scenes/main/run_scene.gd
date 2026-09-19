@@ -134,6 +134,7 @@ const MAIN_MENU_SCENE_PATH: String = "res://scenes/main/main_menu_scene.tscn"
 @onready var _reset_anchor: Marker2D = %ResetAnchor
 @onready var _camera: Camera2D = %DevCamera
 @onready var _background: Sprite2D = get_node("DevCamera/background") as Sprite2D
+@onready var _mountains: Sprite2D = get_node("DevCamera/Sprite2D") as Sprite2D
 @onready var _cloud: AnimatedSprite2D = get_node("DevCamera/cloud") as AnimatedSprite2D
 @onready var _tree_background: Sprite2D = get_node("DevCamera/Tree") as Sprite2D
 @onready var _starter_handholds_root: Node2D = get_node("Handholds") as Node2D
@@ -850,10 +851,17 @@ func _configure_mobile_world_framing() -> void:
 	_camera.zoom = Vector2(camera_zoom, camera_zoom)
 	var visible_world_size: Vector2 = viewport_size / camera_zoom
 	_scale_sprite_to_cover(_background, visible_world_size)
-	_scale_sprite_to_cover(_tree_background, visible_world_size)
+	_scale_canvas_item_to_fit(_tree_background, _tree_background.texture.get_size(), visible_world_size)
+	_scale_canvas_item_to_fit(_mountains, _mountains.texture.get_size(), visible_world_size)
 	var cloud_texture: Texture2D = _cloud.sprite_frames.get_frame_texture(_cloud.animation, _cloud.frame)
 	Validation.require_condition(cloud_texture != null, "RunScene cloud background requires a current animation texture.")
-	_scale_canvas_item_to_cover(_cloud, cloud_texture.get_size(), visible_world_size)
+	_scale_canvas_item_to_fit(_cloud, cloud_texture.get_size(), visible_world_size)
+
+func _scale_canvas_item_to_fit(item: Node2D, texture_size: Vector2, visible_world_size: Vector2) -> void:
+	Validation.require_condition(texture_size.x > 0.0 and texture_size.y > 0.0, "RunScene environment texture size must be positive.")
+	var fit_scale: float = minf(visible_world_size.x / texture_size.x, visible_world_size.y / texture_size.y)
+	item.position = Vector2.ZERO
+	item.scale = Vector2(fit_scale, fit_scale)
 
 func _scale_sprite_to_cover(sprite: Sprite2D, visible_world_size: Vector2) -> void:
 	Validation.require_condition(sprite.texture != null, "RunScene background sprite requires a texture.")
@@ -862,6 +870,7 @@ func _scale_sprite_to_cover(sprite: Sprite2D, visible_world_size: Vector2) -> vo
 func _scale_canvas_item_to_cover(item: Node2D, texture_size: Vector2, visible_world_size: Vector2) -> void:
 	Validation.require_condition(texture_size.x > 0.0 and texture_size.y > 0.0, "RunScene background texture size must be positive.")
 	var cover_scale: float = maxf(visible_world_size.x / texture_size.x, visible_world_size.y / texture_size.y)
+	item.position = Vector2.ZERO
 	item.scale = Vector2(cover_scale, cover_scale)
 
 func _sync_generated_chunks() -> void:

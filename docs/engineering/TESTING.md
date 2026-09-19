@@ -55,3 +55,10 @@ After installing or updating GUT, update the pinned version here and keep tests 
 - Avoid random test data unless the seed is explicit.
 - Do not loosen assertions to make tests pass.
 - Prefer small fixtures over full scenes for pure logic.
+## Portrait Phone Preview
+
+Desktop playtests default to a 360 x 800 window (9:20 portrait), representing the framing of a 1080 x 2400 phone display. The design viewport remains 1080 x 1920; canvas-items expansion reveals additional vertical content on taller displays.
+
+In the Godot Game view, choose Game window options > Keep Aspect Ratio so the preview retains the phone shape when the editor panel changes size. This is an editor-local setting. If Godot was already open when the setting changed externally, select it in the current session too.
+
+This preview checks framing and UI layout. Test on the target phone to verify its actual aspect ratio, display cutouts, touch input, and performance.

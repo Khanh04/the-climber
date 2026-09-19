@@ -1,7 +1,7 @@
-[gd_resource type="Resource" script_class="HandholdPresentationCatalog" load_steps=16 format=3]
+[gd_resource type="Resource" script_class="HandholdPresentationCatalog" format=3 uid="uid://cix73pf0yx0a2"]
 
-[ext_resource type="Script" path="res://resources/config/handhold_presentation_catalog.gd" id="1"]
-[ext_resource type="Script" path="res://resources/config/handhold_presentation_definition.gd" id="2"]
+[ext_resource type="Script" uid="uid://fb2j2ca0c7ac" path="res://resources/config/handhold_presentation_catalog.gd" id="1"]
+[ext_resource type="Script" uid="uid://dn3183o0frhdi" path="res://resources/config/handhold_presentation_definition.gd" id="2"]
 [ext_resource type="PackedScene" path="res://scenes/handholds/presentation/normal.tscn" id="3"]
 [ext_resource type="PackedScene" path="res://scenes/handholds/presentation/rest.tscn" id="4"]
 [ext_resource type="PackedScene" path="res://scenes/handholds/presentation/burn.tscn" id="5"]

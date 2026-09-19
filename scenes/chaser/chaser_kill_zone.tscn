@@ -1,8 +1,81 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://mrfp8nboh2xm"]
 
-[ext_resource type="Script" path="res://scenes/chaser/chaser_kill_zone.gd" id="1_script"]
-[ext_resource type="Script" path="res://resources/config/chaser_tuning.gd" id="2_tuning"]
+[ext_resource type="Script" uid="uid://jn2v3o0xpr5g" path="res://scenes/chaser/chaser_kill_zone.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://cddbb26pw0s5w" path="res://resources/config/chaser_tuning.gd" id="2_tuning"]
 [ext_resource type="Resource" path="res://resources/config/chaser_theme_rising_void.tres" id="3_theme"]
+[ext_resource type="Texture2D" uid="uid://df2m3uj7b75u8" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_01.png" id="4_q77w2"]
+[ext_resource type="Texture2D" uid="uid://t501nqv6x1b5" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_02.png" id="5_hh0dj"]
+[ext_resource type="Texture2D" uid="uid://cadx3uipx2c06" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_03.png" id="6_jnahm"]
+[ext_resource type="Texture2D" uid="uid://ois8l1o1gh48" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_04.png" id="7_bltqe"]
+[ext_resource type="Texture2D" uid="uid://20k8yreoxaf3" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_05.png" id="8_jugmb"]
+[ext_resource type="Texture2D" uid="uid://cpm5l3ja6i8lr" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_06.png" id="9_6guhw"]
+[ext_resource type="Texture2D" uid="uid://0eecwmb7uvph" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_07.png" id="10_16hpe"]
+[ext_resource type="Texture2D" uid="uid://6rnstvaw3dlw" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_08.png" id="11_yrf3i"]
+[ext_resource type="Texture2D" uid="uid://ceg24dgmndlps" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_09.png" id="12_s8ljj"]
+[ext_resource type="Texture2D" uid="uid://cw3aaklh0xt2h" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_10.png" id="13_8farh"]
+[ext_resource type="Texture2D" uid="uid://cbfgagcugqlca" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_11.png" id="14_onjbb"]
+[ext_resource type="Texture2D" uid="uid://iw37qtr482ba" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_12.png" id="15_skqjx"]
+[ext_resource type="Texture2D" uid="uid://dv43jc0ywqtkk" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_13.png" id="16_0m0w0"]
+[ext_resource type="Texture2D" uid="uid://beynstgwam53y" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_14.png" id="17_qkk1y"]
+[ext_resource type="Texture2D" uid="uid://bdhhuurufkr44" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_15.png" id="18_ysqt8"]
+[ext_resource type="Texture2D" uid="uid://b6xt2a8tj4gy4" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_16.png" id="19_ich2j"]
+[ext_resource type="Texture2D" uid="uid://bhydcag1bcaax" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_17.png" id="20_g8ulh"]
+[ext_resource type="Texture2D" uid="uid://b1kvbd2e6sxvm" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_18.png" id="21_675ok"]
+[ext_resource type="Texture2D" uid="uid://cr6hs5hqabrew" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_19.png" id="22_yv8q4"]
+[ext_resource type="Texture2D" uid="uid://bkf7pooe48at6" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_20.png" id="23_cy76u"]
+[ext_resource type="Texture2D" uid="uid://cowpiu6qc655u" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_21.png" id="24_2repy"]
+[ext_resource type="Texture2D" uid="uid://gvqo8wnr8too" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_22.png" id="25_rxo1v"]
+[ext_resource type="Texture2D" uid="uid://ck6k5g2s6kv15" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_23.png" id="26_iinsn"]
+[ext_resource type="Texture2D" uid="uid://cx0xb18ubiunu" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_24.png" id="27_a34oo"]
+[ext_resource type="Texture2D" uid="uid://43auulacb8nh" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_25.png" id="28_usk2f"]
+[ext_resource type="Texture2D" uid="uid://dc13emugtypr2" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_26.png" id="29_10rup"]
+[ext_resource type="Texture2D" uid="uid://umgfmqpkb0xf" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_27.png" id="30_wvvnv"]
+[ext_resource type="Texture2D" uid="uid://co6guye2yjos7" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_28.png" id="31_d45ph"]
+[ext_resource type="Texture2D" uid="uid://dqduggg57yhiy" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_29.png" id="32_3ksat"]
+[ext_resource type="Texture2D" uid="uid://cfprh2iy6l1gn" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_30.png" id="33_cnfip"]
+[ext_resource type="Texture2D" uid="uid://dnqfhp3llrh23" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_31.png" id="34_8adnj"]
+[ext_resource type="Texture2D" uid="uid://bbbb4d6gbb0ss" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_32.png" id="35_uhe7b"]
+[ext_resource type="Texture2D" uid="uid://coidewtm4wsrv" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_33.png" id="36_tshx1"]
+[ext_resource type="Texture2D" uid="uid://c50erk3juvve" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_34.png" id="37_w8pky"]
+[ext_resource type="Texture2D" uid="uid://c0oxr4l8fpt88" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_35.png" id="38_pllo1"]
+[ext_resource type="Texture2D" uid="uid://b3ap87pw4hrpu" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_36.png" id="39_vjnol"]
+[ext_resource type="Texture2D" uid="uid://cr7gm8ehgdo2o" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_37.png" id="40_vt1gt"]
+[ext_resource type="Texture2D" uid="uid://cjjmxl4npjvtm" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_38.png" id="41_5n30y"]
+[ext_resource type="Texture2D" uid="uid://djwkpq7uqctjw" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_39.png" id="42_jmy1s"]
+[ext_resource type="Texture2D" uid="uid://coaehosjoodk0" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_40.png" id="43_3hp8r"]
+[ext_resource type="Texture2D" uid="uid://5hx3obsjep5h" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_41.png" id="44_gqbew"]
+[ext_resource type="Texture2D" uid="uid://dxxkknm6o3nnr" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_42.png" id="45_7a33k"]
+[ext_resource type="Texture2D" uid="uid://c6owwwhqfspcf" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_43.png" id="46_3molc"]
+[ext_resource type="Texture2D" uid="uid://c14b7bd60sj2w" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_44.png" id="47_pscaa"]
+[ext_resource type="Texture2D" uid="uid://bx61apvd72ywv" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_45.png" id="48_ajymv"]
+[ext_resource type="Texture2D" uid="uid://dgup84mvh7dwn" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_46.png" id="49_xl6s6"]
+[ext_resource type="Texture2D" uid="uid://ccqbob5eh68yk" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_47.png" id="50_52pr1"]
+[ext_resource type="Texture2D" uid="uid://c6qa853ju26y1" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_48.png" id="51_bd4g6"]
+[ext_resource type="Texture2D" uid="uid://crj6tr24w7jnl" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_49.png" id="52_2h7kv"]
+[ext_resource type="Texture2D" uid="uid://3p0io536rylm" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_50.png" id="53_tn6rp"]
+[ext_resource type="Texture2D" uid="uid://ber3ko8sxcljd" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_51.png" id="54_7rq5w"]
+[ext_resource type="Texture2D" uid="uid://b78mbp6xavwam" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_52.png" id="55_uf3bb"]
+[ext_resource type="Texture2D" uid="uid://nc4200q0swq8" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_53.png" id="56_btq28"]
+[ext_resource type="Texture2D" uid="uid://dr436n1m10srt" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_54.png" id="57_xygl1"]
+[ext_resource type="Texture2D" uid="uid://sjw5v2g3xjpu" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_55.png" id="58_1a1hi"]
+[ext_resource type="Texture2D" uid="uid://cmhkp0rafdrum" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_56.png" id="59_hgdjh"]
+[ext_resource type="Texture2D" uid="uid://5jcqmdw8c02i" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_57.png" id="60_1ey04"]
+[ext_resource type="Texture2D" uid="uid://b6ygxj0m7tpmo" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_58.png" id="61_qtqsg"]
+[ext_resource type="Texture2D" uid="uid://dlq0i1lvds4uq" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_59.png" id="62_re7oc"]
+[ext_resource type="Texture2D" uid="uid://838vookj77f1" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_60.png" id="63_gurxk"]
+[ext_resource type="Texture2D" uid="uid://bg71in4brgjmh" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_61.png" id="64_nfu6i"]
+[ext_resource type="Texture2D" uid="uid://dkbb74teea38k" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_62.png" id="65_dfnen"]
+[ext_resource type="Texture2D" uid="uid://q52q3snx0o8g" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_63.png" id="66_eeyg5"]
+[ext_resource type="Texture2D" uid="uid://5kh2kpvctt1d" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_64.png" id="67_p2mut"]
+[ext_resource type="Texture2D" uid="uid://b28p3g5ti1rc6" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_65.png" id="68_8hx8g"]
+[ext_resource type="Texture2D" uid="uid://djlgckpex4b4m" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_66.png" id="69_cwu1v"]
+[ext_resource type="Texture2D" uid="uid://bnjd701nogrfo" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_67.png" id="70_cu1fo"]
+[ext_resource type="Texture2D" uid="uid://cks3fmabc3sli" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_68.png" id="71_pf4co"]
+[ext_resource type="Texture2D" uid="uid://cps5komf75edc" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_69.png" id="72_5s0yu"]
+[ext_resource type="Texture2D" uid="uid://dy00q1bkuslj8" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_70.png" id="73_hhgqr"]
+[ext_resource type="Texture2D" uid="uid://cvpu2t1ii3h6n" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_71.png" id="74_eki48"]
+[ext_resource type="Texture2D" uid="uid://ddbpe7o1805ig" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_72.png" id="75_ma3tb"]
+[ext_resource type="Texture2D" uid="uid://dy5h81gabe48q" path="res://assets/PNG/UI/run_scene/Chaser/Chaser_animation/frame_73.png" id="76_p1alr"]
 
 [sub_resource type="Resource" id="Resource_chaser_tuning"]
 script = ExtResource("2_tuning")
@@ -10,38 +83,266 @@ script = ExtResource("2_tuning")
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_chaser"]
 size = Vector2(1336, 192)
 
-[node name="ChaserKillZone" type="Area2D"]
+[sub_resource type="SpriteFrames" id="SpriteFrames_kvdqo"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("4_q77w2")
+}, {
+"duration": 1.0,
+"texture": ExtResource("5_hh0dj")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_jnahm")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_bltqe")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_jugmb")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_6guhw")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_16hpe")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11_yrf3i")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_s8ljj")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_8farh")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_onjbb")
+}, {
+"duration": 1.0,
+"texture": ExtResource("15_skqjx")
+}, {
+"duration": 1.0,
+"texture": ExtResource("16_0m0w0")
+}, {
+"duration": 1.0,
+"texture": ExtResource("17_qkk1y")
+}, {
+"duration": 1.0,
+"texture": ExtResource("18_ysqt8")
+}, {
+"duration": 1.0,
+"texture": ExtResource("19_ich2j")
+}, {
+"duration": 1.0,
+"texture": ExtResource("20_g8ulh")
+}, {
+"duration": 1.0,
+"texture": ExtResource("21_675ok")
+}, {
+"duration": 1.0,
+"texture": ExtResource("22_yv8q4")
+}, {
+"duration": 1.0,
+"texture": ExtResource("23_cy76u")
+}, {
+"duration": 1.0,
+"texture": ExtResource("24_2repy")
+}, {
+"duration": 1.0,
+"texture": ExtResource("25_rxo1v")
+}, {
+"duration": 1.0,
+"texture": ExtResource("26_iinsn")
+}, {
+"duration": 1.0,
+"texture": ExtResource("27_a34oo")
+}, {
+"duration": 1.0,
+"texture": ExtResource("28_usk2f")
+}, {
+"duration": 1.0,
+"texture": ExtResource("29_10rup")
+}, {
+"duration": 1.0,
+"texture": ExtResource("30_wvvnv")
+}, {
+"duration": 1.0,
+"texture": ExtResource("31_d45ph")
+}, {
+"duration": 1.0,
+"texture": ExtResource("32_3ksat")
+}, {
+"duration": 1.0,
+"texture": ExtResource("33_cnfip")
+}, {
+"duration": 1.0,
+"texture": ExtResource("34_8adnj")
+}, {
+"duration": 1.0,
+"texture": ExtResource("35_uhe7b")
+}, {
+"duration": 1.0,
+"texture": ExtResource("36_tshx1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("37_w8pky")
+}, {
+"duration": 1.0,
+"texture": ExtResource("38_pllo1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("39_vjnol")
+}, {
+"duration": 1.0,
+"texture": ExtResource("40_vt1gt")
+}, {
+"duration": 1.0,
+"texture": ExtResource("41_5n30y")
+}, {
+"duration": 1.0,
+"texture": ExtResource("42_jmy1s")
+}, {
+"duration": 1.0,
+"texture": ExtResource("43_3hp8r")
+}, {
+"duration": 1.0,
+"texture": ExtResource("44_gqbew")
+}, {
+"duration": 1.0,
+"texture": ExtResource("45_7a33k")
+}, {
+"duration": 1.0,
+"texture": ExtResource("46_3molc")
+}, {
+"duration": 1.0,
+"texture": ExtResource("47_pscaa")
+}, {
+"duration": 1.0,
+"texture": ExtResource("48_ajymv")
+}, {
+"duration": 1.0,
+"texture": ExtResource("49_xl6s6")
+}, {
+"duration": 1.0,
+"texture": ExtResource("50_52pr1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("51_bd4g6")
+}, {
+"duration": 1.0,
+"texture": ExtResource("52_2h7kv")
+}, {
+"duration": 1.0,
+"texture": ExtResource("53_tn6rp")
+}, {
+"duration": 1.0,
+"texture": ExtResource("54_7rq5w")
+}, {
+"duration": 1.0,
+"texture": ExtResource("55_uf3bb")
+}, {
+"duration": 1.0,
+"texture": ExtResource("56_btq28")
+}, {
+"duration": 1.0,
+"texture": ExtResource("57_xygl1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("58_1a1hi")
+}, {
+"duration": 1.0,
+"texture": ExtResource("59_hgdjh")
+}, {
+"duration": 1.0,
+"texture": ExtResource("60_1ey04")
+}, {
+"duration": 1.0,
+"texture": ExtResource("61_qtqsg")
+}, {
+"duration": 1.0,
+"texture": ExtResource("62_re7oc")
+}, {
+"duration": 1.0,
+"texture": ExtResource("63_gurxk")
+}, {
+"duration": 1.0,
+"texture": ExtResource("64_nfu6i")
+}, {
+"duration": 1.0,
+"texture": ExtResource("65_dfnen")
+}, {
+"duration": 1.0,
+"texture": ExtResource("66_eeyg5")
+}, {
+"duration": 1.0,
+"texture": ExtResource("67_p2mut")
+}, {
+"duration": 1.0,
+"texture": ExtResource("68_8hx8g")
+}, {
+"duration": 1.0,
+"texture": ExtResource("69_cwu1v")
+}, {
+"duration": 1.0,
+"texture": ExtResource("70_cu1fo")
+}, {
+"duration": 1.0,
+"texture": ExtResource("71_pf4co")
+}, {
+"duration": 1.0,
+"texture": ExtResource("72_5s0yu")
+}, {
+"duration": 1.0,
+"texture": ExtResource("73_hhgqr")
+}, {
+"duration": 1.0,
+"texture": ExtResource("74_eki48")
+}, {
+"duration": 1.0,
+"texture": ExtResource("75_ma3tb")
+}, {
+"duration": 1.0,
+"texture": ExtResource("76_p1alr")
+}],
+"loop": 1,
+"name": &"default",
+"speed": 24.0
+}]
+
+[node name="ChaserKillZone" type="Area2D" unique_id=1366949008]
 collision_layer = 4
-collision_mask = 1
-monitoring = true
-monitorable = true
 script = ExtResource("1_script")
 chaser_tuning = SubResource("Resource_chaser_tuning")
 chaser_theme = ExtResource("3_theme")
 
-[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_name_in_owner = true]
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1138205243]
 shape = SubResource("RectangleShape2D_chaser")
 
-[node name="GlowVisual" type="Polygon2D" parent="." unique_name_in_owner = true]
+[node name="GlowVisual" type="Polygon2D" parent="." unique_id=1088917796]
 z_index = -1
 color = Color(0.84, 0.22, 0.14, 0.08)
 polygon = PackedVector2Array(-748, -152, 748, -152, 748, 152, -748, 152)
 
-[node name="Visual" type="Polygon2D" parent="." unique_name_in_owner = true]
+[node name="Visual" type="Polygon2D" parent="." unique_id=1337240309]
 color = Color(0.16, 0.09, 0.12, 0.92)
 polygon = PackedVector2Array(-668, -96, 668, -96, 668, 96, -668, 96)
 
-[node name="CrestVisual" type="Polygon2D" parent="." unique_name_in_owner = true]
+[node name="CrestVisual" type="Polygon2D" parent="." unique_id=990789096]
 z_index = 1
 position = Vector2(0, -76)
 color = Color(1, 0.57, 0.3, 0.14)
 polygon = PackedVector2Array(-640, -20, 640, -20, 640, 20, -640, 20)
 
-[node name="IntensityAudioPlayer" type="AudioStreamPlayer2D" parent="." unique_name_in_owner = true]
+[node name="IntensityAudioPlayer" type="AudioStreamPlayer2D" parent="." unique_id=178978959]
 volume_db = -20.0
 pitch_scale = 0.98
 
-[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_name_in_owner = true]
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="." unique_id=696493825]
 z_index = 2
+position = Vector2(0, -627)
+scale = Vector2(4.960001, 3)
+sprite_frames = SubResource("SpriteFrames_kvdqo")
+frame_progress = 0.12912084
 
 [connection signal="body_entered" from="." to="." method="_on_body_entered"]

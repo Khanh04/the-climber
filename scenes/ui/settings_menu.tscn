@@ -1,22 +1,22 @@
 [gd_scene format=3 uid="uid://bpxsufjvq5d26"]
 
 [ext_resource type="Script" uid="uid://b1qu3kvescpvb" path="res://scenes/ui/settings_menu.gd" id="1_settings"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Setting_scene/panel_setting.png" id="2_x3vyp"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Setting_scene/btn_Exit.png" id="3_0b1cv"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Setting_scene/icon_Music.png" id="4_yu862"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Setting_scene/slider/grabber.png" id="5_iii5b"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Setting_scene/icon_Sound.png" id="5_ywggk"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Setting_scene/slider/track.png" id="6_h271e"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Setting_scene/icon_Haptics.png" id="7_7dpwb"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Setting_scene/slider/fill.png" id="7_r6v77"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Setting_scene/icon_left zone.png" id="8_iii5b"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/run_sence/Setting_scene/icon_center gap.png" id="9_r6v77"]
+[ext_resource type="Texture2D" uid="uid://dc1ntnqcfkalq" path="res://assets/PNG/UI/Setting_scene/panel_setting.png" id="2_x3vyp"]
+[ext_resource type="Texture2D" uid="uid://dfpjssq453no5" path="res://assets/PNG/UI/Setting_scene/btn_Exit.png" id="3_0b1cv"]
+[ext_resource type="Texture2D" uid="uid://cwoohrqlkhtm5" path="res://assets/PNG/UI/Setting_scene/icon_Music.png" id="4_yu862"]
+[ext_resource type="Texture2D" uid="uid://d03upvg7j0kro" path="res://assets/PNG/UI/Setting_scene/slider/grabber.png" id="5_iii5b"]
+[ext_resource type="Texture2D" uid="uid://di6i3q6qt3d4r" path="res://assets/PNG/UI/Setting_scene/icon_Sound.png" id="5_ywggk"]
+[ext_resource type="Texture2D" uid="uid://clwul2up3g1ip" path="res://assets/PNG/UI/Setting_scene/slider/track.png" id="6_h271e"]
+[ext_resource type="Texture2D" uid="uid://nuefaxs8ga8m" path="res://assets/PNG/UI/Setting_scene/icon_Haptics.png" id="7_7dpwb"]
+[ext_resource type="Texture2D" uid="uid://b4ftdipa4jetv" path="res://assets/PNG/UI/Setting_scene/slider/fill.png" id="7_r6v77"]
+[ext_resource type="Texture2D" uid="uid://dhxddob3y8c0h" path="res://assets/PNG/UI/Setting_scene/icon_left zone.png" id="8_iii5b"]
+[ext_resource type="Texture2D" uid="uid://b7lqrnddy4b2h" path="res://assets/PNG/UI/Setting_scene/Checked.png" id="9_pxswo"]
+[ext_resource type="Texture2D" uid="uid://d0375vvt7nrru" path="res://assets/PNG/UI/Setting_scene/icon_center gap.png" id="9_r6v77"]
+[ext_resource type="Texture2D" uid="uid://btaya8qnvpjru" path="res://assets/PNG/UI/Setting_scene/Checkbox.png" id="11_pxswo"]
+[ext_resource type="Texture2D" uid="uid://bwh0x5v3bd4kh" path="res://assets/PNG/UI/Setting_scene/unchecked.png" id="12_w48g0"]
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_qwcqe"]
 texture = ExtResource("2_x3vyp")
-
-[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_uj04i"]
-texture = ExtResource("3_0b1cv")
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_buo60"]
 texture = ExtResource("6_h271e")
@@ -30,6 +30,8 @@ expand_margin_bottom = 6.0
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_qx4d5"]
 texture = ExtResource("7_r6v77")
+expand_margin_top = 6.0
+expand_margin_bottom = 6.0
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_l7kn0"]
 texture = ExtResource("6_h271e")
@@ -37,6 +39,11 @@ expand_margin_top = 4.0
 expand_margin_bottom = 4.0
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_6q72o"]
+texture = ExtResource("7_r6v77")
+expand_margin_top = 6.0
+expand_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_iii5b"]
 texture = ExtResource("7_r6v77")
 expand_margin_top = 6.0
 expand_margin_bottom = 6.0
@@ -53,6 +60,17 @@ expand_margin_bottom = 6.0
 
 [sub_resource type="StyleBoxTexture" id="StyleBoxTexture_6o8jw"]
 texture = ExtResource("7_r6v77")
+expand_margin_top = 6.0
+expand_margin_bottom = 6.0
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_uj04i"]
+texture = ExtResource("3_0b1cv")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_54f85"]
+texture = ExtResource("3_0b1cv")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_kuuov"]
+texture = ExtResource("3_0b1cv")
 
 [node name="SettingsMenu" type="Control" unique_id=2111691378]
 process_mode = 3
@@ -70,10 +88,8 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 3.0
-offset_top = 1.0
-offset_right = 3.0
-offset_bottom = 1.0
+offset_left = 1.0
+offset_right = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -102,30 +118,12 @@ theme_override_styles/panel = SubResource("StyleBoxTexture_qwcqe")
 [node name="ControlPosition" type="Control" parent="CenterContainer/Panel" unique_id=636766101]
 layout_mode = 2
 
-[node name="CloseButton" type="Button" parent="CenterContainer/Panel/ControlPosition" unique_id=1663265585]
-custom_minimum_size = Vector2(108, 60)
-layout_mode = 0
-offset_left = 336.00003
-offset_top = -9.523819
-offset_right = 449.3334
-offset_bottom = 91.47618
-scale = Vector2(0.5, 0.5888889)
-theme_override_styles/normal = SubResource("StyleBoxTexture_uj04i")
-
 [node name="AudioControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=877160596]
 anchors_preset = 0
 offset_left = 52.0
 offset_top = 153.57166
 offset_right = 328.0
 offset_bottom = 208.33362
-
-[node name="AudioMuteCheckBox" type="CheckBox" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=966139236]
-layout_mode = 0
-offset_left = 224.0
-offset_top = 2.380949
-offset_right = 248.0
-offset_bottom = 26.380949
-scale = Vector2(2, 2)
 
 [node name="icon_Audio" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=624236252]
 layout_mode = 0
@@ -135,6 +133,27 @@ offset_right = 15.0
 offset_bottom = 17.999939
 scale = Vector2(3, 3)
 texture = ExtResource("4_yu862")
+
+[node name="Checkbox" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=1240040723]
+layout_mode = 0
+offset_left = 223.0
+offset_top = 4.761902
+offset_right = 268.0
+offset_bottom = 49.7619
+texture = ExtResource("11_pxswo")
+
+[node name="AudioMuteCheckBox" type="CheckBox" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=966139236]
+layout_mode = 0
+offset_left = 229.0
+offset_top = 7.142832
+offset_right = 253.0
+offset_bottom = 31.142832
+scale = Vector2(1.216393, 1.8825282)
+offset_transform_enabled = true
+offset_transform_scale = Vector2(1.29, 1.29)
+theme_override_icons/checked = ExtResource("9_pxswo")
+theme_override_icons/unchecked = ExtResource("12_w48g0")
+button_pressed = true
 
 [node name="VolumeControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=77972330]
 anchors_preset = 0
@@ -176,16 +195,8 @@ offset_bottom = 39.666817
 anchors_preset = 0
 offset_left = 52.0
 offset_top = 298.80997
-offset_right = 309.0
+offset_right = 323.0
 offset_bottom = 355.9529
-
-[node name="HapticsCheckBox" type="CheckBox" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=2047688248]
-layout_mode = 0
-offset_left = 223.0
-offset_right = 247.0
-offset_bottom = 31.0
-scale = Vector2(2, 2)
-button_pressed = true
 
 [node name="icon_haptic" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=376600665]
 layout_mode = 0
@@ -195,6 +206,27 @@ offset_right = 13.0
 offset_bottom = 20.380981
 scale = Vector2(3, 3)
 texture = ExtResource("7_7dpwb")
+
+[node name="Checkbox" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=96940484]
+layout_mode = 0
+offset_left = 223.0
+offset_top = 7.1429443
+offset_right = 268.0
+offset_bottom = 52.142944
+texture = ExtResource("11_pxswo")
+
+[node name="HapticsCheckBox" type="CheckBox" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=2047688248]
+layout_mode = 0
+offset_left = 230.0
+offset_top = 9.523804
+offset_right = 254.0
+offset_bottom = 33.523804
+scale = Vector2(1.1703278, 1.8268198)
+offset_transform_enabled = true
+offset_transform_scale = Vector2(1.295, 1.295)
+theme_override_icons/checked = ExtResource("9_pxswo")
+theme_override_icons/unchecked = ExtResource("12_w48g0")
+button_pressed = true
 
 [node name="TouchSplitControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=612888563]
 anchors_preset = 0
@@ -216,6 +248,7 @@ theme_override_icons/grabber_disabled = ExtResource("5_iii5b")
 theme_override_icons/tick = ExtResource("5_iii5b")
 theme_override_styles/slider = SubResource("StyleBoxTexture_l7kn0")
 theme_override_styles/grabber_area = SubResource("StyleBoxTexture_6q72o")
+theme_override_styles/grabber_area_highlight = SubResource("StyleBoxTexture_iii5b")
 
 [node name="icon_TouchSplit" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/TouchSplitControl" unique_id=1805460442]
 layout_mode = 0
@@ -267,3 +300,15 @@ offset_left = 263.0
 offset_top = 14.285786
 offset_right = 303.0
 offset_bottom = 37.285786
+
+[node name="CloseButton" type="Button" parent="." unique_id=1663265585]
+custom_minimum_size = Vector2(108, 60)
+layout_mode = 0
+offset_left = 682.0
+offset_top = 682.0
+offset_right = 795.3334
+offset_bottom = 783.0
+scale = Vector2(0.5, 0.5888889)
+theme_override_styles/normal = SubResource("StyleBoxTexture_uj04i")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_54f85")
+theme_override_styles/hover = SubResource("StyleBoxTexture_kuuov")

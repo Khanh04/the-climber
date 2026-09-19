@@ -53,7 +53,8 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 - Contact with a lethal hazard ends the run.
 - Mobile gameplay framing keeps a fixed 900-pixel world width across portrait aspect ratios. Taller phones reveal more vertical route without shrinking the player or interactive objects.
 - Horizontal camera travel is limited to 24 world pixels around the route center so the full 800-pixel route corridor remains readable.
-- Camera-child environment layers scale uniformly to cover the current visible world rectangle rather than assuming a 16:9 viewport.
+- The sky fills the viewport. Clouds, mountains, and trees share a centered 9:16 artwork frame, matching the main menu without stretching individual layers on taller phones.
+- The HUD anchors to the top center of the artwork frame and keeps its metrics and pause button within the portrait screen.
 - `Camera2D` should use heavy smoothing.
 - On falls, the camera must follow the full descent instead of snapping immediately to a death result state.
 - Bottom-screen fall detection uses the camera's zoom-adjusted visible world height.
