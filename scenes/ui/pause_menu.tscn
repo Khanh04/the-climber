@@ -1,20 +1,18 @@
-[gd_scene format=3]
+[gd_scene format=3 uid="uid://caple2pf1uor3"]
 
-[ext_resource type="Script" path="res://scenes/ui/pause_menu.gd" id="1_pause"]
+[ext_resource type="Script" uid="uid://2bdjvmgchxot" path="res://scenes/ui/pause_menu.gd" id="1_pause"]
 
-[node name="PauseMenu" type="Control"]
+[node name="PauseMenu" type="Control" unique_id=1523791023]
 process_mode = 3
-visible = false
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-mouse_filter = 0
 script = ExtResource("1_pause")
 
-[node name="Backdrop" type="ColorRect" parent="."]
+[node name="Backdrop" type="ColorRect" parent="." unique_id=1211255951]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -24,7 +22,7 @@ grow_vertical = 2
 mouse_filter = 2
 color = Color(0.02, 0.025, 0.03, 0.58)
 
-[node name="CenterContainer" type="CenterContainer" parent="."]
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1245666107]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -32,56 +30,58 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="Panel" type="PanelContainer" parent="CenterContainer"]
+[node name="Panel" type="PanelContainer" parent="CenterContainer" unique_id=695833379]
 custom_minimum_size = Vector2(360, 600)
 layout_mode = 2
 
-[node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel"]
+[node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel" unique_id=192612514]
 layout_mode = 2
 theme_override_constants/margin_left = 18
 theme_override_constants/margin_top = 18
 theme_override_constants/margin_right = 18
 theme_override_constants/margin_bottom = 18
 
-[node name="Content" type="VBoxContainer" parent="CenterContainer/Panel/ContentMargin"]
+[node name="Content" type="VBoxContainer" parent="CenterContainer/Panel/ContentMargin" unique_id=29060146]
 layout_mode = 2
 theme_override_constants/separation = 10
 
-[node name="TitleLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="TitleLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=11816299]
 layout_mode = 2
 text = "Paused"
 horizontal_alignment = 1
 
-[node name="SummaryLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+[node name="SummaryLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=206108582]
 layout_mode = 2
-text = "Height: 0.0 m\nWallet Coins: 0\nRun Coins: 0"
+text = "Height: 0.0 m
+Wallet Coins: 0
+Run Coins: 0"
 horizontal_alignment = 1
 
-[node name="ResumeButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+[node name="ResumeButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1887007836]
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Resume"
 
-[node name="RestartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+[node name="RestartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=420455997]
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Restart Run"
 
-[node name="NewSeedRunButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+[node name="NewSeedRunButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1616533990]
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "New Seed Run"
 
-[node name="MainMenuButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+[node name="MainMenuButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1127202756]
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Main Menu"
 
-[node name="SettingsButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_name_in_owner=true]
+[node name="SettingsButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1204210530]
 custom_minimum_size = Vector2(0, 72)
 layout_mode = 2
 size_flags_horizontal = 3
