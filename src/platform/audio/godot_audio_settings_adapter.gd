@@ -32,3 +32,9 @@ func _volume_ratio_to_db(master_volume_ratio: float) -> float:
         return MIN_VOLUME_DB
 
     return linear_to_db(master_volume_ratio)
+func apply_music_settings(music_volume_ratio: float) -> void:
+    Validation.require_condition(music_volume_ratio >= 0.0 and music_volume_ratio <= 1.0, "Music volume must be between 0 and 1.")
+    var music_bus_index: int = AudioServer.get_bus_index("Music")
+    Validation.require_condition(music_bus_index >= 0, "The default audio bus layout must contain Music.")
+    AudioServer.set_bus_mute(music_bus_index, is_zero_approx(music_volume_ratio))
+    AudioServer.set_bus_volume_db(music_bus_index, _volume_ratio_to_db(music_volume_ratio))

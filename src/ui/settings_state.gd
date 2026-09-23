@@ -5,6 +5,7 @@ const TouchInputSettingsScript = preload("res://src/gameplay/player/touch_input_
 
 var visible: bool
 var audio_muted: bool
+var music_volume_ratio: float
 var master_volume_ratio: float
 var haptics_enabled: bool
 var touch_split_ratio: float
@@ -16,7 +17,8 @@ func _init(
     master_volume_ratio_value: float = 1.0,
     haptics_enabled_value: bool = true,
     touch_split_ratio_value: float = 0.5,
-    touch_center_dead_zone_ratio_value: float = 0.0
+    touch_center_dead_zone_ratio_value: float = 0.0,
+    music_volume_ratio_value: float = 1.0
 ) -> void:
     visible = visible_value
     audio_muted = audio_muted_value
@@ -24,9 +26,11 @@ func _init(
     haptics_enabled = haptics_enabled_value
     touch_split_ratio = touch_split_ratio_value
     touch_center_dead_zone_ratio = touch_center_dead_zone_ratio_value
+    music_volume_ratio = music_volume_ratio_value
     assert_valid()
 
 func assert_valid() -> void:
+    Validation.require_condition(music_volume_ratio >= 0.0 and music_volume_ratio <= 1.0, "SettingsState music volume ratio must be between 0 and 1.")
     Validation.require_condition(master_volume_ratio >= 0.0 and master_volume_ratio <= 1.0, "SettingsState master volume ratio must be between 0 and 1.")
     Validation.require_condition(
         TouchInputSettingsScript.are_values_valid(touch_split_ratio, touch_center_dead_zone_ratio),

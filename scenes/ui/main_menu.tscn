@@ -100,7 +100,7 @@
 [ext_resource type="Texture2D" uid="uid://gh6qasbw4bd0" path="res://assets/PNG/Decoration_animation/Cloud/cloud0087.png" id="90_shmnx"]
 [ext_resource type="Texture2D" uid="uid://c286wh750imja" path="res://assets/PNG/Decoration_animation/Cloud/cloud0088.png" id="91_3bagu"]
 [ext_resource type="Script" uid="uid://cp03jyrp3tdmd" path="res://scenes/ui/animated_sprite_2d.gd" id="92_2jbqi"]
-[ext_resource type="Texture2D" uid="uid://btjkjo600u4pi" path="res://assets/PNG/UI/main_menu_scene/panel_mainmenu 1.png" id="94_r1s37"]
+[ext_resource type="Texture2D" uid="uid://c8rp5n0666rvw" path="res://assets/PNG/UI/main_menu_scene/panel_mainmenu.png" id="98_dltkq"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_p5viw"]
 animations = [{
@@ -514,7 +514,7 @@ offset_transform_enabled = true
 offset_transform_position = Vector2(0, 1)
 offset_transform_position_ratio = Vector2(0, -0.205)
 offset_transform_scale = Vector2(3.875, 3.875)
-texture = ExtResource("94_r1s37")
+texture = ExtResource("98_dltkq")
 stretch_mode = 3
 
 [node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel" unique_id=63420222]

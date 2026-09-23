@@ -65,7 +65,6 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     var pickup_collision_shape: CollisionShape2D = pickup_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var pickup_circle_shape: CircleShape2D = pickup_collision_shape.shape as CircleShape2D
     var pickup_visual: Polygon2D = pickup_spawn.get_node("Visual") as Polygon2D
-    var pickup_animated_sprite: AnimatedSprite2D = pickup_spawn.get_node("AnimatedSprite2D") as AnimatedSprite2D
     var wind_gust_spawn: GeneratedHazardSpawnAdapterScript = chunk_node.get_node("Hazards/chunk_02_hazard_00") as GeneratedHazardSpawnAdapterScript
     var wind_collision_shape: CollisionShape2D = wind_gust_spawn.get_node("CollisionShape2D") as CollisionShape2D
     var wind_rectangle_shape: RectangleShape2D = wind_collision_shape.shape as RectangleShape2D
@@ -136,9 +135,7 @@ func test_scene_builder_creates_passive_handhold_collision_bodies_and_runtime_sp
     assert_eq(pickup_circle_shape.radius, 18.0)
     assert_eq(pickup_spawn.coin_amount, 1)
     assert_not_null(pickup_visual)
-    assert_not_null(pickup_animated_sprite)
-    assert_not_null(pickup_animated_sprite.sprite_frames)
-    assert_eq(pickup_animated_sprite.sprite_frames.get_frame_count(&"buff"), 48)
+    assert_false(pickup_spawn.has_node("AnimatedSprite2D"))
 
     assert_not_null(wind_gust_spawn)
     assert_true(wind_gust_spawn.is_in_group(GeneratedChunkSceneBuilderScript.HAZARD_GROUP_NAME))
@@ -339,3 +336,4 @@ func _get_int_meta(node: Node, key: StringName) -> int:
 
     var typed_value: int = raw_value
     return typed_value
+

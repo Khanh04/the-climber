@@ -26,7 +26,7 @@ var _pause_requested: bool = false
 var _resume_requested: bool = false
 var _settings_requested: bool = false
 var _settings_closed: bool = false
-var _settings_audio_muted: bool = false
+var _settings_music_volume: float = -1.0
 var _settings_master_volume_ratio: float = -1.0
 var _settings_haptics_enabled: bool = false
 var _settings_touch_split_ratio: float = -1.0
@@ -269,7 +269,7 @@ func test_run_hud_scene_displays_height_stamina_and_run_coins() -> void:
 
 	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric/HeightValueLabel") as Label
 	var stamina_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaValueLabel") as Label
-	var stamina_bar: ProgressBar = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaBar") as ProgressBar
+	var stamina_bar: TextureProgressBar = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaBar") as TextureProgressBar
 	var wallet_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/WalletValueLabel") as Label
 	var coins_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/CoinsValueLabel") as Label
 	var pause_button: Button = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton") as Button
@@ -717,30 +717,30 @@ func test_settings_menu_displays_state_and_emits_setting_intents() -> void:
 	await get_tree().process_frame
 
 	_settings_closed = false
-	_settings_audio_muted = false
+	_settings_music_volume = -1.0
 	_settings_master_volume_ratio = -1.0
 	_settings_haptics_enabled = false
 	_settings_touch_split_ratio = -1.0
 	_settings_touch_dead_zone_ratio = -1.0
 	var _closed_connect_result: int = menu.connect(&"closed", Callable(self, "_mark_settings_closed"))
-	var _audio_connect_result: int = menu.connect(&"audio_muted_changed", Callable(self, "_mark_settings_audio_muted"))
+	var _audio_connect_result: int = menu.connect(&"music_volume_changed", Callable(self, "_mark_settings_music_volume"))
 	var _volume_connect_result: int = menu.connect(&"master_volume_changed", Callable(self, "_mark_settings_master_volume"))
 	var _haptics_connect_result: int = menu.connect(&"haptics_enabled_changed", Callable(self, "_mark_settings_haptics_enabled"))
 	var _split_connect_result: int = menu.connect(&"touch_split_changed", Callable(self, "_mark_settings_touch_split"))
 	var _dead_zone_connect_result: int = menu.connect(&"touch_center_dead_zone_changed", Callable(self, "_mark_settings_touch_dead_zone"))
 	menu.call("apply_state", SettingsStateScript.new(true, true, 0.65, false, 0.58, 0.07))
 
-	var audio_mute_check_box: CheckBox = menu.get_node("CenterContainer/Panel/ControlPosition/AudioControl/AudioMuteCheckBox") as CheckBox
+	var audio_slider: HSlider = menu.get_node("CenterContainer/Panel/ControlPosition/AudioControl/AudioSlider") as HSlider
 	var volume_slider: HSlider = menu.get_node("CenterContainer/Panel/ControlPosition/VolumeControl/VolumeSlider") as HSlider
 	var volume_value_label: Label = menu.get_node("CenterContainer/Panel/ControlPosition/VolumeControl/value_volume") as Label
 	var haptics_check_box: CheckBox = menu.get_node("CenterContainer/Panel/ControlPosition/HapicControl/HapticsCheckBox") as CheckBox
 	var touch_split_slider: HSlider = menu.get_node("CenterContainer/Panel/ControlPosition/TouchSplitControl/TouchSplitSlider") as HSlider
 	var touch_dead_zone_slider: HSlider = menu.get_node("CenterContainer/Panel/ControlPosition/TouchDeadZoneControl/TouchDeadZoneSlider") as HSlider
-	var close_button: Button = menu.get_node("CloseButton") as Button
+	var close_button: BaseButton = menu.get_node("CloseButton") as BaseButton
 
 	# Sliders run 0-100 in this scene; SettingsState stores 0.0-1.0 ratios.
 	assert_true(menu.visible)
-	assert_true(audio_mute_check_box.button_pressed)
+	assert_eq(audio_slider.value, 100.0)
 	assert_eq(volume_slider.value, 65.0)
 	assert_eq(volume_value_label.text, "65%")
 	assert_false(haptics_check_box.button_pressed)
@@ -748,14 +748,14 @@ func test_settings_menu_displays_state_and_emits_setting_intents() -> void:
 	assert_eq(touch_split_slider.value, 77.0)
 	assert_eq(touch_dead_zone_slider.value, 35.0)
 
-	var _audio_emit_result: int = audio_mute_check_box.emit_signal("toggled", false)
+	var _audio_emit_result: int = audio_slider.emit_signal("value_changed", 40.0)
 	var _volume_emit_result: int = volume_slider.emit_signal("value_changed", 35.0)
 	var _haptics_emit_result: int = haptics_check_box.emit_signal("toggled", true)
 	var _split_emit_result: int = touch_split_slider.emit_signal("value_changed", 50.0)
 	var _dead_zone_emit_result: int = touch_dead_zone_slider.emit_signal("value_changed", 25.0)
 	var _close_emit_result: int = close_button.emit_signal("pressed")
 
-	assert_false(_settings_audio_muted)
+	assert_eq(_settings_music_volume, 0.4)
 	assert_eq(_settings_master_volume_ratio, 0.35)
 	assert_true(_settings_haptics_enabled)
 	assert_eq(_settings_touch_split_ratio, 0.5)
@@ -798,8 +798,8 @@ func _mark_settings_requested() -> void:
 func _mark_settings_closed() -> void:
 	_settings_closed = true
 
-func _mark_settings_audio_muted(audio_muted: bool) -> void:
-	_settings_audio_muted = audio_muted
+func _mark_settings_music_volume(music_volume_ratio: float) -> void:
+	_settings_music_volume = music_volume_ratio
 
 func _mark_settings_master_volume(master_volume_ratio: float) -> void:
 	_settings_master_volume_ratio = master_volume_ratio

@@ -7,6 +7,7 @@ const TouchInputSettingsScript = preload("res://src/gameplay/player/touch_input_
 
 var schema_version: int
 var audio_muted: bool
+var music_volume_ratio: float
 var master_volume_ratio: float
 var haptics_enabled: bool
 var touch_split_ratio: float
@@ -18,7 +19,8 @@ func _init(
 	master_volume_ratio_value: float = 1.0,
 	haptics_enabled_value: bool = true,
 	touch_split_ratio_value: float = 0.5,
-	touch_center_dead_zone_ratio_value: float = 0.0
+	touch_center_dead_zone_ratio_value: float = 0.0,
+	music_volume_ratio_value: float = 1.0
 ) -> void:
 	schema_version = schema_version_value
 	audio_muted = audio_muted_value
@@ -26,9 +28,18 @@ func _init(
 	haptics_enabled = haptics_enabled_value
 	touch_split_ratio = touch_split_ratio_value
 	touch_center_dead_zone_ratio = touch_center_dead_zone_ratio_value
+	music_volume_ratio = music_volume_ratio_value
 	assert_valid()
 
 static func is_dictionary_valid(payload: Dictionary) -> bool:
+	# Existing version-1 saves predate music volume; missing means the original 100%.
+	var music_value: Variant = payload.get(AppSettingsSchemaScript.KEY_MUSIC_VOLUME_RATIO, 1.0)
+	if not _is_number_variant(music_value):
+		return false
+	var music_ratio: float = _float_from_variant(music_value, "Music volume must be numeric.")
+	if not (music_ratio >= 0.0 and music_ratio <= 1.0):
+		return false
+
 	if not payload.has(AppSettingsSchemaScript.KEY_SCHEMA_VERSION):
 		return false
 
@@ -83,6 +94,8 @@ static func is_dictionary_valid(payload: Dictionary) -> bool:
 		and TouchInputSettingsScript.are_values_valid(touch_split_ratio_value, touch_center_dead_zone_ratio_value)
 
 static func assert_dictionary_valid(payload: Dictionary) -> void:
+	var music_ratio: float = _float_from_variant(payload.get(AppSettingsSchemaScript.KEY_MUSIC_VOLUME_RATIO, 1.0), "Music volume must be numeric.")
+	Validation.require_condition(music_ratio >= 0.0 and music_ratio <= 1.0, "Music volume must be between 0 and 1.")
 	Validation.require_condition(payload.has(AppSettingsSchemaScript.KEY_SCHEMA_VERSION), "App settings payload is missing schema version.")
 	Validation.require_condition(payload.has(AppSettingsSchemaScript.KEY_AUDIO_MUTED), "App settings payload is missing audio muted flag.")
 	Validation.require_condition(payload.has(AppSettingsSchemaScript.KEY_MASTER_VOLUME_RATIO), "App settings payload is missing master volume ratio.")
@@ -119,16 +132,19 @@ static func from_dictionary(payload: Dictionary) -> AppSettingsSnapshot:
 		_float_from_variant(payload[AppSettingsSchemaScript.KEY_MASTER_VOLUME_RATIO], "App settings master volume ratio must be a number."),
 		haptics_enabled_value,
 		_float_from_variant(payload[AppSettingsSchemaScript.KEY_TOUCH_SPLIT_RATIO], "App settings touch split ratio must be a number."),
-		_float_from_variant(payload[AppSettingsSchemaScript.KEY_TOUCH_CENTER_DEAD_ZONE_RATIO], "App settings touch center dead-zone ratio must be a number.")
+		_float_from_variant(payload[AppSettingsSchemaScript.KEY_TOUCH_CENTER_DEAD_ZONE_RATIO], "App settings touch center dead-zone ratio must be a number."),
+		_float_from_variant(payload.get(AppSettingsSchemaScript.KEY_MUSIC_VOLUME_RATIO, 1.0), "Music volume must be numeric.")
 	)
 
 func is_valid() -> bool:
-	return schema_version == AppSettingsSchemaScript.VERSION \
+	return music_volume_ratio >= 0.0 and music_volume_ratio <= 1.0 \
+		and schema_version == AppSettingsSchemaScript.VERSION \
 		and master_volume_ratio >= 0.0 \
 		and master_volume_ratio <= 1.0 \
 		and TouchInputSettingsScript.are_values_valid(touch_split_ratio, touch_center_dead_zone_ratio)
 
 func assert_valid() -> void:
+	Validation.require_condition(music_volume_ratio >= 0.0 and music_volume_ratio <= 1.0, "Music volume must be between 0 and 1.")
 	Validation.require_condition(schema_version == AppSettingsSchemaScript.VERSION, "App settings schema version is unsupported.")
 	Validation.require_condition(master_volume_ratio >= 0.0 and master_volume_ratio <= 1.0, "App settings master volume ratio must be between 0 and 1.")
 	var touch_settings: TouchInputSettingsScript = TouchInputSettingsScript.new(touch_split_ratio, touch_center_dead_zone_ratio)
@@ -140,6 +156,7 @@ func to_dictionary() -> Dictionary:
 		AppSettingsSchemaScript.KEY_SCHEMA_VERSION: schema_version,
 		AppSettingsSchemaScript.KEY_AUDIO_MUTED: audio_muted,
 		AppSettingsSchemaScript.KEY_MASTER_VOLUME_RATIO: master_volume_ratio,
+		AppSettingsSchemaScript.KEY_MUSIC_VOLUME_RATIO: music_volume_ratio,
 		AppSettingsSchemaScript.KEY_HAPTICS_ENABLED: haptics_enabled,
 		AppSettingsSchemaScript.KEY_TOUCH_SPLIT_RATIO: touch_split_ratio,
 		AppSettingsSchemaScript.KEY_TOUCH_CENTER_DEAD_ZONE_RATIO: touch_center_dead_zone_ratio,

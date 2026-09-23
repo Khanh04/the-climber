@@ -139,6 +139,7 @@ func _ensure_settings_menu() -> void:
 	var _closed_connect_result: int = _settings_menu.connect(&"closed", Callable(self, "_on_settings_closed"))
 	var _audio_muted_connect_result: int = _settings_menu.connect(&"audio_muted_changed", Callable(self, "_on_settings_audio_muted_changed"))
 	var _volume_connect_result: int = _settings_menu.connect(&"master_volume_changed", Callable(self, "_on_settings_master_volume_changed"))
+	var _music_connect_result: int = _settings_menu.music_volume_changed.connect(_on_settings_music_volume_changed)
 	var _haptics_connect_result: int = _settings_menu.connect(&"haptics_enabled_changed", Callable(self, "_on_settings_haptics_enabled_changed"))
 	var _touch_split_connect_result: int = _settings_menu.connect(&"touch_split_changed", Callable(self, "_on_settings_touch_split_changed"))
 	var _touch_dead_zone_connect_result: int = _settings_menu.connect(&"touch_center_dead_zone_changed", Callable(self, "_on_settings_touch_center_dead_zone_changed"))
@@ -149,6 +150,9 @@ func _refresh_settings_menu(visible: bool = false) -> void:
 
 	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
 	_settings_menu.apply_state(_settings_presenter.build_state(app_settings_snapshot, visible))
+	# Keep the scenery while the settings panel replaces the main menu artwork.
+	(_main_menu.get_node("CenterContainer") as Control).visible = not visible
+	(_main_menu.get_node("decor_preview/Logo_text") as Control).visible = not visible
 
 func _on_settings_closed() -> void:
 	_refresh_settings_menu(false)
@@ -264,3 +268,7 @@ func _duplicate_cosmetic_loadout(loadout: Resource) -> CosmeticLoadoutScript:
 func _validate_required_nodes() -> void:
 	Validation.require_condition(_main_menu != null, "MainMenuScene requires MainMenu.")
 	Validation.require_condition(_main_menu is MainMenuScript, "MainMenuScene requires a MainMenu implementation.")
+
+func _on_settings_music_volume_changed(music_volume_ratio: float) -> void:
+	_storage_runtime.set_music_volume_ratio(music_volume_ratio, _audio_settings_adapter)
+	_refresh_settings_menu(true)

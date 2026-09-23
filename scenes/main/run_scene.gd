@@ -1172,6 +1172,7 @@ func _ensure_settings_menu() -> void:
 	var _closed_connect_result: int = _settings_menu.connect(&"closed", _on_settings_closed)
 	var _audio_muted_connect_result: int = _settings_menu.connect(&"audio_muted_changed", _on_settings_audio_muted_changed)
 	var _volume_connect_result: int = _settings_menu.connect(&"master_volume_changed", _on_settings_master_volume_changed)
+	var _music_connect_result: int = _settings_menu.music_volume_changed.connect(_on_settings_music_volume_changed)
 	var _haptics_connect_result: int = _settings_menu.connect(&"haptics_enabled_changed", _on_settings_haptics_enabled_changed)
 	var _touch_split_connect_result: int = _settings_menu.connect(&"touch_split_changed", _on_settings_touch_split_changed)
 	var _touch_dead_zone_connect_result: int = _settings_menu.connect(&"touch_center_dead_zone_changed", _on_settings_touch_center_dead_zone_changed)
@@ -1466,3 +1467,7 @@ func _find_touch_contact(index: int) -> MobileTouchContactScript:
 func _as_touch_contact(raw_touch_contact: RefCounted) -> MobileTouchContactScript:
 	Validation.require_condition(raw_touch_contact is MobileTouchContactScript, "RunScene requires MobileTouchContact touch state.")
 	return raw_touch_contact as MobileTouchContactScript
+
+func _on_settings_music_volume_changed(music_volume_ratio: float) -> void:
+	_storage_runtime.set_music_volume_ratio(music_volume_ratio, _audio_settings_adapter)
+	_refresh_settings_menu(true)

@@ -7,15 +7,20 @@ const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
 
 @onready var _height_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric/HeightValueLabel") as Label
 @onready var _stamina_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaValueLabel") as Label
-@onready var _stamina_bar: ProgressBar = get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaBar") as ProgressBar
+@onready var _stamina_bar: TextureProgressBar = get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaBar") as TextureProgressBar
 @onready var _wallet_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/WalletValueLabel") as Label
 @onready var _coins_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/CoinsValueLabel") as Label
 @onready var _pause_button: Button = get_node("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton") as Button
 
+# Artwork uses a 270x480 canvas, displayed at 4x in the 1080x1920 design.
+# Scale the whole HUD uniformly and center it with the environment on tall phones.
 func _align_panel() -> void:
 	var panel: Control = get_node("Panel") as Control
-	var artwork_height: float = size.x * 16.0 / 9.0
-	panel.position.y = maxf(0.0, (size.y - artwork_height) * 0.5) + 120.0
+	var design_size: Vector2 = Vector2(1080.0, 1920.0)
+	var fit_scale: float = minf(size.x / design_size.x, size.y / design_size.y)
+	panel.size = design_size
+	panel.scale = Vector2.ONE * fit_scale
+	panel.position = (size - design_size * fit_scale) * 0.5
 
 func _ready() -> void:
 	var _resize_connect_result: int = resized.connect(_align_panel)
@@ -27,14 +32,14 @@ func apply_state(state: RefCounted) -> void:
 	Validation.require_condition(state != null, "RunHud requires a state snapshot.")
 	Validation.require_condition(state is RunHudStateScript, "RunHud requires a RunHudState snapshot.")
 
-	var typed_state: Object = state
-	typed_state.call("assert_valid")
+	var typed_state: RunHudStateScript = state as RunHudStateScript
+	typed_state.assert_valid()
 
-	var height_meters: float = typed_state.get("height_meters")
-	var current_stamina_seconds: float = typed_state.get("current_stamina_seconds")
-	var max_stamina_seconds: float = typed_state.get("max_stamina_seconds")
-	var wallet_coins: int = typed_state.get("wallet_coins")
-	var run_earned_coins: int = typed_state.get("run_earned_coins")
+	var height_meters: float = typed_state.height_meters
+	var current_stamina_seconds: float = typed_state.current_stamina_seconds
+	var max_stamina_seconds: float = typed_state.max_stamina_seconds
+	var wallet_coins: int = typed_state.wallet_coins
+	var run_earned_coins: int = typed_state.run_earned_coins
 
 	_height_value_label.text = "%.1f m" % height_meters
 	_stamina_value_label.text = "%.1f / %.1f" % [current_stamina_seconds, max_stamina_seconds]

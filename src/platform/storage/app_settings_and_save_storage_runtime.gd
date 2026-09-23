@@ -61,6 +61,7 @@ func apply_app_settings(audio_settings_adapter: AudioSettingsAdapterScript) -> v
 	Validation.require_condition(audio_settings_adapter != null, "AppSettingsAndSaveStorageRuntime requires an audio settings adapter before applying app settings.")
 	var current_app_settings: AppSettingsSnapshotScript = get_app_settings_snapshot()
 	audio_settings_adapter.apply_master_settings(current_app_settings.master_volume_ratio, current_app_settings.audio_muted)
+	audio_settings_adapter.apply_music_settings(current_app_settings.music_volume_ratio)
 
 func set_audio_muted(audio_muted: bool, audio_settings_adapter: AudioSettingsAdapterScript) -> void:
 	var current_app_settings: AppSettingsSnapshotScript = get_app_settings_snapshot()
@@ -227,3 +228,9 @@ func _append_unique_owned_item_id(owned_item_ids: PackedStringArray, item_id: St
 
 func _persist_current_app_settings() -> void:
 	persist_app_settings()
+
+func set_music_volume_ratio(music_volume_ratio: float, audio_settings_adapter: AudioSettingsAdapterScript) -> void:
+	var current_app_settings: AppSettingsSnapshotScript = get_app_settings_snapshot()
+	current_app_settings.music_volume_ratio = music_volume_ratio
+	_persist_current_app_settings()
+	apply_app_settings(audio_settings_adapter)

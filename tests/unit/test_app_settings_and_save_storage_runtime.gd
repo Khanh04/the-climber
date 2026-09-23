@@ -24,6 +24,11 @@ class StubAudioSettingsAdapter extends AudioSettingsAdapterScript:
         _master_volume_ratio = master_volume_ratio
         _muted = muted
 
+    var music_volume_ratio: float = 1.0
+
+    func apply_music_settings(ratio: float) -> void:
+        music_volume_ratio = ratio
+
     func get_master_volume_ratio() -> float:
         return _master_volume_ratio
 

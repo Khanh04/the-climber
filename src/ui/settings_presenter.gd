@@ -15,5 +15,6 @@ func build_state(settings_snapshot: RefCounted, visible: bool) -> SettingsStateS
         typed_snapshot.master_volume_ratio,
         typed_snapshot.haptics_enabled,
         typed_snapshot.touch_split_ratio,
-        typed_snapshot.touch_center_dead_zone_ratio
+        typed_snapshot.touch_center_dead_zone_ratio,
+        typed_snapshot.music_volume_ratio
     )
