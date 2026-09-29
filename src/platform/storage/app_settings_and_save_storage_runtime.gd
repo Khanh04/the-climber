@@ -3,6 +3,7 @@
 class_name AppSettingsAndSaveStorageRuntime
 extends RefCounted
 
+const BestScoreStorageScript = preload("res://src/platform/storage/best_score_storage.gd")
 const AppSettingsSnapshotScript = preload("res://src/platform/storage/app_settings_snapshot.gd")
 const AppSettingsStorageScript = preload("res://src/platform/storage/app_settings_storage.gd")
 const AudioSettingsAdapterScript = preload("res://src/platform/audio/audio_settings_adapter.gd")
@@ -234,3 +235,9 @@ func set_music_volume_ratio(music_volume_ratio: float, audio_settings_adapter: A
 	current_app_settings.music_volume_ratio = music_volume_ratio
 	_persist_current_app_settings()
 	apply_app_settings(audio_settings_adapter)
+
+func get_best_height_meters() -> float:
+	return BestScoreStorageScript.new(local_storage_adapter).get_best_height_meters()
+
+func record_best_height(height_meters: float) -> void:
+	BestScoreStorageScript.new(local_storage_adapter).record_height(height_meters)

@@ -153,6 +153,7 @@ const MAIN_MENU_SCENE_PATH: String = "res://scenes/main/main_menu_scene.tscn"
 
 signal tutorial_observation_recorded(observation: TutorialRunObservationScript)
 
+var _best_score_saved_for_end: bool = false
 var _run_session: RunSessionScript = RunSessionScript.new()
 var _stamina: StaminaRuntimeScript
 var _desktop_input: DesktopDebugInputAdapterScript = DesktopDebugInputAdapterScript.new()
@@ -967,6 +968,8 @@ func _uses_chaser() -> bool:
 	return _launch_mode != RunLaunchModeScript.Value.TUTORIAL
 
 func _reset_playground() -> void:
+	_persist_best_score()
+	_best_score_saved_for_end = false
 	_clear_aim_preview()
 
 	_desktop_input.reset()
@@ -1060,6 +1063,9 @@ func _trigger_haptic_feedback(feedback_type: int) -> void:
 
 
 func _refresh_ui() -> void:
+	if _run_session.get_state() == RunStateScript.Value.ENDED and not _best_score_saved_for_end:
+		_persist_best_score()
+		_best_score_saved_for_end = true
 	if _stamina == null or _run_ui_view == null:
 		return
 
@@ -1080,6 +1086,7 @@ func _refresh_ui() -> void:
 		_refresh_settings_menu(_settings_menu.visible)
 
 func _show_pause_menu() -> void:
+	_persist_best_score()
 	if not _overlay_runtime.show_pause_menu(_run_session.get_state()):
 		return
 	_ensure_pause_menu()
@@ -1182,6 +1189,8 @@ func _refresh_settings_menu(settings_visible: bool = false) -> void:
 		return
 	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
 	_settings_menu.apply_state(_overlay_runtime.build_settings_state(_settings_presenter, app_settings_snapshot, settings_visible))
+	if _pause_menu != null:
+		_pause_menu.set_settings_obscured(settings_visible)
 
 func _ensure_store_shell() -> void:
 	if _store_shell != null:
@@ -1223,6 +1232,7 @@ func set_scene_change_callable_for_test(scene_change_callable: Callable) -> void
 	_scene_change_callable = scene_change_callable
 
 func _change_scene(scene_path: String) -> void:
+	_persist_best_score()
 	if get_tree().paused:
 		get_tree().paused = false
 	if _scene_change_callable.is_valid():
@@ -1471,3 +1481,7 @@ func _as_touch_contact(raw_touch_contact: RefCounted) -> MobileTouchContactScrip
 func _on_settings_music_volume_changed(music_volume_ratio: float) -> void:
 	_storage_runtime.set_music_volume_ratio(music_volume_ratio, _audio_settings_adapter)
 	_refresh_settings_menu(true)
+
+func _persist_best_score() -> void:
+	if _launch_mode == RunLaunchModeScript.Value.NORMAL:
+		_storage_runtime.record_best_height(_run_session.get_height_meters())

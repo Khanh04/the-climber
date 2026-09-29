@@ -150,9 +150,8 @@ func _refresh_settings_menu(visible: bool = false) -> void:
 
 	var app_settings_snapshot: AppSettingsSnapshotScript = _storage_runtime.get_app_settings_snapshot()
 	_settings_menu.apply_state(_settings_presenter.build_state(app_settings_snapshot, visible))
-	# Keep the scenery while the settings panel replaces the main menu artwork.
+	# Keep the scenery and logo visible; Settings replaces only the main menu buttons.
 	(_main_menu.get_node("CenterContainer") as Control).visible = not visible
-	(_main_menu.get_node("decor_preview/Logo_text") as Control).visible = not visible
 
 func _on_settings_closed() -> void:
 	_refresh_settings_menu(false)
@@ -199,6 +198,7 @@ func _ensure_store_shell() -> void:
 	var _closed_connect_result: int = _store_shell.connect(&"closed", Callable(self, "_on_store_closed"))
 
 func _refresh_store_ui() -> void:
+	_refresh_main_menu_stats()
 	Validation.require_condition(_store_shell != null, "MainMenuScene requires StoreShell before refreshing store UI.")
 	var store_state: RefCounted = _overlay_runtime.build_store_state(
 		_store_presenter,
@@ -255,6 +255,7 @@ func _sync_save_backed_runtime_models() -> void:
 	_wallet = _storage_runtime.create_wallet_from_save_snapshot()
 	_persistent_transaction_ledger = _storage_runtime.create_persistent_transaction_ledger_from_save_snapshot()
 	_cosmetic_inventory = _storage_runtime.create_cosmetic_inventory_from_save_snapshot(cosmetic_item_catalog)
+	_refresh_main_menu_stats()
 
 func _duplicate_cosmetic_loadout(loadout: Resource) -> CosmeticLoadoutScript:
 	Validation.require_condition(loadout != null, "MainMenuScene requires a cosmetic loadout resource.")
@@ -272,3 +273,6 @@ func _validate_required_nodes() -> void:
 func _on_settings_music_volume_changed(music_volume_ratio: float) -> void:
 	_storage_runtime.set_music_volume_ratio(music_volume_ratio, _audio_settings_adapter)
 	_refresh_settings_menu(true)
+
+func _refresh_main_menu_stats() -> void:
+	_main_menu.apply_player_stats(_storage_runtime.get_best_height_meters(), _wallet.get_coins())

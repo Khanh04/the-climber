@@ -9,14 +9,30 @@ signal settings_requested
 
 const PauseMenuStateScript = preload("res://src/ui/pause_menu_state.gd")
 
-@onready var _summary_label: Label = get_node("CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
+
 @onready var _resume_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/ResumeButton") as Button
 @onready var _restart_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
 @onready var _new_seed_run_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/NewSeedRunButton") as Button
 @onready var _main_menu_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/MainMenuButton") as Button
 @onready var _settings_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
 
+@onready var _panel_frame: Control = $CenterContainer
+@onready var _height_value: Label = $CenterContainer/Panel/ContentMargin/Content/HeightValue
+@onready var _coin_value: Label = $CenterContainer/Panel/ContentMargin/Content/CoinValue
+
+# PNG canvas: 270x480. Display all cropped pieces at the same 4x scale.
+func _align_reference_layout() -> void:
+	var fit_scale: float = minf(size.x / 1080.0, size.y / 1920.0)
+	_panel_frame.position = size * 0.5 + Vector2(-272.0, -604.0) * fit_scale
+	_panel_frame.scale = Vector2.ONE * fit_scale
+
+# Settings replaces the artwork, but the run stays paused underneath it.
+func set_settings_obscured(obscured: bool) -> void:
+	_panel_frame.visible = not obscured
+
 func _ready() -> void:
+	var _resize_connect_result: int = resized.connect(_align_reference_layout)
+	_align_reference_layout.call_deferred()
 	_validate_required_nodes()
 	var _resume_connect_result: int = _resume_button.connect(&"pressed", Callable(self, "_on_resume_button_pressed"))
 	var _restart_connect_result: int = _restart_button.connect(&"pressed", Callable(self, "_on_restart_button_pressed"))
@@ -31,14 +47,14 @@ func apply_state(state: RefCounted) -> void:
 	typed_state.assert_valid()
 
 	visible = typed_state.visible
-	_summary_label.text = "Height: %.1f m\nWallet Coins: %d\nRun Coins: %d" % [
-		typed_state.height_meters,
-		typed_state.wallet_coins,
-		typed_state.run_earned_coins,
-	]
+	# Copy the current run snapshot into the visible labels whenever Pause refreshes.
+	_height_value.text = "%.1f m" % typed_state.height_meters
+	_height_value.tooltip_text = "Độ cao cao nhất lượt này: %.1f m" % typed_state.height_meters
+	_coin_value.text = str(typed_state.run_earned_coins)
+	_coin_value.tooltip_text = "Xu lượt này: %d\nXu trong ví: %d" % [typed_state.run_earned_coins, typed_state.wallet_coins]
 
 func _unhandled_input(event: InputEvent) -> void:
-	if not visible:
+	if not visible or not _panel_frame.visible:
 		return
 
 	if event.is_action_pressed(&"pause_menu"):
@@ -61,7 +77,8 @@ func _on_settings_button_pressed() -> void:
 	settings_requested.emit()
 
 func _validate_required_nodes() -> void:
-	Validation.require_condition(_summary_label != null, "PauseMenu requires SummaryLabel.")
+	Validation.require_condition(_height_value != null, "PauseMenu requires HeightValue.")
+	Validation.require_condition(_coin_value != null, "PauseMenu requires CoinValue.")
 	Validation.require_condition(_resume_button != null, "PauseMenu requires ResumeButton.")
 	Validation.require_condition(_restart_button != null, "PauseMenu requires RestartButton.")
 	Validation.require_condition(_new_seed_run_button != null, "PauseMenu requires NewSeedRunButton.")

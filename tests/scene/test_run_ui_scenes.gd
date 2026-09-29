@@ -247,11 +247,11 @@ func test_run_hud_scene_wires_required_nodes() -> void:
 	add_child_autofree(hud)
 	await get_tree().process_frame
 
-	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric/HeightValueLabel"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Score/Icon_Score/HeightValueLabel"))
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaValueLabel"))
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaBar"))
-	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/WalletValueLabel"))
-	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/CoinsValueLabel"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel2"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel"))
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton"))
 
 func test_run_hud_scene_displays_height_stamina_and_run_coins() -> void:
@@ -267,11 +267,11 @@ func test_run_hud_scene_displays_height_stamina_and_run_coins() -> void:
 
 	hud.call("apply_state", RunHudStateScript.new(18.5, 7.0, 20.0, 9, 4, RunStateScript.Value.CLIMBING))
 
-	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric/HeightValueLabel") as Label
+	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Score/Icon_Score/HeightValueLabel") as Label
 	var stamina_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaValueLabel") as Label
 	var stamina_bar: TextureProgressBar = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaBar") as TextureProgressBar
-	var wallet_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/WalletValueLabel") as Label
-	var coins_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/CoinsValueLabel") as Label
+	var wallet_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel2") as Label
+	var coins_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel") as Label
 	var pause_button: Button = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton") as Button
 
 	assert_not_null(height_value_label)
@@ -585,7 +585,7 @@ func test_run_ui_view_applies_snapshots_to_both_controls() -> void:
 		RunEndScreenStateScript.new(true, true, 14.0, 7, 2, true, RunEndReasonScript.Value.BOTTOM_SCREEN_FALL)
 	)
 
-	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric/HeightValueLabel") as Label
+	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Score/Icon_Score/HeightValueLabel") as Label
 	var title_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
 
 	assert_not_null(height_value_label)
@@ -678,7 +678,6 @@ func test_pause_menu_displays_state_and_emits_actions() -> void:
 	var _settings_connect_result: int = menu.connect(&"settings_requested", Callable(self, "_mark_settings_requested"))
 	menu.call("apply_state", PauseMenuStateScript.new(true, 18.5, 22, 5))
 
-	var summary_label: Label = menu.get_node("CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
 	var resume_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/ResumeButton") as Button
 	var restart_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
 	var new_seed_run_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/NewSeedRunButton") as Button
@@ -686,7 +685,9 @@ func test_pause_menu_displays_state_and_emits_actions() -> void:
 	var settings_button: Button = menu.get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as Button
 
 	assert_true(menu.visible)
-	assert_eq(summary_label.text, "Height: 18.5 m\nWallet Coins: 22\nRun Coins: 5")
+	assert_eq((menu.get_node("CenterContainer/Panel/ContentMargin/Content/HeightValue") as Label).text, "18.5 m")
+	assert_eq((menu.get_node("CenterContainer/Panel/ContentMargin/Content/CoinValue") as Label).text, "5")
+	assert_true(resume_button.is_visible_in_tree())
 	assert_not_null(resume_button)
 	assert_not_null(restart_button)
 	assert_not_null(new_seed_run_button)

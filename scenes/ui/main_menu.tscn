@@ -2,15 +2,15 @@
 
 [ext_resource type="Script" uid="uid://d1wok18hwtpvg" path="res://scenes/ui/main_menu.gd" id="1_menu"]
 [ext_resource type="Texture2D" uid="uid://7v05h7naiafv" path="res://assets/PNG/Enviroment/Background.png" id="2_nxbio"]
-[ext_resource type="Texture2D" uid="uid://bmc3q04mmel5w" path="res://assets/PNG/UI/main_menu_scene/logo.png" id="2_uhagc"]
+[ext_resource type="Texture2D" uid="uid://bmc3q04mmel5w" path="res://assets/PNG/UI/main_menu/logo.png" id="2_uhagc"]
 [ext_resource type="Texture2D" uid="uid://kvjqtkeoy2lp" path="res://assets/PNG/Enviroment/Mountaint.png" id="3_o1jap"]
 [ext_resource type="Texture2D" uid="uid://c5qmfwswfwsxs" path="res://assets/PNG/Decoration_animation/Cloud/cloud0000.png" id="3_pivwi"]
-[ext_resource type="Texture2D" uid="uid://dnbtxtgmkc6d8" path="res://assets/PNG/UI/main_menu_scene/btn_play.png" id="3_x2yvf"]
+[ext_resource type="Texture2D" uid="uid://dnbtxtgmkc6d8" path="res://assets/PNG/UI/main_menu/btn_play.png" id="3_x2yvf"]
 [ext_resource type="Texture2D" uid="uid://dbewd0bu6wt0m" path="res://assets/PNG/Enviroment/floor.png" id="4_1yehf"]
 [ext_resource type="Texture2D" uid="uid://cfe6ycja7po3n" path="res://assets/PNG/Decoration_animation/Cloud/cloud0001.png" id="4_nxbio"]
-[ext_resource type="Texture2D" uid="uid://h60nmp1tpy7c" path="res://assets/PNG/UI/main_menu_scene/btn_tutorial.png" id="4_uhagc"]
+[ext_resource type="Texture2D" uid="uid://h60nmp1tpy7c" path="res://assets/PNG/UI/main_menu/btn_tutorial.png" id="4_uhagc"]
 [ext_resource type="Texture2D" uid="uid://b77yvos8xotde" path="res://assets/PNG/Decoration_animation/Cloud/cloud0002.png" id="5_o1jap"]
-[ext_resource type="Texture2D" uid="uid://b871t7si2mmnn" path="res://assets/PNG/UI/main_menu_scene/btn_setting.png" id="5_x2yvf"]
+[ext_resource type="Texture2D" uid="uid://b871t7si2mmnn" path="res://assets/PNG/UI/main_menu/btn_setting.png" id="5_x2yvf"]
 [ext_resource type="Texture2D" uid="uid://dbx5prkg5labt" path="res://assets/PNG/Decoration_animation/Cloud/cloud0003.png" id="6_1yehf"]
 [ext_resource type="Texture2D" uid="uid://ncaokoo1q2l1" path="res://assets/PNG/Enviroment/Tree.png" id="6_mah8u"]
 [ext_resource type="Texture2D" uid="uid://gff3u878ruu6" path="res://assets/PNG/Enviroment/base.png" id="7_575hu"]
@@ -100,7 +100,9 @@
 [ext_resource type="Texture2D" uid="uid://gh6qasbw4bd0" path="res://assets/PNG/Decoration_animation/Cloud/cloud0087.png" id="90_shmnx"]
 [ext_resource type="Texture2D" uid="uid://c286wh750imja" path="res://assets/PNG/Decoration_animation/Cloud/cloud0088.png" id="91_3bagu"]
 [ext_resource type="Script" uid="uid://cp03jyrp3tdmd" path="res://scenes/ui/animated_sprite_2d.gd" id="92_2jbqi"]
-[ext_resource type="Texture2D" uid="uid://c8rp5n0666rvw" path="res://assets/PNG/UI/main_menu_scene/panel_mainmenu.png" id="98_dltkq"]
+[ext_resource type="Texture2D" uid="uid://c8rp5n0666rvw" path="res://assets/PNG/UI/main_menu/panel_mainmenu.png" id="98_dltkq"]
+[ext_resource type="Texture2D" uid="uid://crwg7m246kh7o" path="res://assets/PNG/UI/main_menu/best_score.png" id="stats_best"]
+[ext_resource type="Texture2D" uid="uid://dk4aajlgnc3qp" path="res://assets/PNG/UI/main_menu/wallet_coin.png" id="stats_wallet"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_p5viw"]
 animations = [{
@@ -377,6 +379,16 @@ animations = [{
 "speed": 24.0
 }]
 
+[sub_resource type="AtlasTexture" id="StatsBestAtlas"]
+atlas = ExtResource("stats_best")
+region = Rect2(11, 7, 24, 28)
+filter_clip = true
+
+[sub_resource type="AtlasTexture" id="StatsWalletAtlas"]
+atlas = ExtResource("stats_wallet")
+region = Rect2(10, 42, 21, 22)
+filter_clip = true
+
 [node name="MainMenu" type="Control" unique_id=1937850968]
 layout_mode = 3
 anchors_preset = 15
@@ -462,10 +474,10 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -371.0
-offset_top = -807.0
-offset_right = -187.0
-offset_bottom = -681.0
+offset_left = -540.0
+offset_top = -960.0
+offset_right = -270.0
+offset_bottom = -480.0
 grow_horizontal = 2
 grow_vertical = 2
 scale = Vector2(4, 4)
@@ -500,9 +512,9 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -180.0
-offset_top = -164.0
+offset_top = -98.0
 offset_right = 180.0
-offset_bottom = 362.0
+offset_bottom = 428.0
 grow_horizontal = 2
 grow_vertical = 2
 offset_transform_enabled = true
@@ -566,3 +578,78 @@ custom_minimum_size = Vector2(0, 60)
 layout_mode = 2
 size_flags_horizontal = 3
 text = "Store"
+
+[node name="MainMenuStats" type="Control" parent="." unique_id=1851389140]
+texture_filter = 1
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -500.0
+offset_top = -932.0
+offset_bottom = -704.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="BestScoreRow" type="Control" parent="MainMenuStats" unique_id=404963316]
+anchors_preset = 0
+offset_right = 500.0
+offset_bottom = 112.0
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="MainMenuStats/BestScoreRow" unique_id=163249432]
+layout_mode = 0
+offset_left = 4.0
+offset_right = 100.0
+offset_bottom = 112.0
+mouse_filter = 2
+texture = SubResource("StatsBestAtlas")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="BestScoreValue" type="Label" parent="MainMenuStats/BestScoreRow" unique_id=926451651]
+layout_mode = 0
+offset_left = 116.0
+offset_right = 500.0
+offset_bottom = 112.0
+tooltip_text = "Kỷ lục độ cao"
+theme_override_colors/font_color = Color(1, 0.94, 0.69, 1)
+theme_override_colors/font_outline_color = Color(0.12, 0.14, 0.07, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 42
+text = "0.0 m"
+vertical_alignment = 1
+text_overrun_behavior = 3
+
+[node name="WalletRow" type="Control" parent="MainMenuStats" unique_id=2002365112]
+anchors_preset = 0
+offset_top = 140.0
+offset_right = 500.0
+offset_bottom = 228.0
+mouse_filter = 2
+
+[node name="Icon" type="TextureRect" parent="MainMenuStats/WalletRow" unique_id=1016643873]
+layout_mode = 0
+offset_right = 84.0
+offset_bottom = 88.0
+mouse_filter = 2
+texture = SubResource("StatsWalletAtlas")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="WalletCoinsValue" type="Label" parent="MainMenuStats/WalletRow" unique_id=552033225]
+layout_mode = 0
+offset_left = 116.0
+offset_right = 500.0
+offset_bottom = 88.0
+tooltip_text = "Tổng xu trong ví"
+theme_override_colors/font_color = Color(1, 0.94, 0.69, 1)
+theme_override_colors/font_outline_color = Color(0.12, 0.14, 0.07, 1)
+theme_override_constants/outline_size = 6
+theme_override_font_sizes/font_size = 42
+text = "0"
+vertical_alignment = 1
+text_overrun_behavior = 3

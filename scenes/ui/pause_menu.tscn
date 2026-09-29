@@ -1,18 +1,161 @@
 [gd_scene format=3 uid="uid://caple2pf1uor3"]
 
-[ext_resource type="Script" uid="uid://2bdjvmgchxot" path="res://scenes/ui/pause_menu.gd" id="1_pause"]
+[ext_resource type="Texture2D" uid="uid://bmj7ak4hthdac" path="res://assets/PNG/UI/run/RunHud/icon_coin.png" id="coin"]
+[ext_resource type="Texture2D" uid="uid://bx7mxm3wjkjt2" path="res://assets/PNG/UI/run/RunHud/icon_Score.png" id="height"]
+[ext_resource type="Texture2D" uid="uid://b6mc8yrwn8hup" path="res://assets/PNG/UI/pause_menu/btn_main_menu.png" id="main_menu"]
+[ext_resource type="Texture2D" uid="uid://yir52bs68hlh" path="res://assets/PNG/UI/pause_menu/btn_new_seed.png" id="new_seed"]
+[ext_resource type="Texture2D" uid="uid://ddbhi3hb1uf03" path="res://assets/PNG/UI/pause_menu/panel_pause.png" id="panel"]
+[ext_resource type="Texture2D" uid="uid://dg6ti0ymc4h1t" path="res://assets/PNG/UI/pause_menu/btn_restart.png" id="restart"]
+[ext_resource type="Texture2D" uid="uid://dy3xffh20eb6g" path="res://assets/PNG/UI/pause_menu/btn_resume.png" id="resume"]
+[ext_resource type="Script" uid="uid://2bdjvmgchxot" path="res://scenes/ui/pause_menu.gd" id="script"]
+[ext_resource type="Texture2D" uid="uid://dx31xcbcpesbc" path="res://assets/PNG/UI/pause_menu/btn_setting.png" id="setting"]
 
-[node name="PauseMenu" type="Control" unique_id=1523791023]
+[sub_resource type="AtlasTexture" id="Atlas_panel"]
+atlas = ExtResource("panel")
+region = Rect2(67, 89, 135, 250)
+filter_clip = true
+
+[sub_resource type="AtlasTexture" id="Atlas_height"]
+atlas = ExtResource("height")
+region = Rect2(215, 8, 15, 15)
+filter_clip = true
+
+[sub_resource type="AtlasTexture" id="Atlas_coin"]
+atlas = ExtResource("coin")
+region = Rect2(216, 35, 13, 14)
+filter_clip = true
+
+[sub_resource type="AtlasTexture" id="Atlas_resume"]
+atlas = ExtResource("resume")
+region = Rect2(91, 174, 88, 26)
+filter_clip = true
+
+[sub_resource type="StyleBoxTexture" id="resume_normal"]
+texture = SubResource("Atlas_resume")
+
+[sub_resource type="StyleBoxTexture" id="resume_pressed"]
+texture = SubResource("Atlas_resume")
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="resume_hover"]
+texture = SubResource("Atlas_resume")
+modulate_color = Color(1.12, 1.12, 1.12, 1)
+
+[sub_resource type="StyleBoxFlat" id="Focus"]
+draw_center = false
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.95, 0.7, 1)
+
+[sub_resource type="AtlasTexture" id="Atlas_restart"]
+atlas = ExtResource("restart")
+region = Rect2(91, 204, 88, 26)
+filter_clip = true
+
+[sub_resource type="StyleBoxTexture" id="restart_normal"]
+texture = SubResource("Atlas_restart")
+
+[sub_resource type="StyleBoxTexture" id="restart_pressed"]
+texture = SubResource("Atlas_restart")
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="restart_hover"]
+texture = SubResource("Atlas_restart")
+modulate_color = Color(1.12, 1.12, 1.12, 1)
+
+[sub_resource type="AtlasTexture" id="Atlas_new_seed"]
+atlas = ExtResource("new_seed")
+region = Rect2(91, 234, 88, 26)
+filter_clip = true
+
+[sub_resource type="StyleBoxTexture" id="new_seed_normal"]
+texture = SubResource("Atlas_new_seed")
+
+[sub_resource type="StyleBoxTexture" id="new_seed_pressed"]
+texture = SubResource("Atlas_new_seed")
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="new_seed_hover"]
+texture = SubResource("Atlas_new_seed")
+modulate_color = Color(1.12, 1.12, 1.12, 1)
+
+[sub_resource type="AtlasTexture" id="Atlas_main_menu"]
+atlas = ExtResource("main_menu")
+region = Rect2(91, 264, 88, 26)
+filter_clip = true
+
+[sub_resource type="StyleBoxTexture" id="main_menu_normal"]
+texture = SubResource("Atlas_main_menu")
+
+[sub_resource type="StyleBoxTexture" id="main_menu_pressed"]
+texture = SubResource("Atlas_main_menu")
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="main_menu_hover"]
+texture = SubResource("Atlas_main_menu")
+modulate_color = Color(1.12, 1.12, 1.12, 1)
+
+[sub_resource type="AtlasTexture" id="Atlas_setting"]
+atlas = ExtResource("setting")
+region = Rect2(91, 294, 88, 26)
+filter_clip = true
+
+[sub_resource type="StyleBoxTexture" id="setting_normal"]
+texture = SubResource("Atlas_setting")
+
+[sub_resource type="StyleBoxTexture" id="setting_pressed"]
+texture = SubResource("Atlas_setting")
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="setting_hover"]
+texture = SubResource("Atlas_setting")
+modulate_color = Color(1.12, 1.12, 1.12, 1)
+
+[node name="PauseMenu" type="Control" unique_id=1859928570]
 process_mode = 3
+texture_filter = 1
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_pause")
+script = ExtResource("script")
 
-[node name="Backdrop" type="ColorRect" parent="." unique_id=1211255951]
+[node name="Backdrop" type="ColorRect" parent="." unique_id=1384200420]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.57254905)
+
+[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1416676327]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -270.0
+offset_top = -500.0
+offset_right = 270.0
+offset_bottom = 500.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="Panel" type="TextureRect" parent="CenterContainer" unique_id=717836836]
+custom_minimum_size = Vector2(540, 1000)
+layout_mode = 2
+mouse_filter = 2
+texture = SubResource("Atlas_panel")
+expand_mode = 1
+
+[node name="ContentMargin" type="Control" parent="CenterContainer/Panel" unique_id=807165680]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -20,69 +163,121 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-color = Color(0.02, 0.025, 0.03, 0.58)
 
-[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1245666107]
+[node name="Content" type="Control" parent="CenterContainer/Panel/ContentMargin" unique_id=287312630]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 
-[node name="Panel" type="PanelContainer" parent="CenterContainer" unique_id=695833379]
-custom_minimum_size = Vector2(360, 600)
-layout_mode = 2
+[node name="HeightIcon" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1144672623]
+layout_mode = 0
+offset_left = 96.0
+offset_top = 236.0
+offset_right = 156.0
+offset_bottom = 296.0
+mouse_filter = 2
+texture = SubResource("Atlas_height")
+expand_mode = 1
 
-[node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel" unique_id=192612514]
-layout_mode = 2
-theme_override_constants/margin_left = 18
-theme_override_constants/margin_top = 18
-theme_override_constants/margin_right = 18
-theme_override_constants/margin_bottom = 18
+[node name="CoinIcon" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1244493654]
+layout_mode = 0
+offset_left = 280.0
+offset_top = 240.0
+offset_right = 332.0
+offset_bottom = 296.0
+mouse_filter = 2
+texture = SubResource("Atlas_coin")
+expand_mode = 1
 
-[node name="Content" type="VBoxContainer" parent="CenterContainer/Panel/ContentMargin" unique_id=29060146]
-layout_mode = 2
-theme_override_constants/separation = 10
+[node name="HeightValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=584126850]
+layout_mode = 0
+offset_left = 164.0
+offset_top = 236.0
+offset_right = 272.0
+offset_bottom = 300.0
+theme_override_colors/font_color = Color(1, 0.94, 0.69, 1)
+theme_override_font_sizes/font_size = 28
+text = "0.0 m"
+vertical_alignment = 1
+text_overrun_behavior = 3
 
-[node name="TitleLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=11816299]
-layout_mode = 2
-text = "Paused"
-horizontal_alignment = 1
+[node name="CoinValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=575661228]
+layout_mode = 0
+offset_left = 340.0
+offset_top = 236.0
+offset_right = 448.0
+offset_bottom = 300.0
+theme_override_colors/font_color = Color(1, 0.94, 0.69, 1)
+theme_override_font_sizes/font_size = 28
+text = "0"
+vertical_alignment = 1
+text_overrun_behavior = 3
 
-[node name="SummaryLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=206108582]
-layout_mode = 2
-text = "Height: 0.0 m
-Wallet Coins: 0
-Run Coins: 0"
-horizontal_alignment = 1
+[node name="ResumeButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1276961074]
+layout_mode = 0
+offset_left = 96.0
+offset_top = 340.0
+offset_right = 448.0
+offset_bottom = 444.0
+tooltip_text = "Continue Game"
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("resume_normal")
+theme_override_styles/pressed = SubResource("resume_pressed")
+theme_override_styles/hover = SubResource("resume_hover")
+theme_override_styles/focus = SubResource("Focus")
 
-[node name="ResumeButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1887007836]
-custom_minimum_size = Vector2(0, 72)
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Resume"
+[node name="RestartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1040953216]
+layout_mode = 0
+offset_left = 96.0
+offset_top = 460.0
+offset_right = 448.0
+offset_bottom = 564.0
+tooltip_text = "Chơi lại màn hiện tại"
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("restart_normal")
+theme_override_styles/pressed = SubResource("restart_pressed")
+theme_override_styles/hover = SubResource("restart_hover")
+theme_override_styles/focus = SubResource("Focus")
 
-[node name="RestartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=420455997]
-custom_minimum_size = Vector2(0, 72)
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Restart Run"
+[node name="NewSeedRunButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=534817622]
+layout_mode = 0
+offset_left = 96.0
+offset_top = 580.0
+offset_right = 448.0
+offset_bottom = 684.0
+tooltip_text = "Lượt mới với đường leo mới"
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("new_seed_normal")
+theme_override_styles/pressed = SubResource("new_seed_pressed")
+theme_override_styles/hover = SubResource("new_seed_hover")
+theme_override_styles/focus = SubResource("Focus")
 
-[node name="NewSeedRunButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1616533990]
-custom_minimum_size = Vector2(0, 72)
-layout_mode = 2
-size_flags_horizontal = 3
-text = "New Seed Run"
+[node name="MainMenuButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1143494078]
+layout_mode = 0
+offset_left = 96.0
+offset_top = 700.0
+offset_right = 448.0
+offset_bottom = 804.0
+tooltip_text = "Về menu chính"
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("main_menu_normal")
+theme_override_styles/pressed = SubResource("main_menu_pressed")
+theme_override_styles/hover = SubResource("main_menu_hover")
+theme_override_styles/focus = SubResource("Focus")
 
-[node name="MainMenuButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1127202756]
-custom_minimum_size = Vector2(0, 72)
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Main Menu"
-
-[node name="SettingsButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1204210530]
-custom_minimum_size = Vector2(0, 72)
-layout_mode = 2
-size_flags_horizontal = 3
-text = "Settings"
+[node name="SettingsButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1100649296]
+layout_mode = 0
+offset_left = 96.0
+offset_top = 820.0
+offset_right = 448.0
+offset_bottom = 924.0
+tooltip_text = "Cài đặt"
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("setting_normal")
+theme_override_styles/pressed = SubResource("setting_pressed")
+theme_override_styles/hover = SubResource("setting_hover")
+theme_override_styles/focus = SubResource("Focus")

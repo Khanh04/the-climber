@@ -1,23 +1,23 @@
 [gd_scene format=3 uid="uid://bpxsufjvq5d26"]
 
-[ext_resource type="Texture2D" uid="uid://cblla2psdgbuk" path="res://assets/PNG/UI/Setting_scene/slider/fill.png" id="6_w48g0"]
-[ext_resource type="Texture2D" uid="uid://dpkajcw0onk46" path="res://assets/PNG/UI/Setting_scene/Check/checkbox.png" id="box"]
-[ext_resource type="Texture2D" uid="uid://opfrw2sxylsq" path="res://assets/PNG/UI/Setting_scene/Check/checked.png" id="checked"]
-[ext_resource type="Texture2D" uid="uid://ddm2y8h5unl5b" path="res://assets/PNG/UI/Setting_scene/btn_Close.png" id="close"]
-[ext_resource type="Texture2D" uid="uid://bn5lv6uk5es4o" path="res://assets/PNG/UI/Setting_scene/icon_LeftZone.png" id="dead"]
-[ext_resource type="Texture2D" uid="uid://b45onqvja2fo5" path="res://assets/PNG/UI/Setting_scene/slider/grabber.png" id="grabber"]
-[ext_resource type="Texture2D" uid="uid://coqet5721d7l8" path="res://assets/PNG/UI/Setting_scene/icon_Haptic.png" id="haptic"]
-[ext_resource type="Texture2D" uid="uid://bqanrb3rlgt50" path="res://assets/PNG/UI/Setting_scene/icon_music.png" id="music"]
-[ext_resource type="Texture2D" uid="uid://d07d6edvrb4j7" path="res://assets/PNG/UI/Setting_scene/panel_setting.png" id="panel"]
+[ext_resource type="Texture2D" uid="uid://cblla2psdgbuk" path="res://assets/PNG/UI/setting_menu/slider/fill.png" id="6_w48g0"]
+[ext_resource type="Texture2D" uid="uid://dpkajcw0onk46" path="res://assets/PNG/UI/setting_menu/Check/checkbox.png" id="box"]
+[ext_resource type="Texture2D" uid="uid://opfrw2sxylsq" path="res://assets/PNG/UI/setting_menu/Check/checked.png" id="checked"]
+[ext_resource type="Texture2D" uid="uid://ddm2y8h5unl5b" path="res://assets/PNG/UI/setting_menu/btn_Close.png" id="close"]
+[ext_resource type="Texture2D" uid="uid://bn5lv6uk5es4o" path="res://assets/PNG/UI/setting_menu/icon_LeftZone.png" id="dead"]
+[ext_resource type="Texture2D" uid="uid://b45onqvja2fo5" path="res://assets/PNG/UI/setting_menu/slider/grabber.png" id="grabber"]
+[ext_resource type="Texture2D" uid="uid://coqet5721d7l8" path="res://assets/PNG/UI/setting_menu/icon_Haptic.png" id="haptic"]
+[ext_resource type="Texture2D" uid="uid://bqanrb3rlgt50" path="res://assets/PNG/UI/setting_menu/icon_music.png" id="music"]
+[ext_resource type="Texture2D" uid="uid://d07d6edvrb4j7" path="res://assets/PNG/UI/setting_menu/panel_setting.png" id="panel"]
 [ext_resource type="Script" uid="uid://b1qu3kvescpvb" path="res://scenes/ui/settings_menu.gd" id="script"]
-[ext_resource type="Texture2D" uid="uid://boik2sxun2uwq" path="res://assets/PNG/UI/Setting_scene/icon_sound.png" id="sound"]
-[ext_resource type="Texture2D" uid="uid://ck08i2nef8msf" path="res://assets/PNG/UI/Setting_scene/icon_CenterGap.png" id="split"]
-[ext_resource type="Texture2D" uid="uid://f2hhakqg2lcw" path="res://assets/PNG/UI/Setting_scene/slider/track.png" id="track"]
-[ext_resource type="Texture2D" uid="uid://bbdjk1s88p6l6" path="res://assets/PNG/UI/Setting_scene/Check/unchecked.png" id="unchecked"]
+[ext_resource type="Texture2D" uid="uid://boik2sxun2uwq" path="res://assets/PNG/UI/setting_menu/icon_sound.png" id="sound"]
+[ext_resource type="Texture2D" uid="uid://ck08i2nef8msf" path="res://assets/PNG/UI/setting_menu/icon_CenterGap.png" id="split"]
+[ext_resource type="Texture2D" uid="uid://f2hhakqg2lcw" path="res://assets/PNG/UI/setting_menu/slider/track.png" id="track"]
+[ext_resource type="Texture2D" uid="uid://bbdjk1s88p6l6" path="res://assets/PNG/UI/setting_menu/Check/unchecked.png" id="unchecked"]
 
 [sub_resource type="AtlasTexture" id="Atlas_panel"]
 atlas = ExtResource("panel")
-region = Rect2(77, 199, 116, 140)
+region = Rect2(67, 164, 135, 175)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_sound"]
@@ -27,7 +27,7 @@ filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_grabber"]
 atlas = ExtResource("grabber")
-region = Rect2(168.882, 229.012, 14.894, 15.095)
+region = Rect2(170, 231, 10, 11)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_track"]
@@ -108,14 +108,13 @@ grow_vertical = 2
 script = ExtResource("script")
 
 [node name="Backdrop" type="ColorRect" parent="." unique_id=1348405087]
-modulate = Color(1, 1, 1, 0.76862746)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0, 0, 0, 0.5921569)
+color = Color(0, 0, 0, 0.5411765)
 
 [node name="CenterContainer" type="CenterContainer" parent="." unique_id=1352641100]
 layout_mode = 1
@@ -124,15 +123,15 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -232.0
-offset_top = -164.0
-offset_right = 232.0
+offset_left = -270.0
+offset_top = -304.0
+offset_right = 270.0
 offset_bottom = 396.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="TextureRect" parent="CenterContainer" unique_id=797127790]
-custom_minimum_size = Vector2(464, 560)
+custom_minimum_size = Vector2(540, 700)
 layout_mode = 2
 mouse_filter = 2
 texture = SubResource("Atlas_panel")
@@ -149,29 +148,27 @@ mouse_filter = 2
 
 [node name="VolumeControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=1557370040]
 anchors_preset = 0
-offset_left = 48.0
-offset_top = 120.0
-offset_right = 416.0
-offset_bottom = 184.0
+offset_left = 88.0
+offset_top = 260.0
+offset_right = 452.0
+offset_bottom = 324.0
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/VolumeControl" unique_id=867698671]
 layout_mode = 0
-offset_left = 16.0
-offset_top = 2.0
-offset_right = 76.0
-offset_bottom = 62.0
+anchor_right = 0.16483517
+anchor_bottom = 0.9375
 mouse_filter = 2
 texture = SubResource("Atlas_sound")
 expand_mode = 1
+metadata/_edit_use_anchors_ = true
 
 [node name="VolumeSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/VolumeControl" unique_id=1355506414]
 layout_mode = 0
-offset_left = 72.0
-offset_top = 4.0
-offset_right = 147.0
-offset_bottom = 19.0
-scale = Vector2(3.7, 3.7)
+offset_left = 60.0
+offset_right = 136.0
+offset_bottom = 15.0
+scale = Vector2(4, 4)
 tooltip_text = "Âm lượng tổng"
 theme_override_icons/grabber = SubResource("Atlas_grabber")
 theme_override_icons/grabber_highlight = SubResource("Atlas_grabber")
@@ -188,36 +185,37 @@ offset_bottom = 23.0
 
 [node name="AudioControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=1125836470]
 anchors_preset = 0
-offset_left = 48.0
-offset_top = 200.0
-offset_right = 416.0
-offset_bottom = 270.0
+offset_left = 88.0
+offset_top = 340.0
+offset_right = 452.0
+offset_bottom = 404.0
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=1343400370]
 layout_mode = 0
-offset_left = 16.0
-offset_top = 6.0
-offset_right = 76.0
-offset_bottom = 70.0
+anchor_right = 0.16483517
+anchor_bottom = 1.0
 mouse_filter = 2
 texture = SubResource("Atlas_music")
 expand_mode = 1
+metadata/_edit_use_anchors_ = true
 
 [node name="AudioSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=1784522617]
 layout_mode = 0
-offset_left = 72.0
-offset_top = 7.999993
-offset_right = 146.99986
-offset_bottom = 22.999992
-scale = Vector2(3.7, 3.7)
-tooltip_text = "Âm lượng tổng"
+anchor_left = 0.16483517
+anchor_right = 1.0
+anchor_bottom = 0.9375
+offset_right = -228.0
+offset_bottom = -45.0
+scale = Vector2(4, 4)
+tooltip_text = "Nhạc nền"
 theme_override_icons/grabber = SubResource("Atlas_grabber")
 theme_override_icons/grabber_highlight = SubResource("Atlas_grabber")
 theme_override_styles/slider = SubResource("Track")
 theme_override_styles/grabber_area = SubResource("Fill")
 theme_override_styles/grabber_area_highlight = SubResource("Fill")
 value = 100.0
+metadata/_edit_use_anchors_ = true
 
 [node name="value_audio" type="Label" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=1368927564]
 visible = false
@@ -227,37 +225,37 @@ offset_bottom = 23.0
 
 [node name="HapicControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=160099517]
 anchors_preset = 0
-offset_left = 48.0
-offset_top = 284.0
-offset_right = 416.0
-offset_bottom = 348.0
+offset_left = 88.0
+offset_top = 424.0
+offset_right = 452.0
+offset_bottom = 488.0
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=1220116272]
 layout_mode = 0
-offset_left = 16.0
-offset_right = 76.0
-offset_bottom = 60.0
+anchor_right = 0.16483517
+anchor_bottom = 0.9375
 mouse_filter = 2
 texture = SubResource("Atlas_haptic")
 expand_mode = 1
+metadata/_edit_use_anchors_ = true
 
 [node name="Checkbox" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=891107429]
 layout_mode = 0
-offset_left = 302.0
-offset_top = 14.0
-offset_right = 350.0
-offset_bottom = 58.0
+offset_left = 320.0
+offset_top = 8.0
+offset_right = 368.0
+offset_bottom = 52.0
 mouse_filter = 2
 texture = SubResource("Atlas_box")
 expand_mode = 1
 
 [node name="HapticsCheckBox" type="CheckBox" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=751001771]
 layout_mode = 0
-offset_left = 302.0
-offset_top = 14.0
-offset_right = 318.0
-offset_bottom = 30.0
+offset_left = 320.0
+offset_top = 8.0
+offset_right = 332.0
+offset_bottom = 19.0
 scale = Vector2(4, 4)
 tooltip_text = "Bật/tắt rung trên thiết bị hỗ trợ"
 theme_override_constants/h_separation = 0
@@ -272,31 +270,31 @@ theme_override_icons/checked = SubResource("Atlas_checked")
 theme_override_icons/unchecked = SubResource("Atlas_unchecked")
 theme_override_icons/checked_disabled = SubResource("Atlas_checked")
 theme_override_icons/unchecked_disabled = SubResource("Atlas_unchecked")
+button_pressed = true
 
 [node name="TouchSplitControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=931572280]
 anchors_preset = 0
-offset_left = 48.0
-offset_top = 368.0
-offset_right = 416.0
-offset_bottom = 432.0
+offset_left = 88.0
+offset_top = 508.0
+offset_right = 452.0
+offset_bottom = 572.0
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/TouchSplitControl" unique_id=2122161022]
 layout_mode = 0
-offset_left = 16.0
-offset_right = 76.0
-offset_bottom = 60.0
+anchor_right = 0.16483517
+anchor_bottom = 0.9375
 mouse_filter = 2
 texture = SubResource("Atlas_split")
 expand_mode = 1
+metadata/_edit_use_anchors_ = true
 
 [node name="TouchSplitSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/TouchSplitControl" unique_id=1968898738]
 layout_mode = 0
-offset_left = 72.0
-offset_top = 2.0000002
-offset_right = 147.0
-offset_bottom = 17.0
-scale = Vector2(3.7, 3.7)
+offset_left = 60.0
+offset_right = 136.0
+offset_bottom = 15.0
+scale = Vector2(4, 4)
 tooltip_text = "Vị trí ranh giới vùng chạm trái/phải"
 theme_override_icons/grabber = SubResource("Atlas_grabber")
 theme_override_icons/grabber_highlight = SubResource("Atlas_grabber")
@@ -311,34 +309,33 @@ layout_mode = 0
 
 [node name="TouchDeadZoneControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=813029333]
 anchors_preset = 0
-offset_left = 48.0
-offset_top = 452.0
-offset_right = 416.0
-offset_bottom = 516.0
+offset_left = 88.0
+offset_top = 592.0
+offset_right = 452.0
+offset_bottom = 656.0
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/TouchDeadZoneControl" unique_id=745660412]
 layout_mode = 0
-offset_left = 16.0
-offset_right = 76.0
-offset_bottom = 60.0
+anchor_right = 0.16483517
+anchor_bottom = 0.9375
 mouse_filter = 2
 texture = SubResource("Atlas_dead")
 expand_mode = 1
+metadata/_edit_use_anchors_ = true
 
 [node name="TouchDeadZoneSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/TouchDeadZoneControl" unique_id=186927752]
 layout_mode = 0
-offset_left = 72.0
-offset_top = 3.0000002
-offset_right = 147.0
-offset_bottom = 18.0
-scale = Vector2(3.7, 3.7)
+offset_left = 60.0
+offset_right = 136.0
+offset_bottom = 15.0
+scale = Vector2(4, 4)
 tooltip_text = "Độ rộng vùng không nhận chạm ở giữa"
 theme_override_icons/grabber = SubResource("Atlas_grabber")
 theme_override_icons/grabber_highlight = SubResource("Atlas_grabber")
 theme_override_styles/slider = SubResource("Track")
-theme_override_styles/grabber_area = SubResource("Empty")
-theme_override_styles/grabber_area_highlight = SubResource("Empty")
+theme_override_styles/grabber_area = SubResource("Fill")
+theme_override_styles/grabber_area_highlight = SubResource("Fill")
 
 [node name="value_touchdead" type="Label" parent="CenterContainer/Panel/ControlPosition/TouchDeadZoneControl" unique_id=1434465271]
 visible = false
@@ -346,18 +343,18 @@ layout_mode = 0
 
 [node name="CloseButton" type="TextureButton" parent="." unique_id=70035627]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = 180.0
-offset_top = -184.0
-offset_right = 252.0
-offset_bottom = -116.0
-grow_horizontal = 2
-grow_vertical = 2
+anchors_preset = -1
+anchor_left = 0.49814814
+anchor_top = 0.50885415
+anchor_right = 0.49814814
+anchor_bottom = 0.51020837
+offset_left = 212.0
+offset_top = -312.0
+offset_right = 284.0
+offset_bottom = -244.0
+grow_horizontal = 0
 tooltip_text = "Đóng cài đặt"
 texture_normal = SubResource("Atlas_close")
 ignore_texture_size = true
-stretch_mode = 0
+stretch_mode = 5
+metadata/_edit_use_anchors_ = true

@@ -5,11 +5,11 @@ signal pause_requested
 
 const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
 
-@onready var _height_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric/HeightValueLabel") as Label
+@onready var _height_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Score/Icon_Score/HeightValueLabel") as Label
 @onready var _stamina_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaValueLabel") as Label
 @onready var _stamina_bar: TextureProgressBar = get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaBar") as TextureProgressBar
-@onready var _wallet_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/WalletValueLabel") as Label
-@onready var _coins_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/CoinsValueLabel") as Label
+@onready var _wallet_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Coins/CoinsValueLabel2") as Label
+@onready var _coins_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Coins/CoinsValueLabel") as Label
 @onready var _pause_button: Button = get_node("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton") as Button
 
 # Artwork uses a 270x480 canvas, displayed at 4x in the 1080x1920 design.
@@ -52,7 +52,7 @@ func _validate_required_nodes() -> void:
 	Validation.require_condition(_height_value_label != null, "RunHud requires HeightValueLabel.")
 	Validation.require_condition(_stamina_value_label != null, "RunHud requires StaminaValueLabel.")
 	Validation.require_condition(_stamina_bar != null, "RunHud requires StaminaBar.")
-	Validation.require_condition(_wallet_value_label != null, "RunHud requires WalletValueLabel.")
+	Validation.require_condition(_wallet_value_label != null, "RunHud requires CoinsValueLabel2 for the wallet total.")
 	Validation.require_condition(_coins_value_label != null, "RunHud requires CoinsValueLabel.")
 	Validation.require_condition(_pause_button != null, "RunHud requires PauseButton.")
 

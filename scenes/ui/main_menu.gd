@@ -11,6 +11,17 @@ signal store_requested
 @onready var _settings_button: TextureButton = get_node("CenterContainer/Panel/ContentMargin/Content/SettingsButton") as TextureButton
 @onready var _store_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/StoreButton") as Button
 
+@onready var _best_score_value: Label = $MainMenuStats/BestScoreRow/BestScoreValue
+@onready var _wallet_coins_value: Label = $MainMenuStats/WalletRow/WalletCoinsValue
+
+func apply_player_stats(best_height_meters: float, wallet_coins: int) -> void:
+	Validation.require_condition(is_finite(best_height_meters) and best_height_meters >= 0.0, "MainMenu best height must be finite and non-negative.")
+	Validation.require_condition(wallet_coins >= 0, "MainMenu wallet coins cannot be negative.")
+	_best_score_value.text = "%.1f m" % best_height_meters
+	_wallet_coins_value.text = str(wallet_coins)
+	_best_score_value.tooltip_text = "Kỷ lục độ cao: " + _best_score_value.text
+	_wallet_coins_value.tooltip_text = "Tổng xu trong ví: " + _wallet_coins_value.text
+
 func _ready() -> void:
 	_validate_required_nodes()
 	var _start_connect_result: int = _start_button.connect(&"pressed", Callable(self, "_on_start_button_pressed"))

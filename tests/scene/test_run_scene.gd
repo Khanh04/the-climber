@@ -441,7 +441,7 @@ func test_run_scene_generated_coin_pickups_increment_run_coins() -> void:
     var raw_pickup_node: Variant = pickup_nodes[0]
     assert_true(raw_pickup_node is GeneratedCoinPickupSpawnAdapterScript)
     var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = raw_pickup_node
-    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/WalletValueLabel") as Label
+    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel2") as Label
     assert_not_null(pickup_spawn)
     assert_not_null(wallet_value_label)
     assert_eq(_test_adapter(playground).get_run_session_for_test().get_run_earned_coins(), 0)
@@ -584,6 +584,8 @@ func test_run_scene_pause_menu_pauses_resumes_and_restarts() -> void:
     assert_not_null(player_body)
     assert_not_null(reset_anchor)
 
+    _test_adapter(playground).get_run_session_for_test().record_height(18.5)
+    _test_adapter(playground).get_run_session_for_test().add_run_earned_coins(5)
     _test_adapter(playground).show_pause_menu_for_test()
 
     var pause_menu: Control = _test_adapter(playground).get_pause_menu_for_test()
@@ -591,6 +593,10 @@ func test_run_scene_pause_menu_pauses_resumes_and_restarts() -> void:
     assert_true(_test_adapter(playground).is_pause_menu_visible_for_test())
     assert_true(get_tree().paused)
     assert_true(pause_menu.visible)
+    var height_value: Label = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/HeightValue") as Label
+    var coin_value: Label = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/CoinValue") as Label
+    assert_eq(height_value.text, "18.5 m")
+    assert_eq(coin_value.text, "5")
 
     var resume_button: Button = pause_menu.get_node("CenterContainer/Panel/ContentMargin/Content/ResumeButton") as Button
     var _resume_emit_result: int = resume_button.emit_signal("pressed")
@@ -599,7 +605,11 @@ func test_run_scene_pause_menu_pauses_resumes_and_restarts() -> void:
     assert_false(get_tree().paused)
     assert_false(pause_menu.visible)
 
+    _test_adapter(playground).get_run_session_for_test().record_height(26.7)
+    _test_adapter(playground).get_run_session_for_test().add_run_earned_coins(2)
     _test_adapter(playground).show_pause_menu_for_test()
+    assert_eq(height_value.text, "26.7 m")
+    assert_eq(coin_value.text, "7")
     player_body.global_position = Vector2(100.0, 100.0)
     player_body.global_rotation = 0.65
     player_body.linear_velocity = Vector2(200.0, 50.0)
@@ -611,6 +621,8 @@ func test_run_scene_pause_menu_pauses_resumes_and_restarts() -> void:
     assert_false(get_tree().paused)
     assert_false(pause_menu.visible)
     assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
+    assert_eq(height_value.text, "0.0 m")
+    assert_eq(coin_value.text, "0")
     assert_eq(player_body.global_position, reset_anchor.global_position)
     assert_eq(player_body.global_rotation, 0.0)
     assert_eq(player_body.linear_velocity, Vector2.ZERO)
@@ -671,17 +683,19 @@ func test_run_scene_pause_settings_overlay_keeps_run_paused() -> void:
 
     assert_not_null(settings_menu)
     assert_true(settings_menu.visible)
+    assert_false((pause_menu.get_node("CenterContainer") as Control).visible)
     assert_true(_test_adapter(playground).is_pause_menu_visible_for_test())
     assert_true(get_tree().paused)
 
     var haptics_check_box: CheckBox = settings_menu.get_node("CenterContainer/Panel/ControlPosition/HapicControl/HapticsCheckBox") as CheckBox
-    var close_button: Button = settings_menu.get_node("CloseButton") as Button
+    var close_button: BaseButton = settings_menu.get_node("CloseButton") as BaseButton
     assert_not_null(haptics_check_box)
     assert_not_null(close_button)
     var _haptics_emit_result: int = haptics_check_box.emit_signal("toggled", false)
     var _close_emit_result: int = close_button.emit_signal("pressed")
 
     assert_false(settings_menu.visible)
+    assert_true((pause_menu.get_node("CenterContainer") as Control).visible)
     assert_true(_test_adapter(playground).is_pause_menu_visible_for_test())
     assert_true(get_tree().paused)
 
@@ -1559,10 +1573,10 @@ func test_run_scene_hud_displays_initial_run_snapshot() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    var height_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric/HeightValueLabel") as Label
+    var height_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Score/Icon_Score/HeightValueLabel") as Label
     var stamina_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaValueLabel") as Label
-    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/WalletValueLabel") as Label
-    var coins_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric/CoinsValueLabel") as Label
+    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel2") as Label
+    var coins_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel") as Label
     var run_end_screen: Control = playground.get_node("UiLayer/RunEndScreen") as Control
 
     assert_not_null(height_value_label)

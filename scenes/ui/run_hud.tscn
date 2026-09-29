@@ -1,12 +1,12 @@
 [gd_scene format=3 uid="uid://b7y1m41fyw3oa"]
 
-[ext_resource type="Texture2D" uid="uid://bmj7ak4hthdac" path="res://assets/PNG/UI/run_scene/HUD/icon_coin.png" id="coin"]
-[ext_resource type="Texture2D" uid="uid://blvkt567tljie" path="res://assets/PNG/UI/run_scene/HUD/fill_stamina.png" id="fill"]
-[ext_resource type="Texture2D" uid="uid://bx7mxm3wjkjt2" path="res://assets/PNG/UI/run_scene/HUD/icon_Score.png" id="height"]
-[ext_resource type="Texture2D" uid="uid://cuyvnrhcbt1dc" path="res://assets/PNG/UI/run_scene/HUD/btn_Pause.png" id="pause"]
+[ext_resource type="Texture2D" uid="uid://bmj7ak4hthdac" path="res://assets/PNG/UI/run/RunHud/icon_coin.png" id="coin"]
+[ext_resource type="Texture2D" uid="uid://blvkt567tljie" path="res://assets/PNG/UI/run/RunHud/fill_stamina.png" id="fill"]
+[ext_resource type="Texture2D" uid="uid://bx7mxm3wjkjt2" path="res://assets/PNG/UI/run/RunHud/icon_Score.png" id="height"]
+[ext_resource type="Texture2D" uid="uid://cuyvnrhcbt1dc" path="res://assets/PNG/UI/run/RunHud/btn_Pause.png" id="pause"]
 [ext_resource type="Script" uid="uid://c64k3agxnuki" path="res://scenes/ui/run_hud.gd" id="script"]
-[ext_resource type="Texture2D" uid="uid://c324tpidndw2d" path="res://assets/PNG/UI/run_scene/HUD/icon_Stamina.png" id="stamina"]
-[ext_resource type="Texture2D" uid="uid://bhf4c5dkiyxhh" path="res://assets/PNG/UI/run_scene/HUD/track_stamina.png" id="track"]
+[ext_resource type="Texture2D" uid="uid://c324tpidndw2d" path="res://assets/PNG/UI/run/RunHud/icon_Stamina.png" id="stamina"]
+[ext_resource type="Texture2D" uid="uid://bhf4c5dkiyxhh" path="res://assets/PNG/UI/run/RunHud/track_stamina.png" id="track"]
 
 [sub_resource type="AtlasTexture" id="Atlas_pause"]
 atlas = ExtResource("pause")
@@ -18,12 +18,12 @@ texture = SubResource("Atlas_pause")
 
 [sub_resource type="AtlasTexture" id="Atlas_height"]
 atlas = ExtResource("height")
-region = Rect2(191, 7, 22, 24)
+region = Rect2(211.14417, 3.7625427, 22, 24)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_coin"]
 atlas = ExtResource("coin")
-region = Rect2(213, 42, 20, 21)
+region = Rect2(212.12796, 31.644493, 20, 21)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_stamina"]
@@ -93,7 +93,7 @@ theme_override_styles/normal = SubResource("Pause")
 theme_override_styles/pressed = SubResource("Pause")
 theme_override_styles/hover = SubResource("Pause")
 
-[node name="Wrapper_Height" type="Control" parent="Panel/ContentMargin/Metrics" unique_id=1018806141]
+[node name="Wrapper_Score" type="Control" parent="Panel/ContentMargin/Metrics" unique_id=1018806141]
 anchors_preset = 0
 offset_left = 764.0
 offset_top = 28.0
@@ -101,15 +101,16 @@ offset_right = 852.0
 offset_bottom = 124.0
 mouse_filter = 2
 
-[node name="HeightMetric" type="TextureRect" parent="Panel/ContentMargin/Metrics/Wrapper_Height" unique_id=1206721622]
+[node name="Icon_Score" type="TextureRect" parent="Panel/ContentMargin/Metrics/Wrapper_Score" unique_id=1206721622]
 layout_mode = 0
-offset_right = 88.0
+offset_left = 44.0
+offset_right = 132.0
 offset_bottom = 96.0
 mouse_filter = 2
 texture = SubResource("Atlas_height")
 expand_mode = 1
 
-[node name="HeightLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric" unique_id=1315141507]
+[node name="HeightLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Score/Icon_Score" unique_id=1315141507]
 visible = false
 layout_mode = 0
 offset_left = -252.0
@@ -119,11 +120,11 @@ theme_override_colors/font_color = Color(1, 0.94, 0.68, 1)
 theme_override_colors/font_outline_color = Color(0.08, 0.12, 0.08, 1)
 theme_override_constants/outline_size = 7
 theme_override_font_sizes/font_size = 34
-text = "Độ cao"
+text = "Height"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="HeightValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Height/HeightMetric" unique_id=821107478]
+[node name="HeightValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Score/Icon_Score" unique_id=821107478]
 layout_mode = 0
 offset_left = -252.0
 offset_top = 20.0
@@ -137,7 +138,7 @@ text = "0.0 m"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="Wrapper_Wallet" type="Control" parent="Panel/ContentMargin/Metrics" unique_id=135189120]
+[node name="Wrapper_Coins" type="Control" parent="Panel/ContentMargin/Metrics" unique_id=135189120]
 anchors_preset = 0
 offset_left = 852.0
 offset_top = 168.0
@@ -145,43 +146,36 @@ offset_right = 932.0
 offset_bottom = 252.0
 mouse_filter = 2
 
-[node name="WalletMetric" type="Control" parent="Panel/ContentMargin/Metrics/Wrapper_Wallet" unique_id=873293642]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
-[node name="icon_coin" type="TextureRect" parent="Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric" unique_id=978769251]
+[node name="icon_coin" type="TextureRect" parent="Panel/ContentMargin/Metrics/Wrapper_Coins" unique_id=978769251]
 layout_mode = 0
-offset_right = 80.0
-offset_bottom = 84.0
+offset_left = -23.0
+offset_top = -50.0
+offset_right = 57.0
+offset_bottom = 34.0
 mouse_filter = 2
 texture = SubResource("Atlas_coin")
 expand_mode = 1
 
-[node name="WalletLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric" unique_id=395533813]
+[node name="CoinsLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Coins" unique_id=395533813]
 visible = false
 layout_mode = 0
 offset_left = -228.0
 offset_right = -16.0
-offset_bottom = 38.0
+offset_bottom = 47.0
 theme_override_colors/font_color = Color(1, 0.94, 0.68, 1)
 theme_override_colors/font_outline_color = Color(0.08, 0.12, 0.08, 1)
 theme_override_constants/outline_size = 7
 theme_override_font_sizes/font_size = 34
-text = "Xu"
+text = "Coins"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="WalletValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric" unique_id=1868689543]
+[node name="CoinsValueLabel2" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Coins" unique_id=1868689543]
 layout_mode = 0
-offset_left = -228.0
-offset_top = -4.0
-offset_right = -16.0
-offset_bottom = 48.0
+offset_left = -240.0
+offset_top = -35.0
+offset_right = -28.0
+offset_bottom = 17.0
 theme_override_colors/font_color = Color(1, 0.94, 0.68, 1)
 theme_override_colors/font_outline_color = Color(0.08, 0.12, 0.08, 1)
 theme_override_constants/outline_size = 7
@@ -190,12 +184,12 @@ text = "0"
 horizontal_alignment = 2
 vertical_alignment = 1
 
-[node name="CoinsValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Wallet/WalletMetric" unique_id=530233853]
+[node name="CoinsValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Coins" unique_id=530233853]
 layout_mode = 0
-offset_left = -228.0
-offset_top = 43.0
-offset_right = -16.0
-offset_bottom = 79.0
+offset_left = -240.0
+offset_top = 12.0
+offset_right = -28.0
+offset_bottom = 48.0
 theme_override_colors/font_color = Color(1, 0.94, 0.68, 1)
 theme_override_colors/font_outline_color = Color(0.08, 0.12, 0.08, 1)
 theme_override_constants/outline_size = 7
@@ -214,8 +208,10 @@ mouse_filter = 2
 
 [node name="StaminaMetric" type="TextureRect" parent="Panel/ContentMargin/Metrics/Wrapper_Stamina" unique_id=1087679516]
 layout_mode = 0
-offset_right = 104.0
-offset_bottom = 104.0
+offset_left = -19.0
+offset_top = -65.0
+offset_right = 85.0
+offset_bottom = 39.0
 mouse_filter = 2
 texture = SubResource("Atlas_stamina")
 expand_mode = 1
