@@ -181,7 +181,6 @@ you write yourself.
 | `scenes/ui/*.tscn` (layout) | HUD, menus, store screen, settings, pause screen | **Yes, no code needed** for layout/color/font |
 | `scenes/ui/*.gd`, `src/ui/*.gd` | The behavior behind those screens: what a button does, what a state shows | **Yes, once you're writing code** — this is the intended place for UI logic, see Section 7 |
 | `src/cosmetics/*.gd` | How skins get applied to the character/Chaser | **Yes, once you're writing code**, if you're extending cosmetics |
-| `scenes/player/human_character_rig.tscn` | The skeleton the character art attaches to | Careful — you can look, but don't move bones or resize collision shapes |
 | `resources/config/*_tuning.tres` (chaser_tuning, stamina_tuning, economy_tuning, generation_tuning, route_*_tuning) | Gameplay balance numbers (speeds, timers, prices, difficulty) | **Ask first** — these look like plain numbers but they're tuned gameplay, not visuals |
 | `src/gameplay/`, `src/economy/`, `src/platform/` | Physics feel, run rules, save data, ad/purchase integrations | **Ask first / pair on it** — shared systems other code depends on, with real architecture rules (see Section 7) |
 

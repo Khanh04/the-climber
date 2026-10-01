@@ -104,5 +104,4 @@ func test_run_end_saves_record_before_leaving_result_screen() -> void:
 	var session: RunSession = run.get_test_adapter_for_test().get_run_session_for_test()
 	session.record_height(31.2)
 	session.end_run(RunEndReason.Value.BOTTOM_SCREEN_FALL)
-	var _refresh: Variant = run.call("_refresh_ui")
 	assert_eq(Records.new(memory).get_best_height_meters(), 31.2)

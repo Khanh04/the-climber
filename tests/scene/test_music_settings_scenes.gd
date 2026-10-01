@@ -27,3 +27,9 @@ func _exercise_scene(scene: PackedScene) -> void:
 	var _reopen_result: Variant = coordinator.call("_show_settings_menu")
 	assert_true(menu.visible)
 	assert_eq(slider.value, 25.0)
+
+func test_chaser_theme_loop_plays_on_music_bus_so_the_music_slider_controls_it() -> void:
+	var kill_zone: Node = preload("res://scenes/chaser/chaser_kill_zone.tscn").instantiate()
+	var player: AudioStreamPlayer2D = kill_zone.get_node("IntensityAudioPlayer") as AudioStreamPlayer2D
+	assert_eq(player.bus, &"Music")
+	kill_zone.free()

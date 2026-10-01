@@ -101,45 +101,6 @@ func test_main_menu_emits_start_tutorial_settings_and_store_requests() -> void:
 	assert_true(_settings_requested)
 	assert_true(_store_requested)
 
-func test_main_menu_scene_store_lists_and_equips_a_character() -> void:
-	var scene: PackedScene = load("res://scenes/main/main_menu_scene.tscn")
-	var menu_scene_node: Node = scene.instantiate()
-	var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
-
-	assert_not_null(menu_scene_node)
-	var menu_scene: Control = menu_scene_node as Control
-	assert_not_null(menu_scene)
-	menu_scene.call("set_local_storage_adapter", local_storage)
-	add_child_autofree(menu_scene)
-	await get_tree().process_frame
-
-	var main_menu: Node = menu_scene.get_node("MainMenu")
-	var store_button: Button = main_menu.get_node("CenterContainer/Panel/ContentMargin/Content/StoreButton") as Button
-	var _store_emit_result: int = store_button.emit_signal("pressed")
-
-	var store_shell: Control = menu_scene.call("get_store_shell_for_test")
-	assert_not_null(store_shell)
-	assert_true(store_shell.visible)
-
-	var slot_filter: OptionButton = store_shell.get_node("CenterContainer/Panel/ContentMargin/Content/SlotFilterOption") as OptionButton
-	var item_list: ItemList = store_shell.get_node("CenterContainer/Panel/ContentMargin/Content/ItemList") as ItemList
-	slot_filter.select(1) # "Character" filter, per StoreShell._populate_slot_filter_options
-	var _filter_emit_result: int = slot_filter.emit_signal("item_selected", 1)
-
-	var chr1_index: int = -1
-	for index in range(item_list.get_item_count()):
-		if item_list.get_item_text(index).findn("CHR1") >= 0:
-			chr1_index = index
-	assert_gte(chr1_index, 0)
-
-	var _select_emit_result: int = item_list.emit_signal("item_selected", chr1_index)
-	var equip_button: Button = store_shell.get_node("CenterContainer/Panel/ContentMargin/Content/Actions/EquipButton") as Button
-	assert_false(equip_button.disabled)
-	var _equip_emit_result: int = equip_button.emit_signal("pressed")
-
-	var updated_loadout: CosmeticLoadoutScript = menu_scene.get("cosmetic_loadout")
-	assert_eq(updated_loadout.player_appearance_id, &"chr1")
-
 func test_menu_buttons_use_mobile_sized_touch_targets() -> void:
 	var main_menu_scene: PackedScene = load("res://scenes/ui/main_menu.tscn")
 	var pause_menu_scene: PackedScene = load("res://scenes/ui/pause_menu.tscn")

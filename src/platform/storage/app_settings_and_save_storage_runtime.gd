@@ -28,6 +28,7 @@ var app_settings_snapshot: AppSettingsSnapshotScript
 var save_storage: SaveStorageScript
 var save_snapshot: SaveSnapshotScript
 var local_storage_adapter: LocalStorageAdapterScript
+var best_score_storage: BestScoreStorageScript
 
 func _init(initial_local_storage_adapter: LocalStorageAdapterScript = null) -> void:
 	var resolved_local_storage_adapter: LocalStorageAdapterScript = initial_local_storage_adapter
@@ -36,6 +37,7 @@ func _init(initial_local_storage_adapter: LocalStorageAdapterScript = null) -> v
 	self.local_storage_adapter = resolved_local_storage_adapter
 	app_settings_storage = AppSettingsStorageScript.new(resolved_local_storage_adapter)
 	save_storage = SaveStorageScript.new(resolved_local_storage_adapter)
+	best_score_storage = BestScoreStorageScript.new(resolved_local_storage_adapter)
 	app_settings_snapshot = null
 	save_snapshot = null
 
@@ -49,6 +51,10 @@ func load_or_create_app_settings() -> void:
 	Validation.require_condition(app_settings_storage != null, "AppSettingsAndSaveStorageRuntime requires app settings storage before loading.")
 	if app_settings_storage.has_snapshot():
 		app_settings_snapshot = app_settings_storage.load_snapshot()
+		# The mute toggle was removed from Settings; a saved mute would be invisible and unrecoverable.
+		if app_settings_snapshot.audio_muted:
+			app_settings_snapshot.audio_muted = false
+			persist_app_settings()
 	else:
 		app_settings_snapshot = AppSettingsSnapshotScript.new()
 
@@ -143,6 +149,7 @@ func set_local_storage_adapter(adapter: LocalStorageAdapterScript) -> void:
 	Validation.require_condition(adapter != null, "AppSettingsAndSaveStorageRuntime requires a local storage adapter.")
 	Validation.require_condition(adapter is LocalStorageAdapterScript, "AppSettingsAndSaveStorageRuntime requires a LocalStorageAdapter implementation.")
 	local_storage_adapter = adapter
+	best_score_storage = BestScoreStorageScript.new(adapter)
 	initialize_save_storage()
 	initialize_app_settings_storage()
 
@@ -237,7 +244,7 @@ func set_music_volume_ratio(music_volume_ratio: float, audio_settings_adapter: A
 	apply_app_settings(audio_settings_adapter)
 
 func get_best_height_meters() -> float:
-	return BestScoreStorageScript.new(local_storage_adapter).get_best_height_meters()
+	return best_score_storage.get_best_height_meters()
 
 func record_best_height(height_meters: float) -> void:
-	BestScoreStorageScript.new(local_storage_adapter).record_height(height_meters)
+	best_score_storage.record_height(height_meters)

@@ -153,7 +153,6 @@ const MAIN_MENU_SCENE_PATH: String = "res://scenes/main/main_menu_scene.tscn"
 
 signal tutorial_observation_recorded(observation: TutorialRunObservationScript)
 
-var _best_score_saved_for_end: bool = false
 var _run_session: RunSessionScript = RunSessionScript.new()
 var _stamina: StaminaRuntimeScript
 var _desktop_input: DesktopDebugInputAdapterScript = DesktopDebugInputAdapterScript.new()
@@ -969,7 +968,6 @@ func _uses_chaser() -> bool:
 
 func _reset_playground() -> void:
 	_persist_best_score()
-	_best_score_saved_for_end = false
 	_clear_aim_preview()
 
 	_desktop_input.reset()
@@ -979,6 +977,7 @@ func _reset_playground() -> void:
 	_rewarded_continue_feedback_message = ""
 	_run_pickup_transaction_ledger = CoinTransactionLedgerScript.new()
 	_run_session = _run_reset_runtime.create_started_run_session()
+	var _ended_connect_result: int = _run_session.ended.connect(_persist_best_score)
 	_run_reset_runtime.reset_gameplay_state(
 		_gameplay_nodes,
 		_controller,
@@ -1063,9 +1062,6 @@ func _trigger_haptic_feedback(feedback_type: int) -> void:
 
 
 func _refresh_ui() -> void:
-	if _run_session.get_state() == RunStateScript.Value.ENDED and not _best_score_saved_for_end:
-		_persist_best_score()
-		_best_score_saved_for_end = true
 	if _stamina == null or _run_ui_view == null:
 		return
 
@@ -1177,7 +1173,6 @@ func _ensure_settings_menu() -> void:
 	_settings_menu = settings_node as SettingsMenuScript
 	_ui_layer.add_child(_settings_menu)
 	var _closed_connect_result: int = _settings_menu.connect(&"closed", _on_settings_closed)
-	var _audio_muted_connect_result: int = _settings_menu.connect(&"audio_muted_changed", _on_settings_audio_muted_changed)
 	var _volume_connect_result: int = _settings_menu.connect(&"master_volume_changed", _on_settings_master_volume_changed)
 	var _music_connect_result: int = _settings_menu.music_volume_changed.connect(_on_settings_music_volume_changed)
 	var _haptics_connect_result: int = _settings_menu.connect(&"haptics_enabled_changed", _on_settings_haptics_enabled_changed)
@@ -1256,10 +1251,6 @@ func _on_pause_settings_requested() -> void:
 
 func _on_settings_closed() -> void:
 	_hide_settings_menu()
-
-func _on_settings_audio_muted_changed(audio_muted: bool) -> void:
-	_storage_runtime.set_audio_muted(audio_muted, _audio_settings_adapter)
-	_refresh_settings_menu(true)
 
 func _on_settings_master_volume_changed(master_volume_ratio: float) -> void:
 	_storage_runtime.set_master_volume_ratio(master_volume_ratio, _audio_settings_adapter)

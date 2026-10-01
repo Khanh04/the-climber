@@ -137,7 +137,6 @@ func _ensure_settings_menu() -> void:
 	_settings_menu = settings_node as SettingsMenuScript
 	add_child(_settings_menu)
 	var _closed_connect_result: int = _settings_menu.connect(&"closed", Callable(self, "_on_settings_closed"))
-	var _audio_muted_connect_result: int = _settings_menu.connect(&"audio_muted_changed", Callable(self, "_on_settings_audio_muted_changed"))
 	var _volume_connect_result: int = _settings_menu.connect(&"master_volume_changed", Callable(self, "_on_settings_master_volume_changed"))
 	var _music_connect_result: int = _settings_menu.music_volume_changed.connect(_on_settings_music_volume_changed)
 	var _haptics_connect_result: int = _settings_menu.connect(&"haptics_enabled_changed", Callable(self, "_on_settings_haptics_enabled_changed"))
@@ -155,10 +154,6 @@ func _refresh_settings_menu(visible: bool = false) -> void:
 
 func _on_settings_closed() -> void:
 	_refresh_settings_menu(false)
-
-func _on_settings_audio_muted_changed(audio_muted: bool) -> void:
-	_storage_runtime.set_audio_muted(audio_muted, _audio_settings_adapter)
-	_refresh_settings_menu(true)
 
 func _on_settings_master_volume_changed(master_volume_ratio: float) -> void:
 	_storage_runtime.set_master_volume_ratio(master_volume_ratio, _audio_settings_adapter)

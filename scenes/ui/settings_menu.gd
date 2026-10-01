@@ -2,7 +2,6 @@ class_name SettingsMenu
 extends Control
 
 signal closed
-signal audio_muted_changed(audio_muted: bool)
 signal music_volume_changed(music_volume_ratio: float)
 signal master_volume_changed(master_volume_ratio: float)
 signal haptics_enabled_changed(haptics_enabled: bool)
@@ -28,7 +27,6 @@ const SettingsStateScript = preload("res://src/ui/settings_state.gd")
 @onready var _touch_dead_zone_value_label: Label = $CenterContainer/Panel/ControlPosition/TouchDeadZoneControl/value_touchdead
 
 var _applying_state: bool = false
-var _audio_muted: bool = false
 
 # Scale the panel artwork. CloseButton uses the anchors and offsets saved in the scene.
 func _align_reference_layout() -> void:
@@ -60,7 +58,6 @@ func apply_state(state: RefCounted) -> void:
 	visible = typed_state.visible
 	# Music volume is stored as 0–1; the slider displays 0–100.
 	_audio_slider.value = typed_state.music_volume_ratio * 100.0
-	_audio_muted = typed_state.audio_muted
 
 	# 0.0 → 1.0 to 0 → 100
 	_volume_slider.value = typed_state.master_volume_ratio * 100.0
@@ -112,10 +109,6 @@ func _on_volume_value_changed(value: float) -> void:
 	if _applying_state:
 		return
 
-	# The volume bar also allows you to unmute using the setting saved from the old interface.
-	if _audio_muted and value > 0.0:
-		_audio_muted = false
-		audio_muted_changed.emit(false)
 	master_volume_changed.emit(value / 100.0)
 
 func _on_haptics_toggled(button_pressed: bool) -> void:

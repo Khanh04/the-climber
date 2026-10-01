@@ -5,10 +5,14 @@
 
 [sub_resource type="Resource" id="Resource_human"]
 script = ExtResource("2_appearance")
-atlas_texture_path = "res://assets/art/character/human/Character.png"
-face_texture_path = "res://assets/art/character/human/Head.png"
-left_upper_arm_texture_path = "res://assets/art/character/human/left_upperarm.png"
-right_upper_arm_texture_path = "res://assets/art/character/human/right_upperarm.png"
+face_texture_path = "res://assets/PNG/Character/CHR2/head.png"
+face_scale = Vector2(5, 5)
+left_upper_arm_texture_path = "res://assets/PNG/Character/CHR2/leftarm.png"
+left_upper_arm_offset = Vector2(6, -2)
+left_upper_arm_scale = Vector2(3, 3)
+right_upper_arm_texture_path = "res://assets/PNG/Character/CHR2/rightarm.png"
+right_upper_arm_offset = Vector2(-6, -2)
+right_upper_arm_scale = Vector2(3, 3)
 
 [resource]
 script = ExtResource("1_catalog")

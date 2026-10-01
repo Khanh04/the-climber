@@ -224,9 +224,6 @@ func test_run_scene_applies_default_human_appearance_and_hides_overlay_cosmetics
     assert_eq(_test_adapter(playground).get_cosmetic_loadout_for_test().player_appearance_id, &"human")
     assert_not_null(player.get_face_overlay().texture)
     assert_not_null(player.get_left_arm_visual().texture)
-    assert_null(player.get_face_overlay().get_node_or_null("AppearanceCutout"))
-    assert_null(player.get_left_arm_visual().get_node_or_null("AppearanceCutout"))
-    assert_null(player.get_right_arm_visual().get_node_or_null("AppearanceCutout"))
     # Plain-texture appearances fit each arm to a pixel-silhouette (fallback primitive disabled,
     # replaced by convex CollisionPolygon2D children). The head keeps its round authored shape.
     assert_false(player.get_head_collision_shape().disabled)

@@ -6,6 +6,8 @@ const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 const RunStateTransitionsScript = preload("res://src/gameplay/run/run_state_transitions.gd")
 
+signal ended
+
 var _state: int = RunStateScript.Value.READY
 var _height_meters: float = 0.0
 var _run_earned_coins: int = 0
@@ -102,6 +104,8 @@ func reset() -> void:
 func _transition_to(next_state: int) -> void:
     RunStateTransitionsScript.assert_transition_allowed(_state, next_state)
     _state = next_state
+    if next_state == RunStateScript.Value.ENDED:
+        ended.emit()
 
 func _set_end_reason(reason: int) -> void:
     RunEndReasonScript.assert_valid(reason)

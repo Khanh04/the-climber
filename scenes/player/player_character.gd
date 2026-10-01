@@ -301,15 +301,9 @@ func get_left_arm_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
 func get_right_arm_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
 	return _right_arm_fitted_collision_polygons
 
-func configure_arm_collision_capsule(hand_side: int, radius: float, height: float, collision_offset: Vector2) -> void:
-	if hand_side == HandSideScript.Value.LEFT:
-		_configure_capsule_shape(_left_arm_collision_shape, "LeftArm", radius, height, collision_offset)
-		return
-	_configure_capsule_shape(_right_arm_collision_shape, "RightArm", radius, height, collision_offset)
-
 # Pixel-silhouette collision: N convex CollisionPolygon2D children replace the fallback
 # primitive shape (disabled, not removed -- it's the always-valid state before any appearance
-# is applied, and stays the shape used by the cutout appearance path). Godot's dynamic
+# is applied). Godot's dynamic
 # RigidBody2D physics doesn't support a single concave shape correctly (no well-defined
 # "inside"), so a traced silhouette must arrive pre-decomposed into convex pieces -- this
 # only assembles what PlayerAppearanceApplicator hands it, it doesn't do the tracing itself.
@@ -347,21 +341,6 @@ func _configure_collision_polygons(body: RigidBody2D, fallback_shape: CollisionS
 	if not created_polygons.is_empty():
 		fallback_shape.disabled = true
 	return created_polygons
-
-func _configure_capsule_shape(shape_node: CollisionShape2D, label: String, radius: float, height: float, collision_offset: Vector2) -> void:
-	Validation.require_condition(radius > 0.0, "PlayerCharacter %s collision capsule radius must be positive." % label)
-	Validation.require_condition(height >= 0.0, "PlayerCharacter %s collision capsule height cannot be negative." % label)
-	Validation.require_condition(shape_node != null, "PlayerCharacter requires %s collision shape before configuring the capsule." % label)
-	Validation.require_condition(shape_node.shape != null, "PlayerCharacter requires %s collision shape to have a shape before configuring the capsule." % label)
-	Validation.require_condition(shape_node.shape is CapsuleShape2D, "PlayerCharacter %s collision shape must remain a CapsuleShape2D." % label)
-
-	var duplicated_shape: Resource = shape_node.shape.duplicate()
-	Validation.require_condition(duplicated_shape is CapsuleShape2D, "PlayerCharacter failed to duplicate the %s collision capsule." % label)
-	var capsule_shape: CapsuleShape2D = duplicated_shape as CapsuleShape2D
-	capsule_shape.radius = radius
-	capsule_shape.height = height
-	shape_node.shape = capsule_shape
-	shape_node.position = collision_offset
 
 func get_left_grip_joint_anchor() -> Marker2D:
 	return _left_grip_joint_anchor

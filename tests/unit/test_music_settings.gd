@@ -66,4 +66,13 @@ func test_menu_loads_music_silently_and_emits_music_only_when_dragged() -> void:
 	slider.value = 60.0
 	assert_signal_emitted_with_parameters(menu, "music_volume_changed", [0.6])
 	assert_signal_not_emitted(menu, "master_volume_changed")
-	assert_signal_not_emitted(menu, "audio_muted_changed")
+
+func test_loading_a_legacy_muted_save_unmutes_because_settings_has_no_mute_toggle() -> void:
+	var memory: InMemoryLocalStorageAdapter = MemoryStorage.new()
+	var runtime: AppSettingsAndSaveStorageRuntime = Runtime.new(memory)
+	runtime.app_settings_snapshot = Snapshot.new(AppSettingsSchema.VERSION, true)
+	runtime.persist_app_settings()
+	var reloaded: AppSettingsAndSaveStorageRuntime = Runtime.new(memory)
+	reloaded.load_or_create_app_settings()
+	assert_false(reloaded.get_app_settings_snapshot().audio_muted)
+	assert_false(Runtime.new(memory).app_settings_storage.load_snapshot().audio_muted, "The unmute must be persisted.")
