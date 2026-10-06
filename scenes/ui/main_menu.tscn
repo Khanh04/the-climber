@@ -104,6 +104,18 @@
 [ext_resource type="Texture2D" uid="uid://crwg7m246kh7o" path="res://assets/PNG/UI/main_menu/best_score.png" id="stats_best"]
 [ext_resource type="Texture2D" uid="uid://dk4aajlgnc3qp" path="res://assets/PNG/UI/main_menu/wallet_coin.png" id="stats_wallet"]
 
+[sub_resource type="AtlasTexture" id="BtnPlayAtlas"]
+atlas = ExtResource("3_x2yvf")
+region = Rect2(91, 216, 86, 35)
+
+[sub_resource type="AtlasTexture" id="BtnTutorialAtlas"]
+atlas = ExtResource("4_uhagc")
+region = Rect2(91, 251, 86, 35)
+
+[sub_resource type="AtlasTexture" id="BtnSettingAtlas"]
+atlas = ExtResource("5_x2yvf")
+region = Rect2(91, 286, 86, 35)
+
 [sub_resource type="SpriteFrames" id="SpriteFrames_p5viw"]
 animations = [{
 "frames": [{
@@ -432,10 +444,10 @@ anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-offset_transform_enabled = true
-offset_transform_scale = Vector2(4, 4)
 texture = ExtResource("3_o1jap")
-stretch_mode = 3
+expand_mode = 1
+stretch_mode = 5
+
 
 [node name="Floor_preview" type="TextureRect" parent="decor_preview" unique_id=1909515073]
 layout_mode = 1
@@ -469,20 +481,15 @@ script = ExtResource("92_2jbqi")
 
 [node name="Logo_text" type="TextureRect" parent="decor_preview" unique_id=304767284]
 layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -540.0
-offset_top = -960.0
-offset_right = -270.0
-offset_bottom = -480.0
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-scale = Vector2(4, 4)
 texture = ExtResource("2_uhagc")
+expand_mode = 1
 stretch_mode = 5
+
 
 [node name="Tree_preview" type="TextureRect" parent="decor_preview" unique_id=905600630]
 layout_mode = 1
@@ -504,73 +511,60 @@ grow_vertical = 2
 texture = ExtResource("7_575hu")
 stretch_mode = 5
 
-[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1018066240]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -180.0
-offset_top = -98.0
-offset_right = 180.0
-offset_bottom = 428.0
-grow_horizontal = 2
-grow_vertical = 2
-offset_transform_enabled = true
-
-[node name="Panel" type="TextureRect" parent="CenterContainer" unique_id=1559837112]
-custom_minimum_size = Vector2(360, 526)
-layout_mode = 2
-offset_transform_enabled = true
-offset_transform_position = Vector2(0, 1)
-offset_transform_position_ratio = Vector2(0, -0.205)
-offset_transform_scale = Vector2(3.875, 3.875)
-texture = ExtResource("98_dltkq")
-stretch_mode = 3
-
-[node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel" unique_id=63420222]
+[node name="CenterContainer" type="AspectRatioContainer" parent="." unique_id=1018066240]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = 23.000023
-offset_bottom = -13.000244
+grow_horizontal = 2
+grow_vertical = 2
+ratio = 0.5625
+
+
+[node name="Panel" type="TextureRect" parent="CenterContainer" unique_id=1559837112]
+layout_mode = 2
+texture = ExtResource("98_dltkq")
+expand_mode = 1
+
+
+[node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel" unique_id=63420222]
+layout_mode = 1
+anchor_left = 0.337
+anchor_top = 0.45
+anchor_right = 0.6556
+anchor_bottom = 0.6688
 grow_horizontal = 2
 grow_vertical = 2
 
+
 [node name="Content" type="VBoxContainer" parent="CenterContainer/Panel/ContentMargin" unique_id=66398714]
 layout_mode = 2
+theme_override_constants/separation = 0
+
 
 [node name="StartButton" type="TextureButton" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=338040238]
-custom_minimum_size = Vector2(0, 158.69)
 layout_mode = 2
-offset_transform_enabled = true
-offset_transform_position = Vector2(0, 152)
-offset_transform_position_ratio = Vector2(0, 0.03)
-texture_normal = ExtResource("3_x2yvf")
+size_flags_vertical = 3
+texture_normal = SubResource("BtnPlayAtlas")
 ignore_texture_size = true
-stretch_mode = 3
+stretch_mode = 0
+
 
 [node name="TutorialButton" type="TextureButton" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=433810382]
-custom_minimum_size = Vector2(0, 158.69)
 layout_mode = 2
-offset_transform_enabled = true
-offset_transform_position = Vector2(0, 37)
-offset_transform_position_ratio = Vector2(0, -0.245)
-texture_normal = ExtResource("4_uhagc")
+size_flags_vertical = 3
+texture_normal = SubResource("BtnTutorialAtlas")
 ignore_texture_size = true
-stretch_mode = 3
+stretch_mode = 0
+
 
 [node name="SettingsButton" type="TextureButton" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1030834961]
-custom_minimum_size = Vector2(0, 158.69)
 layout_mode = 2
-offset_transform_enabled = true
-offset_transform_position = Vector2(0, -78)
-offset_transform_position_ratio = Vector2(0, -0.52)
-texture_normal = ExtResource("5_x2yvf")
+size_flags_vertical = 3
+texture_normal = SubResource("BtnSettingAtlas")
 ignore_texture_size = true
-stretch_mode = 3
+stretch_mode = 0
+
 
 [node name="StoreButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1484003319]
 visible = false
