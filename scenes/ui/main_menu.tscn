@@ -381,23 +381,20 @@ animations = [{
 
 [sub_resource type="AtlasTexture" id="StatsBestAtlas"]
 atlas = ExtResource("stats_best")
-region = Rect2(11, 7, 24, 28)
+region = Rect2(0, 1, 22, 28)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="StatsWalletAtlas"]
 atlas = ExtResource("stats_wallet")
-region = Rect2(10, 42, 21, 22)
+region = Rect2(0, 0, 21, 22)
 filter_clip = true
 
 [node name="MainMenu" type="Control" unique_id=1937850968]
+texture_filter = 1
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = 1.0
-offset_top = 1.0
-offset_right = 1.0
-offset_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_menu")
@@ -474,15 +471,15 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -540.0
-offset_top = -960.0
-offset_right = -270.0
-offset_bottom = -480.0
+offset_left = -405.0
+offset_top = -684.0
+offset_right = -200.0
+offset_bottom = -571.0
 grow_horizontal = 2
 grow_vertical = 2
 scale = Vector2(4, 4)
 texture = ExtResource("2_uhagc")
-stretch_mode = 5
+stretch_mode = 3
 
 [node name="Tree_preview" type="TextureRect" parent="decor_preview" unique_id=905600630]
 layout_mode = 1
@@ -511,71 +508,78 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -180.0
-offset_top = -98.0
-offset_right = 180.0
-offset_bottom = 428.0
+offset_left = -288.0
+offset_top = -188.0
+offset_right = 288.0
+offset_bottom = 448.0
 grow_horizontal = 2
 grow_vertical = 2
-offset_transform_enabled = true
 
 [node name="Panel" type="TextureRect" parent="CenterContainer" unique_id=1559837112]
-custom_minimum_size = Vector2(360, 526)
+custom_minimum_size = Vector2(576, 636)
 layout_mode = 2
-offset_transform_enabled = true
-offset_transform_position = Vector2(0, 1)
-offset_transform_position_ratio = Vector2(0, -0.205)
-offset_transform_scale = Vector2(3.875, 3.875)
+mouse_filter = 2
 texture = ExtResource("98_dltkq")
-stretch_mode = 3
+expand_mode = 1
 
-[node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel" unique_id=63420222]
+[node name="ContentMargin" type="Control" parent="CenterContainer/Panel" unique_id=63420222]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_top = 23.000023
-offset_bottom = -13.000244
 grow_horizontal = 2
 grow_vertical = 2
+mouse_filter = 2
 
-[node name="Content" type="VBoxContainer" parent="CenterContainer/Panel/ContentMargin" unique_id=66398714]
-layout_mode = 2
+[node name="Content" type="Control" parent="CenterContainer/Panel/ContentMargin" unique_id=66398714]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="StartButton" type="TextureButton" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=338040238]
-custom_minimum_size = Vector2(0, 158.69)
-layout_mode = 2
-offset_transform_enabled = true
-offset_transform_position = Vector2(0, 152)
-offset_transform_position_ratio = Vector2(0, 0.03)
+layout_mode = 0
+offset_left = 118.0
+offset_top = 140.0
+offset_right = 458.0
+offset_bottom = 260.0
+tooltip_text = "Chơi"
+mouse_default_cursor_shape = 2
 texture_normal = ExtResource("3_x2yvf")
 ignore_texture_size = true
-stretch_mode = 3
+stretch_mode = 5
 
 [node name="TutorialButton" type="TextureButton" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=433810382]
-custom_minimum_size = Vector2(0, 158.69)
-layout_mode = 2
-offset_transform_enabled = true
-offset_transform_position = Vector2(0, 37)
-offset_transform_position_ratio = Vector2(0, -0.245)
+layout_mode = 0
+offset_left = 118.0
+offset_top = 288.0
+offset_right = 458.0
+offset_bottom = 408.0
+tooltip_text = "Hướng dẫn"
+mouse_default_cursor_shape = 2
 texture_normal = ExtResource("4_uhagc")
 ignore_texture_size = true
-stretch_mode = 3
+stretch_mode = 5
 
 [node name="SettingsButton" type="TextureButton" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1030834961]
-custom_minimum_size = Vector2(0, 158.69)
-layout_mode = 2
-offset_transform_enabled = true
-offset_transform_position = Vector2(0, -78)
-offset_transform_position_ratio = Vector2(0, -0.52)
+layout_mode = 0
+offset_left = 118.0
+offset_top = 436.0
+offset_right = 458.0
+offset_bottom = 564.0
+tooltip_text = "Cài đặt"
+mouse_default_cursor_shape = 2
 texture_normal = ExtResource("5_x2yvf")
 ignore_texture_size = true
-stretch_mode = 3
+stretch_mode = 5
 
 [node name="StoreButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1484003319]
 visible = false
 custom_minimum_size = Vector2(0, 60)
-layout_mode = 2
+layout_mode = 0
 size_flags_horizontal = 3
 text = "Store"
 

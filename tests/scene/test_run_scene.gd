@@ -441,7 +441,7 @@ func test_run_scene_generated_coin_pickups_increment_run_coins() -> void:
     var raw_pickup_node: Variant = pickup_nodes[0]
     assert_true(raw_pickup_node is GeneratedCoinPickupSpawnAdapterScript)
     var pickup_spawn: GeneratedCoinPickupSpawnAdapterScript = raw_pickup_node
-    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel2") as Label
+    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Coins/CoinsValueLabel2") as Label
     assert_not_null(pickup_spawn)
     assert_not_null(wallet_value_label)
     assert_eq(_test_adapter(playground).get_run_session_for_test().get_run_earned_coins(), 0)
@@ -1575,8 +1575,8 @@ func test_run_scene_hud_displays_initial_run_snapshot() -> void:
 
     var height_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Score/Icon_Score/HeightValueLabel") as Label
     var stamina_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaValueLabel") as Label
-    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel2") as Label
-    var coins_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel") as Label
+    var wallet_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Coins/CoinsValueLabel2") as Label
+    var coins_value_label: Label = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Coins/CoinsValueLabel") as Label
     var run_end_screen: Control = playground.get_node("UiLayer/RunEndScreen") as Control
 
     assert_not_null(height_value_label)

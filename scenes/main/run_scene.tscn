@@ -420,28 +420,24 @@ unique_name_in_owner = true
 position = Vector2(540, 1188)
 
 [node name="background" type="Sprite2D" parent="DevCamera" unique_id=19231194]
-texture = ExtResource("11_civhj")
 scale = Vector2(3.3333333, 3.3333333)
-position = Vector2(0, 0)
+texture = ExtResource("11_civhj")
 
 [node name="cloud" type="AnimatedSprite2D" parent="DevCamera" unique_id=984040109]
+scale = Vector2(3.3333333, 3.3333333)
 sprite_frames = SubResource("SpriteFrames_uj04i")
 animation = &"cloud"
 script = ExtResource("99_xjwkq")
-scale = Vector2(3.3333333, 3.3333333)
-position = Vector2(0, 0)
 
 [node name="Sprite2D" type="Sprite2D" parent="DevCamera" unique_id=429117177]
-texture = ExtResource("102_y6dka")
 modulate = Color(1, 1, 1, 0.6392157)
-position = Vector2(0, 0)
 scale = Vector2(3.3333333, 3.3333333)
+texture = ExtResource("102_y6dka")
 
 [node name="Tree" type="Sprite2D" parent="DevCamera" unique_id=1579738952]
 z_index = 300
-texture = ExtResource("102_kvdqo")
 scale = Vector2(3.3333333, 3.3333333)
-position = Vector2(0, 0)
+texture = ExtResource("102_kvdqo")
 
 [node name="UiLayer" type="CanvasLayer" parent="." unique_id=252631966]
 
@@ -462,7 +458,7 @@ position = Vector2(563, 1323)
 
 [node name="ChaserKillZone" parent="." unique_id=1635600093 instance=ExtResource("7_chaser")]
 unique_name_in_owner = true
-position = Vector2(540, 2293)
+position = Vector2(541, 2293)
 
 [node name="Handholds" type="Node2D" parent="." unique_id=142891664]
 z_index = -300

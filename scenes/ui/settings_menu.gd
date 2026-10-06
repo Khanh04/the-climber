@@ -30,16 +30,7 @@ const SettingsStateScript = preload("res://src/ui/settings_state.gd")
 var _applying_state: bool = false
 var _audio_muted: bool = false
 
-# Scale the panel artwork. CloseButton uses the anchors and offsets saved in the scene.
-func _align_reference_layout() -> void:
-	var fit_scale: float = minf(size.x / 1080.0, size.y / 1920.0)
-	var panel_frame: Control = $CenterContainer
-	panel_frame.position = size * 0.5 + Vector2(-272.0, -304.0) * fit_scale
-	panel_frame.scale = Vector2.ONE * fit_scale
-
 func _ready() -> void:
-	var _resize_connect_result: int = resized.connect(_align_reference_layout)
-	_align_reference_layout.call_deferred()
 	_validate_required_nodes() 
 	var _close_connect_result: int = _close_button.connect(&"pressed", Callable(self, "_on_close_requested"))
 	var _audio_connect_result: int = _audio_slider.connect(&"value_changed", Callable(self, "_on_audio_value_changed"))
