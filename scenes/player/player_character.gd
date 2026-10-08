@@ -14,8 +14,11 @@ const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/pl
 # currently-grabbed hold is exempted by disable_collision on the runtime grip PinJoint2D, so
 # grabbing is unaffected. These two are equal today; keep them separate so climb-only collision
 # can be dialled back without touching the falling path.
-const CONTROLLED_COLLISION_MASK: int = 1
-const FALLING_COLLISION_MASK: int = 3
+# Route walls (layer 64, RunScene's vine borders) block the head in both modes; they sit on
+# their own layer so coin/hazard/chaser areas, which react to any layer-1 body, ignore them.
+const ROUTE_WALL_COLLISION_LAYER: int = 64
+const CONTROLLED_COLLISION_MASK: int = 1 | ROUTE_WALL_COLLISION_LAYER
+const FALLING_COLLISION_MASK: int = 3 | ROUTE_WALL_COLLISION_LAYER
 # ponytail: measured from the CHR2 arm sprites' pixel content (opaque-pixel centroid of the
 # shoulder half vs. the hand half of each cropped frame) rather than an exact art-authored
 # value -- re-measure if the equipped arm art changes. The two are mirror images of each

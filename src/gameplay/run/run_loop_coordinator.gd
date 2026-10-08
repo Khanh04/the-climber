@@ -22,7 +22,8 @@ func calculate_camera_target_y(
 	player_body_y: float,
 	camera_player_lower_screen_offset_pixels: float,
 	camera_vertical_dead_zone_pixels: float,
-	run_state: int
+	run_state: int,
+	is_player_gripping: bool
 ) -> float:
 	Validation.require_condition(camera_player_lower_screen_offset_pixels >= 0.0, "RunLoopCoordinator camera offset cannot be negative.")
 	Validation.require_condition(camera_vertical_dead_zone_pixels >= 0.0, "RunLoopCoordinator camera dead-zone cannot be negative.")
@@ -33,6 +34,10 @@ func calculate_camera_target_y(
 		return target_y + camera_vertical_dead_zone_pixels
 
 	if should_follow_descending_camera(run_state):
+		return target_y
+
+	# An ungripped climber is dropping: follow them down so they can catch a lower hold.
+	if not is_player_gripping and target_y > current_camera_y:
 		return target_y
 
 	return current_camera_y

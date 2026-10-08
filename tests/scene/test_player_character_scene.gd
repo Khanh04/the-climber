@@ -385,13 +385,13 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
     var player_body: RigidBody2D = player.get_player_body()
     var starting_rotation: float = player_body.global_rotation
 
-    assert_eq(player_body.collision_mask, 3)
+    assert_eq(player_body.collision_mask, 67)
 
     player.apply_frame_motion(frame_result, attachment_state)
     await get_tree().process_frame
 
     assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.falling_ragdoll())
-    assert_eq(player_body.collision_mask, 3)
+    assert_eq(player_body.collision_mask, 67)
     for limb_body in _limb_bodies(player):
         assert_false(limb_body.freeze)
 
@@ -401,7 +401,7 @@ func test_player_character_enters_falling_on_stamina_depletion_and_resets_contro
     player.reset_physics(Vector2(25.0, 50.0))
 
     assert_eq(player.get_physics_mode(), PlayerPhysicsModeScript.controlled_climb())
-    assert_eq(player_body.collision_mask, 3)
+    assert_eq(player_body.collision_mask, 67)
     assert_eq(player.get_body_global_position(), Vector2(25.0, 50.0))
     assert_eq(player_body.global_rotation, starting_rotation)
     assert_eq(player.get_body_linear_velocity(), Vector2.ZERO)

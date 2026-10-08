@@ -106,7 +106,8 @@
 [ext_resource type="Texture2D" uid="uid://gh6qasbw4bd0" path="res://assets/PNG/Decoration_animation/Cloud/cloud0087.png" id="97_d88xe"]
 [ext_resource type="Texture2D" uid="uid://c286wh750imja" path="res://assets/PNG/Decoration_animation/Cloud/cloud0088.png" id="98_dhbwt"]
 [ext_resource type="Script" uid="uid://bs74tya2bc18s" path="res://scenes/main/animated_sprite_2d.gd" id="99_xjwkq"]
-[ext_resource type="Texture2D" uid="uid://ncaokoo1q2l1" path="res://assets/PNG/Enviroment/Tree.png" id="102_kvdqo"]
+[ext_resource type="Texture2D" uid="uid://ss0vn42oxkn5" path="res://assets/PNG/Enviroment/VineLeft.png" id="102_vine_left"]
+[ext_resource type="Texture2D" uid="uid://dyrfa71g5yk1n" path="res://assets/PNG/Enviroment/VineRight.png" id="102_vine_right"]
 [ext_resource type="Texture2D" uid="uid://kvjqtkeoy2lp" path="res://assets/PNG/Enviroment/Mountaint.png" id="102_y6dka"]
 [ext_resource type="Texture2D" uid="uid://gff3u878ruu6" path="res://assets/PNG/Enviroment/base.png" id="107_y6dka"]
 [ext_resource type="Texture2D" uid="uid://dbewd0bu6wt0m" path="res://assets/PNG/Enviroment/floor.png" id="109_306mh"]
@@ -437,11 +438,33 @@ modulate = Color(1, 1, 1, 0.6392157)
 position = Vector2(0, 0)
 scale = Vector2(3.3333333, 3.3333333)
 
-[node name="Tree" type="Sprite2D" parent="DevCamera" unique_id=1579738952]
+[node name="TreeLeft" type="Sprite2D" parent="DevCamera" unique_id=1579738952]
 z_index = 300
-texture = ExtResource("102_kvdqo")
+texture_repeat = 2
+texture = ExtResource("102_vine_left")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 0, 73, 1260)
 scale = Vector2(3.3333333, 3.3333333)
-position = Vector2(0, 0)
+position = Vector2(-1003.3333, -800)
+
+[node name="Collision" type="StaticBody2D" parent="DevCamera/TreeLeft" unique_id=713653131]
+collision_layer = 64
+collision_mask = 0
+
+[node name="TreeRight" type="Sprite2D" parent="DevCamera" unique_id=1579738953]
+z_index = 300
+texture_repeat = 2
+texture = ExtResource("102_vine_right")
+centered = false
+region_enabled = true
+region_rect = Rect2(0, 0, 51, 1260)
+scale = Vector2(3.3333333, 3.3333333)
+position = Vector2(650, -800)
+
+[node name="Collision" type="StaticBody2D" parent="DevCamera/TreeRight" unique_id=713653133]
+collision_layer = 64
+collision_mask = 0
 
 [node name="UiLayer" type="CanvasLayer" parent="." unique_id=252631966]
 
@@ -567,3 +590,4 @@ position = Vector2(-561, -1815)
 scale = Vector2(4.09, 4.09)
 texture = ExtResource("109_306mh")
 polygon = PackedVector2Array(-75.67323, 434.45303, 371.6679, 434.45303, 371.6679, 464.2758, -75.67323, 464.2758)
+

@@ -58,11 +58,6 @@ extends Resource
 # Width of the gameplay world visible on every portrait device. Camera zoom
 # derives from this value so interactive objects retain a stable screen size.
 @export var camera_target_visible_width_pixels: float = 900.0
-# How far the camera may pan sideways from the wall centre to follow the climber.
-# The generated wall (generation_tuning.chunk_width_meters, 14 m) is wider than the
-# visible 9 m, so this is (wall width - visible width) / 2: the screen edge reaches the
-# wall edge, never past it.
-@export var camera_horizontal_travel_limit_pixels: float = 250.0
 # Extra distance below the visible bottom edge before a fall is resolved.
 # Higher values are more forgiving; lower values end the run sooner when dropping.
 @export var bottom_fall_margin_pixels: float = 160.0
@@ -96,7 +91,6 @@ func is_valid() -> bool:
         and camera_vertical_dead_zone_pixels >= 0.0 \
         and camera_horizontal_dead_zone_pixels >= 0.0 \
         and camera_target_visible_width_pixels > 0.0 \
-        and camera_horizontal_travel_limit_pixels >= 0.0 \
         and bottom_fall_margin_pixels >= 0.0 \
         and pixels_per_meter > 0.0 \
         and not String(handhold_group_name).is_empty()
@@ -136,7 +130,6 @@ func assert_valid() -> void:
     Validation.require_condition(camera_vertical_dead_zone_pixels >= 0.0, "Camera vertical dead-zone cannot be negative.")
     Validation.require_condition(camera_horizontal_dead_zone_pixels >= 0.0, "Camera horizontal dead-zone cannot be negative.")
     Validation.require_condition(camera_target_visible_width_pixels > 0.0, "Camera target visible width must be positive.")
-    Validation.require_condition(camera_horizontal_travel_limit_pixels >= 0.0, "Camera horizontal travel limit cannot be negative.")
     Validation.require_condition(bottom_fall_margin_pixels >= 0.0, "Bottom fall margin cannot be negative.")
     Validation.require_condition(pixels_per_meter > 0.0, "Pixels-per-meter conversion must be positive.")
     Validation.require_condition(not String(handhold_group_name).is_empty(), "Handhold group name cannot be empty.")

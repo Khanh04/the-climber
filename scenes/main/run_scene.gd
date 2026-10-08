@@ -136,7 +136,9 @@ const MAIN_MENU_SCENE_PATH: String = "res://scenes/main/main_menu_scene.tscn"
 @onready var _background: Sprite2D = get_node("DevCamera/background") as Sprite2D
 @onready var _mountains: Sprite2D = get_node("DevCamera/Sprite2D") as Sprite2D
 @onready var _cloud: AnimatedSprite2D = get_node("DevCamera/cloud") as AnimatedSprite2D
-@onready var _tree_background: Sprite2D = get_node("DevCamera/Tree") as Sprite2D
+@onready var _tree_left: Sprite2D = get_node("DevCamera/TreeLeft") as Sprite2D
+@onready var _tree_right: Sprite2D = get_node("DevCamera/TreeRight") as Sprite2D
+var _vine_tiles_above_camera: int = 1
 @onready var _starter_handholds_root: Node2D = get_node("Handholds") as Node2D
 @onready var _gameplay_nodes: RunGameplayNodeRefsScript = RunGameplayNodeRefsScript.new(
 	_player,
@@ -372,6 +374,22 @@ func _physics_process(delta: float) -> void:
 			_start_y,
 			_get_climb_tuning_float(&"pixels_per_meter")
 		)
+	# Checked against last frame's camera, before it follows the player down: a normal fall
+	# stays on screen, so this only catches a climber thrown off-screen within one frame.
+	if _run_frame_runtime.resolve_bottom_screen_fall_if_needed(
+		_gameplay_nodes,
+		_run_loop_coordinator,
+		_bottom_screen_fall_service,
+		_controller,
+		_run_session,
+		get_viewport_rect().size.y,
+		_get_climb_tuning_float(&"bottom_fall_margin_pixels")
+	):
+		_clear_aim_preview()
+		_refresh_ui()
+		return
+
+	var camera_bounds: Vector2 = _camera_horizontal_bounds()
 	_run_frame_runtime.update_camera_follow(
 		_gameplay_nodes,
 		_run_loop_coordinator,
@@ -379,10 +397,12 @@ func _physics_process(delta: float) -> void:
 		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
 		_get_climb_tuning_float(&"camera_vertical_dead_zone_pixels"),
 		_get_climb_tuning_float(&"camera_horizontal_dead_zone_pixels"),
-		_reset_anchor.global_position.x,
-		_get_climb_tuning_float(&"camera_horizontal_travel_limit_pixels"),
+		(camera_bounds.x + camera_bounds.y) * 0.5,
+		(camera_bounds.y - camera_bounds.x) * 0.5,
+		_controller.get_attachment_state().get_attached_hand_count() > 0,
 		_hazard_camera_effect_controller.get_camera_shake_offset()
 	)
+	_pin_side_vines()
 	_run_frame_runtime.sync_generated_chunks(
 		_gameplay_nodes,
 		_controller,
@@ -399,19 +419,6 @@ func _physics_process(delta: float) -> void:
 			current_height_meters_before_input,
 			delta
 		)
-
-	if _run_frame_runtime.resolve_bottom_screen_fall_if_needed(
-		_gameplay_nodes,
-		_run_loop_coordinator,
-		_bottom_screen_fall_service,
-		_controller,
-		_run_session,
-		get_viewport_rect().size.y,
-		_get_climb_tuning_float(&"bottom_fall_margin_pixels")
-	):
-		_clear_aim_preview()
-		_refresh_ui()
-		return
 
 	if _run_session.get_state() != RunStateScript.Value.CLIMBING:
 		_clear_aim_preview()
@@ -851,11 +858,64 @@ func _configure_mobile_world_framing() -> void:
 	_camera.zoom = Vector2(camera_zoom, camera_zoom)
 	var visible_world_size: Vector2 = viewport_size / camera_zoom
 	_scale_sprite_to_cover(_background, visible_world_size)
-	_scale_canvas_item_to_fit(_tree_background, _tree_background.texture.get_size(), visible_world_size)
 	_scale_canvas_item_to_fit(_mountains, _mountains.texture.get_size(), visible_world_size)
+	_tile_side_vines(visible_world_size.y)
 	var cloud_texture: Texture2D = _cloud.sprite_frames.get_frame_texture(_cloud.animation, _cloud.frame)
 	Validation.require_condition(cloud_texture != null, "RunScene cloud background requires a current animation texture.")
 	_scale_canvas_item_to_fit(_cloud, cloud_texture.get_size(), visible_world_size)
+	_pin_side_vines()
+
+# Side vines repeat one arch-free strip vertically, forever. They share the environment art's
+# pixel scale and get enough tiles to cover the view plus a tile of slack above and below.
+func _tile_side_vines(visible_height: float) -> void:
+	for vine: Sprite2D in [_tree_left, _tree_right]:
+		vine.scale = _mountains.scale
+		var tile_height_pixels: float = vine.texture.get_height() * vine.scale.y
+		_vine_tiles_above_camera = ceili(visible_height * 0.5 / tile_height_pixels)
+		var tile_count: int = _vine_tiles_above_camera * 2 + 1
+		vine.region_rect = Rect2(0.0, 0.0, vine.texture.get_width(), vine.texture.get_height() * tile_count)
+		_build_vine_collision(vine, tile_count)
+
+# Vines are camera children but sit at fixed world x (inner edges on the route border) and
+# snap to a world-anchored tile grid in y, so leaves stay put on the wall as the camera climbs.
+func _pin_side_vines() -> void:
+	var border_pixels: float = generation_tuning.get_half_usable_width_meters() * _get_climb_tuning_float(&"pixels_per_meter")
+	var anchor: Vector2 = _reset_anchor.global_position
+	var camera_position: Vector2 = _camera.global_position
+	var tile_height_pixels: float = _tree_left.texture.get_height() * _tree_left.scale.y
+	var tile_index: float = floorf((camera_position.y - anchor.y) / tile_height_pixels)
+	var top_y: float = anchor.y + (tile_index - _vine_tiles_above_camera) * tile_height_pixels - camera_position.y
+	_tree_left.position = Vector2(anchor.x - camera_position.x - border_pixels - _tree_left.region_rect.size.x * _tree_left.scale.x, top_y)
+	_tree_right.position = Vector2(anchor.x - camera_position.x + border_pixels, top_y)
+
+# Camera x range (x = min, y = max) that lets the screen edge reach each vine's outer edge
+# but never past it, so no empty sky shows beyond the vines on any aspect ratio.
+func _camera_horizontal_bounds() -> Vector2:
+	var border_pixels: float = generation_tuning.get_half_usable_width_meters() * _get_climb_tuning_float(&"pixels_per_meter")
+	var half_view_width: float = _get_climb_tuning_float(&"camera_target_visible_width_pixels") * 0.5
+	var anchor_x: float = _reset_anchor.global_position.x
+	var min_x: float = anchor_x - border_pixels - _tree_left.region_rect.size.x * _tree_left.scale.x + half_view_width
+	var max_x: float = anchor_x + border_pixels + _tree_right.region_rect.size.x * _tree_right.scale.x - half_view_width
+	Validation.require_condition(max_x >= min_x, "RunScene route plus vines must be at least as wide as the visible width.")
+	return Vector2(min_x, max_x)
+
+# Traces the vine strip's opaque pixels into polygons once per tile on its Collision body
+# (layer 64, so coin/hazard/chaser areas ignore it). The body inherits the sprite's transform.
+func _build_vine_collision(vine: Sprite2D, tile_count: int) -> void:
+	var body: StaticBody2D = vine.get_node("Collision") as StaticBody2D
+	for child: Node in body.get_children():
+		body.remove_child(child)
+		child.free()
+	var bitmap: BitMap = BitMap.new()
+	bitmap.create_from_image_alpha(vine.texture.get_image())
+	var polygons: Array[PackedVector2Array] = bitmap.opaque_to_polygons(Rect2i(Vector2i.ZERO, bitmap.get_size()), 2.0)
+	Validation.require_condition(not polygons.is_empty(), "RunScene vine %s has no opaque pixels to collide with." % vine.name)
+	for tile: int in tile_count:
+		var tile_offset: Vector2 = Vector2(0.0, vine.texture.get_height() * tile)
+		for polygon: PackedVector2Array in polygons:
+			var shape: CollisionPolygon2D = CollisionPolygon2D.new()
+			shape.polygon = Transform2D(0.0, tile_offset) * polygon
+			body.add_child(shape)
 
 func _scale_canvas_item_to_fit(item: Node2D, texture_size: Vector2, visible_world_size: Vector2) -> void:
 	Validation.require_condition(texture_size.x > 0.0 and texture_size.y > 0.0, "RunScene environment texture size must be positive.")

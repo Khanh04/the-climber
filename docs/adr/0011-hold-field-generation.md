@@ -77,8 +77,9 @@ sideways.
    a hard error. Measured over 6,000 chunks: 0 hard failures, relaxed attempt
    ~0.1% (after pruning).
 9. **Runtime.** `generation_tuning.chunk_width_meters` is 14.
-   `camera_horizontal_travel_limit_pixels` is 250 (the screen edge reaches the
-   wall edge). The chaser kill zone spans the wall width, centred on the wall,
+   The camera pans sideways until the screen edge meets the outer edge of the
+   side vines, which line the 6.5 m route border; the range is derived from the
+   vine art at runtime, not tuned. The chaser kill zone spans the wall width, centred on the wall,
    instead of the visible width around the camera.
 
 The public seam is unchanged: `DailyChunkGenerator.build_chunk(seed, index)`

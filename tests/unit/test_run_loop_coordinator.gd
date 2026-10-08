@@ -36,30 +36,37 @@ func test_bottom_fall_resolution_requires_active_climb_and_crossing_threshold() 
 func test_camera_target_moves_upward_during_climb() -> void:
 	var coordinator = RunLoopCoordinatorScript.new()
 
-	var target_y: float = coordinator.calculate_camera_target_y(1000.0, 700.0, 160.0, 72.0, RunStateScript.Value.CLIMBING)
+	var target_y: float = coordinator.calculate_camera_target_y(1000.0, 700.0, 160.0, 72.0, RunStateScript.Value.CLIMBING, true)
 
 	assert_eq(target_y, 612.0)
 
 func test_camera_target_holds_position_within_climb_dead_zone() -> void:
 	var coordinator = RunLoopCoordinatorScript.new()
 
-	var target_y: float = coordinator.calculate_camera_target_y(1000.0, 1090.0, 160.0, 72.0, RunStateScript.Value.CLIMBING)
+	var target_y: float = coordinator.calculate_camera_target_y(1000.0, 1090.0, 160.0, 72.0, RunStateScript.Value.CLIMBING, true)
 
 	assert_eq(target_y, 1000.0)
 
 func test_camera_target_holds_position_when_player_descends_while_climbing() -> void:
 	var coordinator = RunLoopCoordinatorScript.new()
 
-	var target_y: float = coordinator.calculate_camera_target_y(540.0, 900.0, 160.0, 72.0, RunStateScript.Value.CLIMBING)
+	var target_y: float = coordinator.calculate_camera_target_y(540.0, 900.0, 160.0, 72.0, RunStateScript.Value.CLIMBING, true)
 
 	assert_eq(target_y, 540.0)
 
 func test_camera_target_follows_downward_during_fall_and_run_end_states() -> void:
 	var coordinator = RunLoopCoordinatorScript.new()
 
-	assert_eq(coordinator.calculate_camera_target_y(540.0, 900.0, 160.0, 72.0, RunStateScript.Value.FALLING), 740.0)
-	assert_eq(coordinator.calculate_camera_target_y(540.0, 900.0, 160.0, 72.0, RunStateScript.Value.RESCUE_OFFERED), 740.0)
-	assert_eq(coordinator.calculate_camera_target_y(540.0, 900.0, 160.0, 72.0, RunStateScript.Value.ENDED), 740.0)
+	assert_eq(coordinator.calculate_camera_target_y(540.0, 900.0, 160.0, 72.0, RunStateScript.Value.FALLING, true), 740.0)
+	assert_eq(coordinator.calculate_camera_target_y(540.0, 900.0, 160.0, 72.0, RunStateScript.Value.RESCUE_OFFERED, true), 740.0)
+	assert_eq(coordinator.calculate_camera_target_y(540.0, 900.0, 160.0, 72.0, RunStateScript.Value.ENDED, true), 740.0)
+
+func test_camera_target_follows_ungripped_climber_downward_while_climbing() -> void:
+	var coordinator = RunLoopCoordinatorScript.new()
+
+	assert_eq(coordinator.calculate_camera_target_y(540.0, 900.0, 160.0, 72.0, RunStateScript.Value.CLIMBING, false), 740.0)
+	assert_eq(coordinator.calculate_camera_target_y(540.0, 900.0, 160.0, 72.0, RunStateScript.Value.CLIMBING, true), 540.0, "A gripped climber swinging down must not drag the camera.")
+	assert_eq(coordinator.calculate_camera_target_y(540.0, 650.0, 160.0, 72.0, RunStateScript.Value.CLIMBING, false), 540.0, "Ungripped follow only moves the camera down.")
 
 func test_camera_target_moves_horizontally_when_player_leaves_dead_zone() -> void:
 	var coordinator = RunLoopCoordinatorScript.new()

@@ -57,6 +57,7 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 - The HUD anchors to the top center of the artwork frame and keeps its metrics and pause button within the portrait screen.
 - `Camera2D` should use heavy smoothing.
 - On falls, the camera must follow the full descent instead of snapping immediately to a death result state.
+- While no hand is gripping, the camera follows the climber downward so they can catch a lower hold and keep climbing. A gripped climber swinging below the camera does not drag it down.
 - Bottom-screen fall detection uses the camera's zoom-adjusted visible world height.
 - Death resolution should pass through a recoverable run-ending state so the shared rescue mechanic can offer either a Rewarded Continue or an inventory Mulligan Drone when eligible.
 
@@ -64,7 +65,7 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 
 | Run-ending event | MVP rescue eligibility | Notes |
 | --- | --- | --- |
-| Bottom-screen fall | Eligible | Let the camera follow the descent before showing the rescue prompt. |
+| Bottom-screen fall | Eligible | Backstop only: the camera follows an ungripped drop, so this fires only when the climber leaves the screen within one frame (e.g. a large hazard impulse). |
 | Stamina-caused grip break leading to fall | Eligible | Counts as a fall recovery, not a stamina refill. |
 | General missed grip / physics fall | Eligible | Eligible only once per run through the shared rescue mechanic. |
 | Chaser contact | Not eligible | Chaser remains the final anti-camping fail state. |

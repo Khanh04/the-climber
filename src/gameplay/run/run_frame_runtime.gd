@@ -28,6 +28,7 @@ func update_camera_follow(
 	camera_horizontal_dead_zone_pixels: float,
 	camera_center_x: float,
 	camera_horizontal_travel_limit_pixels: float,
+	is_player_gripping: bool,
 	camera_shake_offset_pixels: Vector2 = Vector2.ZERO
 ) -> void:
 	var typed_gameplay_nodes: RunGameplayNodeRefsScript = _require_gameplay_nodes(gameplay_nodes)
@@ -53,7 +54,8 @@ func update_camera_follow(
 		player_position.y,
 		camera_player_lower_screen_offset_pixels,
 		camera_vertical_dead_zone_pixels,
-		typed_run_session.get_state()
+		typed_run_session.get_state(),
+		is_player_gripping
 	)
 	# Shake is layered on top of the clean follow target, applied last. The
 	# small transient offset does feed back into next frame's dead-zone read,

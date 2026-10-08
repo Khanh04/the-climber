@@ -1448,15 +1448,22 @@ func test_run_scene_camera_follows_player_horizontally() -> void:
     assert_not_null(camera)
 
     var starting_camera_x: float = camera.global_position.x
-    # Far past dead zone + travel limit, so the camera follows and then clamps.
+    # Far past dead zone + vine edge, so the camera follows and then clamps.
     player_body.global_position = Vector2(player_body.global_position.x + 600.0, player_body.global_position.y)
     playground._physics_process(0.0)
 
     assert_gt(camera.global_position.x, starting_camera_x)
-    assert_eq(
-        camera.global_position.x,
-        starting_camera_x + playground.climb_tuning.camera_horizontal_travel_limit_pixels
-    )
+    # The camera clamps where the screen edge meets each vine's outer edge.
+    var half_view_width: float = playground.climb_tuning.camera_target_visible_width_pixels * 0.5
+    var right_vine: Sprite2D = camera.get_node("TreeRight") as Sprite2D
+    var right_vine_outer_x: float = right_vine.global_position.x + right_vine.region_rect.size.x * right_vine.scale.x
+    assert_almost_eq(camera.global_position.x + half_view_width, right_vine_outer_x, 0.01)
+
+    player_body.global_position = Vector2(player_body.global_position.x - 3000.0, player_body.global_position.y)
+    playground._physics_process(0.0)
+
+    var left_vine: Sprite2D = camera.get_node("TreeLeft") as Sprite2D
+    assert_almost_eq(camera.global_position.x - half_view_width, left_vine.global_position.x, 0.01)
 
 func test_run_scene_camera_holds_horizontal_position_within_dead_zone() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
