@@ -58,9 +58,11 @@ extends Resource
 # Width of the gameplay world visible on every portrait device. Camera zoom
 # derives from this value so interactive objects retain a stable screen size.
 @export var camera_target_visible_width_pixels: float = 900.0
-# Small lateral allowance around the route center. Keeping this below the
-# route's side margin prevents mobile screens from exposing empty world.
-@export var camera_horizontal_travel_limit_pixels: float = 24.0
+# How far the camera may pan sideways from the wall centre to follow the climber.
+# The generated wall (generation_tuning.chunk_width_meters, 14 m) is wider than the
+# visible 9 m, so this is (wall width - visible width) / 2: the screen edge reaches the
+# wall edge, never past it.
+@export var camera_horizontal_travel_limit_pixels: float = 250.0
 # Extra distance below the visible bottom edge before a fall is resolved.
 # Higher values are more forgiving; lower values end the run sooner when dropping.
 @export var bottom_fall_margin_pixels: float = 160.0

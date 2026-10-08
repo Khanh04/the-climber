@@ -1,7 +1,7 @@
 class_name DailySeedKey
 extends RefCounted
 
-const GENERATOR_VERSION: String = "generator_v5"
+const GENERATOR_VERSION: String = "generator_v6"
 
 ## Deterministic seed-string factory (also used directly by tests as a stable, arbitrary
 ## seed key -- callers do not need this to mean "today").

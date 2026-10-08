@@ -36,19 +36,24 @@ func reset_gameplay_state(
 		typed_gameplay_nodes.reset_anchor.global_position.y - camera_player_lower_screen_offset_pixels
 	)
 
+## The kill zone never moves sideways, so it spans the whole wall (or the visible width,
+## whichever is wider) centred on the wall, not on wherever the camera happens to be.
 func reset_chaser_to_player_position(
 	gameplay_nodes: RefCounted,
 	pixels_per_meter: float,
-	viewport_width: float
+	viewport_width: float,
+	wall_width_meters: float
 ) -> void:
 	var typed_gameplay_nodes: RunGameplayNodeRefsScript = _require_gameplay_nodes(gameplay_nodes)
 	Validation.require_condition(pixels_per_meter > 0.0, "RunResetRuntime pixels-per-meter must be positive.")
 	Validation.require_condition(viewport_width > 0.0, "RunResetRuntime viewport width must be positive.")
+	Validation.require_condition(wall_width_meters >= 0.0, "RunResetRuntime wall width cannot be negative.")
+	var visible_width: float = viewport_width / typed_gameplay_nodes.camera.zoom.x
 	typed_gameplay_nodes.chaser_kill_zone.reset_to_player_position(
 		typed_gameplay_nodes.player.get_body_global_position().y,
 		pixels_per_meter,
-		typed_gameplay_nodes.camera.global_position.x,
-		viewport_width / typed_gameplay_nodes.camera.zoom.x
+		typed_gameplay_nodes.reset_anchor.global_position.x,
+		maxf(visible_width, wall_width_meters * pixels_per_meter)
 	)
 
 func _require_gameplay_nodes(gameplay_nodes: RefCounted) -> RunGameplayNodeRefsScript:

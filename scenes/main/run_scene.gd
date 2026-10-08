@@ -990,7 +990,8 @@ func _reset_playground() -> void:
 		_run_reset_runtime.reset_chaser_to_player_position(
 			_gameplay_nodes,
 			_get_climb_tuning_float(&"pixels_per_meter"),
-			get_viewport_rect().size.x
+			get_viewport_rect().size.x,
+			generation_tuning.chunk_width_meters if _uses_generated_chunks() else 0.0
 		)
 
 func _request_restart() -> void:

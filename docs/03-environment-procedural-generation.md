@@ -22,18 +22,18 @@ a possible future direction, not current scope -- see
   layouts for that run; two runs never share a layout.
 - Layouts include a generated opener at the reset anchor, generated
   handholds, normal coin sockets, and hazard sockets.
-- Generated chunks should be evaluated as climbable route problems,
-  not only as lane patterns. Each non-opener problem needs a validated
-  entry, setup, crux or pressure beat, recovery/top-out, and connector
-  into the next chunk window.
+- Generated chunks are hold fields validated as route graphs: every
+  chunk must offer several distinct, reachable routes across a 14 m
+  wall and connect to the next chunk through its seam band.
 - The opener must support first-run onboarding with obvious reachable
   hold pairs, low early punishment, and no misleading cross-screen
   route asks before the player learns the left and right grip loop.
-- The current MVP hazard set is spike clusters, wind gusts,
-  downdrafts, and updrafts through one shared generated-hazard runtime
+- The MVP hazard set is nine kinds (spike clusters, falling rocks,
+  pendulum logs, wind gusts, downdrafts, updrafts, wandering critters,
+  startle puffs, bug swarms) through one shared generated-hazard runtime
   seam.
-- Use daily layouts for shared challenge and future friend ghosts, not
-  for server-authoritative score validation.
+- Layouts are per run (ADR 0008); they are not used for
+  server-authoritative score validation.
 - Keep the first generator simple enough to debug by altitude segment,
   difficulty band, route profile, route role, and validation result.
 - Keep generated chunk lifetimes, spawned pickups, and hazard counts
@@ -61,39 +61,23 @@ a possible future direction, not current scope -- see
 
 ### Generated Opener And Chunk Flow
 
-- Chunk 0 is a generated opener slot, not an authored starter route.
-- The generated chunk coordinator anchors chunk 0 directly at the reset
-  marker with no starter gap.
-- The opener must place at least one reachable left and right handhold
-  pair within the player's initial grip range.
-- The first-row left and right starter holds use fixed physical offsets
-  from the reset anchor before lanes fan outward. Widening the overall
-  chunk must not make the center hold the nearest target for both hands.
-- The opener should bias toward a readable left-right alternation with
-  obvious upward intent and minimal need for advanced pendulum timing.
-- Early opener routes should avoid stacking lethal hazards, dense force
-  hazards, or bait holds that create unfair first-run failures before
-  the onboarding grace period ends.
-- Before the player reaches the normal route cadence, generated chunks
-  should prefer recovery and baseline patterns over challenge-only
-  pressure.
-- Later chunks should follow a deterministic profile schedule that can
-  be reproduced from the daily seed while still avoiding abrupt
-  difficulty cliffs. Baseline, skill, recovery, risk, and
-  challenge-only pressure profiles may remain as coarse labels, but
-  selection should be weighted by altitude, recent profile history,
-  and recovery needs rather than picked uniformly from a flat allowed
-  list.
-- Within each selected route profile, chunk archetypes should also be
-  chosen by deterministic slot-aware weighting so recovery chunks bias
-  toward denser central lines, risk chunks bias toward forked or
-  hazard-denial branches, and pressure chunks bias toward sparse or
-  commitment-heavy shapes without collapsing to one archetype.
-- Vertical density should be authored per chunk archetype through
-  explicit row-step tuning. Chunk segment height remains a ceiling and
-  seam budget, not the source of row spacing.
-- Chunk spawn and despawn windows around the camera must never change
-  layout content or chunk metadata.
+See [ADR 0011](adr/0011-hold-field-generation.md) for the full model.
+
+- The wall is 14 m wide, wider than the 9 m visible screen; the camera pans
+  sideways to follow the climber and the chaser spans the whole wall.
+- Chunk 0 is a generated opener. Two fixed starter holds sit 0.8 m either side
+  of the reset anchor, inside the player's initial grip range, and the route
+  corridors start near them and fan out across the wall by 6 m. The opener has
+  no hazards and only `NORMAL`/`REST` holds.
+- Every chunk is a hold field grown on top of the previous chunk's top 2.4 m.
+  There are no fixed entry or exit lanes, so a seam is just more wall.
+- Four route corridors wander up the wall, seeded from the run seed and kept
+  at least 2.6 m apart. In every 36 m stretch one corridor fades out for a few
+  metres, forcing a traverse.
+- Every chunk must offer three distinct routes in EASY and BASELINE and two in
+  CHALLENGE, each within the band's move limit (1.3 / 1.7 / 2.1 m).
+- Chunk spawn and despawn windows around the camera must never change layout
+  content or chunk metadata.
 
 ### Bouldering-Style Route Model
 
@@ -266,35 +250,21 @@ aliases over a smaller ruleset.
 
 ### Current MVP Hazard Set
 
-#### Spike Clusters
+Nine hazard kinds are generated. Hazards per chunk scale by band (0 in the
+opener, 1 in EASY, 2 in BASELINE, 3 in CHALLENGE), and the share drawn from the
+lethal pool grows with the band.
 
-- Spawn as generated lethal hazard sockets.
-- Use them to deny risky or pressure lanes and end the run immediately
-  on contact.
-
-#### Wind Gusts
-
-- Spawn as force hazards that release attachments, clear active grip
-  joints, and apply a lateral or upward impulse without forcing the
-  run into the falling state.
-- Use them as the default non-lethal disruption in baseline or easy
-  skill chunks.
-
-#### Downdrafts
-
-- Spawn as force hazards that release attachments, clear active grip
-  joints, and push the player downward while keeping re-grabs
-  available.
-- Reserve them for challenge-band skill slots where timing pressure
-  should increase without making the hazard instantly lethal.
-
-#### Updrafts
-
-- Spawn as force hazards that release attachments, clear active grip
-  joints, and launch the player upward while preserving recovery
-  inputs.
-- Use them in opener and recovery slots so early chunks feel dynamic
-  without requiring an authored handoff.
+- **Lethal** (`SPIKE_CLUSTER`, `FALLING_ROCK`, `PENDULUM_LOG`): end the run on
+  contact. Their motion envelope (rock: 1.8 m drop; log: 0.48 m arm, ±0.9 rad)
+  may only cover holds when the chunk still offers K-1 distinct routes without
+  them. Never on a route source, never over a coin.
+- **Force** (`WIND_GUST`, `DOWNDRAFT`, `UPDRAFT`, `WANDERING_CRITTER`): release
+  the grip and push the player. They land on the easiest route about 40% of the
+  time and on another route otherwise. Updrafts sit in the middle of a route's
+  longest move.
+- **Nuisance** (`STARTLE_PUFF`, `BUG_SWARM`): camera shake / screen obscure.
+  Bug swarms sit next to a coin.
+- Hazards keep at least 1.5 m apart.
 
 ## Implementation Notes
 
@@ -325,95 +295,30 @@ aliases over a smaller ruleset.
 
 ### Route Graph And Validation
 
-- The generator rewrite uses a route-first model. Route intent is planned
-  before handhold geometry, and fixed lane-row templates are replaced by
-  typed route plans, layered anchor graphs, solved paths, support
-  population, deterministic hold-type assignment, and hazard-intent
-  placement.
-- Use five logical lanes for route planning: outer-left, inner-left,
-  center, inner-right, and outer-right. The center lane keeps beginner
-  safe routes readable, while outer lanes make optional traverses visibly
-  distinct.
-- Solve the safe path as a reachability-filtered, row-purpose-weighted
-  walk rather than a fixed per-archetype lane pattern: each row's lane
-  is chosen only from lanes actually within reach of the previous row
-  (real anchor distance, not just an index step), so a valid path is a
-  generation-time guarantee rather than a property checked afterward.
-  Row purpose weights the choice among whatever survives that filter --
-  crux/pressure rows favor bigger, more committing moves; catch rows
-  favor a short rest move; decision/traverse rows favor lateral
-  movement -- so the path's shape actually reflects the row roles it
-  was planned from. See [ADR 0009](adr/0009-reachability-driven-path-solver.md).
-- Keep a minimum lateral clearance, sized to the player's collision
-  footprint, on every lateral move: a lane change must clear that width
-  or it isn't a valid candidate, so a swing is never a near-miss squeeze
-  past the wall. The same clearance excludes support holds from a row's
-  swing envelope around its path anchor.
-- Build each chunk from row roles rather than raw hold counts. MVP row
-  roles are support, decision, traverse, crux, pressure, catch, and
-  top-out. Easy chunks should preserve frequent support and catch rows;
-  challenge chunks may use longer sparse or pressure windows only when
-  recovery appears in the broader schedule.
-- Treat branchable chunks as two-route problems. A branchable plan must
-  include a mandatory safe path and a distinct optional path with explicit
-  split and merge rows, minimum branch separation, and minimum outer-lane
-  occupancy.
-- Horizontal branch quality is a first-class score. Optional paths should
-  earn score for sustained width and lateral movement, and lose score for
-  returning to the center before the merge row.
-- Assign hold types after path solving. `NORMAL` and `REST` support
-  beginner-safe and recovery roles; `BURN` adds stamina pressure on crux
-  or optional lines; `BREAK` is reserved for readable challenge pressure;
-  `BOOST` is a deliberate connector or fast-branch tool, not random
-  decoration.
-- Place hazards from typed route intent. Spike clusters deny or tax risky
-  and reward branches, wind gusts shape traverse timing, downdrafts add
-  challenge pressure, and updrafts provide recovery or connector relief.
-  Hazards must not block the only safe path.
-- Random hazard variants must preserve their intent's mechanic. Crux
-  pressure remains a downdraft, recovery lift remains an updraft, and
-  selection only varies among equivalent denial or traverse-force hazards.
-  Falling rocks repeat a vertical lethal drop so they remain active when
-  their chunk reaches the player.
-- Reject invalid candidates. A generated chunk must not fall back to an
-  invalid layout when safe-path, branch, seam, support, hazard, or
-  hold-type constraints fail.
-- Build the primary handhold path before placing rewards and hazards.
-  Handhold placement should own route readability; pickup and hazard
-  passes should react to route roles rather than redefine the path.
-- Use the runtime grip envelope as a validation input. The first
-  implementation distinguishes center-to-center `STATIC_REACH` from the
-  larger, explicitly configured `SWING_REACH` envelope. Opener acquisition
-  uses the live player's grip radius, while swing-assisted route edges are
-  separately typed and tested.
-- Preserve the ordered mandatory safe-path hold IDs through emission.
-  Interior validation must not use support or optional-beta holds to hide
-  a broken mandatory route.
-- Validate chunk interiors and chunk seams. A layout is not acceptable
-  if rows are locally reachable but the exit-to-entry gap between
-  adjacent chunks is not supported by a connector rule.
-- Use a small deterministic generate-and-test budget per chunk. If the
-  generator cannot produce a valid candidate within that budget, fail
-  fast with seed, chunk index, profile, and validation reason rather
-  than silently falling back to unrelated content.
-- Salt each candidate attempt deterministically and evaluate the full
-  budget. Cache only the best candidate whose interior and incoming seam
-  both validate; exhausted generation returns no layout in release builds.
-- Score accepted candidates for target difficulty, route readability,
-  novelty, optional beta quality, recovery availability, object count,
-  and hazard fairness. Keep the score deterministic so identical seeds
-  choose identical layouts.
-- Candidate scoring should include route-role coverage, route-intent
-  socket alignment, and hazard fairness so the accepted chunk is not
-  merely valid, but also readable as a compact bouldering problem.
-- Weighted route-slot selection should account for altitude, recent
-  profile history, and recovery needs, not only flat membership in an
-  allowed list, so profile pacing and route shape reinforce one another.
-- Add distribution tests across multiple dates and chunk ranges so
-  weighted profile changes do not accidentally remove recovery chunks,
-  overproduce hazards, or create repeated crux styles.
-- See [ADR 0006](adr/0006-route-first-generation-rewrite.md) for the
-  route-first rewrite decision, data model, and validation scope.
+- Holds are linked in a reach graph (`HoldReachGraph`): an edge exists when the
+  edge-to-edge gap fits the 2.2 m move envelope and the target is at most
+  0.12 m lower. Edge length is the hold centre distance.
+- Difficulty is the bottleneck: the longest move on the easiest route. Each
+  band has a move limit and a target range (`BandFieldProfile`).
+- Choice is counted as distinct routes from the previous chunk's seam band to
+  this chunk's seam band. Routes are searched along each corridor first, then
+  the easiest route overall, then an open search; a route counts only when it
+  stays on average at least 1.75 m from every counted route.
+- When a chunk is short of routes, repair adds holds in the middle of too-long
+  moves on each corridor (or a spine up a corridor with no path), then prunes
+  holds no one can reach.
+- Up to three candidates per chunk; the first close to the band's target is
+  kept. If none is valid, one relaxed attempt (EASY field, no hazards, one
+  route fewer) runs through the same validation and logs a warning. A chunk
+  that still fails is a hard error. The wall never ships with a gap.
+- After routes are found, holds no route needs are pruned: the easiest route keeps every
+  hold, alternative routes keep only the holds they need within the band's move limit,
+  each route is continued into the top 1.2 m and every hold in that top slice stays.
+  Routes are recounted after pruning.
+- `safe_path_hold_ids` is the easiest route; the easiest route only uses the
+  band's safe hold types. Coins sit on holds off the easiest route.
+- Measurement harness: `tools/generation/` dumps chunks headlessly and checks
+  route counts, move lengths, wall width used, hazard placement and timing.
 
 ### Handhold Type Model
 
@@ -466,7 +371,10 @@ aliases over a smaller ruleset.
 ### Mobile Object Budgets
 
 - Cap active generated content by chunk window rather than letting
-  object counts grow with run length.
+  object counts grow with run length. Each band profile caps holds per
+  chunk (`max_hold_count`, 90, plus up to 24 repair holds) and pruning
+  then removes holds no route needs; measured medians are ~48 / 38 / 28
+  holds in EASY / BASELINE / CHALLENGE.
 - Keep live pickup counts, force hazards, and transient scatter bodies
   inside explicit Android performance budgets before adding more route
   variety.

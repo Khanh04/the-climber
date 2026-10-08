@@ -35,7 +35,7 @@ To run a single GUT test file from the editor, use the GUT panel (addons/gut). F
 | `src/gameplay/player/` | Ragdoll, grip, stamina, hand attachment, rescue hooks |
 | `src/gameplay/run/` | Run state machine, death taxonomy, fall timing, retry flow, rescue orchestration |
 | `src/gameplay/chaser/` | Chaser motion, pacing, kill-zone, theme hooks |
-| `src/gameplay/generation/` | Daily seed, route-first chunk generation pipeline, altitude-band placement |
+| `src/gameplay/generation/` | Run seed, hold-field chunk generation (corridors, reach graph, decoration), altitude bands |
 | `src/gameplay/hazards/` | Hazard contact services |
 | `src/gameplay/pickups/` | Coin pickup services |
 | `src/economy/` | Wallet, coin ledger, consumables, reward grants |
@@ -63,7 +63,7 @@ To run a single GUT test file from the editor, use the GUT panel (addons/gut). F
 
 ### Generation Pipeline
 
-Chunk generation is route-first (`src/gameplay/generation/`): plan route intent (`ChunkRoutePlan`) → solve path on a five-lane anchor graph → populate handholds by row role → assign `HandholdType` deterministically from seed + chunk index → place hazards from typed intents. All generation is deterministic from a UTC daily seed key. Invalid candidates are hard errors — no silent fallback.
+Chunk generation builds a hold field per 12 m chunk on a 14 m wall (`src/gameplay/generation/`, [ADR 0011](docs/adr/0011-hold-field-generation.md)): sample holds along four seeded corridors (`HoldFieldSampler`) on top of the previous chunk's seam band → link them in a reach graph (`HoldReachGraph`) → require K distinct routes within the band's move limit (`BandFieldProfile`), repairing gaps → assign hold types, coins and hazards (`FieldChunkDecorator`). All generation is deterministic from the run seed. Invalid candidates are never emitted; a logged relaxed attempt is the only fallback, then a hard error.
 
 ### Configuration Resources
 

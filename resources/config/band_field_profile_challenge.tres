@@ -1,0 +1,19 @@
+[gd_resource type="Resource" script_class="BandFieldProfile" load_steps=2 format=3]
+
+[ext_resource type="Script" path="res://resources/config/band_field_profile.gd" id="1_band"]
+
+[resource]
+script = ExtResource("1_band")
+corridor_hold_spacing_meters = 1.2
+corridor_half_width_meters = 0.9
+scatter_hold_spacing_meters = 2.5
+corridor_count = 4
+max_route_move_meters = 2.1
+min_easiest_route_move_meters = 1.4
+required_route_count = 2
+max_hold_count = 90
+hazard_count = 3
+lethal_hazard_share = 0.45
+coin_count = 3
+special_hold_chance = 0.3
+extra_hold_keep_ratio = 0.0

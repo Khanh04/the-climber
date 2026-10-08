@@ -1448,7 +1448,8 @@ func test_run_scene_camera_follows_player_horizontally() -> void:
     assert_not_null(camera)
 
     var starting_camera_x: float = camera.global_position.x
-    player_body.global_position = Vector2(player_body.global_position.x + 180.0, player_body.global_position.y)
+    # Far past dead zone + travel limit, so the camera follows and then clamps.
+    player_body.global_position = Vector2(player_body.global_position.x + 600.0, player_body.global_position.y)
     playground._physics_process(0.0)
 
     assert_gt(camera.global_position.x, starting_camera_x)

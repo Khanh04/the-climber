@@ -3,7 +3,7 @@ extends GutTest
 const UtcDateScript = preload("res://src/platform/clock/utc_date.gd")
 
 func test_from_utc_date_uses_generator_version_and_full_date() -> void:
-    assert_eq(DailySeedKey.from_utc_date(2026, 5, 11), "generator_v5:2026-05-11")
+    assert_eq(DailySeedKey.from_utc_date(2026, 5, 11), "generator_v6:2026-05-11")
 
 func test_current_run_uses_generator_version_prefix() -> void:
     var seed_key: String = DailySeedKey.current_run()

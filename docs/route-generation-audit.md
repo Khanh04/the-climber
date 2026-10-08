@@ -7,62 +7,100 @@ difficulty fairness, progression/stakes, reach/grab clarity.
 The random per-run seed is **intentional** (endless, no shared daily challenge), so it is not
 treated as a bug here.
 
-Status: findings only — no changes applied.
+Status: **superseded.** On 2026-10-07 the route-first generator audited here was replaced by
+the hold-field generator ([ADR 0011](adr/0011-hold-field-generation.md)). Findings about the
+deleted internals (plan builder, lane solver, population builder, route validator, slot
+scheduler) no longer apply; runtime findings (T3/D2 `MISSED_GRIP_FALL`, T6 assert-based
+validation, C4 stamina, T12 main-thread generation) still do. Measurement harness:
+`tools/generation/`.
+
+- **First audit:** 2026-10-02 (findings T1–T12, A1–D3).
+- **Re-audit:** 2026-10-07, after the fix commits `9a9d9a6` … `ef873f0`, `5037b27`, `f61c06c`.
+  Every earlier finding now carries a status, and new findings are numbered N1–N10.
+  Sources: code review of the current tree, plus a headless run of the real generator over
+  150 run seeds x 15 chunks (2,250 chunks, 0–180 m) to measure N1, N2, N4 and N11.
 
 ---
 
 ## How generation works today
 
 ```
-DailySeedKey.current_run()  ("generator_v5:run:<ticks>-<randi>")   <- only entropy source
+DailySeedKey.current_run()  ("generator_v5:run:<usec>-<randi>")   <- only entropy source
+  -> GeneratedChunkCoordinator._ensure_chunk  (main thread, synchronous)
   -> DailyChunkGenerator.build_chunk(seed, index)
-      builds every predecessor 0..index (cached), each via a 3-candidate loop:
-        ChunkRouteGenerationPipeline.build_layout    (run TWICE per candidate)
-          1. ChunkRoutePlanBuilder       -> 11-row role template + branch contract + hazard intents
+      builds every predecessor 0..index (cached, evicted behind the player), each via a
+      candidate loop (route_validation_candidate_attempt_count, default 3):
+        ChunkRouteGenerationPipeline.build_layout    (once per candidate)
+          1. ChunkRoutePlanBuilder       -> 11-row role template (seeded rotation)
+                                            + branch contract + hazard intents
           2. RouteAnchorGraphBuilder     -> 5 lanes x 11 rows = 55 anchors, jittered
-          3. ChunkRoutePathSolver        -> safe path (weighted per-row walk) + optional/branch path
-          4. ChunkRoutePopulationBuilder -> path holds, support holds, 1 reward, hazards
+          3. ChunkRoutePathSolver        -> safe path (weighted lane walk, anti-ladder)
+                                            + seeded optional/branch path
+          4. ChunkRoutePopulationBuilder -> path holds, support holds, 1-3 rewards, hazards
           5. ChunkRouteLayoutEmitter     -> GeneratedChunkLayout
         RoutePathValidator.validate_layout  -> BFS over SAFE-PATH HOLDS ONLY to an exit port
-        validate_chunk_seam(prev, candidate)
-      keep the candidate with the HIGHEST candidate_score; if all 3 fail -> return null
+        validate_chunk_seam(prev, candidate)          <- cached, see N1
+      chunk 0: keep the highest least-committing score
+      chunk 1+: keep a seeded pick among candidates within 0.05 of the target difficulty
+      all candidates fail -> return null -> coordinator spawns nothing (wall gap)
 ```
 
-Key invariants baked in: every chunk is exactly **11 rows / 12 m tall / ~0.985 m row pitch**.
-Difficulty is a 3-step function of altitude: EASY `<50 m` (chunks 0–4), BASELINE `<100 m`
-(5–8), CHALLENGE `9+`. Bootstrap chunks 1–3 are always BASELINE/SKILL/RECOVERY regardless of
-seed.
+Fixed invariants: every chunk is **11 rows / 12 m tall / ~0.985 m row pitch**. Difficulty
+band by altitude: EASY `<50 m` (chunks 0–4), BASELINE `<100 m` (5–8), CHALLENGE `9+`, plus a
+continuous altitude bonus of 0.15 per 100 m above 100 m (cap 0.6). Chunks 0–3 are always
+OPENER / BASELINE / SKILL / RECOVERY; from chunk 4 the slot is a weighted seeded pick.
+
+Hazard intents per slot, and the kind each resolves to:
+
+| Slot | Intents |
+|---|---|
+| OPENER | Recovery lift |
+| RECOVERY | Recovery lift, Safe-route relief |
+| SKILL | Traverse force, Crux pressure |
+| RISK | Branch denial, Reward greed |
+| PRESSURE | Crux pressure, Branch denial |
+| BASELINE | Safe-route relief, Traverse force |
+
+| Intent | Kind | Anchored on |
+|---|---|---|
+| Branch denial | Spike 64% / Falling rock 29% / Pendulum log 7% | optional path, last outer row |
+| Traverse force | Wind gust 80% / Wandering critter 20% | optional path if any, else **safe path** |
+| Crux pressure | Downdraft | **safe path**, pressure row |
+| Reward greed | Bug swarm | first reward's anchor |
+| Recovery lift | Updraft | **safe path**, first CATCH row |
+| Safe-route relief | Startle puff | **safe path**, last CATCH row |
 
 ---
 
 ## Part 1 — Technical issues
 
-### Bugs / dead code
+### Prior findings
 
-| # | Issue | Location |
-|---|---|---|
-| T1 | `_get_merge_row_index` — both `match` arms `return row_roles.size() - 2`. The CHALLENGE-specific merge row the structure implies does not exist. | `chunk_route_plan_builder.gd:245-250` |
-| T2 | Public `get_route_slot_for_chunk` builds a **different seed** (`"<ver>:route_profile_preview"`) than real generation. Any UI/telemetry/test calling it reads a fiction — it does not match what the run built. | `daily_chunk_generator.gd:249-256` |
-| T3 | `MISSED_GRIP_FALL` is defined, rescue-eligible, and has end-screen copy, but **is never raised**. Whiffed grabs fall off the bottom and get logged as `BOTTOM_SCREEN_FALL`. Any "cause of death" data is wrong. | `run_end_reason.gd:7`, `rescue_eligibility.gd:13`, `run_end_screen.gd:80` |
-| T4 | `run_scene.tscn` inline `Resource_generation` sets 8 fields that **no longer exist** on `GenerationTuning` (`handhold_assignment_rules`, `ladder_hold_rows`, `zigzag_hold_rows`, …). Silently ignored. | `scenes/main/run_scene.tscn:119-131` |
-| T5 | ~11 tuning knobs are validated (some test-poked) but **unused by the route-first pipeline**: `target_difficulty_score`, `target_support_score`, `max_sparse_row_streak`, `non_opener_row_base_height_meters`, `setup/crux/top_out_zone_upper_ratio`, `route_port_row_tolerance_meters`, `socket_count_per_chunk`, `pickup_socket_ratio`, `pickup_lateral_offset_meters`, `pickup/hazard_branch_side_alignment_meters`. Designers turning these see nothing happen. | `generation_tuning.gd`, `route_validation_tuning.gd`, `chunk_route_plan_builder.gd:276-326` |
+| # | Status | Issue (original) → current state | Location |
+|---|---|---|---|
+| T1 | FIXED `9a9d9a6` | Merge row both arms identical → now a seeded pick of `size-2` / `size-1`. `difficulty_band` arg is validated but unused. | `chunk_route_plan_builder.gd:280-285` |
+| T2 | FIXED `9a9d9a6` | `get_route_slot_for_chunk` used a different seed → method deleted. | — |
+| T3 | **OPEN** | `MISSED_GRIP_FALL` defined, rescue-eligible, has end-screen copy, **never raised**. Only `STAMINA_FALL` (`run_session.gd:63`) and `BOTTOM_SCREEN_FALL` (`bottom_screen_fall_service.gd:25`) are emitted. | `run_end_reason.gd:7` |
+| T4 | FIXED `9a9d9a6` | Phantom `.tscn` fields removed. Leftover: `handhold_definitions = null` overrides the script default — confirm intended. | `run_scene.tscn:121-123` |
+| T5 | FIXED `4d720f2` | Dead tuning knobs removed. | `generation_tuning.gd`, `route_validation_tuning.gd` |
+| T6 | **OPEN** | "Hard errors" are still `push_error` + `assert`; release builds strip `assert`, so every guard becomes log-and-continue. See also N8. | `validation.gd:4-9` |
+| T7 | PARTIAL | Attempt count is now tunable but defaults to 3, with no escalation. All fail → `null` → coordinator logs and **leaves a wall gap**. N1 makes "all fail" more likely. | `daily_chunk_generator.gd:110-111`, `generated_chunk_coordinator.gd:88-90` |
+| T8 | **OPEN** | Validator graphs safe-path holds only; hazards are invisible to it. Stacking was moved upstream (B4) but see N3. | `route_graph_builder.gd:32-33` |
+| T9 | FIXED `4557111` | Seam now applies the downward-move limit. | `route_path_validator.gd:152-158` |
+| T10 | FIXED `00eb6d0` | All seeded decisions use `DeterministicHash.of_string`; no `String.hash()` left. | — |
+| T11 | FIXED `4d720f2`, **caused regression N1** | Caches evicted behind the player. The seam key dropped instance ids and no longer distinguishes candidates. | `daily_chunk_generator.gd:56, 289-290` |
+| T12 | PARTIAL `29e61ed` | Each candidate is built once now. Generation is still synchronous on the main thread at every 12 m boundary. | `generated_chunk_coordinator.gd:87` |
 
-### Robustness
+### New findings
 
-| # | Issue | Detail |
-|---|---|---|
-| T6 | "Hard errors, no silent fallback" is **debug-only**. `Validation.require_condition` is `push_error` + `assert`; Godot strips `assert()` in exported builds. Every `_find_*_row` "role missing", `_select_allowed_handhold_type` "could not select", solver "no reachable lane", and every `assert_valid` becomes *log-and-continue-with-bad-state* in a shipped build. `validation.gd:4-9` |
-| T7 | All-3-candidates-fail -> `build_chunk` returns `null` -> coordinator logs an error and **spawns nothing = a physical gap in the wall mid-climb**. Only 3 attempts, no escalation, run continues. `daily_chunk_generator.gd:75-77`, `generated_chunk_coordinator.gd:88-90` |
-| T8 | **Hazards bypass validation entirely.** `RoutePathValidator` graphs only safe-path holds; it never sees hazard sockets. A hazard on the sole reachable crux hold, two stacked hazards, or a hazard on the entry hold cannot fail generation. `route_graph_builder.gd:42-66` |
-| T9 | Seam validator applies **no downward-move limit** (`max_downward_move_meters` 0.12) even though intra-chunk edges do. A chunk exit slightly above the next entry passes the seam when the equivalent in-chunk move would be rejected. `route_path_validator.gd:141-166` |
-| T10 | **Two hashers.** `RouteAnchorGraphBuilder` uses a hand-rolled FNV-1a (version-stable); everything else — plan style, branch side, safe-path lane walk, handhold types, hazard kinds, route-slot RNG seed — uses Godot `String.hash()`, which is **not contractually stable across Godot versions**. A Godot upgrade can silently reshuffle every route while the jitter stays put. `route_anchor_graph_builder.gd:153-159` |
-| T11 | `_chunk_layout_cache` / `_route_slot_cache` are **never evicted** — unbounded growth over a long run. `_chunk_seam_cache` key includes `get_instance_id()` of freed layouts; ids are recycled after `free()` -> theoretical stale hit. `daily_chunk_generator.gd:33-35` |
-
-### Performance
-
-| # | Issue | Detail |
-|---|---|---|
-| T12 | `_ensure_chunk` runs the **full generator synchronously on the main thread** at every 12 m boundary: 3 candidates x (plan + graph + solve + populate + emit) **run twice each** (preliminary for validation, then final with result embedded) + seam validation. Potential frame spike every chunk. First `build_chunk(N)` also builds all predecessors `0..N`. Node count itself (~120 live) is fine. `daily_chunk_generator.gd:52-80`, `chunk_route_generation_pipeline.gd:98,110` |
+| # | Sev | Issue | Location |
+|---|---|---|---|
+| N1 | FIXED 2026-10-07 | **Seam cache shared across candidates.** The key was `seed\|i\|i+1`, so every candidate of a chunk reused the first candidate's seam result. The key now includes both layouts' candidate attempt index; regression test `test_each_candidate_gets_its_own_seam_check`. | `daily_chunk_generator.gd` `_get_chunk_seam_cache_key` |
+| N7 | LOW | Solver failure asserts instead of counting as a failed candidate attempt. | `chunk_route_generation_pipeline.gd:80` |
+| N8 | LOW | **Silent fallbacks**, which break the "no silent fallback" rule once asserts are stripped (T6): `return Vector2.ZERO` after `require_condition(false)` (`daily_chunk_generator.gd:315`); hazard kind defaults to SPIKE (`chunk_route_population_builder.gd:616`); `minf` quietly trims `opener_top_padding` 1.5 → 1.43 **with the shipped default tuning** (`chunk_route_generation_pipeline.gd:132`). | — |
+| N9 | LOW | **Dead / duplicated code.** `_require_route_port_hold_ids` is never called (`route_path_validator.gd:300-305`). Graph `move_kind` (centre distance) disagrees with the reach check (edge gap) and is never read, nor is node `route_role` (`route_graph_builder.gd:60, 84, 96-97`). `_measure_gap_distance` / `_measure_downward_gap` are copy-pasted in the validator and graph builder. Validator defaults hard-code `0.12` / `0.96` from tuning. Anchor-builder lane-ratio defaults (0.28/0.82) differ from tuning (0.425/0.8). `route_validation_result` / `candidate_score` params of `build_layout` are always `null` / `0.0`. `_build_candidate_score`'s `-1.0` branch is unreachable. | various |
+| N9b | LOW | **Typing.** Internal modules talk through `RefCounted` + `.call("populate")` / `.call("validate_layout")` / `.get()` / `.set()` instead of typed calls; untyped `Array` in `route_path_validator.gd:55,230,254`, `route_graph_builder.gd:45`; Variant loop var `for row_offset in [1, -1, 2, -2]` (`chunk_route_population_builder.gd:531`). Mixed tabs/spaces in several generation files. | pipeline, validator, population builder |
+| N10 | LOW | Post-PRESSURE slot multipliers (Recovery +7, Pressure x0, Risk x0.2, Skill/Baseline x0.5) are hard-coded, not tuning. `route_profile_tuning.tres` overrides nothing, so all slot weights are script defaults. | `daily_chunk_generator.gd:384-389` |
 
 ---
 
@@ -70,70 +108,118 @@ seed.
 
 ### A. Repetition / sameness
 
-| # | Issue |
-|---|---|
-| A1 | **Fixed macro-structure.** Every chunk = 11 rows, 12 m, ~0.985 m pitch, forever. No variation in chunk length, row count, or vertical rhythm anywhere in a run. `chunk_route_generation_pipeline.gd:106-119` |
-| A2 | **~7 role templates total,** chosen purely by `(slot, band)`. Two chunks with the same slot+band get an **identical** 11-row role sequence; the only differences are the lane walk, handhold types, and <=0.08 m / <=0.2 m jitter. `chunk_route_plan_builder.gd:95-219` |
-| A3 | **Bootstrap chunks 1–3 are seed-independent** (BASELINE/SKILL/RECOVERY). Combined with A1–A2 and A4, the **first ~48 m of every run is structurally identical.** `daily_chunk_generator.gd:297-307` |
-| A4 | **Movement style is a pure function of slot** for 5 of 6 slots; only BASELINE flips LADDER/ZIGZAG on a coin-flip. `FORK` style is defined but **never produced.** `chunk_route_plan_builder.gd:55-78` |
-| A5 | **Optional/branch path is unseeded** — a fixed inner/outer alternation. Every branch of a given side+span is byte-identical; branch chunks in a band feel the same. `chunk_route_path_solver.gd:290-318` |
-| A6 | **Branch chunks are mostly on-rails.** With `split_row_index = 1` (non-EASY) and `merge = row_count-2`, only the middle rows have free lane choice; rows 0–1 and merge–10 are forced. `chunk_route_path_solver.gd:153-163` |
-| A7 | **Candidate scoring rewards the gentlest route.** `score = max_move - largest_move_on_path`, and the selector keeps the **maximum**. Of 3 rolls, the least-committing wins every time — a built-in difficulty suppressor *and* variety killer. `daily_chunk_generator.gd:121-133, 71-73` |
-| A8 | **Weak anti-ladder pressure.** Only a `x0.5` weight penalty for matching the lane from *two* rows back; a lane repeated only 1 row back is unpenalized. A run of SUPPORT rows can still hash into a dead-straight vertical ladder. `chunk_route_path_solver.gd:250-251` |
-| A9 | **Rewards** never appear on OPENER or BASELINE slots, and there is **at most one per chunk.** Long stretches with nothing to chase off-route. `chunk_route_population_builder.gd:349-350` |
+| # | Status | Current state |
+|---|---|---|
+| A1 | **OPEN** | Every chunk is still 11 rows / 12 m / ~0.985 m pitch. `generation_tuning.gd:16`, `chunk_route_generation_pipeline.gd:116` |
+| A2 | PARTIAL `aed3949` | Still 8 base templates chosen by `(slot, band)`; a seeded rotation of the 8 interior rows gives up to 8 orderings of the same role set. `chunk_route_plan_builder.gd:87-111` |
+| A3 | PARTIAL `aed3949` | Chunks 1–3 slot order is still fixed (BASELINE/SKILL/RECOVERY); their row order and BASELINE style now vary by seed. `daily_chunk_generator.gd:395-403` |
+| A4 | **OPEN** | Movement style is still slot-determined except BASELINE's coin flip; `FORK` is never produced. `chunk_route_plan_builder.gd:55-78` |
+| A5 | FIXED `fdc8fc8` | Branch path is seeded. `chunk_route_path_solver.gd:~327` |
+| A6 | PARTIAL `fdc8fc8` | Merge row seeded; split row still fixed at 1 outside EASY. `chunk_route_plan_builder.gd:272-273` |
+| A7 | FIXED `83491ee` (see N4) | Score is `-\|observed - target\|`, seeded pick within 0.05. Opener keeps the old metric. `daily_chunk_generator.gd:132-139, 207` |
+| A8 | FIXED `26d8943` | Same lane three rows running → weight 0.05; previous lane x0.6; two-back x0.5. `chunk_route_path_solver.gd:254-259` |
+| A9 | FIXED `30108a0` | 1 reward (2 in CHALLENGE), -1 on opener, seeded +1; no slot excluded. `chunk_route_population_builder.gd:381-388` |
+| N6 | LOW (new) | **Rare hazard kinds.** `_select_hazard_kind` weights by `(n-i)²`: pendulum log 1/14 ≈ 7%, wandering critter 1/5 = 20%. Two of nine hazards are close to invisible. The same weighting is reused for handhold types. `chunk_route_population_builder.gd:618-635` |
 
 ### B. Difficulty fairness
 
-| # | Issue |
-|---|---|
-| B1 | **The "safe path" guarantee is graph connectivity, not physical achievability.** Player static grab radius = **0.96 m**, but generation routinely emits ~1.97 m lane-change moves and ~2.15 m seam moves, up to a 2.2 m cap. Everything past 0.96 m is a dynamic swing/lunge the generator **never simulates** — no stamina model, no swing physics, no seconds-per-move budget, no limit on consecutive swing moves. Whether these routes are fair rests entirely on swing feel with no corresponding check. `route_graph_builder.gd:68-108`, `route_validation_tuning.gd:5-9` |
-| B2 | **Forced-path hazards are never validated and stack an unmodelled multiplier on the lowest-margin move.** `CRUX_PRESSURE` -> DOWNDRAFT placed *directly on* the safe-path crux hold, positioned in the swing corridor, and contact **force-releases both hands**. `RECOVERY_LIFT` -> UPDRAFT on the safe-path CATCH hold. The route grader can't see any of it. `chunk_route_population_builder.gd:436-449`, `chunk_route_layout_emitter.gd:184-208` |
-| B3 | **No safety net for overshoots.** `max_downward_move_meters = 0.12` means there is essentially never a catch hold below a target. A swing that overshoots slightly and lands below the intended hold has nothing to grab -> fall. `route_validation_tuning.gd:9` |
-| B4 | **No hazard<->hazard or hazard<->path spacing.** Multiple intents can resolve to the same anchor (e.g. PRESSURE slot's `[CRUX_PRESSURE, OPTIONAL_BRANCH_DENIAL]`), stacking two hazards on one hold with no dedup. `chunk_route_population_builder.gd:367-399` |
-| B5 | **Every chunk seam is a ~2.15 m move, right at the 2.2 m cap, every 12 m,** validated geometrically only. Deliberately tuned to "just inside the envelope" — no margin for a bad jitter roll or a tired player. `chunk_route_generation_pipeline.gd:121-129` |
+| # | Status | Current state |
+|---|---|---|
+| B1 | **OPEN** | Static reach 0.96 m vs move cap 2.2 m; no limit on consecutive swing moves, no swing simulation. Only additions: 0.15 m jitter margin, body-width clearance. `route_validation_tuning.gd:5-17` |
+| B2 | **OPEN** | Downdraft still on the safe-path crux hold, updraft on the safe-path CATCH hold, both force-release the grip. See N2, N3, N5. `chunk_route_population_builder.gd:576, 586` |
+| B3 | **OPEN** | `max_downward_move_meters = 0.12` — still no catch hold below a target. `route_validation_tuning.gd:9` |
+| B4 | FIXED `4557111`, **undercut by N3** | Colliding hazards are nudged ±1/±2 rows — but the last fallback stacks them anyway. |
+| B5 | **OPEN** | Seam move still ≈2.15 m, 0.05 m under the 2.2 m cap. `chunk_route_generation_pipeline.gd:127-138` |
+| N2 | MED (new) | **Hazard motion is never checked.** Falling rock spawns 0.6 m above its anchor and falls 1.8 m (180 px at 100 px/m) — about two rows, sweeping past its hold and roughly one row below. Pendulum log sways ±0.38 m and dips 0.18 m; critter roams ±0.7 m. Branch-denial anchors sit on the optional path's last outer row, so a rock near the split can fall into rows where the safe path uses that lane. The primary coin and the branch-denial hazard can share an anchor. Motion constants are in pixels and won't follow a `pixels_per_meter` change. Measured: 0 lethal sweeps over a safe-path hold in 2,250 chunks — branch rows keep the safe path on the far side — so this is a missing guard, not a live bug. `generated_hazard_spawn_adapter.gd:21-27`, `chunk_route_population_builder.gd:561-565` |
+| N3 | MED (new) | **Nudge fallback stacks hazards and can move one onto the safe path.** Order: optional path → safe path → return the already-occupied anchor. A lethal kind is never pushed onto the safe path today only because branch denial is always the first intent placed. `chunk_route_population_builder.gd:504-521` |
+| N5 | MED (new) | **5 of 6 hazard intents land on the safe path** (crux pressure, recovery lift, safe-route relief, traverse force without a branch, reward greed when the reward is on a safe row). Force hazards on the safe path release both hands. The design doc says "Hazards must not block the only safe path". `chunk_route_population_builder.gd:568-588`, `run_scene.gd:939` |
 
 ### C. Progression / stakes
 
-| # | Issue |
-|---|---|
-| C1 | **Difficulty is a 3-step function that caps at 100 m.** After chunk 9 nothing changes — same target scores, same hold pools, same separation minimums, forever. An endless climber with a finite difficulty ceiling. `daily_chunk_generator.gd:238-247` |
-| C2 | **The chaser never scales with altitude** and never exceeds ~1.0 m/s in practice (`max_rise_speed = 5.0` is unreachable — nothing adds beyond `+0.5`). It only reacts to the player's own last-5 s progress. `chaser_pacing_model.gd:31-58` |
-| C3 | **The chaser speeds up when you're already struggling.** Slow progress -> CAMPING -> chaser rises to 1.0 m/s. A hard chunk that slows the player also *accelerates the threat*. Difficulty and punishment compound instead of the pacing compensating. `chaser_pacing_model.gd:34-48` |
-| C4 | **The stamina/grip pillar is inert in the shipped scene.** `run_scene.tscn` overrides `one_hand_seconds` to **100.0** (default 8.0). At 100 s the BURN (1.35x) and greasy (3x) drain multipliers are meaningless, and the generator's careful placement of BURN holds on CRUX rows buys an endurance cost that doesn't exist. Either the endurance design isn't in effect, or 8.0 is the real target and 100.0 is debug debt. `scenes/main/run_scene.tscn:117`, `stamina_runtime.gd:34-47` |
-| C5 | **Pressure rhythm is fixed and CHALLENGE-only.** PRESSURE is asserted to zero weight in EASY/BASELINE, and every PRESSURE chunk is always followed by a forced RECOVERY. Predictable pressure->relief cadence high on the wall, no pressure at all low on it. `route_profile_tuning.gd:79-80`, `daily_chunk_generator.gd:284-286` |
-| C6 | **The knobs meant to shape the curve are dead.** `target_difficulty_score` (0.25/0.55/0.85), `target_support_score`, `max_sparse_row_streak` are computed and stored on the plan and **never read** by the solver or population builder. The difficulty curve is entirely implicit in role templates + hold-type pools. |
+| # | Status | Current state |
+|---|---|---|
+| C1 | FIXED `43a14e6`, **undercut by N4** | Continuous altitude bonus (0.15 / 100 m, cap 0.6). Also thins support holds above ~167 m. |
+| C2 | FIXED `5037b27` | Chaser +0.35 m/s per 100 m above 50 m; the 5.0 m/s cap is reached around 1.2 km. `chaser_pacing_model.gd:66-68` |
+| C3 | FIXED `5037b27` | Camping bonus fades to zero by ~193 m. `chaser_pacing_model.gd:53-54` |
+| C4 | **OPEN** | `one_hand_seconds = 100.0` still disables the stamina pillar. `run_scene.tscn:119` |
+| C5 | FIXED `ef873f0` | After PRESSURE, RECOVERY is boosted, not forced; BASELINE band PRESSURE weight 0.25. EASY still 0. |
+| C6 | PARTIAL `43a14e6` | `target_difficulty_score` is now read by the selector. `target_support_score`, `max_sparse_row_streak` are still unread. |
+| N4 | PARTIAL 2026-10-07 | **Difficulty was flat across bands.** Three causes: (1) the selector measured the validator's BFS path, which takes the fewest hops and skips rows, so every route read as ~0.8; (2) band targets (0.25 / 0.55 / 0.85+) sat outside the reachable range — a straight-up route alone scores ~0.45; (3) the solver's lane weights ignored the band. Fixes: the selector measures the designed safe path (`_observed_route_difficulty`); targets are 0.52 / 0.60 / 0.68 with smaller slot offsets and a quarter-weighted altitude bonus; the solver ranks moves by a band preference for short moves (EASY `(1-r)^3`, BASELINE `(1-r)^1.5`; the opener is exempt), applied before the anti-ladder rules, and a third same-lane row is effectively banned. A first version applied the preference after the anti-ladder floor and turned 75% of EASY chunks into 4+ row vertical ladders; that is fixed. Measured over 2,250 chunks, before → after: mean move EASY 1.60 → 1.38 m, BASELINE 1.57 → 1.43 m, CHALLENGE 1.58 → 1.56 m; moves past the 0.96 m edge-to-edge reach 71% → 48% / 68% → 54% / 70% → 68%; 4+ row ladders 1% → 0%. Still PARTIAL: at full lane width the shortest non-straight move is ~1.8 m, so EASY and BASELINE stay close. Narrower EASY lanes (half width) measured 1.20 m / 30% / worst 1.31 m with no ladders, but break the 65%-of-wall spread rule. Test: `test_safe_path_moves_get_longer_from_easy_to_challenge_band` (fails at full width: EASY 1.39 vs BASELINE 1.46 m). |
+
+| N11 | MED (new) | **Coins sit under lethal hazards; the greed hazard misses them.** Measured: 172/172 falling rocks and 44/44 pendulum logs share their spot with a coin, while 0/395 bug swarms do. Branch denial and reward greed both resolve to the reward anchor; branch denial is placed first and keeps it, and the bug swarm is nudged away. Players see coins inside rocks and logs, and the swarm guards nothing. `chunk_route_population_builder.gd:561-573` |
 
 ### D. Reach / grab clarity
 
-| # | Issue |
-|---|---|
-| D1 | **The aim preview overstates the real grab radius.** The preview line is `max(160, 96 x 1.75) = 168 px`; the actual grab happens within **96 px**. Players are taught the wrong distance and will whiff moves that looked in range. `run_scene.gd:763` |
-| D2 | **`MISSED_GRIP_FALL` never fires** (see T3) — a whiffed grab and a genuine fall-off-the-bottom look the same to the player and to analytics. No feedback that says "you were short." |
-| D3 | **Grab is pure nearest-distance, no directionality.** `run_handhold_targeting_runtime.gd:28-29` picks the closest hold in radius regardless of whether it's above, below, or behind the intended move. Combined with the monotonic-up layout, an overshoot can grab a hold you didn't mean to and break your rhythm. |
+| # | Status | Current state |
+|---|---|---|
+| D1 | FIXED `f61c06c` | Aim preview uses the real 96 px detection radius. `run_scene.gd:776` |
+| D2 | **OPEN** | Same as T3 — no "you were short" feedback. |
+| D3 | FIXED `f61c06c` | Targeting score is `distance / alignment` with aim-direction alignment. `run_handhold_targeting_runtime.gd:38-43` |
 
 ---
 
-## Part 3 — Recommendations (ranked by fun-per-effort)
+## Part 3 — Doc drift
 
-Directional only — each is a design change, not a step-by-step plan.
+`docs/03-environment-procedural-generation.md` no longer matches the code:
 
-1. **Fix the candidate selector (A7).** It currently optimizes for *least* spice. Score candidates on a target difficulty *band* (closest-to-target, not smallest-move), or just keep a seeded random pick among the 3 valid ones. Biggest single lever for both variety and challenge, tiny change.
-2. **Vary the macro-structure (A1–A2).** Let `segment_height_meters` / row count vary per chunk (seeded), and add 2–3x more role templates per `(slot, band)` with a seeded pick. Kills the "every chunk is 11 rows" feel.
-3. **Seed the branch path and de-rail branch chunks (A5–A6).** Give the optional path a seeded lane walk like the safe path, and widen the free-choice window (`split_row_index` earlier, `merge` later).
-4. **Break the identical opening (A3).** Seed the bootstrap slots, or at least seed their templates/styles, so the first 48 m differs run to run.
-5. **Add a real difficulty ramp past 100 m (C1).** Make target difficulty a continuous function of altitude (or add CHALLENGE sub-tiers) so an endless run keeps escalating.
-6. **Make the chaser a real progression axis (C2–C3).** Add a slow altitude-based speed term, and stop the camping bonus from punishing players who are slow *because the route is hard* (e.g. cap the camping bonus when local route difficulty is high, or base "camping" on stationary time not distance).
-7. **Validate hazards (B2, B4, T8).** Feed hazard sockets into `RoutePathValidator`: reject a hazard on the sole reachable hold of a row, dedupe stacked hazards, enforce minimum hazard<->hazard and hazard<->forced-hold spacing.
-8. **Add physical-achievability to validation (B1, B3).** Cap consecutive `SWING_REACH` edges on the safe path, and/or add a cheap swing-cost budget per chunk. Add occasional catch holds slightly below crux targets so a small overshoot is recoverable.
-9. **Resolve the stamina question (C4).** Decide whether endurance pressure is a pillar. If yes, set `one_hand_seconds` back toward 8–20 and tune around it; if no, delete the BURN/greasy multiplier machinery.
-10. **Fix grab feedback (D1–D3).** Match the aim preview to the real 96 px radius, raise `MISSED_GRIP_FALL` on a grip press with a target just outside radius, and bias grab target selection toward the aim direction.
-11. **Housekeeping (T1, T2, T4, T5, T10, T11).** Delete dead `merge_row_index` arm; align `get_route_slot_for_chunk` seed with real generation or drop the method; strip the 8 phantom `.tscn` fields and the dead tuning knobs; pick one hasher (the FNV-1a) for all seeded decisions to survive Godot upgrades; cap or evict the caches.
+- `:32`, `:267` — the "MVP hazard set" lists 4 kinds; the generator places 9.
+- `:288` — downdrafts are "challenge-band skill only"; code uses them in SKILL at every band
+  and in PRESSURE.
+- `:281` — wind is listed for baseline / easy-skill chunks; code uses it in every band, and
+  20% of the time it is a critter.
+- `:372` — "Hazards must not block the only safe path" is violated (N5).
+- `:378`, `:384-392` — candidate rejection and scoring are described as covering support,
+  hazards, readability and novelty; code rejects on safe-path reachability and seam only and
+  scores on mean hop vs target.
+- `:92` — row step is tuned per archetype; every template is 11 rows with one derived step.
+- `:320` — hazard density scales by band; it is fixed at 1–2 intents per slot.
+- `:35`, `:81`, `:138-152` — still describe daily layouts; the seed is per-run.
+
+## Part 4 — Test gaps
+
+Existing generation tests cover determinism, caches, seams across 24 dates x 30 chunks, slot
+distributions, hazard kinds per slot, support clearance, and the solver move envelope.
+Missing:
+
+- A test that each candidate gets its own seam result (would have caught N1).
+- Hazard placement and motion envelopes vs safe-path holds (N2, N3, N5).
+- Coin reachability, and the optional path's move envelope.
+- Fuzzing over `DailySeedKey.current_run()` seeds; tests only use date seeds.
+- That observed difficulty can reach each band's target (N4).
+- Graceful handling of solver failure (N7) and of the nudge stacking fallback (N3).
 
 ---
 
-## Part 4 — Open design questions
+## Part 5 — Recommendations (ranked)
 
-- **Is endurance (stamina) a gameplay pillar?** The shipped `one_hand_seconds = 100.0` says no; the handhold catalog and BURN placement say yes. This decision gates recommendation 9 and roughly a third of the config surface.
-- **Should difficulty be authored (bands/templates) or parametric (continuous target score)?** The dead `target_difficulty_score` machinery suggests parametric was intended but abandoned. Picking one determines whether recommendations 1, 5, and C6 are "wire up the existing knobs" or "delete them."
-- **How committing should moves be by default?** The 0.96 m static reach vs. 2.2 m move cap gap means the game is *already* a swing game, but nothing acknowledges or tunes that. Worth an explicit call on the intended ratio.
-- `DailySeedKey.from_utc_date` / `to_rng_seed` are now test-only dead code given the intentional random seed — safe to delete unless a daily-challenge mode is on the roadmap.
+Directional only — each is a change to plan separately.
+
+1. ~~Seam cache (N1)~~ done. **Difficulty curve (N4)** partly done: decide between full-width
+   EASY lanes (small curve) and narrower EASY lanes (clear curve, breaks the 65% spread rule).
+   Also vary chunk entry/exit lanes: every chunk enters at x≈-0.8 and exits at x≈0, so every
+   boundary is the same ~2.3 m hop — the hardest move in EASY (B5).
+2. **Validate hazards and fix coin overlap (N11, N2, N3, N5, T8, B2).** Keep coins off lethal
+   hazards and put the bug swarm on the coin. Feed hazard sockets and their motion envelopes
+   into `RoutePathValidator`; reject a candidate where a lethal sweep crosses a safe-path
+   hold; make the nudge fail the candidate instead of stacking; decide which force hazards
+   are allowed on the safe path and update the design doc to match.
+3. **Stop shipping wall gaps (T7, T6, N7, N8).** Escalate on failure (more attempts, then a
+   known-safe fallback template flagged as such), count solver failures as failed attempts,
+   and make validation fail loudly in release builds.
+4. **Resolve the stamina question (C4)** and **raise `MISSED_GRIP_FALL` (T3/D2).**
+5. **Variety (A1, A4, A6, N6).** Seed chunk height/row count, produce `FORK`, seed the split
+   row, flatten the hazard-kind weighting so all nine hazards appear.
+6. **Fairness (B1, B3, B5).** Cap consecutive swing moves, allow an occasional catch hold just
+   below a crux target, add margin to the seam move.
+7. **Housekeeping (N9, N9b, N10, C6) and doc drift (Part 3).**
+
+## Part 6 — Open design questions
+
+- **Is endurance (stamina) a gameplay pillar?** Still gated on `one_hand_seconds = 100.0`.
+- **Which hazards may sit on the safe path?** Updraft and startle puff are arguably fine
+  there; downdraft on the crux hold and wind on BASELINE safe rows force-release the grip on
+  the only route.
+- **What should "difficulty" measure?** Mean safe-path move length now separates the bands,
+  but it ignores hazards, swing streaks and hold types.
+- `DailySeedKey.from_utc_date` / `to_rng_seed` are test-only given the per-run seed — delete
+  unless a daily-challenge mode is planned.

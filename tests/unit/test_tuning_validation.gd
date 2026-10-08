@@ -7,7 +7,7 @@ const ChaserThemeCatalogScript = preload("res://resources/config/chaser_theme_ca
 const GenerationTuningScript = preload("res://resources/config/generation_tuning.gd")
 const HandholdTypeDefinitionCatalogScript = preload("res://resources/config/handhold_type_definition_catalog.gd")
 const HandholdTypeDefinitionScript = preload("res://resources/config/handhold_type_definition.gd")
-const RouteProfileTuningScript = preload("res://resources/config/route_profile_tuning.gd")
+const BandFieldProfileScript = preload("res://resources/config/band_field_profile.gd")
 const RouteValidationTuningScript = preload("res://resources/config/route_validation_tuning.gd")
 const ChaserThemeScript = preload("res://resources/config/chaser_theme.gd")
 const ChaserTuningScript = preload("res://resources/config/chaser_tuning.gd")
@@ -85,11 +85,25 @@ func test_route_validation_player_body_width_matches_player_collision_footprint(
 
     assert_almost_eq(tuning.player_body_width_meters, expected_body_width_meters, 0.01)
 
-func test_default_route_profile_tuning_is_valid() -> void:
-    var tuning: RouteProfileTuningScript = load("res://resources/config/route_profile_tuning.tres") as RouteProfileTuningScript
+func test_default_band_field_profiles_are_valid() -> void:
+    for path: String in [
+        "res://resources/config/band_field_profile_easy.tres",
+        "res://resources/config/band_field_profile_baseline.tres",
+        "res://resources/config/band_field_profile_challenge.tres",
+    ]:
+        var profile: BandFieldProfileScript = load(path) as BandFieldProfileScript
+        assert_not_null(profile, path)
+        assert_true(profile.is_valid(), path)
 
-    assert_not_null(tuning)
-    assert_true(tuning.is_valid())
+func test_band_field_profiles_get_harder_with_altitude() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var easy: BandFieldProfileScript = tuning.get_field_profile(ChunkDifficultyBandScript.Value.EASY)
+    var baseline: BandFieldProfileScript = tuning.get_field_profile(ChunkDifficultyBandScript.Value.BASELINE)
+    var challenge: BandFieldProfileScript = tuning.get_field_profile(ChunkDifficultyBandScript.Value.CHALLENGE)
+
+    assert_lt(easy.max_route_move_meters, baseline.max_route_move_meters)
+    assert_lt(baseline.max_route_move_meters, challenge.max_route_move_meters)
+    assert_lt(easy.corridor_hold_spacing_meters, challenge.corridor_hold_spacing_meters)
 
 func test_default_handhold_type_definition_catalog_is_valid() -> void:
     var catalog: HandholdTypeDefinitionCatalogScript = load("res://resources/config/handhold_type_definition_catalog.tres") as HandholdTypeDefinitionCatalogScript
@@ -97,17 +111,17 @@ func test_default_handhold_type_definition_catalog_is_valid() -> void:
     assert_not_null(catalog)
     assert_true(catalog.is_valid())
 
-func test_default_handhold_widths_leave_visual_lane_gap() -> void:
+func test_default_handhold_widths_leave_a_visual_gap_at_the_tightest_hold_spacing() -> void:
     var catalog: HandholdTypeDefinitionCatalogScript = load("res://resources/config/handhold_type_definition_catalog.tres") as HandholdTypeDefinitionCatalogScript
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    var center_to_inner_lane_spacing_meters: float = tuning.chunk_width_meters * 0.5 * tuning.inner_lane_position_ratio
+    var tightest_spacing_meters: float = tuning.get_field_profile(ChunkDifficultyBandScript.Value.EASY).corridor_hold_spacing_meters
     var minimum_visual_gap_meters: float = 0.02
 
     assert_not_null(catalog)
     for definition_resource in catalog.definitions:
         assert_true(definition_resource is HandholdTypeDefinitionScript)
         var definition: HandholdTypeDefinitionScript = definition_resource as HandholdTypeDefinitionScript
-        assert_lte(definition.physical_size_meters.x, center_to_inner_lane_spacing_meters - minimum_visual_gap_meters)
+        assert_lte(definition.physical_size_meters.x, tightest_spacing_meters - minimum_visual_gap_meters)
 
 func test_generation_tuning_duplicates_authored_default_handhold_resources() -> void:
     var first_tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -116,21 +130,21 @@ func test_generation_tuning_duplicates_authored_default_handhold_resources() -> 
     var second_definition: HandholdTypeDefinitionScript = second_tuning.handhold_definitions[0] as HandholdTypeDefinitionScript
     var first_route_validation_tuning: RouteValidationTuningScript = first_tuning.route_validation_tuning as RouteValidationTuningScript
     var second_route_validation_tuning: RouteValidationTuningScript = second_tuning.route_validation_tuning as RouteValidationTuningScript
-    var first_route_profile_tuning: RouteProfileTuningScript = first_tuning.route_profile_tuning as RouteProfileTuningScript
-    var second_route_profile_tuning: RouteProfileTuningScript = second_tuning.route_profile_tuning as RouteProfileTuningScript
+    var first_easy_profile: BandFieldProfileScript = first_tuning.easy_field_profile as BandFieldProfileScript
+    var second_easy_profile: BandFieldProfileScript = second_tuning.easy_field_profile as BandFieldProfileScript
 
     assert_not_null(first_definition)
     assert_not_null(second_definition)
     assert_not_null(first_route_validation_tuning)
     assert_not_null(second_route_validation_tuning)
-    assert_not_null(first_route_profile_tuning)
-    assert_not_null(second_route_profile_tuning)
+    assert_not_null(first_easy_profile)
+    assert_not_null(second_easy_profile)
     assert_ne(first_definition, second_definition)
     assert_ne(first_definition.surface_profile, second_definition.surface_profile)
     assert_ne(first_definition.lifecycle_rule, second_definition.lifecycle_rule)
     assert_ne(first_definition.movement_rule, second_definition.movement_rule)
     assert_ne(first_route_validation_tuning, second_route_validation_tuning)
-    assert_ne(first_route_profile_tuning, second_route_profile_tuning)
+    assert_ne(first_easy_profile, second_easy_profile)
 
 func test_invalid_generation_tuning_is_detected() -> void:
     var tuning = GenerationTuningScript.new()
@@ -150,18 +164,36 @@ func test_generation_tuning_rejects_non_increasing_difficulty_band_heights() -> 
 
     assert_false(tuning.is_valid())
 
-func test_generation_tuning_rejects_invalid_lane_position_ratios() -> void:
-    var tuning = GenerationTuningScript.new()
-    tuning.inner_lane_position_ratio = tuning.outer_lane_position_ratio
+func test_generation_tuning_rejects_a_band_profile_needing_more_routes_than_corridors() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    var profile: BandFieldProfileScript = tuning.get_field_profile(ChunkDifficultyBandScript.Value.BASELINE)
+    profile.required_route_count = profile.corridor_count + 1
 
     assert_false(tuning.is_valid())
 
-func test_generation_tuning_rejects_opener_spacing_that_exceeds_chunk_height() -> void:
-    var tuning = GenerationTuningScript.new()
-    tuning.opener_first_row_height_meters = tuning.segment_height_meters * 0.8
-    tuning.opener_top_padding_meters = tuning.segment_height_meters * 0.25
+func test_generation_tuning_rejects_opener_row_outside_the_first_chunk() -> void:
+    var tuning: GenerationTuningScript = GenerationTuningScript.new()
+    tuning.opener_first_row_height_meters = tuning.segment_height_meters
 
     assert_false(tuning.is_valid())
+
+func test_band_field_profile_rejects_route_moves_shorter_than_hold_spacing() -> void:
+    var profile: BandFieldProfileScript = BandFieldProfileScript.new()
+    profile.max_route_move_meters = profile.corridor_hold_spacing_meters
+
+    assert_false(profile.is_valid())
+
+func test_band_field_profile_rejects_a_keep_ratio_outside_zero_to_one() -> void:
+    var profile: BandFieldProfileScript = BandFieldProfileScript.new()
+    profile.extra_hold_keep_ratio = 1.1
+
+    assert_false(profile.is_valid())
+
+func test_band_field_profile_rejects_a_move_floor_above_its_ceiling() -> void:
+    var profile: BandFieldProfileScript = BandFieldProfileScript.new()
+    profile.min_easiest_route_move_meters = profile.max_route_move_meters
+
+    assert_false(profile.is_valid())
 
 func test_generation_tuning_rejects_invalid_route_validation_tuning() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
@@ -179,26 +211,15 @@ func test_generation_tuning_rejects_static_reach_above_swing_envelope() -> void:
 
     assert_false(tuning.is_valid())
 
-func test_generation_tuning_restores_missing_default_route_tunings_before_validation() -> void:
+func test_generation_tuning_rejects_missing_route_validation_tuning() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
-
     tuning.route_validation_tuning = null
-    tuning.route_profile_tuning = null
 
-    assert_true(tuning.is_valid())
-    assert_true(tuning.route_validation_tuning is RouteValidationTuningScript)
-    assert_true(tuning.route_profile_tuning is RouteProfileTuningScript)
+    assert_false(tuning.is_valid())
 
-func test_generation_tuning_rejects_invalid_route_profile_tuning() -> void:
+func test_generation_tuning_rejects_missing_band_field_profile() -> void:
     var tuning: GenerationTuningScript = GenerationTuningScript.new()
-    var route_profile_tuning: RouteProfileTuningScript = tuning.route_profile_tuning as RouteProfileTuningScript
-
-    assert_not_null(route_profile_tuning)
-    route_profile_tuning.easy_baseline_weight = 0.0
-    route_profile_tuning.easy_skill_weight = 0.0
-    route_profile_tuning.easy_recovery_weight = 0.0
-    route_profile_tuning.easy_risk_weight = 0.0
-    route_profile_tuning.easy_pressure_weight = 0.0
+    tuning.challenge_field_profile = null
 
     assert_false(tuning.is_valid())
 

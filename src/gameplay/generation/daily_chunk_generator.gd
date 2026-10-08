@@ -1,42 +1,35 @@
 class_name DailyChunkGenerator
 extends RefCounted
 
-const ChunkRouteGenerationPipelineScript = preload("res://src/gameplay/generation/chunk_route_generation_pipeline.gd")
-const ChunkRoutePlanBuilderScript = preload("res://src/gameplay/generation/chunk_route_plan_builder.gd")
-const RouteProfileTuningScript = preload("res://resources/config/route_profile_tuning.gd")
-const RouteValidationTuningScript = preload("res://resources/config/route_validation_tuning.gd")
-const RoutePathValidatorScript: GDScript = preload("res://src/gameplay/generation/route_path_validator.gd")
+## Builds the endless wall chunk by chunk from a run seed. Each chunk is a hold field
+## (FieldChunkPipeline) grown on top of the previous chunk's seam band, so chunks are
+## built in order and cached. See docs/adr/0011-hold-field-generation.md.
 
-## Candidates whose observed difficulty lands this close to the best are treated
-## as tied and settled by the seeded tie-break.
-# ponytail: fixed heuristic band; Phase 7 retunes it alongside the reach envelope.
-const CANDIDATE_DIFFICULTY_TOLERANCE: float = 0.05
+const FieldChunkPipelineScript = preload("res://src/gameplay/generation/field_chunk_pipeline.gd")
+const HoldReachGraphScript = preload("res://src/gameplay/generation/hold_reach_graph.gd")
+const RouteValidationTuningScript = preload("res://resources/config/route_validation_tuning.gd")
+
+## A valid candidate whose easiest-route bottleneck lands this close to the band's target
+## is kept without building the remaining candidates (generation runs on the main thread).
+const GOOD_ENOUGH_SCORE_MISS_METERS: float = 0.2
 
 var _tuning: GenerationTuning
-var _route_path_validator: RefCounted
-var _route_generation_pipeline: ChunkRouteGenerationPipelineScript
-var _route_entry_anchor_positions: Array[Vector2]
-var _route_slot_cache: Dictionary
-var _chunk_layout_cache: Dictionary
-var _chunk_seam_cache: Dictionary
+var _pipeline: FieldChunkPipelineScript
+var _chunk_layout_cache: Dictionary[String, GeneratedChunkLayout]
+var _chunk_seam_cache: Dictionary[String, GeneratedChunkSeamValidationResult]
 
+## static_reach_distance_meters is accepted for call-site compatibility; the hold field
+## measures difficulty by move length, not by the static reach threshold.
 func _init(tuning_value: GenerationTuning, static_reach_distance_meters: float = -1.0) -> void:
 	Validation.require_condition(tuning_value != null, "DailyChunkGenerator requires generation tuning.")
 	_tuning = tuning_value
 	_tuning.assert_valid()
-	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
-	var effective_static_reach_distance_meters: float = route_validation_tuning.static_reach_distance_meters
-	if static_reach_distance_meters > 0.0:
-		effective_static_reach_distance_meters = static_reach_distance_meters
-	Validation.require_condition(effective_static_reach_distance_meters <= route_validation_tuning.max_move_distance_meters, "DailyChunkGenerator runtime static reach cannot exceed the swing move envelope.")
-	_route_path_validator = _build_route_path_validator(
-		route_validation_tuning.max_move_distance_meters,
-		route_validation_tuning.max_downward_move_meters,
-		effective_static_reach_distance_meters
+	var validation_tuning: RouteValidationTuningScript = _tuning.get_route_validation_tuning()
+	Validation.require_condition(
+		static_reach_distance_meters <= validation_tuning.max_move_distance_meters,
+		"DailyChunkGenerator runtime static reach cannot exceed the swing move envelope."
 	)
-	_route_generation_pipeline = ChunkRouteGenerationPipelineScript.new(_tuning)
-	_route_entry_anchor_positions = route_validation_tuning.duplicate_entry_anchor_positions()
-	_route_slot_cache = {}
+	_pipeline = FieldChunkPipelineScript.new(_tuning)
 	_chunk_layout_cache = {}
 	_chunk_seam_cache = {}
 
@@ -44,293 +37,15 @@ func build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
 	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative.")
 	Validation.require_condition(
 		seed_key.begins_with(_tuning.generator_version + ":"),
-        "DailyChunkGenerator seed key must match the configured generator version."
+		"DailyChunkGenerator seed key must match the configured generator version."
 	)
 	for pending_chunk_index in range(_get_first_uncached_predecessor_index(seed_key, chunk_index), chunk_index + 1):
 		var pending_cache_key: String = _get_chunk_cache_key(seed_key, pending_chunk_index)
-		if _chunk_layout_cache.has(pending_cache_key):
-			continue
-		if not _build_and_cache_chunk(seed_key, pending_chunk_index, pending_cache_key):
-			return null
+		if not _chunk_layout_cache.has(pending_cache_key):
+			_chunk_layout_cache[pending_cache_key] = _build_chunk(seed_key, pending_chunk_index)
 
 	_evict_chunk_caches_before(seed_key, chunk_index - _retained_chunk_history_count())
-	return _get_cached_chunk_layout(seed_key, chunk_index)
-
-## Walks back from chunk_index only as far as the nearest cached chunk. Predecessors
-## are required for the incoming-seam check and the route-slot history walk; anything
-## further back was already retired by _evict_chunk_caches_before on an earlier call.
-func _get_first_uncached_predecessor_index(seed_key: String, chunk_index: int) -> int:
-	var earliest_required_index: int = chunk_index
-	while earliest_required_index > 0 and not _chunk_layout_cache.has(_get_chunk_cache_key(seed_key, earliest_required_index - 1)):
-		earliest_required_index -= 1
-	return earliest_required_index
-
-## Chunks kept behind the highest built index. Covers the coordinator's keep-behind
-## window plus its spawn-ahead reach so a steady climb never rebuilds a retired chunk.
-func _retained_chunk_history_count() -> int:
-	return _tuning.chunk_keep_behind_count + _tuning.chunk_spawn_ahead_count + 1
-
-func _evict_chunk_caches_before(seed_key: String, min_retained_chunk_index: int) -> void:
-	if min_retained_chunk_index <= 0:
-		return
-	_evict_indexed_cache_before(_chunk_layout_cache, seed_key, min_retained_chunk_index, 1)
-	_evict_indexed_cache_before(_route_slot_cache, seed_key, min_retained_chunk_index, 1)
-	_evict_indexed_cache_before(_chunk_seam_cache, seed_key, min_retained_chunk_index, 2)
-
-## Drops cache entries for a different run or below the retained window. Layout and
-## route-slot keys are "<seed>|<index>"; seam keys are "<seed>|<current>|<next>".
-func _evict_indexed_cache_before(cache: Dictionary, seed_key: String, min_retained_chunk_index: int, index_field_count: int) -> void:
-	for cache_key in cache.keys():
-		var key_parts: PackedStringArray = str(cache_key).rsplit("|", true, index_field_count)
-		var is_stale: bool = key_parts.size() != index_field_count + 1 or key_parts[0] != seed_key or key_parts[1].to_int() < min_retained_chunk_index
-		if is_stale:
-			var _erased: bool = cache.erase(cache_key)
-
-func _build_and_cache_chunk(seed_key: String, chunk_index: int, cache_key: String) -> bool:
-	var previous_layout: GeneratedChunkLayout = null
-	if chunk_index > 0:
-		previous_layout = _get_cached_chunk_layout(seed_key, chunk_index - 1)
-
-	var valid_candidates: Array[GeneratedChunkLayout] = []
-	var candidate_failure_reasons: PackedStringArray = PackedStringArray()
-	for candidate_attempt_index in range(_tuning.route_validation_candidate_attempt_count):
-		var candidate_layout: GeneratedChunkLayout = _build_chunk_candidate(seed_key, chunk_index, candidate_attempt_index)
-		var route_validation_result: RefCounted = candidate_layout.route_validation_result
-		if route_validation_result == null or not _route_validation_result_is_valid(route_validation_result):
-			var _append_route_failure_result: bool = candidate_failure_reasons.append("attempt %d route: %s" % [candidate_attempt_index, _require_validation_failure_reason(route_validation_result)])
-			continue
-		if previous_layout != null:
-			var seam_result: RefCounted = validate_chunk_seam(previous_layout, candidate_layout)
-			if not _seam_validation_result_is_valid(seam_result):
-				var _append_seam_failure_result: bool = candidate_failure_reasons.append("attempt %d seam: %s" % [candidate_attempt_index, _require_validation_failure_reason(seam_result)])
-				continue
-		valid_candidates.append(candidate_layout)
-
-	if valid_candidates.is_empty():
-		push_error("DailyChunkGenerator exhausted %d candidate attempts without a valid route and incoming seam for chunk %d: %s" % [_tuning.route_validation_candidate_attempt_count, chunk_index, "; ".join(candidate_failure_reasons)])
-		return false
-
-	if chunk_index == 0:
-		_chunk_layout_cache[cache_key] = _select_strict_best_candidate(valid_candidates)
-	else:
-		_chunk_layout_cache[cache_key] = _select_candidate_closest_to_target(valid_candidates, seed_key, chunk_index)
-	return true
-
-## Legacy selection: single highest candidate_score, earliest attempt wins a tie.
-## Kept for the opener so chunk 0 stays byte-identical to pre-A7 output.
-func _select_strict_best_candidate(candidates: Array[GeneratedChunkLayout]) -> GeneratedChunkLayout:
-	var selected: GeneratedChunkLayout = candidates[0]
-	for candidate_index in range(1, candidates.size()):
-		if candidates[candidate_index].candidate_score > selected.candidate_score:
-			selected = candidates[candidate_index]
-	return selected
-
-## Highest candidate_score = closest to the chunk's target difficulty. Among the
-## candidates tied within CANDIDATE_DIFFICULTY_TOLERANCE of the best, pick one by
-## a per-chunk seeded hash so two runs at the same (slot, band) diverge instead of
-## both taking the earliest attempt.
-func _select_candidate_closest_to_target(candidates: Array[GeneratedChunkLayout], seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
-	var best_score: float = -INF
-	for candidate in candidates:
-		best_score = maxf(best_score, candidate.candidate_score)
-
-	var contenders: Array[GeneratedChunkLayout] = []
-	for candidate in candidates:
-		if best_score - candidate.candidate_score <= CANDIDATE_DIFFICULTY_TOLERANCE:
-			contenders.append(candidate)
-
-	var tie_break_index: int = DeterministicHash.of_string("%s:candidate_tiebreak:%d" % [seed_key, chunk_index]) % contenders.size()
-	return contenders[tie_break_index]
-
-func _get_cached_chunk_layout(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
-	var cache_key: String = _get_chunk_cache_key(seed_key, chunk_index)
-	Validation.require_condition(_chunk_layout_cache.has(cache_key), "DailyChunkGenerator requires predecessor chunks to be cached before access.")
-	var cached_layout_variant: Variant = _chunk_layout_cache[cache_key]
-	Validation.require_condition(cached_layout_variant is GeneratedChunkLayout, "DailyChunkGenerator chunk cache must store GeneratedChunkLayout values.")
-	var cached_layout: GeneratedChunkLayout = cached_layout_variant
-	return cached_layout
-
-func _build_chunk_candidate(seed_key: String, chunk_index: int, candidate_attempt_index: int) -> GeneratedChunkLayout:
-	Validation.require_condition(candidate_attempt_index >= 0, "DailyChunkGenerator candidate attempt index cannot be negative.")
-	Validation.require_condition(_route_generation_pipeline != null, "DailyChunkGenerator requires a route generation pipeline.")
-
-	var start_height_meters: float = float(chunk_index) * _tuning.segment_height_meters
-	var difficulty_band: int = get_difficulty_band_for_height(start_height_meters)
-	var route_slot: int = _get_route_slot_for_chunk_seeded(seed_key, chunk_index, difficulty_band)
-	var candidate_selection_seed: String = _build_candidate_selection_seed(seed_key, chunk_index, candidate_attempt_index)
-	# Build once. route_validation_result and candidate_score are pure passthrough
-	# fields the emitter just copies onto the layout, so bake them in afterwards
-	# instead of running the whole pipeline a second time (audit T12).
-	var candidate_layout: GeneratedChunkLayout = _route_generation_pipeline.build_layout(
-		seed_key,
-		chunk_index,
-		route_slot,
-		difficulty_band,
-		start_height_meters,
-		null,
-		candidate_attempt_index,
-		0.0,
-		candidate_selection_seed
-	)
-	var route_validation_result: RefCounted = _validate_generated_layout(candidate_layout)
-	candidate_layout.route_validation_result = route_validation_result
-	candidate_layout.candidate_score = _build_candidate_score(candidate_layout, route_validation_result)
-	candidate_layout.assert_valid()
-	return candidate_layout
-
-## Scores a candidate by how close its observed route difficulty sits to the
-## chunk's target for its (route_slot, difficulty_band). Returned as a value the
-## selector maximizes: 0.0 is on target, -1.0 is as far off as possible. The old
-## metric rewarded the least-committing candidate, which flattened difficulty and
-## variety -- see docs/route-generation-audit.md A7.
-##
-## The OPENER keeps the legacy least-committing metric: chunk 0 is an onboarding
-## chunk that must stay gentle and spread, not part of the difficulty ramp. Its
-## spread guarantee is Phase 2's job (A3/A8), not the selector's.
-func _build_candidate_score(layout: GeneratedChunkLayout, route_validation_result: RefCounted) -> float:
-	Validation.require_condition(layout != null, "DailyChunkGenerator candidate scoring requires a layout.")
-	Validation.require_condition(route_validation_result != null, "DailyChunkGenerator candidate scoring requires a validation result.")
-	if not _route_validation_result_is_valid(route_validation_result):
-		return -1.0
-	if layout.route_slot == ChunkRouteSlot.Value.OPENER:
-		return _least_committing_candidate_score(layout, route_validation_result)
-	var observed_difficulty: float = _observed_route_difficulty(layout, route_validation_result)
-	var altitude_difficulty_bonus: float = ChunkRoutePlanBuilderScript.altitude_difficulty_bonus_for(
-		layout.start_height_meters,
-		_tuning.altitude_difficulty_ramp_per_100m,
-		_tuning.altitude_difficulty_bonus_cap,
-		_tuning.baseline_band_max_height_meters
-	)
-	var target_difficulty: float = ChunkRoutePlanBuilderScript.target_difficulty_score_for(
-		layout.route_slot, layout.difficulty_band, altitude_difficulty_bonus
-	)
-	return -absf(observed_difficulty - target_difficulty)
-
-## Legacy metric: swing envelope minus the largest safe-path hop. Higher = more
-## slack on the hardest move.
-func _least_committing_candidate_score(layout: GeneratedChunkLayout, route_validation_result: RefCounted) -> float:
-	var path_hold_ids: PackedStringArray = _require_validation_path_hold_ids(route_validation_result)
-	var maximum_move_distance: float = 0.0
-	for path_index in range(1, path_hold_ids.size()):
-		var from_position: Vector2 = _get_required_handhold_position(layout, path_hold_ids[path_index - 1])
-		var to_position: Vector2 = _get_required_handhold_position(layout, path_hold_ids[path_index])
-		maximum_move_distance = maxf(maximum_move_distance, from_position.distance_to(to_position))
-	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
-	return maxf(0.0, route_validation_tuning.max_move_distance_meters - maximum_move_distance)
-
-## Cheap difficulty proxy in [0, 1]: mean safe-path hop length normalized by the
-## swing move envelope.
-func _observed_route_difficulty(layout: GeneratedChunkLayout, route_validation_result: RefCounted) -> float:
-	var path_hold_ids: PackedStringArray = _require_validation_path_hold_ids(route_validation_result)
-	if path_hold_ids.size() < 2:
-		return 0.0
-	var total_move_distance: float = 0.0
-	for path_index in range(1, path_hold_ids.size()):
-		var from_position: Vector2 = _get_required_handhold_position(layout, path_hold_ids[path_index - 1])
-		var to_position: Vector2 = _get_required_handhold_position(layout, path_hold_ids[path_index])
-		total_move_distance += from_position.distance_to(to_position)
-	var mean_move_distance: float = total_move_distance / float(path_hold_ids.size() - 1)
-	var route_validation_tuning: RouteValidationTuningScript = _get_route_validation_tuning()
-	return clampf(mean_move_distance / route_validation_tuning.max_move_distance_meters, 0.0, 1.0)
-
-func _route_validation_result_is_valid(route_validation_result: RefCounted) -> bool:
-	var raw_is_valid: Variant = route_validation_result.get("is_valid")
-	Validation.require_condition(raw_is_valid is bool, "DailyChunkGenerator route validation result must expose a bool is_valid property.")
-	var is_valid: bool = raw_is_valid
-	return is_valid
-
-func _seam_validation_result_is_valid(seam_validation_result: RefCounted) -> bool:
-	Validation.require_condition(seam_validation_result != null, "DailyChunkGenerator seam validation requires a result.")
-	var raw_is_valid: Variant = seam_validation_result.get("is_valid")
-	Validation.require_condition(raw_is_valid is bool, "DailyChunkGenerator seam validation result must expose a bool is_valid property.")
-	var is_valid: bool = raw_is_valid
-	return is_valid
-
-func _build_route_path_validator(max_move_distance_meters: float, max_downward_move_meters: float, static_reach_distance_meters: float) -> RefCounted:
-	var validator_variant: Variant = RoutePathValidatorScript.new(max_move_distance_meters, max_downward_move_meters, static_reach_distance_meters)
-	Validation.require_condition(validator_variant is RefCounted, "DailyChunkGenerator route path validator must be RefCounted.")
-	var validator: RefCounted = validator_variant
-	return validator
-
-func _validate_generated_layout(layout: GeneratedChunkLayout) -> RefCounted:
-	Validation.require_condition(_route_path_validator != null, "DailyChunkGenerator route path validator must be initialized.")
-	var validation_result_variant: Variant = _route_path_validator.call("validate_layout", layout, _route_entry_anchor_positions)
-	Validation.require_condition(
-		validation_result_variant is RefCounted,
-		"DailyChunkGenerator route validation must return a RefCounted result."
-	)
-	var validation_result: RefCounted = validation_result_variant
-	return validation_result
-
-func validate_chunk_seam(current_layout: GeneratedChunkLayout, next_layout: GeneratedChunkLayout) -> RefCounted:
-	Validation.require_condition(current_layout != null, "DailyChunkGenerator current seam layout cannot be null.")
-	Validation.require_condition(next_layout != null, "DailyChunkGenerator next seam layout cannot be null.")
-	Validation.require_condition(_route_path_validator != null, "DailyChunkGenerator route path validator must be initialized.")
-	current_layout.assert_valid()
-	next_layout.assert_valid()
-	var seam_cache_key: String = _get_chunk_seam_cache_key(current_layout, next_layout)
-	if _chunk_seam_cache.has(seam_cache_key):
-		var cached_seam_result_variant: Variant = _chunk_seam_cache[seam_cache_key]
-		Validation.require_condition(cached_seam_result_variant is RefCounted, "DailyChunkGenerator seam cache must store RefCounted values.")
-		var cached_seam_result: RefCounted = cached_seam_result_variant
-		return cached_seam_result
-	var seam_result_variant: Variant = _route_path_validator.call("validate_chunk_seam", current_layout, next_layout)
-	Validation.require_condition(
-		seam_result_variant is RefCounted,
-		"DailyChunkGenerator seam validation must return a RefCounted result."
-	)
-	var seam_result: RefCounted = seam_result_variant
-	_chunk_seam_cache[seam_cache_key] = seam_result
-	return seam_result
-
-func _get_chunk_cache_key(seed_key: String, chunk_index: int) -> String:
-	return "%s|%d" % [seed_key, chunk_index]
-
-func _get_chunk_seam_cache_key(current_layout: GeneratedChunkLayout, next_layout: GeneratedChunkLayout) -> String:
-	return "%s|%d|%d" % [current_layout.seed_key, current_layout.chunk_index, next_layout.chunk_index]
-
-func _build_candidate_selection_seed(seed_key: String, chunk_index: int, candidate_attempt_index: int) -> String:
-	return "%s:candidate:%d:%d" % [seed_key, chunk_index, candidate_attempt_index]
-
-func _require_validation_path_hold_ids(route_validation_result: RefCounted) -> PackedStringArray:
-	var raw_path_hold_ids: Variant = route_validation_result.get("path_hold_ids")
-	Validation.require_condition(raw_path_hold_ids is PackedStringArray, "DailyChunkGenerator validation path must be a PackedStringArray.")
-	var path_hold_ids: PackedStringArray = raw_path_hold_ids
-	Validation.require_condition(not path_hold_ids.is_empty(), "DailyChunkGenerator valid candidate path cannot be empty.")
-	return path_hold_ids
-
-func _require_validation_failure_reason(validation_result: RefCounted) -> String:
-	if validation_result == null:
-		return "missing validation result"
-	var raw_failure_reason: Variant = validation_result.get("failure_reason")
-	Validation.require_condition(raw_failure_reason is String, "DailyChunkGenerator validation failure reason must be a String.")
-	var failure_reason: String = raw_failure_reason
-	return failure_reason
-
-func _get_required_handhold_position(layout: GeneratedChunkLayout, hold_id: String) -> Vector2:
-	for handhold in layout.handholds:
-		if String(handhold.hold_id) == hold_id:
-			return handhold.local_position
-	Validation.require_condition(false, "DailyChunkGenerator candidate path references an unknown handhold.")
-	return Vector2.ZERO
-
-func _get_route_validation_tuning() -> RouteValidationTuningScript:
-	Validation.require_condition(_tuning.route_validation_tuning != null, "DailyChunkGenerator requires route validation tuning.")
-	Validation.require_condition(
-		_tuning.route_validation_tuning is RouteValidationTuningScript,
-		"DailyChunkGenerator route validation tuning must use RouteValidationTuning resources."
-	)
-	var typed_tuning: RouteValidationTuningScript = _tuning.route_validation_tuning as RouteValidationTuningScript
-	return typed_tuning
-
-func _get_route_profile_tuning() -> RouteProfileTuningScript:
-	Validation.require_condition(_tuning.route_profile_tuning != null, "DailyChunkGenerator requires route profile tuning.")
-	Validation.require_condition(
-		_tuning.route_profile_tuning is RouteProfileTuningScript,
-		"DailyChunkGenerator route profile tuning must use RouteProfileTuning resources."
-	)
-	var typed_tuning: RouteProfileTuningScript = _tuning.route_profile_tuning as RouteProfileTuningScript
-	return typed_tuning
+	return _chunk_layout_cache[_get_chunk_cache_key(seed_key, chunk_index)]
 
 func get_difficulty_band_for_chunk(chunk_index: int) -> int:
 	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when calculating a difficulty band.")
@@ -338,230 +53,139 @@ func get_difficulty_band_for_chunk(chunk_index: int) -> int:
 
 func get_difficulty_band_for_height(height_meters: float) -> int:
 	Validation.require_condition(height_meters >= 0.0, "DailyChunkGenerator height cannot be negative when calculating a difficulty band.")
-
 	if height_meters < _tuning.easy_band_max_height_meters:
 		return ChunkDifficultyBand.Value.EASY
-
 	if height_meters < _tuning.baseline_band_max_height_meters:
 		return ChunkDifficultyBand.Value.BASELINE
-
 	return ChunkDifficultyBand.Value.CHALLENGE
 
-func _get_route_slot_for_chunk_seeded(seed_key: String, chunk_index: int, difficulty_band: int) -> int:
-	Validation.require_condition(chunk_index >= 0, "DailyChunkGenerator chunk index cannot be negative when calculating a seeded route slot.")
-	ChunkDifficultyBand.assert_valid(difficulty_band)
+## Whether the next chunk's easiest route can be reached from the current chunk's seam
+## band. Cached per candidate pair (audit N1: candidates of one chunk share seed + index).
+func validate_chunk_seam(current_layout: GeneratedChunkLayout, next_layout: GeneratedChunkLayout) -> GeneratedChunkSeamValidationResult:
+	Validation.require_condition(current_layout != null, "DailyChunkGenerator current seam layout cannot be null.")
+	Validation.require_condition(next_layout != null, "DailyChunkGenerator next seam layout cannot be null.")
+	Validation.require_condition(next_layout.chunk_index == current_layout.chunk_index + 1, "DailyChunkGenerator seam validation requires adjacent chunks.")
+	var seam_cache_key: String = _get_chunk_seam_cache_key(current_layout, next_layout)
+	if _chunk_seam_cache.has(seam_cache_key):
+		return _chunk_seam_cache[seam_cache_key]
 
-	if chunk_index == 0:
-		return ChunkRouteSlot.Value.OPENER
+	var segment_height: float = _tuning.segment_height_meters
+	var positions: PackedVector2Array = PackedVector2Array()
+	var sizes: PackedVector2Array = PackedVector2Array()
+	var hold_ids: PackedStringArray = PackedStringArray()
+	var sources: PackedInt32Array = PackedInt32Array()
+	var lowest_seam_y: float = -(segment_height - _tuning.seam_band_height_meters)
+	for handhold in current_layout.handholds:
+		if handhold.local_position.y <= lowest_seam_y:
+			var _s: bool = sources.append(positions.size())
+			var _p: bool = positions.append(handhold.local_position + Vector2(0.0, segment_height))
+			var _z: bool = sizes.append(handhold.physical_size_meters)
+			var _i: bool = hold_ids.append(String(handhold.hold_id))
+	var entry_id: String = next_layout.route_entry_hold_ids[0]
+	var entry_node: int = -1
+	for handhold in next_layout.handholds:
+		if String(handhold.hold_id) == entry_id:
+			entry_node = positions.size()
+		var _p: bool = positions.append(handhold.local_position)
+		var _z: bool = sizes.append(handhold.physical_size_meters)
+		var _i: bool = hold_ids.append(String(handhold.hold_id))
+	Validation.require_condition(entry_node != -1, "DailyChunkGenerator next chunk entry hold is missing.")
 
-	var cache_key: String = _get_route_slot_cache_key(seed_key, chunk_index)
-	var bootstrap_route_slot: int = _get_bootstrap_route_slot(chunk_index)
-	if bootstrap_route_slot != -1:
-		_route_slot_cache[cache_key] = bootstrap_route_slot
-		return bootstrap_route_slot
+	var result: GeneratedChunkSeamValidationResult
+	var from_hold_id: StringName = StringName(current_layout.route_exit_hold_ids[0])
+	if sources.is_empty():
+		result = GeneratedChunkSeamValidationResult.new(false, "Current chunk has no holds in its seam band.", current_layout.chunk_index, next_layout.chunk_index, from_hold_id, StringName(entry_id))
+	else:
+		var validation_tuning: RouteValidationTuningScript = _tuning.get_route_validation_tuning()
+		var graph: HoldReachGraphScript = HoldReachGraphScript.new(positions, sizes, validation_tuning.max_move_distance_meters, validation_tuning.max_downward_move_meters)
+		var is_entry: PackedByteArray = graph.empty_mask()
+		is_entry[entry_node] = 1
+		var path: PackedInt32Array = graph.path_within(sources, is_entry, graph.empty_mask(), INF)
+		if path.is_empty():
+			result = GeneratedChunkSeamValidationResult.new(false, "Next chunk entry is not reachable from the current chunk's seam band.", current_layout.chunk_index, next_layout.chunk_index, from_hold_id, StringName(entry_id))
+		else:
+			result = GeneratedChunkSeamValidationResult.new(true, "", current_layout.chunk_index, next_layout.chunk_index, StringName(hold_ids[path[0]]), StringName(entry_id))
+	_chunk_seam_cache[seam_cache_key] = result
+	return result
 
-	if _route_slot_cache.has(cache_key):
-		var cached_route_slot_variant: Variant = _route_slot_cache[cache_key]
-		Validation.require_condition(cached_route_slot_variant is int, "DailyChunkGenerator route-slot cache must store ints.")
-		var cached_route_slot: int = cached_route_slot_variant
-		ChunkRouteSlot.assert_valid(cached_route_slot)
-		return cached_route_slot
+## Tries candidates until one is close enough to the band target (else keeps the best), and falls
+## back to one relaxed attempt (EASY field, no hazards, one route fewer) through the same
+## validation, with a warning. A chunk that still fails is a hard error: the wall never
+## ships with a gap.
+func _build_chunk(seed_key: String, chunk_index: int) -> GeneratedChunkLayout:
+	var previous_layout: GeneratedChunkLayout = null
+	if chunk_index > 0:
+		previous_layout = _chunk_layout_cache[_get_chunk_cache_key(seed_key, chunk_index - 1)]
+	var difficulty_band: int = get_difficulty_band_for_chunk(chunk_index)
+	var attempt_count: int = _tuning.route_validation_candidate_attempt_count
+	var best: GeneratedChunkLayout = null
+	var failure_reasons: PackedStringArray = PackedStringArray()
+	for attempt_index in range(attempt_count):
+		var candidate: GeneratedChunkLayout = _build_chunk_candidate(seed_key, chunk_index, attempt_index, previous_layout, difficulty_band, false)
+		if candidate == null:
+			var _f: bool = failure_reasons.append("attempt %d: %s" % [attempt_index, _pipeline.last_failure_reason])
+			continue
+		if best == null or candidate.candidate_score > best.candidate_score:
+			best = candidate
+		if best.candidate_score >= -GOOD_ENOUGH_SCORE_MISS_METERS:
+			break
+	if best == null:
+		best = _build_chunk_candidate(seed_key, chunk_index, attempt_count, previous_layout, difficulty_band, true)
+		if best == null:
+			var _r: bool = failure_reasons.append("relaxed: %s" % _pipeline.last_failure_reason)
+		else:
+			push_warning("DailyChunkGenerator used the relaxed fallback for chunk %d of %s: %s" % [chunk_index, seed_key, "; ".join(failure_reasons)])
+	Validation.require_condition(best != null, "DailyChunkGenerator could not build chunk %d: %s" % [chunk_index, "; ".join(failure_reasons)])
+	return best
 
-	var route_profile_tuning: RouteProfileTuningScript = _get_route_profile_tuning()
-	var previous_route_slot: int = ChunkRouteSlot.Value.OPENER
-	if chunk_index > 1:
-		var previous_difficulty_band: int = get_difficulty_band_for_chunk(chunk_index - 1)
-		previous_route_slot = _get_route_slot_for_chunk_seeded(seed_key, chunk_index - 1, previous_difficulty_band)
-
-	var candidate_slots: Array[int] = []
-	var candidate_weights: Array[float] = []
-	_append_route_profile_candidates(route_profile_tuning, difficulty_band, candidate_slots, candidate_weights)
-	_apply_route_profile_history_biases(seed_key, chunk_index, candidate_slots, candidate_weights)
-
-	# After a PRESSURE chunk relief is very likely but no longer forced: RECOVERY is
-	# heavily favoured, a back-to-back PRESSURE is ruled out and RISK is dampened,
-	# but a normal slot can still follow (audit C5).
-	if previous_route_slot == ChunkRouteSlot.Value.PRESSURE:
-		_add_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RECOVERY, route_profile_tuning.novelty_bonus_weight + 6.0)
-		_scale_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.PRESSURE, 0.0)
-		_scale_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, 0.2)
-		_scale_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.SKILL, 0.5)
-		_scale_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.BASELINE, 0.5)
-	var route_slot_rng: RandomNumberGenerator = _build_route_slot_rng(seed_key, chunk_index)
-	var selected_route_slot: int = _select_weighted_route_slot(candidate_slots, candidate_weights, route_slot_rng)
-	_route_slot_cache[cache_key] = selected_route_slot
-	return selected_route_slot
-
-func _get_bootstrap_route_slot(chunk_index: int) -> int:
-	Validation.require_condition(chunk_index > 0, "DailyChunkGenerator bootstrap route slots apply only after the opener.")
-	match chunk_index:
-		1:
-			return ChunkRouteSlot.Value.BASELINE
-		2:
-			return ChunkRouteSlot.Value.SKILL
-		3:
-			return ChunkRouteSlot.Value.RECOVERY
-		_:
-			return -1
-
-func _append_route_profile_candidates(
-	route_profile_tuning: RouteProfileTuningScript,
-	difficulty_band: int,
-	candidate_slots: Array[int],
-	candidate_weights: Array[float]
-) -> void:
-	Validation.require_condition(route_profile_tuning != null, "DailyChunkGenerator route-profile candidates require tuning.")
-	ChunkDifficultyBand.assert_valid(difficulty_band)
-
-	match difficulty_band:
-		ChunkDifficultyBand.Value.EASY:
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.BASELINE, route_profile_tuning.easy_baseline_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.SKILL, route_profile_tuning.easy_skill_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RECOVERY, route_profile_tuning.easy_recovery_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, route_profile_tuning.easy_risk_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.PRESSURE, route_profile_tuning.easy_pressure_weight)
-		ChunkDifficultyBand.Value.BASELINE:
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.BASELINE, route_profile_tuning.baseline_baseline_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.SKILL, route_profile_tuning.baseline_skill_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RECOVERY, route_profile_tuning.baseline_recovery_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, route_profile_tuning.baseline_risk_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.PRESSURE, route_profile_tuning.baseline_pressure_weight)
-		ChunkDifficultyBand.Value.CHALLENGE:
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.BASELINE, route_profile_tuning.challenge_baseline_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.SKILL, route_profile_tuning.challenge_skill_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RECOVERY, route_profile_tuning.challenge_recovery_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, route_profile_tuning.challenge_risk_weight)
-			_append_route_profile_candidate(candidate_slots, candidate_weights, ChunkRouteSlot.Value.PRESSURE, route_profile_tuning.challenge_pressure_weight)
-		_:
-			Validation.require_condition(false, "DailyChunkGenerator route-profile candidates require a supported difficulty band.")
-
-	Validation.require_condition(candidate_slots.size() > 0, "DailyChunkGenerator route-profile candidates cannot be empty.")
-
-func _append_route_profile_candidate(
-	candidate_slots: Array[int],
-	candidate_weights: Array[float],
-	route_slot: int,
-	weight: float
-) -> void:
-	ChunkRouteSlot.assert_valid(route_slot)
-	Validation.require_condition(weight >= 0.0, "DailyChunkGenerator route-profile candidate weights cannot be negative.")
-	if is_zero_approx(weight):
-		return
-
-	candidate_slots.append(route_slot)
-	candidate_weights.append(weight)
-
-func _apply_route_profile_history_biases(
+func _build_chunk_candidate(
 	seed_key: String,
 	chunk_index: int,
-	candidate_slots: Array[int],
-	candidate_weights: Array[float]
-) -> void:
-	Validation.require_condition(chunk_index > 0, "DailyChunkGenerator route-profile history biases require a non-opener chunk.")
-	Validation.require_condition(candidate_slots.size() == candidate_weights.size(), "DailyChunkGenerator route-profile candidates must align with weights.")
-	var route_profile_tuning: RouteProfileTuningScript = _get_route_profile_tuning()
-	var recent_history_count: int = maxi(route_profile_tuning.max_repeat_profile_count, route_profile_tuning.recovery_debt_threshold)
-	var recent_slots: Array[int] = _get_recent_route_slots(seed_key, chunk_index, recent_history_count)
-	var risk_pressure_count: int = 0
+	attempt_index: int,
+	previous_layout: GeneratedChunkLayout,
+	difficulty_band: int,
+	relaxed: bool
+) -> GeneratedChunkLayout:
+	return _pipeline.build_layout(seed_key, chunk_index, difficulty_band, attempt_index, previous_layout, relaxed)
 
-	for recent_slot in recent_slots:
-		if recent_slot == ChunkRouteSlot.Value.RISK or recent_slot == ChunkRouteSlot.Value.PRESSURE:
-			risk_pressure_count += 1
+## Walks back from chunk_index only as far as the nearest cached chunk; each chunk grows
+## from its predecessor's seam band.
+func _get_first_uncached_predecessor_index(seed_key: String, chunk_index: int) -> int:
+	var earliest_required_index: int = chunk_index
+	while earliest_required_index > 0 and not _chunk_layout_cache.has(_get_chunk_cache_key(seed_key, earliest_required_index - 1)):
+		earliest_required_index -= 1
+	return earliest_required_index
 
-	if _recent_slots_are_repeating(recent_slots, route_profile_tuning.max_repeat_profile_count):
-		_set_route_slot_weight(candidate_slots, candidate_weights, recent_slots[0], 0.0)
+## Chunks kept behind the highest built index: the coordinator's keep-behind window plus
+## its spawn-ahead reach, so a steady climb never rebuilds a retired chunk.
+func _retained_chunk_history_count() -> int:
+	return _tuning.chunk_keep_behind_count + _tuning.chunk_spawn_ahead_count + 1
 
-	if risk_pressure_count >= route_profile_tuning.recovery_debt_threshold:
-		_add_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RECOVERY, route_profile_tuning.novelty_bonus_weight + 1.0)
-		_add_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.BASELINE, 0.5)
-		_scale_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.PRESSURE, 0.25)
-		_scale_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, 0.5)
+func _evict_chunk_caches_before(seed_key: String, min_retained_chunk_index: int) -> void:
+	if min_retained_chunk_index <= 0:
+		return
+	for cache_key: String in _chunk_layout_cache.keys():
+		if _is_stale_key(cache_key, seed_key, min_retained_chunk_index):
+			var _erased: bool = _chunk_layout_cache.erase(cache_key)
+	for cache_key: String in _chunk_seam_cache.keys():
+		if _is_stale_key(cache_key, seed_key, min_retained_chunk_index):
+			var _erased: bool = _chunk_seam_cache.erase(cache_key)
 
-	for route_slot in candidate_slots:
-		if not recent_slots.has(route_slot):
-			_add_route_slot_weight(candidate_slots, candidate_weights, route_slot, route_profile_tuning.novelty_bonus_weight)
+## Cache keys are "<seed>|<chunk index>|..."; stale when from another run or below the window.
+func _is_stale_key(cache_key: String, seed_key: String, min_retained_chunk_index: int) -> bool:
+	if not cache_key.begins_with(seed_key + "|"):
+		return true
+	var index_text: String = cache_key.substr(seed_key.length() + 1).get_slice("|", 0)
+	return index_text.to_int() < min_retained_chunk_index
 
-	_add_route_slot_weight(candidate_slots, candidate_weights, ChunkRouteSlot.Value.RISK, route_profile_tuning.optional_beta_bias_weight)
-
-func _get_recent_route_slots(seed_key: String, chunk_index: int, max_count: int) -> Array[int]:
-	Validation.require_condition(chunk_index > 0, "DailyChunkGenerator recent route-slot lookup requires a non-opener chunk.")
-	Validation.require_condition(max_count >= 0, "DailyChunkGenerator recent route-slot count cannot be negative.")
-	var recent_slots: Array[int] = []
-	for previous_chunk_index in range(chunk_index - 1, maxi(0, chunk_index - max_count) - 1, -1):
-		if previous_chunk_index == 0:
-			recent_slots.append(ChunkRouteSlot.Value.OPENER)
-			continue
-
-		var previous_difficulty_band: int = get_difficulty_band_for_chunk(previous_chunk_index)
-		recent_slots.append(_get_route_slot_for_chunk_seeded(seed_key, previous_chunk_index, previous_difficulty_band))
-
-	return recent_slots
-
-func _recent_slots_are_repeating(recent_slots: Array[int], required_repeat_count: int) -> bool:
-	if required_repeat_count <= 1:
-		return recent_slots.size() > 0
-	if recent_slots.size() < required_repeat_count:
-		return false
-
-	var repeated_route_slot: int = recent_slots[0]
-	for recent_index in range(required_repeat_count):
-		if recent_slots[recent_index] != repeated_route_slot:
-			return false
-
-	return true
-
-func _set_route_slot_weight(candidate_slots: Array[int], candidate_weights: Array[float], route_slot: int, weight: float) -> void:
-	ChunkRouteSlot.assert_valid(route_slot)
-	Validation.require_condition(weight >= 0.0, "DailyChunkGenerator route-slot weight cannot be negative.")
-	for slot_index in range(candidate_slots.size()):
-		if candidate_slots[slot_index] == route_slot:
-			candidate_weights[slot_index] = weight
-			return
-
-func _add_route_slot_weight(candidate_slots: Array[int], candidate_weights: Array[float], route_slot: int, delta: float) -> void:
-	ChunkRouteSlot.assert_valid(route_slot)
-	Validation.require_condition(delta >= 0.0, "DailyChunkGenerator route-slot weight delta cannot be negative.")
-	for slot_index in range(candidate_slots.size()):
-		if candidate_slots[slot_index] == route_slot:
-			candidate_weights[slot_index] += delta
-			return
-
-func _scale_route_slot_weight(candidate_slots: Array[int], candidate_weights: Array[float], route_slot: int, scale: float) -> void:
-	ChunkRouteSlot.assert_valid(route_slot)
-	Validation.require_condition(scale >= 0.0, "DailyChunkGenerator route-slot weight scale cannot be negative.")
-	for slot_index in range(candidate_slots.size()):
-		if candidate_slots[slot_index] == route_slot:
-			candidate_weights[slot_index] *= scale
-			return
-
-func _select_weighted_route_slot(
-	candidate_slots: Array[int],
-	candidate_weights: Array[float],
-	route_slot_rng: RandomNumberGenerator
-) -> int:
-	Validation.require_condition(candidate_slots.size() > 0, "DailyChunkGenerator weighted route-slot selection requires candidates.")
-	Validation.require_condition(candidate_slots.size() == candidate_weights.size(), "DailyChunkGenerator weighted route-slot candidates must align with weights.")
-	Validation.require_condition(route_slot_rng != null, "DailyChunkGenerator weighted route-slot selection requires an RNG.")
-
-	var total_weight: float = 0.0
-	for weight in candidate_weights:
-		total_weight += weight
-
-	Validation.require_condition(total_weight > 0.0, "DailyChunkGenerator weighted route-slot selection requires positive total weight.")
-	var selection_value: float = route_slot_rng.randf_range(0.0, total_weight)
-	var accumulated_weight: float = 0.0
-	for slot_index in range(candidate_slots.size()):
-		accumulated_weight += candidate_weights[slot_index]
-		if selection_value <= accumulated_weight:
-			return candidate_slots[slot_index]
-
-	return candidate_slots[candidate_slots.size() - 1]
-
-func _build_route_slot_rng(seed_key: String, chunk_index: int) -> RandomNumberGenerator:
-	var route_slot_rng: RandomNumberGenerator = RandomNumberGenerator.new()
-	var route_slot_seed_key: String = "%s:route_profile:%d" % [seed_key, chunk_index]
-	route_slot_rng.seed = DeterministicHash.of_string(route_slot_seed_key)
-	return route_slot_rng
-
-func _get_route_slot_cache_key(seed_key: String, chunk_index: int) -> String:
+func _get_chunk_cache_key(seed_key: String, chunk_index: int) -> String:
 	return "%s|%d" % [seed_key, chunk_index]
+
+func _get_chunk_seam_cache_key(current_layout: GeneratedChunkLayout, next_layout: GeneratedChunkLayout) -> String:
+	return "%s|%d|%d|%d|%d" % [
+		current_layout.seed_key,
+		current_layout.chunk_index,
+		current_layout.selected_candidate_attempt_index,
+		next_layout.chunk_index,
+		next_layout.selected_candidate_attempt_index,
+	]
