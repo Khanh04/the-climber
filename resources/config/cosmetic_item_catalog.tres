@@ -16,6 +16,22 @@ slot = 4
 default_unlocked = true
 player_appearance_id = &"human"
 
+[sub_resource type="Resource" id="Resource_character_spartan"]
+script = ExtResource("2_item")
+item_id = &"character_spartan"
+display_name = "Spartan"
+slot = 4
+price_coins = 20
+player_appearance_id = &"spartan"
+
+[sub_resource type="Resource" id="Resource_character_webhead"]
+script = ExtResource("2_item")
+item_id = &"character_webhead"
+display_name = "Webhead"
+slot = 4
+price_coins = 25
+player_appearance_id = &"webhead"
+
 [sub_resource type="Resource" id="Resource_body_sunrise"]
 script = ExtResource("2_item")
 item_id = &"body_sunrise_jacket"
@@ -84,4 +100,4 @@ chaser_theme_id = &"glitch"
 
 [resource]
 script = ExtResource("1_catalog")
-items = Array[Resource]([SubResource("Resource_body_default"), SubResource("Resource_character_human"), SubResource("Resource_body_sunrise"), SubResource("Resource_left_hand_default"), SubResource("Resource_left_hand_gold"), SubResource("Resource_right_hand_default"), SubResource("Resource_right_hand_gold"), SubResource("Resource_chaser_rising_void"), SubResource("Resource_chaser_hot_coffee"), SubResource("Resource_chaser_glitch")])
+items = Array[Resource]([SubResource("Resource_body_default"), SubResource("Resource_character_human"), SubResource("Resource_character_spartan"), SubResource("Resource_character_webhead"), SubResource("Resource_body_sunrise"), SubResource("Resource_left_hand_default"), SubResource("Resource_left_hand_gold"), SubResource("Resource_right_hand_default"), SubResource("Resource_right_hand_gold"), SubResource("Resource_chaser_rising_void"), SubResource("Resource_chaser_hot_coffee"), SubResource("Resource_chaser_glitch")])

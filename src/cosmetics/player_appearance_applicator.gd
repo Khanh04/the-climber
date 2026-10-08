@@ -15,13 +15,14 @@ func apply_appearance(player: Node, appearance: Resource) -> void:
 	var typed_appearance: PlayerAppearanceScript = appearance as PlayerAppearanceScript
 	typed_appearance.assert_valid()
 	_clear_existing_appearance_visuals(typed_player)
-	# The head is the whole visible body now. It keeps its scene-authored round CapsuleShape2D
-	# rather than a traced face silhouette: a lopsided silhouette gives a resting head a
-	# preferred tilt angle (it tips and drags the arm sockets, its children, askew), and unlike
-	# the arms the head cannot be rotation-locked without also killing the grip-point swing.
-	var _face_image: Image = _apply_part(typed_player.get_face_overlay(), typed_appearance.face_texture_path, typed_appearance.face_offset, typed_appearance.face_scale)
-	var left_arm_image: Image = _apply_part(typed_player.get_left_arm_visual(), typed_appearance.left_upper_arm_texture_path, typed_appearance.left_upper_arm_offset, typed_appearance.left_upper_arm_scale)
-	var right_arm_image: Image = _apply_part(typed_player.get_right_arm_visual(), typed_appearance.right_upper_arm_texture_path, typed_appearance.right_upper_arm_offset, typed_appearance.right_upper_arm_scale)
+	# The head is the whole visible body now. It keeps its scene-authored RectangleShape2D
+	# (sized to the head art) rather than a traced face silhouette: a lopsided silhouette gives a
+	# resting head a preferred tilt angle (it tips and drags the arm sockets, its children,
+	# askew), and unlike the arms the head cannot be rotation-locked without also killing the
+	# grip-point swing.
+	var _face_image: Image = _apply_part(typed_player.get_face_overlay(), typed_appearance.face_texture_path, typed_appearance.face_offset, typed_appearance.face_scale, 0.0)
+	var left_arm_image: Image = _apply_part(typed_player.get_left_arm_visual(), typed_appearance.left_upper_arm_texture_path, typed_appearance.left_upper_arm_offset, typed_appearance.left_upper_arm_scale, typed_appearance.left_upper_arm_rotation_degrees)
+	var right_arm_image: Image = _apply_part(typed_player.get_right_arm_visual(), typed_appearance.right_upper_arm_texture_path, typed_appearance.right_upper_arm_offset, typed_appearance.right_upper_arm_scale, typed_appearance.right_upper_arm_rotation_degrees)
 	_fit_arm_collision_to_pixel_silhouette(typed_player, HandSideScript.Value.LEFT, left_arm_image)
 	_fit_arm_collision_to_pixel_silhouette(typed_player, HandSideScript.Value.RIGHT, right_arm_image)
 	typed_player.assert_visual_roots_physics_neutral()
@@ -40,7 +41,7 @@ func _clear_existing_appearance_visuals(player: PlayerCharacterScript) -> void:
 func _resolve_crop_center_offset(frame_size: Vector2, used_rect_position: Vector2, used_rect_size: Vector2) -> Vector2:
 	return used_rect_position + (used_rect_size / 2.0) - (frame_size / 2.0)
 
-func _apply_part(sprite: Sprite2D, asset_path: String, offset: Vector2, scale_value: Vector2) -> Image:
+func _apply_part(sprite: Sprite2D, asset_path: String, offset: Vector2, scale_value: Vector2, rotation_degrees_value: float) -> Image:
 	Validation.require_condition(sprite != null, "PlayerAppearanceApplicator requires a sprite target.")
 	Validation.require_condition(not asset_path.is_empty(), "PlayerAppearanceApplicator requires a texture asset path.")
 	_clear_part_visual(sprite)
@@ -56,6 +57,7 @@ func _apply_part(sprite: Sprite2D, asset_path: String, offset: Vector2, scale_va
 	sprite.texture = texture
 	sprite.offset = offset + crop_center_offset
 	sprite.scale = scale_value
+	sprite.rotation_degrees = rotation_degrees_value
 	return image
 
 # Reading these bytes via Image.load(ProjectSettings.globalize_path(...)) only works when
@@ -80,6 +82,7 @@ func _clear_part_visual(sprite: Sprite2D) -> void:
 	sprite.texture = null
 	sprite.offset = Vector2.ZERO
 	sprite.scale = Vector2.ONE
+	sprite.rotation = 0.0
 
 # Godot's dynamic RigidBody2D physics doesn't handle a single concave shape correctly (no
 # well-defined "inside" for a ConcavePolygonShape2D on a live body -- it's meant for static
@@ -87,9 +90,9 @@ func _clear_part_visual(sprite: Sprite2D) -> void:
 # usable collision. BitMap.opaque_to_polygons traces the sprite's already-cropped opaque region
 # (built from the exact same image _apply_part rendered, so the collision literally outlines
 # the visible pixels); Geometry2D.decompose_polygon_in_convex splits each traced outline into
-# physics-legal convex pieces. The transform into body-local space:
-# image-space points are centered, scaled by the sprite's own scale, and offset by
-# the sprite's resolved .offset plus its accumulated local position up to the owning body.
+# physics-legal convex pieces. The transform into body-local space: image-space points are
+# centered, shifted by the sprite's resolved .offset (texture pixels), then carried through
+# the sprite's own transform (scale, rotation, position) and every ancestor up to the body.
 const SILHOUETTE_TRACE_EPSILON: float = 2.0
 
 func _fit_arm_collision_to_pixel_silhouette(player: PlayerCharacterScript, hand_side: int, image: Image) -> void:
@@ -108,13 +111,13 @@ func _pixel_silhouette_polygons(image: Image, anchor: Sprite2D, stop_at: Node) -
 	var traced_outlines: Array[PackedVector2Array] = bitmap.opaque_to_polygons(Rect2(Vector2.ZERO, Vector2(image.get_size())), SILHOUETTE_TRACE_EPSILON)
 	Validation.require_condition(not traced_outlines.is_empty(), "PlayerAppearanceApplicator found no opaque silhouette to trace.")
 
-	var anchor_local_offset: Vector2 = _sum_local_positions(anchor, stop_at) + anchor.offset
+	var anchor_to_body: Transform2D = _transform_to(anchor, stop_at)
 	var image_center: Vector2 = Vector2(image.get_size()) / 2.0
 	var convex_polygons: Array[PackedVector2Array] = []
 	for outline in traced_outlines:
 		var body_local_points: Array[Vector2] = []
 		for point in outline:
-			body_local_points.append(anchor_local_offset + (point - image_center) * anchor.scale)
+			body_local_points.append(anchor_to_body * (anchor.offset + point - image_center))
 		var body_local_outline := PackedVector2Array(body_local_points)
 		for convex_piece in Geometry2D.decompose_polygon_in_convex(body_local_outline):
 			Validation.require_condition(convex_piece.size() >= 3, "PlayerAppearanceApplicator produced a degenerate convex collision piece.")
@@ -123,15 +126,15 @@ func _pixel_silhouette_polygons(image: Image, anchor: Sprite2D, stop_at: Node) -
 	Validation.require_condition(not convex_polygons.is_empty(), "PlayerAppearanceApplicator failed to build any convex collision pieces.")
 	return convex_polygons
 
-func _sum_local_positions(node: Node2D, stop_at: Node) -> Vector2:
+func _transform_to(node: Node2D, stop_at: Node) -> Transform2D:
 	Validation.require_condition(node != null, "PlayerAppearanceApplicator requires a node to resolve collision fit positions.")
 	Validation.require_condition(stop_at != null, "PlayerAppearanceApplicator requires a collision fit stop node.")
-	var accumulated: Vector2 = Vector2.ZERO
+	var accumulated: Transform2D = Transform2D.IDENTITY
 	var current: Node = node
 	while current != null and current != stop_at:
 		Validation.require_condition(current is Node2D, "PlayerAppearanceApplicator requires Node2D ancestors while resolving collision fit positions.")
 		var typed_current: Node2D = current as Node2D
-		accumulated += typed_current.position
+		accumulated = typed_current.transform * accumulated
 		current = typed_current.get_parent()
 	Validation.require_condition(current == stop_at, "PlayerAppearanceApplicator could not resolve collision fit positions to Torso.")
 	return accumulated

@@ -275,38 +275,51 @@ func test_player_cosmetic_applicator_adds_visuals_without_changing_physics() -> 
     assert_eq(body.collision_layer, starting_collision_layer)
     assert_eq(body.collision_mask, starting_collision_mask)
 
-func test_player_appearance_applicator_applies_human_appearance_without_changing_physics() -> void:
-    var player: PlayerCharacterScript = await _instantiate_player()
+func test_player_appearance_applicator_applies_every_appearance_without_changing_physics() -> void:
     var catalog: PlayerAppearanceCatalogScript = load("res://resources/config/player_appearance_catalog.tres") as PlayerAppearanceCatalogScript
-    var applicator := PlayerAppearanceApplicatorScript.new()
-    var body: RigidBody2D = player.get_player_body()
-    var starting_mass: float = body.mass
-    var starting_collision_layer: int = body.collision_layer
-    var starting_collision_mask: int = body.collision_mask
-
     assert_not_null(catalog)
-    var human_appearance: PlayerAppearanceScript = catalog.get_required_appearance_by_id(&"human")
-    applicator.apply_appearance(player, human_appearance)
+    assert_gt(catalog.get_all_appearances().size(), 1)
 
-    assert_not_null(player.get_face_overlay().texture)
-    assert_not_null(player.get_left_arm_visual().texture)
-    assert_not_null(player.get_right_arm_visual().texture)
+    for appearance in catalog.get_all_appearances():
+        var label: String = String(appearance.appearance_id)
+        var player: PlayerCharacterScript = await _instantiate_player()
+        var body: RigidBody2D = player.get_player_body()
+        var starting_mass: float = body.mass
+        var starting_collision_layer: int = body.collision_layer
+        var starting_collision_mask: int = body.collision_mask
 
-    # The plain-texture path fits each arm to a pixel-silhouette: the fallback primitive is
-    # disabled and replaced with one or more convex CollisionPolygon2D children. The head is
-    # excluded on purpose -- it keeps its round authored CapsuleShape2D (enabled), so a resting
-    # head has no preferred tilt angle.
-    assert_false(player.get_head_collision_shape().disabled)
-    assert_true(player.get_head_collision_shape().shape is RectangleShape2D)
-    assert_true(player.get_left_arm_collision_shape().disabled)
-    _assert_fitted_collision_polygons_are_valid(player.get_left_arm_fitted_collision_polygons())
-    assert_true(player.get_right_arm_collision_shape().disabled)
-    _assert_fitted_collision_polygons_are_valid(player.get_right_arm_fitted_collision_polygons())
+        PlayerAppearanceApplicatorScript.new().apply_appearance(player, appearance)
 
-    player.assert_visual_roots_physics_neutral()
-    assert_eq(body.mass, starting_mass)
-    assert_eq(body.collision_layer, starting_collision_layer)
-    assert_eq(body.collision_mask, starting_collision_mask)
+        assert_not_null(player.get_face_overlay().texture, label)
+        assert_not_null(player.get_left_arm_visual().texture, label)
+        assert_not_null(player.get_right_arm_visual().texture, label)
+
+        # The plain-texture path fits each arm to a pixel-silhouette: the fallback primitive is
+        # disabled and replaced with one or more convex CollisionPolygon2D children. The head is
+        # excluded on purpose -- it keeps its authored RectangleShape2D (enabled), the same
+        # gameplay box for every appearance.
+        assert_false(player.get_head_collision_shape().disabled, label)
+        assert_true(player.get_head_collision_shape().shape is RectangleShape2D, label)
+        assert_true(player.get_left_arm_collision_shape().disabled, label)
+        _assert_fitted_collision_polygons_are_valid(player.get_left_arm_fitted_collision_polygons())
+        assert_true(player.get_right_arm_collision_shape().disabled, label)
+        _assert_fitted_collision_polygons_are_valid(player.get_right_arm_fitted_collision_polygons())
+
+        player.assert_visual_roots_physics_neutral()
+        assert_eq(body.mass, starting_mass, label)
+        assert_eq(body.collision_layer, starting_collision_layer, label)
+        assert_eq(body.collision_mask, starting_collision_mask, label)
+
+func test_player_appearance_arm_art_hangs_from_shoulder_socket_and_reaches_hand_anchor() -> void:
+    var catalog: PlayerAppearanceCatalogScript = load("res://resources/config/player_appearance_catalog.tres") as PlayerAppearanceCatalogScript
+    for appearance in catalog.get_all_appearances():
+        var label: String = String(appearance.appearance_id)
+        var player: PlayerCharacterScript = await _instantiate_player()
+        PlayerAppearanceApplicatorScript.new().apply_appearance(player, appearance)
+
+        # At rest the arm sits on its socket with the body's rotation, so arm-local == socket-local.
+        _assert_arm_art_spans_socket_to_anchor(player.get_left_arm_fitted_collision_polygons(), player.get_left_hand_anchor().position, "%s left" % label)
+        _assert_arm_art_spans_socket_to_anchor(player.get_right_arm_fitted_collision_polygons(), player.get_right_hand_anchor().position, "%s right" % label)
 
 func test_player_character_grip_joints_target_player_body() -> void:
     var player: PlayerCharacterScript = await _instantiate_player()
@@ -457,6 +470,23 @@ func _assert_fitted_collision_polygons_are_valid(polygons: Array[CollisionPolygo
     for polygon_node in polygons:
         assert_gt(polygon_node.polygon.size(), 2)
         assert_false(polygon_node.disabled)
+
+# The traced silhouette (which outlines the drawn pixels) must cover the pivot -- else the arm
+# swings from an invisible point -- and the gameplay hand anchor -- else grabs start from empty air.
+func _assert_arm_art_spans_socket_to_anchor(polygons: Array[CollisionPolygon2D], hand_anchor_local_position: Vector2, label: String) -> void:
+    assert_lt(_distance_to_polygons(Vector2.ZERO, polygons), 3.0, "%s arm art must cover its shoulder pivot" % label)
+    assert_lt(_distance_to_polygons(hand_anchor_local_position, polygons), 3.0, "%s arm art must cover its hand anchor" % label)
+
+func _distance_to_polygons(point: Vector2, polygons: Array[CollisionPolygon2D]) -> float:
+    var nearest: float = INF
+    for polygon_node in polygons:
+        var points: PackedVector2Array = polygon_node.polygon
+        if Geometry2D.is_point_in_polygon(point, points):
+            return 0.0
+        for i in points.size():
+            var closest: Vector2 = Geometry2D.get_closest_point_to_segment(point, points[i], points[(i + 1) % points.size()])
+            nearest = minf(nearest, point.distance_to(closest))
+    return nearest
 
 func _instantiate_player() -> PlayerCharacterScript:
     var scene: PackedScene = load("res://scenes/player/player_character.tscn")

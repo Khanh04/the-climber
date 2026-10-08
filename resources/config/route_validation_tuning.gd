@@ -12,9 +12,9 @@ extends Resource
 @export var jitter_safety_margin_meters: float = 0.15
 ## Minimum lateral clearance a swing move must keep, so the player's body has room to swing
 ## between two holds instead of squeezing past the wall. Sourced from the player's collision
-## footprint (scenes/player/player_character.tscn HeadCollisionShape: 48px wide at
-## climb_prototype_tuning.gd's pixels_per_meter = 100.0 -> 0.48m) -- keep the two in agreement.
-@export var player_body_width_meters: float = 0.48
+## footprint (scenes/player/player_character.tscn HeadCollisionShape: 70px wide at
+## climb_prototype_tuning.gd's pixels_per_meter = 100.0 -> 0.70m) -- keep the two in agreement.
+@export var player_body_width_meters: float = 0.70
 ## Entry anchors used when validating the opener and any chunk-local starting position.
 @export var entry_anchor_positions: PackedVector2Array = PackedVector2Array([
 	Vector2(-0.42, -0.24),

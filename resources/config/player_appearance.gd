@@ -11,9 +11,12 @@ extends Resource
 @export_file("*.png") var left_upper_arm_texture_path: String = ""
 @export var left_upper_arm_offset: Vector2 = Vector2.ZERO
 @export var left_upper_arm_scale: Vector2 = Vector2.ONE
+## Turns the arm art so its shoulder->hand line matches the rig's bone (see PlayerCharacter).
+@export var left_upper_arm_rotation_degrees: float = 0.0
 @export_file("*.png") var right_upper_arm_texture_path: String = ""
 @export var right_upper_arm_offset: Vector2 = Vector2.ZERO
 @export var right_upper_arm_scale: Vector2 = Vector2.ONE
+@export var right_upper_arm_rotation_degrees: float = 0.0
 
 func is_valid() -> bool:
 	return not appearance_id.is_empty() \

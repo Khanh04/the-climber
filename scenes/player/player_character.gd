@@ -19,19 +19,21 @@ const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/pl
 const ROUTE_WALL_COLLISION_LAYER: int = 64
 const CONTROLLED_COLLISION_MASK: int = 1 | ROUTE_WALL_COLLISION_LAYER
 const FALLING_COLLISION_MASK: int = 3 | ROUTE_WALL_COLLISION_LAYER
-# ponytail: measured from the CHR2 arm sprites' pixel content (opaque-pixel centroid of the
-# shoulder half vs. the hand half of each cropped frame) rather than an exact art-authored
-# value -- re-measure if the equipped arm art changes. The two are mirror images of each
-# other (measured ~141.4 deg / ~38.6 deg), hence right = PI - left.
-const LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = 2.4674
+# ponytail: measured from the CHR2 arm sprites' pixel content -- the arm origin (the drawn
+# shoulder tip, which player_appearance_catalog.tres offsets onto the pivot) to the drawn hand
+# tip, (-36, 9) px -- rather than an exact art-authored value. Re-measure if the equipped arm
+# art changes. The two are near-mirror images (right measures ~11.8 deg vs. the mirrored
+# ~14 deg), hence right = PI - left.
+const LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = 2.8966
 const RIGHT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = PI - LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS
 const MIN_ARM_TARGET_DISTANCE_PIXELS: float = 4.0
 
 # LeftArm/RightArm live on this layer and mask only world geometry (layer 1) + handhold bodies
 # (layer 2), so the arms never collide with each other or with Head. Head is the gameplay body
 # and stays on layer 1 (ChaserKillZone/hazard/pickup detection keys off it); the arm<->Head
-# exclusion is handled entirely by disable_collision=true on the 2 scene-authored PinJoint2D
-# joints in player_character.tscn. Do not "simplify" this into a layer-only scheme.
+# exclusion is the permanent add_collision_exception_with() in _ready() (the scene-authored
+# PinJoint2Ds' disable_collision only covers the falling mode, when they are connected). Do not
+# "simplify" this into a layer-only scheme.
 const LIMB_COLLISION_LAYER: int = 32
 
 # ponytail: per-limb mass values (scene-authored in player_character.tscn) are placeholder
@@ -310,8 +312,8 @@ func get_right_arm_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
 # RigidBody2D physics doesn't support a single concave shape correctly (no well-defined
 # "inside"), so a traced silhouette must arrive pre-decomposed into convex pieces -- this
 # only assembles what PlayerAppearanceApplicator hands it, it doesn't do the tracing itself.
-# The head is excluded on purpose: it keeps its round authored CapsuleShape2D so a resting
-# head has no preferred tilt angle (see PlayerAppearanceApplicator.apply_appearance).
+# The head is excluded on purpose: it keeps its authored RectangleShape2D sized to the head art
+# (see PlayerAppearanceApplicator.apply_appearance).
 func configure_arm_collision_polygons(hand_side: int, local_polygons: Array[PackedVector2Array]) -> void:
 	if hand_side == HandSideScript.Value.LEFT:
 		_left_arm_fitted_collision_polygons = _configure_collision_polygons(_left_arm, _left_arm_collision_shape, _left_arm_fitted_collision_polygons, "LeftArm", local_polygons)

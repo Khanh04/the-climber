@@ -6,14 +6,49 @@
 [sub_resource type="Resource" id="Resource_human"]
 script = ExtResource("2_appearance")
 face_texture_path = "res://assets/PNG/Character/CHR2/head.png"
+face_offset = Vector2(-1, 1)
 face_scale = Vector2(5, 5)
 left_upper_arm_texture_path = "res://assets/PNG/Character/CHR2/leftarm.png"
-left_upper_arm_offset = Vector2(6, -2)
-left_upper_arm_scale = Vector2(3, 3)
+left_upper_arm_offset = Vector2(3.5, 1)
+left_upper_arm_scale = Vector2(2.87, 2.87)
+left_upper_arm_rotation_degrees = 10.2
 right_upper_arm_texture_path = "res://assets/PNG/Character/CHR2/rightarm.png"
-right_upper_arm_offset = Vector2(-6, -2)
-right_upper_arm_scale = Vector2(3, 3)
+right_upper_arm_offset = Vector2(-3.7, 0.3)
+right_upper_arm_scale = Vector2(2.95, 2.95)
+right_upper_arm_rotation_degrees = -9.9
+
+[sub_resource type="Resource" id="Resource_spartan"]
+script = ExtResource("2_appearance")
+appearance_id = &"spartan"
+display_name = "Spartan"
+face_texture_path = "res://assets/PNG/Character/CHR1/Player/head.png"
+face_offset = Vector2(-1, 4)
+face_scale = Vector2(3, 3)
+left_upper_arm_texture_path = "res://assets/PNG/Character/CHR1/Player/leftarm.png"
+left_upper_arm_offset = Vector2(4.75, -0.25)
+left_upper_arm_scale = Vector2(3.11, 3.11)
+left_upper_arm_rotation_degrees = 2.6
+right_upper_arm_texture_path = "res://assets/PNG/Character/CHR1/Player/rightarm.png"
+right_upper_arm_offset = Vector2(-6.75, -0.25)
+right_upper_arm_scale = Vector2(3.09, 3.09)
+right_upper_arm_rotation_degrees = -4.9
+
+[sub_resource type="Resource" id="Resource_webhead"]
+script = ExtResource("2_appearance")
+appearance_id = &"webhead"
+display_name = "Webhead"
+face_texture_path = "res://assets/PNG/Character/CHR3/head.png"
+face_offset = Vector2(0, -1)
+face_scale = Vector2(3, 3)
+left_upper_arm_texture_path = "res://assets/PNG/Character/CHR3/leftarm.png"
+left_upper_arm_offset = Vector2(11.5, -3)
+left_upper_arm_scale = Vector2(3.52, 3.52)
+left_upper_arm_rotation_degrees = 36.7
+right_upper_arm_texture_path = "res://assets/PNG/Character/CHR3/rightarm.png"
+right_upper_arm_offset = Vector2(-7.83, -1.83)
+right_upper_arm_scale = Vector2(2.64, 2.64)
+right_upper_arm_rotation_degrees = -30.3
 
 [resource]
 script = ExtResource("1_catalog")
-appearances = Array[Resource]([SubResource("Resource_human")])
+appearances = Array[Resource]([SubResource("Resource_human"), SubResource("Resource_spartan"), SubResource("Resource_webhead")])
