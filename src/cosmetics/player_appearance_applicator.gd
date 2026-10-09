@@ -15,12 +15,13 @@ func apply_appearance(player: Node, appearance: Resource) -> void:
 	var typed_appearance: PlayerAppearanceScript = appearance as PlayerAppearanceScript
 	typed_appearance.assert_valid()
 	_clear_existing_appearance_visuals(typed_player)
-	# The head is the whole visible body now. It keeps its scene-authored RectangleShape2D
-	# (sized to the head art) rather than a traced face silhouette: a lopsided silhouette gives a
-	# resting head a preferred tilt angle (it tips and drags the arm sockets, its children,
-	# askew), and unlike the arms the head cannot be rotation-locked without also killing the
-	# grip-point swing.
+	# The head is the whole visible body now. Its box is fitted to the head art's opaque bounds
+	# but stays a RectangleShape2D rather than a traced face silhouette: a lopsided silhouette
+	# gives a resting head a preferred tilt angle (it tips and drags the arm sockets, its
+	# children, askew), and unlike the arms the head cannot be rotation-locked without also
+	# killing the grip-point swing.
 	var _face_image: Image = _apply_part(typed_player.get_face_overlay(), typed_appearance.face_texture_path, typed_appearance.face_offset, typed_appearance.face_scale, 0.0)
+	typed_player.configure_head_collision(_drawn_rect_in(typed_player.get_face_overlay(), typed_player.get_head_body()))
 	var left_arm_image: Image = _apply_part(typed_player.get_left_arm_visual(), typed_appearance.left_upper_arm_texture_path, typed_appearance.left_upper_arm_offset, typed_appearance.left_upper_arm_scale, typed_appearance.left_upper_arm_rotation_degrees)
 	var right_arm_image: Image = _apply_part(typed_player.get_right_arm_visual(), typed_appearance.right_upper_arm_texture_path, typed_appearance.right_upper_arm_offset, typed_appearance.right_upper_arm_scale, typed_appearance.right_upper_arm_rotation_degrees)
 	_fit_arm_collision_to_pixel_silhouette(typed_player, HandSideScript.Value.LEFT, left_arm_image)
@@ -94,6 +95,18 @@ func _clear_part_visual(sprite: Sprite2D) -> void:
 # centered, shifted by the sprite's resolved .offset (texture pixels), then carried through
 # the sprite's own transform (scale, rotation, position) and every ancestor up to the body.
 const SILHOUETTE_TRACE_EPSILON: float = 2.0
+
+# The sprite's texture is already cropped to its opaque pixels, so its drawn quad is the visible
+# art. Returns that quad's bounding rect in stop_at's local space.
+func _drawn_rect_in(sprite: Sprite2D, stop_at: Node) -> Rect2:
+	Validation.require_condition(sprite.texture != null, "PlayerAppearanceApplicator requires a textured sprite to measure its drawn rect.")
+	var sprite_to_body: Transform2D = _transform_to(sprite, stop_at)
+	var texture_size: Vector2 = sprite.texture.get_size()
+	var local_rect := Rect2(sprite.offset - texture_size / 2.0, texture_size)
+	var drawn_rect := Rect2(sprite_to_body * local_rect.position, Vector2.ZERO)
+	for corner: Vector2 in [local_rect.position + Vector2(texture_size.x, 0.0), local_rect.position + Vector2(0.0, texture_size.y), local_rect.end]:
+		drawn_rect = drawn_rect.expand(sprite_to_body * corner)
+	return drawn_rect
 
 func _fit_arm_collision_to_pixel_silhouette(player: PlayerCharacterScript, hand_side: int, image: Image) -> void:
 	Validation.require_condition(player != null, "PlayerAppearanceApplicator requires a player to fit arm collision.")

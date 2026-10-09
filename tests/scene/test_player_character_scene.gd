@@ -296,8 +296,7 @@ func test_player_appearance_applicator_applies_every_appearance_without_changing
 
         # The plain-texture path fits each arm to a pixel-silhouette: the fallback primitive is
         # disabled and replaced with one or more convex CollisionPolygon2D children. The head is
-        # excluded on purpose -- it keeps its authored RectangleShape2D (enabled), the same
-        # gameplay box for every appearance.
+        # excluded on purpose -- it stays a RectangleShape2D (enabled), fitted to the art's bounds.
         assert_false(player.get_head_collision_shape().disabled, label)
         assert_true(player.get_head_collision_shape().shape is RectangleShape2D, label)
         assert_true(player.get_left_arm_collision_shape().disabled, label)
@@ -309,6 +308,38 @@ func test_player_appearance_applicator_applies_every_appearance_without_changing
         assert_eq(body.mass, starting_mass, label)
         assert_eq(body.collision_layer, starting_collision_layer, label)
         assert_eq(body.collision_mask, starting_collision_mask, label)
+
+func test_player_appearance_fits_head_collision_and_shoulders_to_drawn_head() -> void:
+    var catalog: PlayerAppearanceCatalogScript = load("res://resources/config/player_appearance_catalog.tres") as PlayerAppearanceCatalogScript
+    for appearance in catalog.get_all_appearances():
+        var label: String = String(appearance.appearance_id)
+        var player: PlayerCharacterScript = await _instantiate_player()
+        PlayerAppearanceApplicatorScript.new().apply_appearance(player, appearance)
+
+        # The face texture is cropped to its opaque pixels, so texture size x scale is the drawn head.
+        var face: Sprite2D = player.get_face_overlay()
+        var drawn_size: Vector2 = face.texture.get_size() * face.scale
+        var drawn_center: Vector2 = face.position + face.offset * face.scale
+        var head_collision: CollisionShape2D = player.get_head_collision_shape()
+        assert_almost_eq((head_collision.shape as RectangleShape2D).size, drawn_size, Vector2(0.5, 0.5), label)
+        assert_almost_eq(head_collision.position, drawn_center, Vector2(0.5, 0.5), label)
+
+        var inset: float = PlayerCharacterScript.SHOULDER_INSET_PIXELS
+        assert_almost_eq(player.get_left_shoulder_socket().position, Vector2(drawn_center.x - drawn_size.x / 2.0 + inset, drawn_center.y), Vector2(0.5, 0.5), label)
+        assert_almost_eq(player.get_right_shoulder_socket().position, Vector2(drawn_center.x + drawn_size.x / 2.0 - inset, drawn_center.y), Vector2(0.5, 0.5), label)
+        # The frozen arms follow the moved sockets immediately, not on the next physics frame.
+        assert_almost_eq(player.get_left_arm_body().global_position, player.get_left_shoulder_socket().global_position, Vector2(0.01, 0.01), label)
+
+func test_player_appearance_head_fit_does_not_resize_other_players() -> void:
+    var catalog: PlayerAppearanceCatalogScript = load("res://resources/config/player_appearance_catalog.tres") as PlayerAppearanceCatalogScript
+    var fitted_player: PlayerCharacterScript = await _instantiate_player()
+    var untouched_player: PlayerCharacterScript = await _instantiate_player()
+    var untouched_size: Vector2 = (untouched_player.get_head_collision_shape().shape as RectangleShape2D).size
+
+    PlayerAppearanceApplicatorScript.new().apply_appearance(fitted_player, catalog.get_required_appearance_by_id(&"spartan"))
+
+    assert_ne((fitted_player.get_head_collision_shape().shape as RectangleShape2D).size, untouched_size)
+    assert_eq((untouched_player.get_head_collision_shape().shape as RectangleShape2D).size, untouched_size)
 
 func test_player_appearance_arm_art_hangs_from_shoulder_socket_and_reaches_hand_anchor() -> void:
     var catalog: PlayerAppearanceCatalogScript = load("res://resources/config/player_appearance_catalog.tres") as PlayerAppearanceCatalogScript

@@ -11,10 +11,11 @@ extends Resource
 ## bad jitter roll can never push a real move past max_move_distance_meters.
 @export var jitter_safety_margin_meters: float = 0.15
 ## Minimum lateral clearance a swing move must keep, so the player's body has room to swing
-## between two holds instead of squeezing past the wall. Sourced from the player's collision
-## footprint (scenes/player/player_character.tscn HeadCollisionShape: 70px wide at
-## climb_prototype_tuning.gd's pixels_per_meter = 100.0 -> 0.70m) -- keep the two in agreement.
-@export var player_body_width_meters: float = 0.70
+## between two holds instead of squeezing past the wall. Sourced from the widest player
+## collision footprint: each appearance fits the head box to its art (ADR 0012), widest today is
+## webhead at 72px, at climb_prototype_tuning.gd's pixels_per_meter = 100.0 -> 0.72m.
+## test_tuning_validation keeps the two in agreement.
+@export var player_body_width_meters: float = 0.72
 ## Entry anchors used when validating the opener and any chunk-local starting position.
 @export var entry_anchor_positions: PackedVector2Array = PackedVector2Array([
 	Vector2(-0.42, -0.24),

@@ -55,7 +55,7 @@ To run a single GUT test file from the editor, use the GUT panel (addons/gut). F
 - Gameplay systems never call platform SDKs directly — only through `src/platform/` adapters.
 - Scene scripts are thin coordinators. Reusable rules live in `src/`.
 - UI reads game state and dispatches typed commands; it does not own gameplay rules.
-- Cosmetics must never modify mass, friction, collision layers, collision shapes, or gameplay tuning.
+- Cosmetics must never modify mass, friction, collision layers, or gameplay tuning. A player appearance may refit the player's collision shapes (head box, arm silhouettes) and shoulder sockets to its art; see [ADR 0012](docs/adr/0012-appearance-fitted-collision.md).
 
 ### Run State Machine
 

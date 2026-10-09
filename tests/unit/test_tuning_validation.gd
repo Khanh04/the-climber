@@ -16,6 +16,8 @@ const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.g
 const CosmeticsTuningScript = preload("res://resources/config/cosmetics_tuning.gd")
 const ClimbPrototypeTuningScript = preload("res://resources/config/climb_prototype_tuning.gd")
 const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
+const PlayerAppearanceCatalogScript = preload("res://resources/config/player_appearance_catalog.gd")
+const PlayerAppearanceApplicatorScript = preload("res://src/cosmetics/player_appearance_applicator.gd")
 const ChunkTypeScript = preload("res://src/gameplay/generation/chunk_type.gd")
 const ChunkDifficultyBandScript = preload("res://src/gameplay/generation/chunk_difficulty_band.gd")
 const ChunkRouteSlotScript = preload("res://src/gameplay/generation/chunk_route_slot.gd")
@@ -72,18 +74,22 @@ func test_default_route_validation_tuning_is_valid() -> void:
     assert_not_null(tuning)
     assert_true(tuning.is_valid())
 
-func test_route_validation_player_body_width_matches_player_collision_footprint() -> void:
+func test_route_validation_player_body_width_matches_widest_appearance_collision_footprint() -> void:
     var tuning: RouteValidationTuningScript = load("res://resources/config/route_validation_tuning.tres") as RouteValidationTuningScript
+    var catalog: PlayerAppearanceCatalogScript = load("res://resources/config/player_appearance_catalog.tres") as PlayerAppearanceCatalogScript
     var player_scene: PackedScene = load("res://scenes/player/player_character.tscn")
-    var player: PlayerCharacterScript = player_scene.instantiate() as PlayerCharacterScript
-    add_child_autofree(player)
-    var climb_tuning: ClimbPrototypeTuningScript = player.climb_tuning
-    var head_collision_shape: CollisionShape2D = player.get_node("Head/HeadCollisionShape") as CollisionShape2D
-    var head_shape: RectangleShape2D = head_collision_shape.shape as RectangleShape2D
+    var widest_head_pixels: float = 0.0
+    var pixels_per_meter: float = 0.0
 
-    var expected_body_width_meters: float = head_shape.size.x / climb_tuning.pixels_per_meter
+    for appearance in catalog.get_all_appearances():
+        var player: PlayerCharacterScript = player_scene.instantiate() as PlayerCharacterScript
+        add_child_autofree(player)
+        PlayerAppearanceApplicatorScript.new().apply_appearance(player, appearance)
+        var head_shape: RectangleShape2D = player.get_head_collision_shape().shape as RectangleShape2D
+        widest_head_pixels = maxf(widest_head_pixels, head_shape.size.x)
+        pixels_per_meter = (player.climb_tuning as ClimbPrototypeTuningScript).pixels_per_meter
 
-    assert_almost_eq(tuning.player_body_width_meters, expected_body_width_meters, 0.01)
+    assert_almost_eq(tuning.player_body_width_meters, widest_head_pixels / pixels_per_meter, 0.01)
 
 func test_default_band_field_profiles_are_valid() -> void:
     for path: String in [

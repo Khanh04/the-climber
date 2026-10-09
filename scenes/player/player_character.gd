@@ -27,6 +27,9 @@ const FALLING_COLLISION_MASK: int = 3 | ROUTE_WALL_COLLISION_LAYER
 const LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = 2.8966
 const RIGHT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = PI - LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS
 const MIN_ARM_TARGET_DISTANCE_PIXELS: float = 4.0
+# How far inside the fitted head box's side edges the shoulder sockets sit, so the drawn
+# shoulder overlaps the head instead of floating beside it.
+const SHOULDER_INSET_PIXELS: float = 3.0
 
 # LeftArm/RightArm live on this layer and mask only world geometry (layer 1) + handhold bodies
 # (layer 2), so the arms never collide with each other or with Head. Head is the gameplay body
@@ -312,8 +315,8 @@ func get_right_arm_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
 # RigidBody2D physics doesn't support a single concave shape correctly (no well-defined
 # "inside"), so a traced silhouette must arrive pre-decomposed into convex pieces -- this
 # only assembles what PlayerAppearanceApplicator hands it, it doesn't do the tracing itself.
-# The head is excluded on purpose: it keeps its authored RectangleShape2D sized to the head art
-# (see PlayerAppearanceApplicator.apply_appearance).
+# The head is excluded on purpose: it stays a RectangleShape2D, fitted to the head art's bounds
+# by configure_head_collision (see PlayerAppearanceApplicator.apply_appearance).
 func configure_arm_collision_polygons(hand_side: int, local_polygons: Array[PackedVector2Array]) -> void:
 	if hand_side == HandSideScript.Value.LEFT:
 		_left_arm_fitted_collision_polygons = _configure_collision_polygons(_left_arm, _left_arm_collision_shape, _left_arm_fitted_collision_polygons, "LeftArm", local_polygons)
@@ -346,6 +349,25 @@ func _configure_collision_polygons(body: RigidBody2D, fallback_shape: CollisionS
 	if not created_polygons.is_empty():
 		fallback_shape.disabled = true
 	return created_polygons
+
+# Fits the head box to the drawn head (a Head-local rect) and moves the shoulder sockets onto
+# its side edges. Hand anchors and the body<->arm joints are socket children, so they follow.
+# The scene's head shape is a sub-resource shared by every PlayerCharacter instance, so it is
+# duplicated before resizing -- resizing it in place would resize every other player too.
+func configure_head_collision(drawn_rect: Rect2) -> void:
+	Validation.require_condition(drawn_rect.size.x > SHOULDER_INSET_PIXELS * 2.0 and drawn_rect.size.y > 0.0, "PlayerCharacter head collision rect must be wider than both shoulder insets.")
+	Validation.require_condition(_head_collision_shape.shape is RectangleShape2D, "PlayerCharacter HeadCollisionShape must be a RectangleShape2D to fit head art.")
+
+	var fitted_shape: RectangleShape2D = (_head_collision_shape.shape as RectangleShape2D).duplicate() as RectangleShape2D
+	fitted_shape.size = drawn_rect.size
+	_head_collision_shape.shape = fitted_shape
+	_head_collision_shape.position = drawn_rect.get_center()
+
+	var shoulder_y: float = drawn_rect.get_center().y
+	_left_shoulder_socket.position = Vector2(drawn_rect.position.x + SHOULDER_INSET_PIXELS, shoulder_y)
+	_right_shoulder_socket.position = Vector2(drawn_rect.end.x - SHOULDER_INSET_PIXELS, shoulder_y)
+	if _physics_mode == PlayerPhysicsModeScript.controlled_climb():
+		_sync_kinematic_limb_pose()
 
 func get_left_grip_joint_anchor() -> Marker2D:
 	return _left_grip_joint_anchor
