@@ -118,6 +118,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("script")
+metadata/_edit_vertical_guides_ = [380.0, -734.0]
 
 [node name="Backdrop" type="ColorRect" parent="." unique_id=1384200420]
 layout_mode = 1
@@ -171,10 +172,10 @@ mouse_filter = 2
 
 [node name="HeightIcon" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1144672623]
 layout_mode = 0
-offset_left = 110.0
-offset_top = 250.0
-offset_right = 170.0
-offset_bottom = 310.0
+offset_left = 96.0
+offset_top = 254.0
+offset_right = 156.0
+offset_bottom = 314.0
 scale = Vector2(0.7, 0.7)
 mouse_filter = 2
 texture = SubResource("Atlas_height")
@@ -182,10 +183,10 @@ expand_mode = 1
 
 [node name="CoinIcon" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1244493654]
 layout_mode = 0
-offset_left = 110.0
-offset_top = 310.0
-offset_right = 162.0
-offset_bottom = 366.0
+offset_left = 96.0
+offset_top = 314.0
+offset_right = 148.0
+offset_bottom = 370.0
 scale = Vector2(0.7, 0.7)
 mouse_filter = 2
 texture = SubResource("Atlas_coin")
@@ -193,10 +194,10 @@ expand_mode = 1
 
 [node name="HeightValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=584126850]
 layout_mode = 0
-offset_left = 164.0
-offset_top = 241.0
-offset_right = 272.0
-offset_bottom = 305.0
+offset_left = 150.0
+offset_top = 245.0
+offset_right = 258.0
+offset_bottom = 309.0
 theme_override_colors/font_color = Color(1, 0.94, 0.69, 1)
 theme_override_font_sizes/font_size = 28
 text = "0.0 m"
@@ -205,10 +206,10 @@ text_overrun_behavior = 3
 
 [node name="CoinValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=575661228]
 layout_mode = 0
-offset_left = 164.0
-offset_top = 299.0
-offset_right = 272.0
-offset_bottom = 363.0
+offset_left = 150.0
+offset_top = 303.0
+offset_right = 258.0
+offset_bottom = 367.0
 theme_override_colors/font_color = Color(1, 0.94, 0.69, 1)
 theme_override_font_sizes/font_size = 28
 text = "+0"

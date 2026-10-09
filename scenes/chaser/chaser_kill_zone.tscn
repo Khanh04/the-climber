@@ -3,7 +3,6 @@
 [ext_resource type="Script" uid="uid://jn2v3o0xpr5g" path="res://scenes/chaser/chaser_kill_zone.gd" id="1_script"]
 [ext_resource type="Script" uid="uid://cddbb26pw0s5w" path="res://resources/config/chaser_tuning.gd" id="2_tuning"]
 [ext_resource type="Resource" path="res://resources/config/chaser_theme_rising_void.tres" id="3_theme"]
-
 [ext_resource type="SpriteFrames" uid="uid://cwldcvf4426qa" path="res://resources/config/chaser_run_animation.tres" id="4_animation"]
 
 [sub_resource type="Resource" id="Resource_chaser_tuning"]
@@ -46,6 +45,6 @@ position = Vector2(0, 37)
 scale = Vector2(4, 4)
 sprite_frames = ExtResource("4_animation")
 animation = &"chase"
-frame_progress = 0.6032298
+frame_progress = 0.15442358
 
 [connection signal="body_entered" from="." to="." method="_on_body_entered"]

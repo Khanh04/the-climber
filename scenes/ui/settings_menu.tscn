@@ -167,8 +167,8 @@ stretch_mode = 5
 
 [node name="VolumeSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/VolumeControl" unique_id=1355506414]
 layout_mode = 0
-offset_left = 64.0
-offset_right = 140.0
+offset_left = 56.0
+offset_right = 132.0
 offset_bottom = 15.0
 scale = Vector2(4, 4)
 tooltip_text = "Âm lượng tổng"
@@ -204,8 +204,8 @@ stretch_mode = 5
 
 [node name="AudioSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=1784522617]
 layout_mode = 0
-offset_left = 64.0
-offset_right = 140.0
+offset_left = 56.0
+offset_right = 132.0
 offset_bottom = 15.0
 scale = Vector2(4, 4)
 tooltip_text = "Nhạc nền"
@@ -241,9 +241,9 @@ stretch_mode = 5
 
 [node name="Checkbox" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=891107429]
 layout_mode = 0
-offset_left = 320.0
+offset_left = 309.0
 offset_top = 8.0
-offset_right = 368.0
+offset_right = 357.0
 offset_bottom = 52.0
 mouse_filter = 2
 texture = SubResource("Atlas_box")
@@ -251,10 +251,10 @@ expand_mode = 1
 
 [node name="HapticsCheckBox" type="CheckBox" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=751001771]
 layout_mode = 0
-offset_left = 320.0
+offset_left = 309.0
 offset_top = 8.0
-offset_right = 332.0
-offset_bottom = 19.0
+offset_right = 325.0
+offset_bottom = 24.0
 scale = Vector2(4, 4)
 tooltip_text = "Bật/tắt rung trên thiết bị hỗ trợ"
 theme_override_constants/h_separation = 0
@@ -290,8 +290,8 @@ stretch_mode = 5
 
 [node name="TouchSplitSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/TouchSplitControl" unique_id=1968898738]
 layout_mode = 0
-offset_left = 64.0
-offset_right = 140.0
+offset_left = 56.0
+offset_right = 132.0
 offset_bottom = 15.0
 scale = Vector2(4, 4)
 tooltip_text = "Vị trí ranh giới vùng chạm trái/phải"
@@ -325,8 +325,8 @@ stretch_mode = 5
 
 [node name="TouchDeadZoneSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/TouchDeadZoneControl" unique_id=186927752]
 layout_mode = 0
-offset_left = 64.0
-offset_right = 140.0
+offset_left = 56.0
+offset_right = 132.0
 offset_bottom = 15.0
 scale = Vector2(4, 4)
 tooltip_text = "Độ rộng vùng không nhận chạm ở giữa"
