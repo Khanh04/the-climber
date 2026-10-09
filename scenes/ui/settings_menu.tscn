@@ -17,12 +17,12 @@
 
 [sub_resource type="AtlasTexture" id="Atlas_panel"]
 atlas = ExtResource("panel")
-region = Rect2(67, 164, 135, 175)
+region = Rect2(0, 0, 135, 191)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_sound"]
 atlas = ExtResource("sound")
-region = Rect2(89, 229, 15, 15)
+region = Rect2(0, 0, 15, 15)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_grabber"]
@@ -56,44 +56,46 @@ expand_margin_bottom = -3.0
 
 [sub_resource type="AtlasTexture" id="Atlas_music"]
 atlas = ExtResource("music")
-region = Rect2(89, 249, 15, 16)
+region = Rect2(0, 0, 15, 16)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_haptic"]
 atlas = ExtResource("haptic")
-region = Rect2(89, 270, 15, 15)
+region = Rect2(0, 0, 15, 15)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_box"]
 atlas = ExtResource("box")
-region = Rect2(169, 272, 12, 11)
+region = Rect2(0, 0, 12, 11)
 filter_clip = true
 
 [sub_resource type="StyleBoxEmpty" id="Empty"]
 
 [sub_resource type="AtlasTexture" id="Atlas_checked"]
 atlas = ExtResource("checked")
-region = Rect2(169, 272, 12, 11)
+region = Rect2(0, 0, 5, 7)
+margin = Rect2(4, 2, 7, 4)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_unchecked"]
 atlas = ExtResource("unchecked")
-region = Rect2(169, 272, 12, 11)
+region = Rect2(0, 0, 4, 7)
+margin = Rect2(4, 2, 8, 4)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_split"]
 atlas = ExtResource("split")
-region = Rect2(89, 291, 15, 15)
+region = Rect2(0, 0, 15, 15)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_dead"]
 atlas = ExtResource("dead")
-region = Rect2(89, 312, 15, 15)
+region = Rect2(0, 0, 15, 15)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_close"]
 atlas = ExtResource("close")
-region = Rect2(180, 194, 18, 17)
+region = Rect2(0, 0, 18, 17)
 filter_clip = true
 
 [node name="SettingsMenu" type="Control" unique_id=918568447]
@@ -126,12 +128,12 @@ anchor_bottom = 0.5
 offset_left = -270.0
 offset_top = -304.0
 offset_right = 270.0
-offset_bottom = 396.0
+offset_bottom = 460.0
 grow_horizontal = 2
 grow_vertical = 2
 
 [node name="Panel" type="TextureRect" parent="CenterContainer" unique_id=797127790]
-custom_minimum_size = Vector2(540, 700)
+custom_minimum_size = Vector2(540, 764)
 layout_mode = 2
 mouse_filter = 2
 texture = SubResource("Atlas_panel")
@@ -149,24 +151,24 @@ mouse_filter = 2
 [node name="VolumeControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=1557370040]
 anchors_preset = 0
 offset_left = 88.0
-offset_top = 260.0
-offset_right = 452.0
-offset_bottom = 324.0
+offset_top = 344.0
+offset_right = 456.0
+offset_bottom = 408.0
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/VolumeControl" unique_id=867698671]
 layout_mode = 0
-anchor_right = 0.16483517
-anchor_bottom = 0.9375
+offset_right = 60.0
+offset_bottom = 60.0
 mouse_filter = 2
 texture = SubResource("Atlas_sound")
 expand_mode = 1
-metadata/_edit_use_anchors_ = true
+stretch_mode = 5
 
 [node name="VolumeSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/VolumeControl" unique_id=1355506414]
 layout_mode = 0
-offset_left = 60.0
-offset_right = 136.0
+offset_left = 56.0
+offset_right = 132.0
 offset_bottom = 15.0
 scale = Vector2(4, 4)
 tooltip_text = "Âm lượng tổng"
@@ -186,27 +188,25 @@ offset_bottom = 23.0
 [node name="AudioControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=1125836470]
 anchors_preset = 0
 offset_left = 88.0
-offset_top = 340.0
-offset_right = 452.0
-offset_bottom = 404.0
+offset_top = 424.0
+offset_right = 456.0
+offset_bottom = 488.0
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=1343400370]
 layout_mode = 0
-anchor_right = 0.16483517
-anchor_bottom = 1.0
+offset_right = 60.0
+offset_bottom = 64.0
 mouse_filter = 2
 texture = SubResource("Atlas_music")
 expand_mode = 1
-metadata/_edit_use_anchors_ = true
+stretch_mode = 5
 
 [node name="AudioSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=1784522617]
 layout_mode = 0
-anchor_left = 0.16483517
-anchor_right = 1.0
-anchor_bottom = 0.9375
-offset_right = -228.0
-offset_bottom = -45.0
+offset_left = 56.0
+offset_right = 132.0
+offset_bottom = 15.0
 scale = Vector2(4, 4)
 tooltip_text = "Nhạc nền"
 theme_override_icons/grabber = SubResource("Atlas_grabber")
@@ -215,7 +215,6 @@ theme_override_styles/slider = SubResource("Track")
 theme_override_styles/grabber_area = SubResource("Fill")
 theme_override_styles/grabber_area_highlight = SubResource("Fill")
 value = 100.0
-metadata/_edit_use_anchors_ = true
 
 [node name="value_audio" type="Label" parent="CenterContainer/Panel/ControlPosition/AudioControl" unique_id=1368927564]
 visible = false
@@ -226,25 +225,25 @@ offset_bottom = 23.0
 [node name="HapicControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=160099517]
 anchors_preset = 0
 offset_left = 88.0
-offset_top = 424.0
-offset_right = 452.0
-offset_bottom = 488.0
+offset_top = 504.0
+offset_right = 456.0
+offset_bottom = 568.0
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=1220116272]
 layout_mode = 0
-anchor_right = 0.16483517
-anchor_bottom = 0.9375
+offset_right = 60.0
+offset_bottom = 60.0
 mouse_filter = 2
 texture = SubResource("Atlas_haptic")
 expand_mode = 1
-metadata/_edit_use_anchors_ = true
+stretch_mode = 5
 
 [node name="Checkbox" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=891107429]
 layout_mode = 0
-offset_left = 320.0
+offset_left = 309.0
 offset_top = 8.0
-offset_right = 368.0
+offset_right = 357.0
 offset_bottom = 52.0
 mouse_filter = 2
 texture = SubResource("Atlas_box")
@@ -252,10 +251,10 @@ expand_mode = 1
 
 [node name="HapticsCheckBox" type="CheckBox" parent="CenterContainer/Panel/ControlPosition/HapicControl" unique_id=751001771]
 layout_mode = 0
-offset_left = 320.0
+offset_left = 309.0
 offset_top = 8.0
-offset_right = 332.0
-offset_bottom = 19.0
+offset_right = 325.0
+offset_bottom = 24.0
 scale = Vector2(4, 4)
 tooltip_text = "Bật/tắt rung trên thiết bị hỗ trợ"
 theme_override_constants/h_separation = 0
@@ -275,24 +274,24 @@ button_pressed = true
 [node name="TouchSplitControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=931572280]
 anchors_preset = 0
 offset_left = 88.0
-offset_top = 508.0
-offset_right = 452.0
-offset_bottom = 572.0
+offset_top = 584.0
+offset_right = 456.0
+offset_bottom = 648.0
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/TouchSplitControl" unique_id=2122161022]
 layout_mode = 0
-anchor_right = 0.16483517
-anchor_bottom = 0.9375
+offset_right = 60.0
+offset_bottom = 60.0
 mouse_filter = 2
 texture = SubResource("Atlas_split")
 expand_mode = 1
-metadata/_edit_use_anchors_ = true
+stretch_mode = 5
 
 [node name="TouchSplitSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/TouchSplitControl" unique_id=1968898738]
 layout_mode = 0
-offset_left = 60.0
-offset_right = 136.0
+offset_left = 56.0
+offset_right = 132.0
 offset_bottom = 15.0
 scale = Vector2(4, 4)
 tooltip_text = "Vị trí ranh giới vùng chạm trái/phải"
@@ -310,24 +309,24 @@ layout_mode = 0
 [node name="TouchDeadZoneControl" type="Control" parent="CenterContainer/Panel/ControlPosition" unique_id=813029333]
 anchors_preset = 0
 offset_left = 88.0
-offset_top = 592.0
-offset_right = 452.0
-offset_bottom = 656.0
+offset_top = 664.0
+offset_right = 456.0
+offset_bottom = 728.0
 mouse_filter = 2
 
 [node name="Icon" type="TextureRect" parent="CenterContainer/Panel/ControlPosition/TouchDeadZoneControl" unique_id=745660412]
 layout_mode = 0
-anchor_right = 0.16483517
-anchor_bottom = 0.9375
+offset_right = 60.0
+offset_bottom = 60.0
 mouse_filter = 2
 texture = SubResource("Atlas_dead")
 expand_mode = 1
-metadata/_edit_use_anchors_ = true
+stretch_mode = 5
 
 [node name="TouchDeadZoneSlider" type="HSlider" parent="CenterContainer/Panel/ControlPosition/TouchDeadZoneControl" unique_id=186927752]
 layout_mode = 0
-offset_left = 60.0
-offset_right = 136.0
+offset_left = 56.0
+offset_right = 132.0
 offset_bottom = 15.0
 scale = Vector2(4, 4)
 tooltip_text = "Độ rộng vùng không nhận chạm ở giữa"
@@ -343,18 +342,18 @@ layout_mode = 0
 
 [node name="CloseButton" type="TextureButton" parent="." unique_id=70035627]
 layout_mode = 1
-anchors_preset = -1
-anchor_left = 0.49814814
-anchor_top = 0.50885415
-anchor_right = 0.49814814
-anchor_bottom = 0.51020837
-offset_left = 212.0
-offset_top = -312.0
-offset_right = 284.0
-offset_bottom = -244.0
-grow_horizontal = 0
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = 216.0
+offset_top = -290.0
+offset_right = 288.0
+offset_bottom = -222.0
+grow_horizontal = 2
+grow_vertical = 2
 tooltip_text = "Đóng cài đặt"
 texture_normal = SubResource("Atlas_close")
 ignore_texture_size = true
 stretch_mode = 5
-metadata/_edit_use_anchors_ = true

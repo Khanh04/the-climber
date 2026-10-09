@@ -9,6 +9,7 @@ var _builder: GeneratedChunkSceneBuilder = null
 var _seed_key: String = ""
 var _chunk_start_height_offset_meters: float = 0.0
 var _is_configured: bool = false
+var _route_offset_pixels: Vector2 = Vector2.ZERO
 
 func configure(
 	tuning_value: GenerationTuning,
@@ -16,7 +17,8 @@ func configure(
 	builder_value: GeneratedChunkSceneBuilder,
 	seed_key_value: String,
 	world_origin_global_position_value: Vector2,
-	chunk_start_height_offset_meters_value: float
+	chunk_start_height_offset_meters_value: float,
+	route_offset_pixels_value: Vector2 = Vector2.ZERO
 ) -> void:
 	Validation.require_condition(tuning_value != null, "GeneratedChunkCoordinator requires generation tuning.")
 	Validation.require_condition(generator_value != null, "GeneratedChunkCoordinator requires a chunk generator.")
@@ -36,6 +38,7 @@ func configure(
 	_builder = builder_value
 	_seed_key = seed_key_value
 	_chunk_start_height_offset_meters = chunk_start_height_offset_meters_value
+	_route_offset_pixels = route_offset_pixels_value
 	global_position = world_origin_global_position_value
 	_is_configured = true
 
@@ -89,6 +92,7 @@ func _ensure_chunk(chunk_index: int) -> void:
 		push_error("GeneratedChunkCoordinator could not generate a valid chunk %d." % chunk_index)
 		return
 	var chunk_node: Node2D = _builder.build_chunk_node(layout)
+	chunk_node.position += _route_offset_pixels
 	chunk_node.set_meta(&"generated_chunk_layout", layout)
 	add_child(chunk_node)
 	chunk_spawned.emit(chunk_node)

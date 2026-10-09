@@ -211,8 +211,8 @@ func test_run_hud_scene_wires_required_nodes() -> void:
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Score/Icon_Score/HeightValueLabel"))
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaValueLabel"))
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaBar"))
-	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel2"))
-	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Coins/CoinsValueLabel2"))
+	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Coins/CoinsValueLabel"))
 	assert_not_null(hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton"))
 
 func test_run_hud_scene_displays_height_stamina_and_run_coins() -> void:
@@ -231,8 +231,8 @@ func test_run_hud_scene_displays_height_stamina_and_run_coins() -> void:
 	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Score/Icon_Score/HeightValueLabel") as Label
 	var stamina_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaValueLabel") as Label
 	var stamina_bar: TextureProgressBar = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric/StaminaBar") as TextureProgressBar
-	var wallet_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel2") as Label
-	var coins_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Coins/WalletMetric/CoinsValueLabel") as Label
+	var wallet_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Coins/CoinsValueLabel2") as Label
+	var coins_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Coins/CoinsValueLabel") as Label
 	var pause_button: Button = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton") as Button
 
 	assert_not_null(height_value_label)

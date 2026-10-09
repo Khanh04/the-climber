@@ -1,45 +1,42 @@
 [gd_scene format=3 uid="uid://b7y1m41fyw3oa"]
 
+[ext_resource type="Texture2D" uid="uid://cxsel2egvwo0" path="res://assets/PNG/UI/run/RunHud/icon_Score.png" id="3_vct8k"]
 [ext_resource type="Texture2D" uid="uid://bmj7ak4hthdac" path="res://assets/PNG/UI/run/RunHud/icon_coin.png" id="coin"]
 [ext_resource type="Texture2D" uid="uid://blvkt567tljie" path="res://assets/PNG/UI/run/RunHud/fill_stamina.png" id="fill"]
-[ext_resource type="Texture2D" uid="uid://bx7mxm3wjkjt2" path="res://assets/PNG/UI/run/RunHud/icon_Score.png" id="height"]
 [ext_resource type="Texture2D" uid="uid://cuyvnrhcbt1dc" path="res://assets/PNG/UI/run/RunHud/btn_Pause.png" id="pause"]
 [ext_resource type="Script" uid="uid://c64k3agxnuki" path="res://scenes/ui/run_hud.gd" id="script"]
 [ext_resource type="Texture2D" uid="uid://c324tpidndw2d" path="res://assets/PNG/UI/run/RunHud/icon_Stamina.png" id="stamina"]
 [ext_resource type="Texture2D" uid="uid://bhf4c5dkiyxhh" path="res://assets/PNG/UI/run/RunHud/track_stamina.png" id="track"]
 
-[sub_resource type="AtlasTexture" id="Atlas_pause"]
-atlas = ExtResource("pause")
-region = Rect2(4, 4, 41, 47)
-filter_clip = true
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_y1so2"]
+texture = ExtResource("pause")
 
-[sub_resource type="StyleBoxTexture" id="Pause"]
-texture = SubResource("Atlas_pause")
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_k8uxw"]
+texture = ExtResource("pause")
+
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_opxye"]
+texture = ExtResource("pause")
 
 [sub_resource type="AtlasTexture" id="Atlas_height"]
-atlas = ExtResource("height")
-region = Rect2(211.14417, 3.7625427, 22, 24)
+atlas = ExtResource("3_vct8k")
+region = Rect2(0, 0, 17, 17)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_coin"]
 atlas = ExtResource("coin")
-region = Rect2(212.12796, 31.644493, 20, 21)
+region = Rect2(0, 0, 15, 15)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_stamina"]
 atlas = ExtResource("stamina")
-region = Rect2(239, 82, 26, 26)
+region = Rect2(0, 0, 27, 28)
 filter_clip = true
 
-[sub_resource type="AtlasTexture" id="Atlas_track"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_elvma"]
 atlas = ExtResource("track")
-region = Rect2(245, 113, 13, 102)
-filter_clip = true
 
-[sub_resource type="AtlasTexture" id="Atlas_fill"]
+[sub_resource type="AtlasTexture" id="AtlasTexture_lc2qd"]
 atlas = ExtResource("fill")
-region = Rect2(245, 113, 13, 102)
-filter_clip = true
 
 [node name="RunHud" type="Control" unique_id=1218950206]
 texture_filter = 1
@@ -89,16 +86,16 @@ layout_mode = 0
 offset_right = 164.0
 offset_bottom = 188.0
 tooltip_text = "Tạm dừng"
-theme_override_styles/normal = SubResource("Pause")
-theme_override_styles/pressed = SubResource("Pause")
-theme_override_styles/hover = SubResource("Pause")
+theme_override_styles/normal = SubResource("StyleBoxTexture_y1so2")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_k8uxw")
+theme_override_styles/hover = SubResource("StyleBoxTexture_opxye")
 
 [node name="Wrapper_Score" type="Control" parent="Panel/ContentMargin/Metrics" unique_id=1018806141]
 anchors_preset = 0
 offset_left = 764.0
 offset_top = 28.0
-offset_right = 852.0
-offset_bottom = 124.0
+offset_right = 764.0
+offset_bottom = 28.0
 mouse_filter = 2
 
 [node name="Icon_Score" type="TextureRect" parent="Panel/ContentMargin/Metrics/Wrapper_Score" unique_id=1206721622]
@@ -106,6 +103,7 @@ layout_mode = 0
 offset_left = 44.0
 offset_right = 132.0
 offset_bottom = 96.0
+scale = Vector2(0.9, 0.9)
 mouse_filter = 2
 texture = SubResource("Atlas_height")
 expand_mode = 1
@@ -142,16 +140,17 @@ vertical_alignment = 1
 anchors_preset = 0
 offset_left = 852.0
 offset_top = 168.0
-offset_right = 932.0
-offset_bottom = 252.0
+offset_right = 852.0
+offset_bottom = 168.0
 mouse_filter = 2
 
 [node name="icon_coin" type="TextureRect" parent="Panel/ContentMargin/Metrics/Wrapper_Coins" unique_id=978769251]
 layout_mode = 0
-offset_left = -23.0
-offset_top = -50.0
-offset_right = 57.0
-offset_bottom = 34.0
+offset_left = -37.0
+offset_top = -8.0
+offset_right = 43.0
+offset_bottom = 76.0
+scale = Vector2(0.8, 0.8)
 mouse_filter = 2
 texture = SubResource("Atlas_coin")
 expand_mode = 1
@@ -172,10 +171,10 @@ vertical_alignment = 1
 
 [node name="CoinsValueLabel2" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Coins" unique_id=1868689543]
 layout_mode = 0
-offset_left = -240.0
-offset_top = -35.0
-offset_right = -28.0
-offset_bottom = 17.0
+offset_left = -264.0
+offset_top = -12.0
+offset_right = -52.0
+offset_bottom = 40.0
 theme_override_colors/font_color = Color(1, 0.94, 0.68, 1)
 theme_override_colors/font_outline_color = Color(0.08, 0.12, 0.08, 1)
 theme_override_constants/outline_size = 7
@@ -186,10 +185,10 @@ vertical_alignment = 1
 
 [node name="CoinsValueLabel" type="Label" parent="Panel/ContentMargin/Metrics/Wrapper_Coins" unique_id=530233853]
 layout_mode = 0
-offset_left = -240.0
-offset_top = 12.0
-offset_right = -28.0
-offset_bottom = 48.0
+offset_left = -264.0
+offset_top = 35.0
+offset_right = -52.0
+offset_bottom = 71.0
 theme_override_colors/font_color = Color(1, 0.94, 0.68, 1)
 theme_override_colors/font_outline_color = Color(0.08, 0.12, 0.08, 1)
 theme_override_constants/outline_size = 7
@@ -202,8 +201,8 @@ vertical_alignment = 1
 anchors_preset = 0
 offset_left = 956.0
 offset_top = 328.0
-offset_right = 1060.0
-offset_bottom = 860.0
+offset_right = 1017.0
+offset_bottom = 806.0
 mouse_filter = 2
 
 [node name="StaminaMetric" type="TextureRect" parent="Panel/ContentMargin/Metrics/Wrapper_Stamina" unique_id=1087679516]
@@ -247,14 +246,15 @@ vertical_alignment = 1
 
 [node name="StaminaBar" type="TextureProgressBar" parent="Panel/ContentMargin/Metrics/Wrapper_Stamina/StaminaMetric" unique_id=1382926751]
 layout_mode = 0
-offset_left = 24.0
+offset_left = 22.0
 offset_top = 124.0
 offset_right = 37.0
-offset_bottom = 226.0
+offset_bottom = 228.0
 scale = Vector2(4, 4)
 mouse_filter = 2
 step = 0.01
 value = 100.0
 fill_mode = 3
-texture_under = SubResource("Atlas_track")
-texture_progress = SubResource("Atlas_fill")
+texture_under = SubResource("AtlasTexture_elvma")
+texture_progress = SubResource("AtlasTexture_lc2qd")
+texture_progress_offset = Vector2(3, 3)

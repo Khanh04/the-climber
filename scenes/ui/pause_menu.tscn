@@ -1,9 +1,9 @@
 [gd_scene format=3 uid="uid://caple2pf1uor3"]
 
 [ext_resource type="Texture2D" uid="uid://bmj7ak4hthdac" path="res://assets/PNG/UI/run/RunHud/icon_coin.png" id="coin"]
-[ext_resource type="Texture2D" uid="uid://bx7mxm3wjkjt2" path="res://assets/PNG/UI/run/RunHud/icon_Score.png" id="height"]
+[ext_resource type="Texture2D" uid="uid://cxsel2egvwo0" path="res://assets/PNG/UI/run/RunHud/icon_Score.png" id="height"]
 [ext_resource type="Texture2D" uid="uid://b6mc8yrwn8hup" path="res://assets/PNG/UI/pause_menu/btn_main_menu.png" id="main_menu"]
-[ext_resource type="Texture2D" uid="uid://yir52bs68hlh" path="res://assets/PNG/UI/pause_menu/btn_new_seed.png" id="new_seed"]
+[ext_resource type="Texture2D" uid="uid://yir52bs68hlh" path="res://assets/PNG/UI/pause_menu/btn_new_run.png" id="new_seed"]
 [ext_resource type="Texture2D" uid="uid://ddbhi3hb1uf03" path="res://assets/PNG/UI/pause_menu/panel_pause.png" id="panel"]
 [ext_resource type="Texture2D" uid="uid://dg6ti0ymc4h1t" path="res://assets/PNG/UI/pause_menu/btn_restart.png" id="restart"]
 [ext_resource type="Texture2D" uid="uid://dy3xffh20eb6g" path="res://assets/PNG/UI/pause_menu/btn_resume.png" id="resume"]
@@ -12,30 +12,29 @@
 
 [sub_resource type="AtlasTexture" id="Atlas_panel"]
 atlas = ExtResource("panel")
-region = Rect2(67, 89, 135, 250)
+region = Rect2(0, 0, 135, 284)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_height"]
 atlas = ExtResource("height")
-region = Rect2(215, 8, 15, 15)
+region = Rect2(0, 0, 17, 17)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_coin"]
 atlas = ExtResource("coin")
-region = Rect2(216, 35, 13, 14)
+region = Rect2(0, 0, 15, 15)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_resume"]
 atlas = ExtResource("resume")
-region = Rect2(91, 174, 88, 26)
+region = Rect2(0, 0, 88, 26)
 filter_clip = true
 
 [sub_resource type="StyleBoxTexture" id="resume_normal"]
 texture = SubResource("Atlas_resume")
 
-[sub_resource type="StyleBoxTexture" id="resume_pressed"]
-texture = SubResource("Atlas_resume")
-modulate_color = Color(0.8, 0.8, 0.8, 1)
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_vct8k"]
+texture = ExtResource("resume")
 
 [sub_resource type="StyleBoxTexture" id="resume_hover"]
 texture = SubResource("Atlas_resume")
@@ -51,15 +50,14 @@ border_color = Color(1, 0.95, 0.7, 1)
 
 [sub_resource type="AtlasTexture" id="Atlas_restart"]
 atlas = ExtResource("restart")
-region = Rect2(91, 204, 88, 26)
+region = Rect2(0, 0, 88, 26)
 filter_clip = true
 
 [sub_resource type="StyleBoxTexture" id="restart_normal"]
 texture = SubResource("Atlas_restart")
 
-[sub_resource type="StyleBoxTexture" id="restart_pressed"]
-texture = SubResource("Atlas_restart")
-modulate_color = Color(0.8, 0.8, 0.8, 1)
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_coo1x"]
+texture = ExtResource("restart")
 
 [sub_resource type="StyleBoxTexture" id="restart_hover"]
 texture = SubResource("Atlas_restart")
@@ -67,15 +65,14 @@ modulate_color = Color(1.12, 1.12, 1.12, 1)
 
 [sub_resource type="AtlasTexture" id="Atlas_new_seed"]
 atlas = ExtResource("new_seed")
-region = Rect2(91, 234, 88, 26)
+region = Rect2(0, 0, 88, 26)
 filter_clip = true
 
 [sub_resource type="StyleBoxTexture" id="new_seed_normal"]
 texture = SubResource("Atlas_new_seed")
 
-[sub_resource type="StyleBoxTexture" id="new_seed_pressed"]
-texture = SubResource("Atlas_new_seed")
-modulate_color = Color(0.8, 0.8, 0.8, 1)
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_ht4ye"]
+texture = ExtResource("new_seed")
 
 [sub_resource type="StyleBoxTexture" id="new_seed_hover"]
 texture = SubResource("Atlas_new_seed")
@@ -83,15 +80,14 @@ modulate_color = Color(1.12, 1.12, 1.12, 1)
 
 [sub_resource type="AtlasTexture" id="Atlas_main_menu"]
 atlas = ExtResource("main_menu")
-region = Rect2(91, 264, 88, 26)
+region = Rect2(0, 0, 88, 26)
 filter_clip = true
 
 [sub_resource type="StyleBoxTexture" id="main_menu_normal"]
 texture = SubResource("Atlas_main_menu")
 
-[sub_resource type="StyleBoxTexture" id="main_menu_pressed"]
-texture = SubResource("Atlas_main_menu")
-modulate_color = Color(0.8, 0.8, 0.8, 1)
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_7yca1"]
+texture = ExtResource("main_menu")
 
 [sub_resource type="StyleBoxTexture" id="main_menu_hover"]
 texture = SubResource("Atlas_main_menu")
@@ -99,15 +95,14 @@ modulate_color = Color(1.12, 1.12, 1.12, 1)
 
 [sub_resource type="AtlasTexture" id="Atlas_setting"]
 atlas = ExtResource("setting")
-region = Rect2(91, 294, 88, 26)
+region = Rect2(0, 0, 88, 26)
 filter_clip = true
 
 [sub_resource type="StyleBoxTexture" id="setting_normal"]
 texture = SubResource("Atlas_setting")
 
-[sub_resource type="StyleBoxTexture" id="setting_pressed"]
-texture = SubResource("Atlas_setting")
-modulate_color = Color(0.8, 0.8, 0.8, 1)
+[sub_resource type="StyleBoxTexture" id="StyleBoxTexture_lrbnh"]
+texture = ExtResource("setting")
 
 [sub_resource type="StyleBoxTexture" id="setting_hover"]
 texture = SubResource("Atlas_setting")
@@ -123,6 +118,7 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("script")
+metadata/_edit_vertical_guides_ = [380.0, -734.0]
 
 [node name="Backdrop" type="ColorRect" parent="." unique_id=1384200420]
 layout_mode = 1
@@ -141,15 +137,15 @@ anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
 offset_left = -270.0
-offset_top = -500.0
+offset_top = -604.0
 offset_right = 270.0
-offset_bottom = 500.0
+offset_bottom = 396.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
 [node name="Panel" type="TextureRect" parent="CenterContainer" unique_id=717836836]
-custom_minimum_size = Vector2(540, 1000)
+custom_minimum_size = Vector2(540, 1080)
 layout_mode = 2
 mouse_filter = 2
 texture = SubResource("Atlas_panel")
@@ -157,9 +153,10 @@ expand_mode = 1
 
 [node name="ContentMargin" type="Control" parent="CenterContainer/Panel" unique_id=807165680]
 layout_mode = 1
-anchors_preset = 15
+anchor_top = 0.074
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_top = 0.08000183
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
@@ -176,29 +173,31 @@ mouse_filter = 2
 [node name="HeightIcon" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1144672623]
 layout_mode = 0
 offset_left = 96.0
-offset_top = 236.0
+offset_top = 254.0
 offset_right = 156.0
-offset_bottom = 296.0
+offset_bottom = 314.0
+scale = Vector2(0.7, 0.7)
 mouse_filter = 2
 texture = SubResource("Atlas_height")
 expand_mode = 1
 
 [node name="CoinIcon" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1244493654]
 layout_mode = 0
-offset_left = 280.0
-offset_top = 240.0
-offset_right = 332.0
-offset_bottom = 296.0
+offset_left = 96.0
+offset_top = 314.0
+offset_right = 148.0
+offset_bottom = 370.0
+scale = Vector2(0.7, 0.7)
 mouse_filter = 2
 texture = SubResource("Atlas_coin")
 expand_mode = 1
 
 [node name="HeightValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=584126850]
 layout_mode = 0
-offset_left = 164.0
-offset_top = 236.0
-offset_right = 272.0
-offset_bottom = 300.0
+offset_left = 150.0
+offset_top = 245.0
+offset_right = 258.0
+offset_bottom = 309.0
 theme_override_colors/font_color = Color(1, 0.94, 0.69, 1)
 theme_override_font_sizes/font_size = 28
 text = "0.0 m"
@@ -207,77 +206,77 @@ text_overrun_behavior = 3
 
 [node name="CoinValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=575661228]
 layout_mode = 0
-offset_left = 340.0
-offset_top = 236.0
-offset_right = 448.0
-offset_bottom = 300.0
+offset_left = 150.0
+offset_top = 303.0
+offset_right = 258.0
+offset_bottom = 367.0
 theme_override_colors/font_color = Color(1, 0.94, 0.69, 1)
 theme_override_font_sizes/font_size = 28
-text = "0"
+text = "+0"
 vertical_alignment = 1
 text_overrun_behavior = 3
 
 [node name="ResumeButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1276961074]
 layout_mode = 0
 offset_left = 96.0
-offset_top = 340.0
+offset_top = 370.0
 offset_right = 448.0
-offset_bottom = 444.0
+offset_bottom = 474.0
 tooltip_text = "Continue Game"
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("resume_normal")
-theme_override_styles/pressed = SubResource("resume_pressed")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_vct8k")
 theme_override_styles/hover = SubResource("resume_hover")
 theme_override_styles/focus = SubResource("Focus")
 
 [node name="RestartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1040953216]
 layout_mode = 0
 offset_left = 96.0
-offset_top = 460.0
+offset_top = 490.0
 offset_right = 448.0
-offset_bottom = 564.0
+offset_bottom = 594.0
 tooltip_text = "Chơi lại màn hiện tại"
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("restart_normal")
-theme_override_styles/pressed = SubResource("restart_pressed")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_coo1x")
 theme_override_styles/hover = SubResource("restart_hover")
 theme_override_styles/focus = SubResource("Focus")
 
 [node name="NewSeedRunButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=534817622]
 layout_mode = 0
 offset_left = 96.0
-offset_top = 580.0
+offset_top = 610.0
 offset_right = 448.0
-offset_bottom = 684.0
+offset_bottom = 714.0
 tooltip_text = "Lượt mới với đường leo mới"
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("new_seed_normal")
-theme_override_styles/pressed = SubResource("new_seed_pressed")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_ht4ye")
 theme_override_styles/hover = SubResource("new_seed_hover")
 theme_override_styles/focus = SubResource("Focus")
 
 [node name="MainMenuButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1143494078]
 layout_mode = 0
 offset_left = 96.0
-offset_top = 700.0
+offset_top = 730.0
 offset_right = 448.0
-offset_bottom = 804.0
+offset_bottom = 834.0
 tooltip_text = "Về menu chính"
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("main_menu_normal")
-theme_override_styles/pressed = SubResource("main_menu_pressed")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_7yca1")
 theme_override_styles/hover = SubResource("main_menu_hover")
 theme_override_styles/focus = SubResource("Focus")
 
 [node name="SettingsButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1100649296]
 layout_mode = 0
 offset_left = 96.0
-offset_top = 820.0
+offset_top = 850.0
 offset_right = 448.0
-offset_bottom = 924.0
+offset_bottom = 954.0
 tooltip_text = "Cài đặt"
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("setting_normal")
-theme_override_styles/pressed = SubResource("setting_pressed")
+theme_override_styles/pressed = SubResource("StyleBoxTexture_lrbnh")
 theme_override_styles/hover = SubResource("setting_hover")
 theme_override_styles/focus = SubResource("Focus")

@@ -16,7 +16,9 @@ func reset_gameplay_state(
 	controller: RefCounted,
 	chaser_pacing_model: RefCounted,
 	uses_generated_chunks: bool,
-	camera_player_lower_screen_offset_pixels: float
+	camera_player_lower_screen_offset_pixels: float,
+	player_start_position: Vector2 = Vector2.INF,
+	camera_start_position: Vector2 = Vector2.INF
 ) -> void:
 	var typed_gameplay_nodes: RunGameplayNodeRefsScript = _require_gameplay_nodes(gameplay_nodes)
 	var typed_controller: ClimbPrototypeControllerScript = _require_controller(controller)
@@ -30,8 +32,9 @@ func reset_gameplay_state(
 		_require_chaser_pacing_model(chaser_pacing_model).reset()
 	if uses_generated_chunks:
 		typed_gameplay_nodes.generated_chunk_coordinator.reset_chunks()
-	typed_gameplay_nodes.player.reset_physics(typed_gameplay_nodes.reset_anchor.global_position)
-	typed_gameplay_nodes.camera.global_position = Vector2(
+	var spawn_position: Vector2 = typed_gameplay_nodes.reset_anchor.global_position if player_start_position == Vector2.INF else player_start_position
+	typed_gameplay_nodes.player.reset_physics(spawn_position)
+	typed_gameplay_nodes.camera.global_position = camera_start_position if camera_start_position != Vector2.INF else Vector2(
 		typed_gameplay_nodes.reset_anchor.global_position.x,
 		typed_gameplay_nodes.reset_anchor.global_position.y - camera_player_lower_screen_offset_pixels
 	)

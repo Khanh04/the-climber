@@ -20,19 +20,11 @@ const PauseMenuStateScript = preload("res://src/ui/pause_menu_state.gd")
 @onready var _height_value: Label = $CenterContainer/Panel/ContentMargin/Content/HeightValue
 @onready var _coin_value: Label = $CenterContainer/Panel/ContentMargin/Content/CoinValue
 
-# PNG canvas: 270x480. Display all cropped pieces at the same 4x scale.
-func _align_reference_layout() -> void:
-	var fit_scale: float = minf(size.x / 1080.0, size.y / 1920.0)
-	_panel_frame.position = size * 0.5 + Vector2(-272.0, -604.0) * fit_scale
-	_panel_frame.scale = Vector2.ONE * fit_scale
-
 # Settings replaces the artwork, but the run stays paused underneath it.
 func set_settings_obscured(obscured: bool) -> void:
 	_panel_frame.visible = not obscured
 
 func _ready() -> void:
-	var _resize_connect_result: int = resized.connect(_align_reference_layout)
-	_align_reference_layout.call_deferred()
 	_validate_required_nodes()
 	var _resume_connect_result: int = _resume_button.connect(&"pressed", Callable(self, "_on_resume_button_pressed"))
 	var _restart_connect_result: int = _restart_button.connect(&"pressed", Callable(self, "_on_restart_button_pressed"))
