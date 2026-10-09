@@ -6,6 +6,7 @@ const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 var visible: bool = false
 var rescue_offered: bool = false
 var final_height_meters: float = 0.0
+var best_height_meters: float = 0.0
 var wallet_coins: int = 0
 var run_earned_coins: int = 0
 var has_end_reason: bool = false
@@ -34,6 +35,7 @@ func _init(
 	show_post_run_coin_doubler = show_post_run_coin_doubler_value
 
 func assert_valid() -> void:
+	Validation.require_condition(is_finite(best_height_meters) and best_height_meters >= 0.0, "RunEndScreenState best height must be finite and non-negative.")
 	Validation.require_condition(final_height_meters >= 0.0, "RunEndScreenState final height cannot be negative.")
 	Validation.require_condition(wallet_coins >= 0, "RunEndScreenState wallet coins cannot be negative.")
 	Validation.require_condition(run_earned_coins >= 0, "RunEndScreenState run-earned coins cannot be negative.")

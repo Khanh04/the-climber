@@ -22,6 +22,11 @@ const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
 @onready var _new_seed_run_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/NewSeedRunButton") as Button
 @onready var _main_menu_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/MainMenuButton") as Button
 
+@onready var _score_value: Label = $CenterContainer/Panel/ContentMargin/Content/ScoreValue
+@onready var _best_score_value: Label = $CenterContainer/Panel/ContentMargin/Content/BestScoreValue
+@onready var _run_coins_value: Label = $CenterContainer/Panel/ContentMargin/Content/RunCoinsValue
+@onready var _wallet_coins_value: Label = $CenterContainer/Panel/ContentMargin/Content/WalletCoinsValue
+
 func _ready() -> void:
 	_validate_required_nodes()
 	var _rewarded_continue_connect_result: int = _rewarded_continue_button.connect(&"pressed", Callable(self, "_on_rewarded_continue_button_pressed"))
@@ -42,12 +47,21 @@ func apply_state(state: RefCounted) -> void:
 	var is_rescue_offered_state: bool = typed_state.get("rescue_offered")
 	var end_reason: int = typed_state.get("end_reason")
 	var final_height_meters: float = typed_state.get("final_height_meters")
+	var best_height_meters: float = typed_state.get("best_height_meters")
 	var wallet_coins: int = typed_state.get("wallet_coins")
 	var run_earned_coins: int = typed_state.get("run_earned_coins")
 	var show_post_run_coin_doubler: bool = typed_state.get("show_post_run_coin_doubler")
 	var show_rewarded_continue: bool = typed_state.get("show_rewarded_continue")
 	var ad_feedback_message: String = typed_state.get("ad_feedback_message")
 
+	# Labels display the snapshot only; they never award coins or save a record.
+	_score_value.text = "%.1f m" % final_height_meters
+	_best_score_value.text = "%.1f m" % best_height_meters
+	_run_coins_value.text = str(run_earned_coins)
+	_wallet_coins_value.text = str(wallet_coins)
+	_run_coins_value.tooltip_text = "Xu nhặt trong lượt này: %d" % run_earned_coins
+	_wallet_coins_value.tooltip_text = "Tổng xu trong ví: %d" % wallet_coins
+	_title_label.visible = is_rescue_offered_state
 	visible = is_visible_state
 	_ad_feedback_label.visible = not ad_feedback_message.is_empty()
 	_ad_feedback_label.text = ad_feedback_message

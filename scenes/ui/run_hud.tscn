@@ -1,6 +1,6 @@
 [gd_scene format=3 uid="uid://b7y1m41fyw3oa"]
 
-[ext_resource type="Texture2D" uid="uid://duptdjarxcxx6" path="res://assets/PNG/UI/run/RunHud/icon_score.png" id="3_vct8k"]
+[ext_resource type="Texture2D" uid="uid://cxsel2egvwo0" path="res://assets/PNG/UI/run/RunHud/icon_Score.png" id="3_vct8k"]
 [ext_resource type="Texture2D" uid="uid://bmj7ak4hthdac" path="res://assets/PNG/UI/run/RunHud/icon_coin.png" id="coin"]
 [ext_resource type="Texture2D" uid="uid://blvkt567tljie" path="res://assets/PNG/UI/run/RunHud/fill_stamina.png" id="fill"]
 [ext_resource type="Texture2D" uid="uid://cuyvnrhcbt1dc" path="res://assets/PNG/UI/run/RunHud/btn_Pause.png" id="pause"]

@@ -118,6 +118,8 @@ const TUTORIAL_UPPER_HOLD_IDS: Array[StringName] = [
 const RUN_SCENE_PATH: String = "res://scenes/main/run_scene.tscn"
 const MAIN_MENU_SCENE_PATH: String = "res://scenes/main/main_menu_scene.tscn"
 
+@export var use_editor_start_positions: bool = true
+
 @export var climb_tuning: ClimbPrototypeTuningScript
 @export var stamina_tuning: StaminaTuningScript
 @export var generation_tuning: GenerationTuningScript
@@ -134,7 +136,7 @@ const MAIN_MENU_SCENE_PATH: String = "res://scenes/main/main_menu_scene.tscn"
 @onready var _reset_anchor: Marker2D = %ResetAnchor
 @onready var _camera: Camera2D = %DevCamera
 @onready var _background: Sprite2D = get_node("DevCamera/background") as Sprite2D
-@onready var _mountains: Sprite2D = get_node("DevCamera/Sprite2D") as Sprite2D
+@onready var _mountains: Sprite2D = get_node("DevCamera/Moutain") as Sprite2D
 @onready var _cloud: AnimatedSprite2D = get_node("DevCamera/cloud") as AnimatedSprite2D
 @onready var _tree_background: Sprite2D = get_node("DevCamera/Tree") as Sprite2D
 @onready var _starter_handholds_root: Node2D = get_node("Handholds") as Node2D
@@ -213,6 +215,13 @@ var _settings_presenter: SettingsPresenterScript = SettingsPresenterScript.new()
 var _store_shell: StoreShellScript = null
 var _pause_menu: PauseMenuScript = null
 var _post_run_coin_doubler_reward_id: String = ""
+# Capture saved scene positions before runtime setup changes any of them.
+@onready var _editor_player_start: Vector2 = _player.get_body_global_position()
+@onready var _editor_camera_start: Vector2 = _camera.global_position
+@onready var _editor_camera_zoom: Vector2 = _camera.zoom
+@onready var _editor_chaser_start: Vector2 = _chaser_kill_zone.global_position
+@onready var _editor_generated_origin: Vector2 = _generated_chunk_coordinator.global_position
+
 var _start_y: float = 0.0
 var _launch_mode: int = RunLaunchModeScript.Value.NORMAL
 var _launch_mode_override: int = RunLaunchModeScript.Value.NORMAL
@@ -258,7 +267,7 @@ func _ready() -> void:
 	_controller = ClimbPrototypeControllerScript.new(climb_tuning, _stamina)
 	_chaser_pacing_model = ChaserPacingModelScript.new(_gameplay_nodes.chaser_kill_zone.chaser_tuning)
 	_apply_cosmetic_loadout()
-	_start_y = _gameplay_nodes.reset_anchor.global_position.y
+	_start_y = _editor_player_start.y if use_editor_start_positions else _gameplay_nodes.reset_anchor.global_position.y
 	if _uses_generated_chunks():
 		_configure_generated_chunks()
 	_reset_playground()
@@ -377,10 +386,10 @@ func _physics_process(delta: float) -> void:
 		_gameplay_nodes,
 		_run_loop_coordinator,
 		_run_session,
-		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
+		_get_camera_player_start_offset(),
 		_get_climb_tuning_float(&"camera_vertical_dead_zone_pixels"),
 		_get_climb_tuning_float(&"camera_horizontal_dead_zone_pixels"),
-		_reset_anchor.global_position.x,
+		_editor_camera_start.x if use_editor_start_positions else _reset_anchor.global_position.x,
 		_get_climb_tuning_float(&"camera_horizontal_travel_limit_pixels"),
 		_hazard_camera_effect_controller.get_camera_shake_offset()
 	)
@@ -552,7 +561,7 @@ func _build_test_adapter() -> RunSceneTestAdapterScript:
 		_chaser_pacing_model,
 		_launch_mode,
 		_get_climb_tuning_float(&"bottom_fall_margin_pixels"),
-		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
+		_get_camera_player_start_offset(),
 		Callable(self, "_get_run_session_for_test_adapter"),
 		Callable(self, "_get_store_shell_for_test_adapter"),
 		Callable(self, "_show_store"),
@@ -821,7 +830,10 @@ func _configure_generated_chunks() -> void:
 
 	Validation.require_condition(_generated_chunk_coordinator != null, "RunScene requires GeneratedChunks before configuring generated chunks.")
 	var pixels_per_meter: float = _get_climb_tuning_float(&"pixels_per_meter")
-	var generated_world_origin: Vector2 = _reset_anchor.global_position
+	var generated_world_origin: Vector2 = _editor_generated_origin if use_editor_start_positions else _reset_anchor.global_position
+	# Keep the authored container, but start the generated route at the player spawn.
+	var route_origin: Vector2 = _editor_player_start if use_editor_start_positions else _reset_anchor.global_position
+	var route_offset: Vector2 = route_origin - generated_world_origin
 	var chunk_start_height_offset_meters: float = 0.0
 	var seed_key: String = DailySeedKey.current_run()
 	var builder: GeneratedChunkSceneBuilderScript = GeneratedChunkSceneBuilderScript.new(
@@ -840,39 +852,65 @@ func _configure_generated_chunks() -> void:
 		builder,
 		seed_key,
 		generated_world_origin,
-		chunk_start_height_offset_meters
+		chunk_start_height_offset_meters,
+		route_offset
 	)
 	_run_generated_spawn_hookup_runtime.ensure_chunk_spawn_signal_connected(_generated_chunk_coordinator, _on_generated_chunk_spawned)
 
 func _configure_mobile_world_framing() -> void:
 	var viewport_size: Vector2 = get_viewport_rect().size
 	Validation.require_condition(viewport_size.x > 0.0 and viewport_size.y > 0.0, "RunScene mobile framing requires a positive viewport size.")
+	if use_editor_start_positions:
+		# Preserve every authored transform; scale the whole camera view as one 1080x1920 design.
+		var design_size: Vector2 = Vector2(1080.0, 1920.0)
+		var design_scale: float = minf(viewport_size.x / design_size.x, viewport_size.y / design_size.y)
+		_camera.zoom = _editor_camera_zoom * design_scale
+		_update_environment_mattes(viewport_size)
+		return
 	var target_visible_width: float = _get_climb_tuning_float(&"camera_target_visible_width_pixels")
 	var camera_zoom: float = viewport_size.x / target_visible_width
 	_camera.zoom = Vector2(camera_zoom, camera_zoom)
 	var visible_world_size: Vector2 = viewport_size / camera_zoom
-	_scale_sprite_to_cover(_background, visible_world_size)
+	# Match MainMenu TextureRects: show the complete artwork without cropping.
+	_scale_sprite_to_fit(_background, visible_world_size)
 	_scale_canvas_item_to_fit(_tree_background, _tree_background.texture.get_size(), visible_world_size)
 	_scale_canvas_item_to_fit(_mountains, _mountains.texture.get_size(), visible_world_size)
+	# MainMenu decor_preview/Mountaint has a 330.98-pixel vertical offset.
+	_mountains.position.y = 330.98 / camera_zoom
 	var cloud_texture: Texture2D = _cloud.sprite_frames.get_frame_texture(_cloud.animation, _cloud.frame)
 	Validation.require_condition(cloud_texture != null, "RunScene cloud background requires a current animation texture.")
 	_scale_canvas_item_to_fit(_cloud, cloud_texture.get_size(), visible_world_size)
+	_update_environment_mattes(viewport_size)
+
+func _scale_sprite_to_fit(sprite: Sprite2D, visible_world_size: Vector2) -> void:
+	Validation.require_condition(sprite.texture != null, "RunScene background sprite requires a texture.")
+	_scale_canvas_item_to_fit(sprite, sprite.texture.get_size(), visible_world_size)
 
 func _scale_canvas_item_to_fit(item: Node2D, texture_size: Vector2, visible_world_size: Vector2) -> void:
-	Validation.require_condition(texture_size.x > 0.0 and texture_size.y > 0.0, "RunScene environment texture size must be positive.")
+	Validation.require_condition(texture_size.x > 0.0 and texture_size.y > 0.0, "RunScene background texture size must be positive.")
 	var fit_scale: float = minf(visible_world_size.x / texture_size.x, visible_world_size.y / texture_size.y)
 	item.position = Vector2.ZERO
 	item.scale = Vector2(fit_scale, fit_scale)
 
-func _scale_sprite_to_cover(sprite: Sprite2D, visible_world_size: Vector2) -> void:
-	Validation.require_condition(sprite.texture != null, "RunScene background sprite requires a texture.")
-	_scale_canvas_item_to_cover(sprite, sprite.texture.get_size(), visible_world_size)
-
-func _scale_canvas_item_to_cover(item: Node2D, texture_size: Vector2, visible_world_size: Vector2) -> void:
-	Validation.require_condition(texture_size.x > 0.0 and texture_size.y > 0.0, "RunScene background texture size must be positive.")
-	var cover_scale: float = maxf(visible_world_size.x / texture_size.x, visible_world_size.y / texture_size.y)
-	item.position = Vector2.ZERO
-	item.scale = Vector2(cover_scale, cover_scale)
+func _update_environment_mattes(viewport_size: Vector2) -> void:
+	# The HUD and MainMenu use the same centered 1080x1920 artwork frame.
+	var design_size: Vector2 = Vector2(1080.0, 1920.0)
+	var fit_scale: float = minf(viewport_size.x / design_size.x, viewport_size.y / design_size.y)
+	var frame_size: Vector2 = design_size * fit_scale
+	var inset: Vector2 = (viewport_size - frame_size) * 0.5
+	var clear_color: Color = ProjectSettings.get_setting("rendering/environment/defaults/default_clear_color", Color(0.3, 0.3, 0.3, 1.0))
+	var rectangles: Array[Rect2] = [
+		Rect2(Vector2.ZERO, Vector2(viewport_size.x, inset.y)),
+		Rect2(Vector2(0.0, viewport_size.y - inset.y), Vector2(viewport_size.x, inset.y)),
+		Rect2(Vector2(0.0, inset.y), Vector2(inset.x, frame_size.y)),
+		Rect2(Vector2(viewport_size.x - inset.x, inset.y), Vector2(inset.x, frame_size.y)),
+	]
+	var names: Array[String] = ["Top", "Bottom", "Left", "Right"]
+	for index: int in range(names.size()):
+		var matte: ColorRect = get_node("UiLayer/EnvironmentMatte" + names[index]) as ColorRect
+		matte.position = rectangles[index].position
+		matte.size = rectangles[index].size
+		matte.color = clear_color
 
 func _sync_generated_chunks() -> void:
 	if not _uses_generated_chunks():
@@ -984,7 +1022,9 @@ func _reset_playground() -> void:
 		_controller,
 		_chaser_pacing_model,
 		_uses_generated_chunks(),
-		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
+		_get_camera_player_start_offset(),
+		_editor_player_start if use_editor_start_positions else Vector2.INF,
+		_editor_camera_start if use_editor_start_positions else Vector2.INF
 	)
 	if _uses_chaser() and _chaser_kill_zone != null:
 		_apply_cosmetic_loadout()
@@ -993,6 +1033,14 @@ func _reset_playground() -> void:
 			_get_climb_tuning_float(&"pixels_per_meter"),
 			get_viewport_rect().size.x
 		)
+
+		if use_editor_start_positions:
+			_chaser_kill_zone.global_position = _editor_chaser_start
+
+func _get_camera_player_start_offset() -> float:
+	if use_editor_start_positions:
+		return maxf(1.0, _editor_player_start.y - _editor_camera_start.y)
+	return _get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
 
 func _request_restart() -> void:
 	_hide_settings_menu()
@@ -1077,6 +1125,11 @@ func _refresh_ui() -> void:
 		_can_offer_rewarded_continue(),
 		_rewarded_continue_feedback_message
 	)
+	# Use the same saved record as Main Menu, after end-of-run persistence above.
+	var show_results: bool = run_end_state.get("visible")
+	if show_results:
+		run_end_state.set("best_height_meters", _storage_runtime.get_best_height_meters())
+	_run_hud.visible = not show_results
 	_run_ui_view.apply_state_snapshots(hud_state, run_end_state)
 	if _store_shell != null and _store_shell.visible:
 		_refresh_store_ui()
@@ -1374,7 +1427,7 @@ func _restore_rewarded_continue() -> void:
 	var rescue_plan: RewardedContinueRescuePlanScript = _run_rescue_runtime.build_rewarded_continue_rescue_plan(
 		_collect_rewarded_continue_handholds(),
 		_camera.global_position,
-		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels"),
+		_get_camera_player_start_offset(),
 		_get_climb_tuning_float(&"grip_hang_offset_pixels"),
 		_player.get_left_hand_anchor_global_position().distance_to(_player.get_right_hand_anchor_global_position()),
 		Callable(_run_handhold_targeting_runtime, "require_handhold_drain_multiplier").bind(_starter_handholds_root, generation_tuning),
@@ -1384,7 +1437,7 @@ func _restore_rewarded_continue() -> void:
 		_gameplay_nodes,
 		_controller,
 		rescue_plan,
-		_get_climb_tuning_float(&"camera_player_lower_screen_offset_pixels")
+		_get_camera_player_start_offset()
 	)
 	_run_generated_handhold_runtime.notify_hand_attached_for_path(
 		rescue_plan.left_hold_target.hold_path,

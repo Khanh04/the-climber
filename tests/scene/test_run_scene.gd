@@ -356,12 +356,16 @@ func test_run_scene_has_tall_generated_route_that_collides_while_falling() -> vo
     assert_gte(collidable_generated_hold_count, 18)
     assert_gt(lowest_hold_y - highest_hold_y, 1200.0)
 
-func test_run_scene_starts_generated_chunks_from_reset_anchor_without_authored_starter_route_nodes() -> void:
+func test_run_scene_starts_generated_chunks_near_player_without_authored_starter_route_nodes() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
 
     assert_not_null(playground)
+    var player_node: Node2D = playground.get_node("PlayerCharacter") as Node2D
+    var player_head: Node2D = playground.get_node("PlayerCharacter/Head") as Node2D
+    var authored_origin: Vector2 = playground.transform * player_node.transform * player_head.position
+    playground.set_local_storage_adapter(InMemoryLocalStorageAdapterScript.new())
     add_child_autofree(playground)
     await get_tree().process_frame
 
@@ -375,7 +379,7 @@ func test_run_scene_starts_generated_chunks_from_reset_anchor_without_authored_s
     assert_not_null(first_generated_chunk)
     assert_null(removed_start_hold)
     assert_eq(generated_chunks_root.get_child_count(), playground.generation_tuning.chunk_spawn_ahead_count)
-    assert_eq(first_generated_chunk.global_position, reset_anchor.global_position)
+    assert_eq(first_generated_chunk.global_position, authored_origin)
 
     for generated_chunk in generated_chunks_root.get_children():
         assert_true(generated_chunk is Node2D)

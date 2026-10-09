@@ -1,9 +1,9 @@
 [gd_scene format=3 uid="uid://caple2pf1uor3"]
 
 [ext_resource type="Texture2D" uid="uid://bmj7ak4hthdac" path="res://assets/PNG/UI/run/RunHud/icon_coin.png" id="coin"]
-[ext_resource type="Texture2D" uid="uid://duptdjarxcxx6" path="res://assets/PNG/UI/run/RunHud/icon_score.png" id="height"]
+[ext_resource type="Texture2D" uid="uid://cxsel2egvwo0" path="res://assets/PNG/UI/run/RunHud/icon_Score.png" id="height"]
 [ext_resource type="Texture2D" uid="uid://b6mc8yrwn8hup" path="res://assets/PNG/UI/pause_menu/btn_main_menu.png" id="main_menu"]
-[ext_resource type="Texture2D" uid="uid://yir52bs68hlh" path="res://assets/PNG/UI/pause_menu/btn_new_seed.png" id="new_seed"]
+[ext_resource type="Texture2D" uid="uid://yir52bs68hlh" path="res://assets/PNG/UI/pause_menu/btn_new_run.png" id="new_seed"]
 [ext_resource type="Texture2D" uid="uid://ddbhi3hb1uf03" path="res://assets/PNG/UI/pause_menu/panel_pause.png" id="panel"]
 [ext_resource type="Texture2D" uid="uid://dg6ti0ymc4h1t" path="res://assets/PNG/UI/pause_menu/btn_restart.png" id="restart"]
 [ext_resource type="Texture2D" uid="uid://dy3xffh20eb6g" path="res://assets/PNG/UI/pause_menu/btn_resume.png" id="resume"]

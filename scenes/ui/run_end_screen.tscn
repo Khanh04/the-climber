@@ -1,85 +1,376 @@
 [gd_scene format=3 uid="uid://b4yuxkuixyx8a"]
 
-[ext_resource type="Script" uid="uid://pu3si1t87k4e" path="res://scenes/ui/run_end_screen.gd" id="1_run_end"]
+[ext_resource type="Script" path="res://scenes/ui/run_end_screen.gd" id="script"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/panel_gameover.png" id="panel"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/Score.png" id="score"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/BestCore.png" id="best"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/icon_coin.png" id="coin"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/icon_wallet.png" id="wallet"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/btn_restart.png" id="restart"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/btn_new_run.png" id="new_run"]
+[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/btn_main.png" id="main"]
 
-[node name="RunEndScreen" type="Control" unique_id=1271303578]
+[sub_resource type="StyleBoxTexture" id="restart_normal"]
+texture = ExtResource("restart")
+modulate_color = Color(1, 1, 1, 1)
+
+[sub_resource type="StyleBoxTexture" id="restart_hover"]
+texture = ExtResource("restart")
+modulate_color = Color(1.15, 1.15, 1.15, 1)
+
+[sub_resource type="StyleBoxTexture" id="restart_pressed"]
+texture = ExtResource("restart")
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="new_run_normal"]
+texture = ExtResource("new_run")
+modulate_color = Color(1, 1, 1, 1)
+
+[sub_resource type="StyleBoxTexture" id="new_run_hover"]
+texture = ExtResource("new_run")
+modulate_color = Color(1.15, 1.15, 1.15, 1)
+
+[sub_resource type="StyleBoxTexture" id="new_run_pressed"]
+texture = ExtResource("new_run")
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="main_normal"]
+texture = ExtResource("main")
+modulate_color = Color(1, 1, 1, 1)
+
+[sub_resource type="StyleBoxTexture" id="main_hover"]
+texture = ExtResource("main")
+modulate_color = Color(1.15, 1.15, 1.15, 1)
+
+[sub_resource type="StyleBoxTexture" id="main_pressed"]
+texture = ExtResource("main")
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxEmpty" id="Empty"]
+
+[sub_resource type="StyleBoxFlat" id="Focus"]
+draw_center = false
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(1, 0.95, 0.7, 1)
+
+[sub_resource type="StyleBoxFlat" id="Offer"]
+bg_color = Color(0.32, 0.21, 0.01, 1)
+border_width_left = 3
+border_width_top = 3
+border_width_right = 3
+border_width_bottom = 3
+border_color = Color(0.94, 0.73, 0.34, 1)
+
+[node name="RunEndScreen" type="Control"]
+process_mode = 3
+texture_filter = 1
 layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("script")
+
+[node name="CenterContainer" type="Control" parent="."]
+layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
+offset_left = -452.5
+offset_top = -760.0
+offset_right = 452.5
+offset_bottom = 555.0
 grow_horizontal = 2
 grow_vertical = 2
-script = ExtResource("1_run_end")
+mouse_filter = 2
 
-[node name="CenterContainer" type="CenterContainer" parent="." unique_id=574238163]
+[node name="Panel" type="TextureRect" parent="CenterContainer"]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
-offset_left = -170.0
-offset_top = -105.5
-offset_right = 170.0
-offset_bottom = 105.5
-grow_horizontal = 2
-grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("panel")
+expand_mode = 1
 
-[node name="Panel" type="PanelContainer" parent="CenterContainer" unique_id=473027209]
-custom_minimum_size = Vector2(340, 0)
-layout_mode = 2
+[node name="ContentMargin" type="Control" parent="CenterContainer/Panel"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
 
-[node name="ContentMargin" type="MarginContainer" parent="CenterContainer/Panel" unique_id=684097101]
-layout_mode = 2
-theme_override_constants/margin_left = 20
-theme_override_constants/margin_top = 20
-theme_override_constants/margin_right = 20
-theme_override_constants/margin_bottom = 20
+[node name="Content" type="Control" parent="CenterContainer/Panel/ContentMargin"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+mouse_filter = 2
 
-[node name="Content" type="VBoxContainer" parent="CenterContainer/Panel/ContentMargin" unique_id=802999909]
-layout_mode = 2
-theme_override_constants/separation = 10
+[node name="ScoreTitle" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 340.0
+offset_top = 635.0
+offset_right = 560.0
+offset_bottom = 695.0
+mouse_filter = 2
+texture = ExtResource("score")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="TitleLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=849395688]
-layout_mode = 2
-text = "Run Ended"
+[node name="BestScoreTitle" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 245.0
+offset_top = 795.0
+offset_right = 655.0
+offset_bottom = 860.0
+mouse_filter = 2
+texture = ExtResource("best")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="ReasonLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=235108975]
-layout_mode = 2
-text = "Reason"
+[node name="CoinIcon" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 210.0
+offset_top = 990.0
+offset_right = 285.0
+offset_bottom = 1065.0
+mouse_filter = 2
+texture = ExtResource("coin")
+expand_mode = 1
+stretch_mode = 5
 
-[node name="SummaryLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=201304547]
-layout_mode = 2
-text = "Summary"
+[node name="WalletIcon" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 465.0
+offset_top = 965.0
+offset_right = 555.0
+offset_bottom = 1070.0
+mouse_filter = 2
+texture = ExtResource("wallet")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="ScoreValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 175.0
+offset_top = 705.0
+offset_right = 725.0
+offset_bottom = 790.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 48
+text = "0.0 m"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+
+[node name="BestScoreValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 175.0
+offset_top = 865.0
+offset_right = 725.0
+offset_bottom = 955.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 48
+text = "0.0 m"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+
+[node name="RunCoinsValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 290.0
+offset_top = 980.0
+offset_right = 450.0
+offset_bottom = 1070.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 34
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+
+[node name="WalletCoinsValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 555.0
+offset_top = 980.0
+offset_right = 715.0
+offset_bottom = 1070.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 34
+text = "0"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+
+[node name="TitleLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 140.0
+offset_top = 1320.0
+offset_right = 765.0
+offset_bottom = 1375.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 30
+text = "Rescue Offered"
+horizontal_alignment = 1
+vertical_alignment = 1
+visible = false
+
+[node name="ReasonLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 5.0
+offset_bottom = 5.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 16
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+visible = false
+
+[node name="SummaryLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 0.0
+offset_top = 0.0
+offset_right = 5.0
+offset_bottom = 5.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 16
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+visible = false
+
+[node name="AdFeedbackLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 140.0
+offset_top = 1490.0
+offset_right = 765.0
+offset_bottom = 1615.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
+theme_override_constants/outline_size = 3
+theme_override_font_sizes/font_size = 27
+text = ""
+horizontal_alignment = 1
+vertical_alignment = 1
+visible = false
 autowrap_mode = 3
 
-[node name="AdFeedbackLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1960806427]
-visible = false
-layout_mode = 2
-autowrap_mode = 3
-
-[node name="RewardedContinueButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1380104800]
-visible = false
-layout_mode = 2
-text = "Watch Ad: Continue Run"
-
-[node name="PostRunCoinDoublerButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=167758806]
-visible = false
-layout_mode = 2
-text = "Watch Ad: Double Run Coins"
-
-[node name="StoreButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1062334221]
-layout_mode = 2
-text = "Store"
-
-[node name="RestartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1239121422]
-layout_mode = 2
-text = "Restart Run"
+[node name="RestartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 195.0
+offset_top = 1115.0
+offset_right = 345.0
+offset_bottom = 1270.0
+tooltip_text = "Chơi lại cùng màn"
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("restart_normal")
+theme_override_styles/hover = SubResource("restart_hover")
+theme_override_styles/pressed = SubResource("restart_pressed")
+theme_override_styles/disabled = SubResource("restart_normal")
+theme_override_styles/focus = SubResource("Focus")
 
 [node name="NewSeedRunButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
-layout_mode = 2
-text = "New Seed Run"
+layout_mode = 0
+offset_left = 375.0
+offset_top = 1115.0
+offset_right = 525.0
+offset_bottom = 1270.0
+tooltip_text = "Chơi lượt mới"
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("new_run_normal")
+theme_override_styles/hover = SubResource("new_run_hover")
+theme_override_styles/pressed = SubResource("new_run_pressed")
+theme_override_styles/disabled = SubResource("new_run_normal")
+theme_override_styles/focus = SubResource("Focus")
 
 [node name="MainMenuButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
-layout_mode = 2
-text = "Main Menu"
+layout_mode = 0
+offset_left = 555.0
+offset_top = 1115.0
+offset_right = 705.0
+offset_bottom = 1270.0
+tooltip_text = "Về Main Menu"
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("main_normal")
+theme_override_styles/hover = SubResource("main_hover")
+theme_override_styles/pressed = SubResource("main_pressed")
+theme_override_styles/disabled = SubResource("main_normal")
+theme_override_styles/focus = SubResource("Focus")
+
+[node name="StoreButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 460.0
+offset_top = 960.0
+offset_right = 720.0
+offset_bottom = 1075.0
+tooltip_text = "Mở cửa hàng"
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("Empty")
+theme_override_styles/hover = SubResource("Empty")
+theme_override_styles/pressed = SubResource("Empty")
+theme_override_styles/disabled = SubResource("Empty")
+theme_override_styles/focus = SubResource("Focus")
+
+[node name="RewardedContinueButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 140.0
+offset_top = 1385.0
+offset_right = 765.0
+offset_bottom = 1480.0
+visible = false
+theme_override_font_sizes/font_size = 29
+theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+text = "Watch Ad: Continue Run"
+theme_override_styles/normal = SubResource("Offer")
+theme_override_styles/hover = SubResource("Offer")
+theme_override_styles/pressed = SubResource("Offer")
+theme_override_styles/disabled = SubResource("Offer")
+theme_override_styles/focus = SubResource("Focus")
+
+[node name="PostRunCoinDoublerButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+layout_mode = 0
+offset_left = 140.0
+offset_top = 1385.0
+offset_right = 765.0
+offset_bottom = 1480.0
+visible = false
+theme_override_font_sizes/font_size = 29
+theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+text = "Watch Ad: Double Run Coins"
+theme_override_styles/normal = SubResource("Offer")
+theme_override_styles/hover = SubResource("Offer")
+theme_override_styles/pressed = SubResource("Offer")
+theme_override_styles/disabled = SubResource("Offer")
+theme_override_styles/focus = SubResource("Focus")
+

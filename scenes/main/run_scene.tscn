@@ -404,6 +404,7 @@ size = Vector2(96, 34)
 size = Vector2(1200, 80)
 
 [node name="RunScene" type="Node2D" unique_id=15343070]
+position = Vector2(-3, -223)
 script = ExtResource("1_dev")
 climb_tuning = SubResource("Resource_climb")
 stamina_tuning = SubResource("Resource_stamina")
@@ -420,29 +421,44 @@ unique_name_in_owner = true
 position = Vector2(540, 1188)
 
 [node name="background" type="Sprite2D" parent="DevCamera" unique_id=19231194]
-scale = Vector2(3.3333333, 3.3333333)
+scale = Vector2(4, 4)
 texture = ExtResource("11_civhj")
 
 [node name="cloud" type="AnimatedSprite2D" parent="DevCamera" unique_id=984040109]
-scale = Vector2(3.3333333, 3.3333333)
+scale = Vector2(4, 4)
 sprite_frames = SubResource("SpriteFrames_uj04i")
 animation = &"cloud"
 script = ExtResource("99_xjwkq")
 
-[node name="Sprite2D" type="Sprite2D" parent="DevCamera" unique_id=429117177]
+[node name="Moutain" type="Sprite2D" parent="DevCamera" unique_id=429117177]
 modulate = Color(1, 1, 1, 0.6392157)
-scale = Vector2(3.3333333, 3.3333333)
+position = Vector2(0, 330.98)
+scale = Vector2(4, 4)
 texture = ExtResource("102_y6dka")
 
 [node name="Tree" type="Sprite2D" parent="DevCamera" unique_id=1579738952]
 z_index = 300
-scale = Vector2(3.3333333, 3.3333333)
+scale = Vector2(4, 4)
 texture = ExtResource("102_kvdqo")
 
 [node name="UiLayer" type="CanvasLayer" parent="." unique_id=252631966]
 
+[node name="EnvironmentMatteTop" type="ColorRect" parent="UiLayer" unique_id=1649991619]
+mouse_filter = 2
+
+[node name="EnvironmentMatteBottom" type="ColorRect" parent="UiLayer" unique_id=1598419096]
+mouse_filter = 2
+
+[node name="EnvironmentMatteLeft" type="ColorRect" parent="UiLayer" unique_id=1989007747]
+mouse_filter = 2
+
+[node name="EnvironmentMatteRight" type="ColorRect" parent="UiLayer" unique_id=1876766554]
+mouse_filter = 2
+
 [node name="RunHud" parent="UiLayer" unique_id=120501001 instance=ExtResource("5_run_hud")]
 unique_name_in_owner = true
+offset_top = 3.0
+offset_bottom = 3.0
 metadata/_edit_use_anchors_ = true
 
 [node name="RunEndScreen" parent="UiLayer" unique_id=120501002 instance=ExtResource("6_run_end")]
@@ -450,28 +466,26 @@ unique_name_in_owner = true
 
 [node name="ResetAnchor" type="Marker2D" parent="." unique_id=2064874863]
 unique_name_in_owner = true
-position = Vector2(540, 1348)
+position = Vector2(513, 1725)
 
 [node name="PlayerCharacter" parent="." unique_id=2062018110 instance=ExtResource("4_player")]
 unique_name_in_owner = true
-position = Vector2(563, 1323)
-
-[node name="ChaserKillZone" parent="." unique_id=1635600093 instance=ExtResource("7_chaser")]
-unique_name_in_owner = true
-position = Vector2(541, 2293)
+position = Vector2(536, 1700)
 
 [node name="Handholds" type="Node2D" parent="." unique_id=142891664]
-z_index = -300
+z_index = -60
+position = Vector2(-13, 373)
 
 [node name="HoldSafePlatform" type="StaticBody2D" parent="Handholds" unique_id=693929253 groups=["handhold"]]
 position = Vector2(540, 1405)
 
 [node name="Visual" type="Polygon2D" parent="Handholds/HoldSafePlatform" unique_id=245411791]
 z_index = 300
-position = Vector2(-508.99994, -1497)
-scale = Vector2(3.9, 3.9)
+position = Vector2(-530.746, -1535.5035)
+scale = Vector2(3.9859269, 3.9859269)
 texture = ExtResource("107_y6dka")
-polygon = PackedVector2Array(-9.872858, 359.7992, 277.91483, 359.7992, 277.91483, 436.24283, -9.872858, 436.24283, -9.872856, 381.60052)
+polygon = PackedVector2Array(7.0398655, 372.18533, 253.07692, 373.33337, 252.39865, 447.11957, 7.0398655, 448.0966, 7.347229, 388.8181)
+uv = PackedVector2Array(292.16278, 372.8954)
 
 [node name="CollisionPolygon2D" type="CollisionPolygon2D" parent="Handholds/HoldSafePlatform" unique_id=1904665093]
 polygon = PackedVector2Array(-91.6, -26.3, -103.3, -26.3, -103.3, -14.6, -87.7, -14.6, -68.2, 8.8, -64.3, 8.8, -83.8, 24.4, -83.8, 28.3, -196.9, 47.8, -208.6, 47.8, -271, 86.8, -271, 90.7, -403.6, 141.4, -403.6, 145.3, -505, 157, -505, 199.9, -450.4, 180.4, -423.1, 180.4, -419.2, 203.8, -411.4, 203.8, -391.9, 164.8, -380.2, 164.8, -376.3, 231.1, -368.5, 231.1, -368.5, 168.7, -368.5, 157, -333.4, 145.3, -321.7, 145.3, -263.2, 110.2, -263.2, 106.3, -263.2, 145.3, -255.4, 145.3, -251.5, 129.7, -251.5, 98.5, -232, 86.8, -232, 82.9, -224.2, 98.5, -216.4, 98.5, -216.4, 75.1, -208.6, 79, -200.8, 79, -196.9, 75.1, -196.9, 63.4, -181.3, 63.4, -181.3, 59.5, -169.6, 59.5, -177.4, 79, -181.3, 79, -177.4, 125.8, -169.6, 125.8, -173.5, 118, -173.5, 82.9, -161.8, 67.3, -161.8, 59.5, -64.3, 43.9, -56.5, 43.9, -56.5, 71.2, -48.7, 71.2, -48.7, 28.3, -40.9, 28.3, 29.3, 47.8, 29.3, 59.5, 80, 36.1, 103.4, 36.1, 130.7, 55.6, 130.7, 79, 138.5, 55.6, 154.1, 55.6, 150.2, 75.1, 150.2, 98.5, 161.9, 55.6, 212.6, 55.6, 228.2, 149.2, 228.2, 153.1, 232.1, 106.3, 232.1, 79, 220.4, 67.3, 220.4, 55.6, 282.8, 67.3, 294.5, 67.3, 314, 110.2, 317.9, 110.2, 321.8, 145.3, 321.8, 157, 333.5, 149.2, 333.5, 133.6, 314, 86.8, 317.9, 86.8, 403.7, 176.5, 403.7, 180.4, 442.7, 199.9, 442.7, 223.3, 458.3, 211.6, 462.2, 211.6, 466.1, 238.9, 466.1, 254.5, 470, 235, 470, 219.4, 528.5, 238.9, 548, 238.9, 548, 196, 524.6, 192.1, 505.1, 192.1, 466.1, 168.7, 454.4, 168.7, 337.4, 63.4, 337.4, 59.5, 282.8, 43.9, 282.8, 40, 126.8, 32.2, 119, 32.2, 119, 8.8, 119, 1, 154.1, -14.6, 154.1, -30.2, -91.6, -34.1)
@@ -548,18 +562,24 @@ disabled = true
 color = Color(0.95, 0.78, 0.32, 1)
 polygon = PackedVector2Array(-48, -17, 48, -17, 48, 17, -48, 17)
 
-[node name="GeneratedChunks" type="Node2D" parent="." unique_id=1704810011]
-unique_name_in_owner = true
-script = ExtResource("11_generated_chunks")
-
 [node name="Floor" type="StaticBody2D" parent="." unique_id=713653130]
-position = Vector2(540, 1688)
+position = Vector2(540, 2028)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Floor" unique_id=1306148472]
 shape = SubResource("RectangleShape2D_floor")
 
 [node name="Visual" type="Polygon2D" parent="Floor" unique_id=204315343]
-position = Vector2(-561, -1815)
-scale = Vector2(4.09, 4.09)
+position = Vector2(-543, -1815)
+scale = Vector2(4, 4)
 texture = ExtResource("109_306mh")
-polygon = PackedVector2Array(-75.67323, 434.45303, 371.6679, 434.45303, 371.6679, 464.2758, -75.67323, 464.2758)
+polygon = PackedVector2Array(-0.8963165, 431.59738, 271.65692, 432.54935, 272.49072, 467.04376, -0.8963165, 467.18195)
+
+[node name="GeneratedChunks" type="Node2D" parent="." unique_id=1704810011]
+unique_name_in_owner = true
+position = Vector2(0, 340)
+script = ExtResource("11_generated_chunks")
+
+[node name="ChaserKillZone" parent="." unique_id=1635600093 instance=ExtResource("7_chaser")]
+unique_name_in_owner = true
+z_index = 250
+position = Vector2(541, 2539)
