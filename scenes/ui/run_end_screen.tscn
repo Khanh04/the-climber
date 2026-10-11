@@ -1,52 +1,96 @@
 [gd_scene format=3 uid="uid://b4yuxkuixyx8a"]
 
-[ext_resource type="Script" path="res://scenes/ui/run_end_screen.gd" id="script"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/panel_gameover.png" id="panel"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/Score.png" id="score"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/BestCore.png" id="best"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/icon_coin.png" id="coin"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/icon_wallet.png" id="wallet"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/btn_restart.png" id="restart"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/btn_new_run.png" id="new_run"]
-[ext_resource type="Texture2D" path="res://assets/PNG/UI/gameover_menu/btn_main.png" id="main"]
+[ext_resource type="Texture2D" uid="uid://8iqc6gwcven2" path="res://assets/assets_animated/icon_coin/coin_0001.png" id="5_1ui32"]
+[ext_resource type="Texture2D" uid="uid://djwmbe634t3ku" path="res://assets/assets_animated/icon_coin/coin_0002.png" id="6_36e7q"]
+[ext_resource type="Texture2D" uid="uid://dcyua3vo0wc3w" path="res://assets/assets_animated/icon_coin/coin_0003.png" id="7_t1fx4"]
+[ext_resource type="Texture2D" uid="uid://cy3me5477m468" path="res://assets/assets_animated/icon_coin/coin_0004.png" id="8_b6y4b"]
+[ext_resource type="Texture2D" uid="uid://bla7vpkry48nw" path="res://assets/assets_animated/icon_coin/coin_0005.png" id="9_fks60"]
+[ext_resource type="Texture2D" uid="uid://cb2e167enabtp" path="res://assets/assets_animated/icon_coin/coin_0006.png" id="10_se2ia"]
+[ext_resource type="Texture2D" uid="uid://b7tkemktrnshd" path="res://assets/assets_animated/icon_coin/coin_0007.png" id="11_eqv3u"]
+[ext_resource type="Texture2D" uid="uid://yh4hyqdsikk5" path="res://assets/assets_animated/icon_coin/coin_0008.png" id="12_dqu75"]
+[ext_resource type="Texture2D" uid="uid://y6ilhe82ju4p" path="res://assets/assets_animated/icon_coin/coin_0009.png" id="13_ua8wx"]
+[ext_resource type="Texture2D" uid="uid://b5alhf24rx3e6" path="res://assets/assets_animated/icon_coin/coin_0010.png" id="14_m3hut"]
+[ext_resource type="Texture2D" uid="uid://nx7f1d1bgn27" path="res://assets/assets_animated/icon_coin/coin_0011.png" id="15_3jdl5"]
+[ext_resource type="Texture2D" uid="uid://6j4eab3slm1p" path="res://assets/assets_animated/icon_coin/coin_0012.png" id="16_yxyjh"]
+[ext_resource type="Texture2D" uid="uid://cj76aic2hmoqr" path="res://assets/assets_animated/icon_coin/coin_0013.png" id="17_7ug8k"]
+[ext_resource type="Texture2D" uid="uid://c2k5tayo728fn" path="res://assets/assets_animated/icon_coin/coin_0014.png" id="18_4m02r"]
+[ext_resource type="Texture2D" uid="uid://cc6ful4c7kd8m" path="res://assets/assets_animated/icon_coin/coin_0015.png" id="19_qnvvc"]
+[ext_resource type="Texture2D" uid="uid://u7yhld8b0vq7" path="res://assets/assets_animated/icon_coin/coin_0016.png" id="20_u6pbn"]
+[ext_resource type="Texture2D" uid="uid://bdr1xf3hxh1up" path="res://assets/PNG/UI/gameover_menu/BestCore.png" id="best"]
+[ext_resource type="Texture2D" uid="uid://blgo82t1cbu0o" path="res://assets/PNG/UI/gameover_menu/btn_main.png" id="main"]
+[ext_resource type="Texture2D" uid="uid://3c8iipr6bv62" path="res://assets/PNG/UI/gameover_menu/btn_new_run.png" id="new_run"]
+[ext_resource type="Texture2D" uid="uid://bnsdhfske0opj" path="res://assets/PNG/UI/gameover_menu/panel_gameover.png" id="panel"]
+[ext_resource type="Texture2D" uid="uid://bmbcd0jwhy0e2" path="res://assets/PNG/UI/gameover_menu/btn_restart.png" id="restart"]
+[ext_resource type="Texture2D" uid="uid://wxb8154bvw0d" path="res://assets/PNG/UI/gameover_menu/Score.png" id="score"]
+[ext_resource type="Script" uid="uid://pu3si1t87k4e" path="res://scenes/ui/run_end_screen.gd" id="script"]
+[ext_resource type="Texture2D" uid="uid://c6vcnhbuad82" path="res://assets/PNG/UI/gameover_menu/icon_wallet.png" id="wallet"]
+
+[sub_resource type="SpriteFrames" id="SpriteFrames_uj04i"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_1ui32")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_36e7q")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_t1fx4")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_b6y4b")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_fks60")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_se2ia")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11_eqv3u")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_dqu75")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_ua8wx")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_m3hut")
+}, {
+"duration": 1.0,
+"texture": ExtResource("15_3jdl5")
+}, {
+"duration": 1.0,
+"texture": ExtResource("16_yxyjh")
+}, {
+"duration": 1.0,
+"texture": ExtResource("17_7ug8k")
+}, {
+"duration": 1.0,
+"texture": ExtResource("18_4m02r")
+}, {
+"duration": 1.0,
+"texture": ExtResource("19_qnvvc")
+}, {
+"duration": 1.0,
+"texture": ExtResource("20_u6pbn")
+}],
+"loop": 1,
+"name": &"coin_animated",
+"speed": 24.0
+}]
 
 [sub_resource type="StyleBoxTexture" id="restart_normal"]
 texture = ExtResource("restart")
-modulate_color = Color(1, 1, 1, 1)
-
-[sub_resource type="StyleBoxTexture" id="restart_hover"]
-texture = ExtResource("restart")
-modulate_color = Color(1.15, 1.15, 1.15, 1)
 
 [sub_resource type="StyleBoxTexture" id="restart_pressed"]
 texture = ExtResource("restart")
 modulate_color = Color(0.8, 0.8, 0.8, 1)
 
-[sub_resource type="StyleBoxTexture" id="new_run_normal"]
-texture = ExtResource("new_run")
-modulate_color = Color(1, 1, 1, 1)
-
-[sub_resource type="StyleBoxTexture" id="new_run_hover"]
-texture = ExtResource("new_run")
+[sub_resource type="StyleBoxTexture" id="restart_hover"]
+texture = ExtResource("restart")
 modulate_color = Color(1.15, 1.15, 1.15, 1)
-
-[sub_resource type="StyleBoxTexture" id="new_run_pressed"]
-texture = ExtResource("new_run")
-modulate_color = Color(0.8, 0.8, 0.8, 1)
-
-[sub_resource type="StyleBoxTexture" id="main_normal"]
-texture = ExtResource("main")
-modulate_color = Color(1, 1, 1, 1)
-
-[sub_resource type="StyleBoxTexture" id="main_hover"]
-texture = ExtResource("main")
-modulate_color = Color(1.15, 1.15, 1.15, 1)
-
-[sub_resource type="StyleBoxTexture" id="main_pressed"]
-texture = ExtResource("main")
-modulate_color = Color(0.8, 0.8, 0.8, 1)
-
-[sub_resource type="StyleBoxEmpty" id="Empty"]
 
 [sub_resource type="StyleBoxFlat" id="Focus"]
 draw_center = false
@@ -56,6 +100,30 @@ border_width_right = 3
 border_width_bottom = 3
 border_color = Color(1, 0.95, 0.7, 1)
 
+[sub_resource type="StyleBoxTexture" id="new_run_normal"]
+texture = ExtResource("new_run")
+
+[sub_resource type="StyleBoxTexture" id="new_run_pressed"]
+texture = ExtResource("new_run")
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="new_run_hover"]
+texture = ExtResource("new_run")
+modulate_color = Color(1.15, 1.15, 1.15, 1)
+
+[sub_resource type="StyleBoxTexture" id="main_normal"]
+texture = ExtResource("main")
+
+[sub_resource type="StyleBoxTexture" id="main_pressed"]
+texture = ExtResource("main")
+modulate_color = Color(0.8, 0.8, 0.8, 1)
+
+[sub_resource type="StyleBoxTexture" id="main_hover"]
+texture = ExtResource("main")
+modulate_color = Color(1.15, 1.15, 1.15, 1)
+
+[sub_resource type="StyleBoxEmpty" id="Empty"]
+
 [sub_resource type="StyleBoxFlat" id="Offer"]
 bg_color = Color(0.32, 0.21, 0.01, 1)
 border_width_left = 3
@@ -64,7 +132,7 @@ border_width_right = 3
 border_width_bottom = 3
 border_color = Color(0.94, 0.73, 0.34, 1)
 
-[node name="RunEndScreen" type="Control"]
+[node name="RunEndScreen" type="Control" unique_id=1026367798]
 process_mode = 3
 texture_filter = 1
 layout_mode = 3
@@ -75,7 +143,16 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("script")
 
-[node name="CenterContainer" type="Control" parent="."]
+[node name="Backdrop" type="ColorRect" parent="." unique_id=157011110]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.39215687)
+
+[node name="CenterContainer" type="Control" parent="." unique_id=575107017]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
@@ -90,30 +167,36 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="Panel" type="TextureRect" parent="CenterContainer"]
+[node name="Panel" type="TextureRect" parent="CenterContainer" unique_id=256388960]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 texture = ExtResource("panel")
 expand_mode = 1
 
-[node name="ContentMargin" type="Control" parent="CenterContainer/Panel"]
+[node name="ContentMargin" type="Control" parent="CenterContainer/Panel" unique_id=348151481]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 
-[node name="Content" type="Control" parent="CenterContainer/Panel/ContentMargin"]
+[node name="Content" type="Control" parent="CenterContainer/Panel/ContentMargin" unique_id=1861075989]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
 mouse_filter = 2
 
-[node name="ScoreTitle" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="ScoreTitle" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1597687803]
 layout_mode = 0
 offset_left = 340.0
 offset_top = 635.0
@@ -124,7 +207,7 @@ texture = ExtResource("score")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="BestScoreTitle" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="BestScoreTitle" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1276338805]
 layout_mode = 0
 offset_left = 245.0
 offset_top = 795.0
@@ -135,18 +218,13 @@ texture = ExtResource("best")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="CoinIcon" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content"]
-layout_mode = 0
-offset_left = 210.0
-offset_top = 990.0
-offset_right = 285.0
-offset_bottom = 1065.0
-mouse_filter = 2
-texture = ExtResource("coin")
-expand_mode = 1
-stretch_mode = 5
+[node name="CoinIcon" type="AnimatedSprite2D" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=791740898]
+position = Vector2(289.5, 1021)
+scale = Vector2(4, 4)
+sprite_frames = SubResource("SpriteFrames_uj04i")
+animation = &"coin_animated"
 
-[node name="WalletIcon" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="WalletIcon" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=744834454]
 layout_mode = 0
 offset_left = 465.0
 offset_top = 965.0
@@ -157,13 +235,12 @@ texture = ExtResource("wallet")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="ScoreValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="ScoreValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=629397019]
 layout_mode = 0
 offset_left = 175.0
 offset_top = 705.0
 offset_right = 725.0
 offset_bottom = 790.0
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
 theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
 theme_override_constants/outline_size = 3
@@ -172,14 +249,12 @@ text = "0.0 m"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-
-[node name="BestScoreValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="BestScoreValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=768887229]
 layout_mode = 0
 offset_left = 175.0
 offset_top = 865.0
 offset_right = 725.0
 offset_bottom = 955.0
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
 theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
 theme_override_constants/outline_size = 3
@@ -188,14 +263,12 @@ text = "0.0 m"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-
-[node name="RunCoinsValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="RunCoinsValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1231506535]
 layout_mode = 0
-offset_left = 290.0
-offset_top = 980.0
-offset_right = 450.0
-offset_bottom = 1070.0
-mouse_filter = 2
+offset_left = 282.5
+offset_top = 974.0
+offset_right = 442.5
+offset_bottom = 1064.0
 theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
 theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
 theme_override_constants/outline_size = 3
@@ -204,14 +277,12 @@ text = "0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-
-[node name="WalletCoinsValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="WalletCoinsValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1093551811]
 layout_mode = 0
 offset_left = 555.0
 offset_top = 980.0
 offset_right = 715.0
 offset_bottom = 1070.0
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
 theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
 theme_override_constants/outline_size = 3
@@ -220,14 +291,13 @@ text = "0"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-
-[node name="TitleLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="TitleLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=899018824]
+visible = false
 layout_mode = 0
 offset_left = 140.0
 offset_top = 1320.0
 offset_right = 765.0
 offset_bottom = 1375.0
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
 theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
 theme_override_constants/outline_size = 3
@@ -235,58 +305,47 @@ theme_override_font_sizes/font_size = 30
 text = "Rescue Offered"
 horizontal_alignment = 1
 vertical_alignment = 1
-visible = false
 
-[node name="ReasonLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="ReasonLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=780420738]
+visible = false
 layout_mode = 0
-offset_left = 0.0
-offset_top = 0.0
 offset_right = 5.0
 offset_bottom = 5.0
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
 theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 16
-text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
-visible = false
 
-[node name="SummaryLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="SummaryLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1838414753]
+visible = false
 layout_mode = 0
-offset_left = 0.0
-offset_top = 0.0
 offset_right = 5.0
 offset_bottom = 5.0
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
 theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 16
-text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
-visible = false
 
-[node name="AdFeedbackLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="AdFeedbackLabel" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=402422961]
+visible = false
 layout_mode = 0
 offset_left = 140.0
 offset_top = 1490.0
 offset_right = 765.0
 offset_bottom = 1615.0
-mouse_filter = 2
 theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
 theme_override_colors/font_outline_color = Color(0.18, 0.1, 0, 1)
 theme_override_constants/outline_size = 3
 theme_override_font_sizes/font_size = 27
-text = ""
 horizontal_alignment = 1
 vertical_alignment = 1
-visible = false
 autowrap_mode = 3
 
-[node name="RestartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="RestartButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1724802009]
 layout_mode = 0
 offset_left = 195.0
 offset_top = 1115.0
@@ -295,12 +354,12 @@ offset_bottom = 1270.0
 tooltip_text = "Chơi lại cùng màn"
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("restart_normal")
-theme_override_styles/hover = SubResource("restart_hover")
 theme_override_styles/pressed = SubResource("restart_pressed")
+theme_override_styles/hover = SubResource("restart_hover")
 theme_override_styles/disabled = SubResource("restart_normal")
 theme_override_styles/focus = SubResource("Focus")
 
-[node name="NewSeedRunButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="NewSeedRunButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=356987568]
 layout_mode = 0
 offset_left = 375.0
 offset_top = 1115.0
@@ -309,12 +368,12 @@ offset_bottom = 1270.0
 tooltip_text = "Chơi lượt mới"
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("new_run_normal")
-theme_override_styles/hover = SubResource("new_run_hover")
 theme_override_styles/pressed = SubResource("new_run_pressed")
+theme_override_styles/hover = SubResource("new_run_hover")
 theme_override_styles/disabled = SubResource("new_run_normal")
 theme_override_styles/focus = SubResource("Focus")
 
-[node name="MainMenuButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="MainMenuButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1019729007]
 layout_mode = 0
 offset_left = 555.0
 offset_top = 1115.0
@@ -323,12 +382,12 @@ offset_bottom = 1270.0
 tooltip_text = "Về Main Menu"
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("main_normal")
-theme_override_styles/hover = SubResource("main_hover")
 theme_override_styles/pressed = SubResource("main_pressed")
+theme_override_styles/hover = SubResource("main_hover")
 theme_override_styles/disabled = SubResource("main_normal")
 theme_override_styles/focus = SubResource("Focus")
 
-[node name="StoreButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="StoreButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1920632541]
 layout_mode = 0
 offset_left = 460.0
 offset_top = 960.0
@@ -337,40 +396,39 @@ offset_bottom = 1075.0
 tooltip_text = "Mở cửa hàng"
 mouse_default_cursor_shape = 2
 theme_override_styles/normal = SubResource("Empty")
-theme_override_styles/hover = SubResource("Empty")
 theme_override_styles/pressed = SubResource("Empty")
+theme_override_styles/hover = SubResource("Empty")
 theme_override_styles/disabled = SubResource("Empty")
 theme_override_styles/focus = SubResource("Focus")
 
-[node name="RewardedContinueButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="RewardedContinueButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1777996321]
+visible = false
 layout_mode = 0
 offset_left = 140.0
 offset_top = 1385.0
 offset_right = 765.0
 offset_bottom = 1480.0
-visible = false
-theme_override_font_sizes/font_size = 29
 theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
+theme_override_font_sizes/font_size = 29
+theme_override_styles/normal = SubResource("Offer")
+theme_override_styles/pressed = SubResource("Offer")
+theme_override_styles/hover = SubResource("Offer")
+theme_override_styles/disabled = SubResource("Offer")
+theme_override_styles/focus = SubResource("Focus")
 text = "Watch Ad: Continue Run"
-theme_override_styles/normal = SubResource("Offer")
-theme_override_styles/hover = SubResource("Offer")
-theme_override_styles/pressed = SubResource("Offer")
-theme_override_styles/disabled = SubResource("Offer")
-theme_override_styles/focus = SubResource("Focus")
 
-[node name="PostRunCoinDoublerButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content"]
+[node name="PostRunCoinDoublerButton" type="Button" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1636155621]
+visible = false
 layout_mode = 0
 offset_left = 140.0
 offset_top = 1385.0
 offset_right = 765.0
 offset_bottom = 1480.0
-visible = false
-theme_override_font_sizes/font_size = 29
 theme_override_colors/font_color = Color(1, 0.9, 0.63, 1)
-text = "Watch Ad: Double Run Coins"
+theme_override_font_sizes/font_size = 29
 theme_override_styles/normal = SubResource("Offer")
-theme_override_styles/hover = SubResource("Offer")
 theme_override_styles/pressed = SubResource("Offer")
+theme_override_styles/hover = SubResource("Offer")
 theme_override_styles/disabled = SubResource("Offer")
 theme_override_styles/focus = SubResource("Focus")
-
+text = "Watch Ad: Double Run Coins"

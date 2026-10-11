@@ -12,6 +12,9 @@ const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
 @onready var _coins_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Coins/CoinsValueLabel") as Label
 @onready var _pause_button: Button = get_node("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton") as Button
 
+@onready var _coin_animation: AnimatedSprite2D = \
+$Panel/ContentMargin/Metrics/Wrapper_Coins/icon_coin
+
 # Artwork uses a 270x480 canvas, displayed at 4x in the 1080x1920 design.
 # Scale the whole HUD uniformly and center it with the environment on tall phones.
 func _align_panel() -> void:
@@ -27,7 +30,7 @@ func _ready() -> void:
 	_align_panel.call_deferred()
 	_validate_required_nodes()
 	var _pause_connect_result: int = _pause_button.connect(&"pressed", Callable(self, "_on_pause_button_pressed"))
-
+	_coin_animation.play(&"coin_animated")
 func apply_state(state: RefCounted) -> void:
 	Validation.require_condition(state != null, "RunHud requires a state snapshot.")
 	Validation.require_condition(state is RunHudStateScript, "RunHud requires a RunHudState snapshot.")

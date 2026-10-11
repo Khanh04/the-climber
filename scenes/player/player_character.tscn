@@ -17,8 +17,6 @@ script = ExtResource("1_player")
 climb_tuning = SubResource("Resource_climb")
 
 [node name="Head" type="RigidBody2D" parent="." unique_id=1775544273]
-collision_layer = 1
-mass = 1.0
 continuous_cd = 2
 
 [node name="HeadCollisionShape" type="CollisionShape2D" parent="Head" unique_id=1562466120]

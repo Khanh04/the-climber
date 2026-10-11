@@ -853,7 +853,7 @@ func _configure_generated_chunks() -> void:
 		seed_key,
 		generated_world_origin,
 		chunk_start_height_offset_meters,
-		route_offset
+ 		route_offset
 	)
 	_run_generated_spawn_hookup_runtime.ensure_chunk_spawn_signal_connected(_generated_chunk_coordinator, _on_generated_chunk_spawned)
 

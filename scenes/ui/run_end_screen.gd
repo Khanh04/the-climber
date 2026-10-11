@@ -26,7 +26,8 @@ const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
 @onready var _best_score_value: Label = $CenterContainer/Panel/ContentMargin/Content/BestScoreValue
 @onready var _run_coins_value: Label = $CenterContainer/Panel/ContentMargin/Content/RunCoinsValue
 @onready var _wallet_coins_value: Label = $CenterContainer/Panel/ContentMargin/Content/WalletCoinsValue
-
+@onready var _coin_animation: AnimatedSprite2D = \
+$CenterContainer/Panel/ContentMargin/Content/CoinIcon
 func _ready() -> void:
 	_validate_required_nodes()
 	var _rewarded_continue_connect_result: int = _rewarded_continue_button.connect(&"pressed", Callable(self, "_on_rewarded_continue_button_pressed"))
@@ -35,7 +36,7 @@ func _ready() -> void:
 	var _connect_result: int = _restart_button.connect(&"pressed", Callable(self, "_on_restart_button_pressed"))
 	var _new_seed_run_connect_result: int = _new_seed_run_button.connect(&"pressed", Callable(self, "_on_new_seed_run_button_pressed"))
 	var _main_menu_connect_result: int = _main_menu_button.connect(&"pressed", Callable(self, "_on_main_menu_button_pressed"))
-
+	_coin_animation.play(&"coin_animated")
 func apply_state(state: RefCounted) -> void:
 	Validation.require_condition(state != null, "RunEndScreen requires a state snapshot.")
 	Validation.require_condition(state is RunEndScreenStateScript, "RunEndScreen requires a RunEndScreenState snapshot.")
