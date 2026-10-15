@@ -464,23 +464,6 @@ animation = &"cloud"
 frame_progress = 0.85922265
 script = ExtResource("92_2jbqi")
 
-[node name="Logo_text" type="TextureRect" parent="decor_preview" unique_id=304767284]
-layout_mode = 1
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
-offset_left = -405.0
-offset_top = -730.0
-offset_right = -200.0
-offset_bottom = -617.0
-grow_horizontal = 2
-grow_vertical = 2
-scale = Vector2(4, 4)
-texture = ExtResource("2_uhagc")
-stretch_mode = 3
-
 [node name="Tree_preview" type="TextureRect" parent="decor_preview" unique_id=905600630]
 layout_mode = 1
 anchors_preset = 15
@@ -501,23 +484,52 @@ grow_vertical = 2
 texture = ExtResource("7_575hu")
 stretch_mode = 5
 
-[node name="CenterContainer" type="CenterContainer" parent="." unique_id=1018066240]
+[node name="ColorRect" type="ColorRect" parent="." unique_id=59772030]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+color = Color(0, 0, 0, 0.5803922)
+
+[node name="Logo_text" type="TextureRect" parent="." unique_id=304767284]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -288.0
-offset_top = -188.0
-offset_right = 288.0
-offset_bottom = 448.0
+offset_left = -405.5
+offset_top = -668.0
+offset_right = -199.5
+offset_bottom = -553.0
 grow_horizontal = 2
 grow_vertical = 2
+scale = Vector2(4, 4)
+texture = ExtResource("2_uhagc")
+stretch_mode = 3
+
+[node name="CenterContainer" type="Control" parent="." unique_id=1018066240]
+layout_mode = 1
+anchors_preset = 8
+anchor_left = 0.5
+anchor_top = 0.5
+anchor_right = 0.5
+anchor_bottom = 0.5
+offset_left = -252.0
+offset_top = -140.0
+offset_right = 244.0
+offset_bottom = 400.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
 
 [node name="Panel" type="TextureRect" parent="CenterContainer" unique_id=1559837112]
-custom_minimum_size = Vector2(576, 636)
-layout_mode = 2
+layout_mode = 0
+offset_right = 124.0
+offset_bottom = 135.0
+scale = Vector2(4, 4)
 mouse_filter = 2
 texture = ExtResource("98_dltkq")
 expand_mode = 1
@@ -542,10 +554,10 @@ mouse_filter = 2
 
 [node name="StartButton" type="TextureButton" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=338040238]
 layout_mode = 0
-offset_left = 118.0
-offset_top = 140.0
-offset_right = 458.0
-offset_bottom = 260.0
+offset_left = 45.0
+offset_top = 27.0
+offset_right = 80.0
+offset_bottom = 41.0
 tooltip_text = "Chơi"
 mouse_default_cursor_shape = 2
 texture_normal = ExtResource("3_x2yvf")
@@ -554,10 +566,10 @@ stretch_mode = 5
 
 [node name="TutorialButton" type="TextureButton" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=433810382]
 layout_mode = 0
-offset_left = 118.0
-offset_top = 288.0
-offset_right = 458.0
-offset_bottom = 408.0
+offset_left = 31.0
+offset_top = 64.0
+offset_right = 93.0
+offset_bottom = 78.0
 tooltip_text = "Hướng dẫn"
 mouse_default_cursor_shape = 2
 texture_normal = ExtResource("4_uhagc")
@@ -566,10 +578,10 @@ stretch_mode = 5
 
 [node name="SettingsButton" type="TextureButton" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1030834961]
 layout_mode = 0
-offset_left = 118.0
-offset_top = 436.0
-offset_right = 458.0
-offset_bottom = 564.0
+offset_left = 35.0
+offset_top = 101.0
+offset_right = 89.0
+offset_bottom = 115.0
 tooltip_text = "Cài đặt"
 mouse_default_cursor_shape = 2
 texture_normal = ExtResource("5_x2yvf")

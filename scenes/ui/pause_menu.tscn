@@ -17,7 +17,7 @@
 [ext_resource type="Texture2D" uid="uid://cc6ful4c7kd8m" path="res://assets/assets_animated/icon_coin/coin_0015.png" id="23_0rxam"]
 [ext_resource type="Texture2D" uid="uid://u7yhld8b0vq7" path="res://assets/assets_animated/icon_coin/coin_0016.png" id="24_dfvc5"]
 [ext_resource type="Texture2D" uid="uid://cxsel2egvwo0" path="res://assets/PNG/UI/run/RunHud/icon_Score.png" id="height"]
-[ext_resource type="Texture2D" uid="uid://b6mc8yrwn8hup" path="res://assets/PNG/UI/pause_menu/btn_main_menu.png" id="main_menu"]
+[ext_resource type="Texture2D" uid="uid://b6mc8yrwn8hup" path="res://assets/PNG/UI/pause_menu/btn_home.png" id="main_menu"]
 [ext_resource type="Texture2D" uid="uid://yir52bs68hlh" path="res://assets/PNG/UI/pause_menu/btn_new_run.png" id="new_seed"]
 [ext_resource type="Texture2D" uid="uid://ddbhi3hb1uf03" path="res://assets/PNG/UI/pause_menu/panel_pause.png" id="panel"]
 [ext_resource type="Texture2D" uid="uid://dg6ti0ymc4h1t" path="res://assets/PNG/UI/pause_menu/btn_restart.png" id="restart"]

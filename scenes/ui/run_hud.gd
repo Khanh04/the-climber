@@ -44,7 +44,7 @@ func apply_state(state: RefCounted) -> void:
 	var wallet_coins: int = typed_state.wallet_coins
 	var run_earned_coins: int = typed_state.run_earned_coins
 
-	_height_value_label.text = "%.1f m" % height_meters
+	_height_value_label.text = "%.1f M" % height_meters
 	_stamina_value_label.text = "%.1f / %.1f" % [current_stamina_seconds, max_stamina_seconds]
 	_stamina_bar.max_value = max_stamina_seconds
 	_stamina_bar.value = current_stamina_seconds

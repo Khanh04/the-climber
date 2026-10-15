@@ -14,21 +14,29 @@ const PlayerPhysicsModeTransitionsScript = preload("res://src/gameplay/player/pl
 # currently-grabbed hold is exempted by disable_collision on the runtime grip PinJoint2D, so
 # grabbing is unaffected. These two are equal today; keep them separate so climb-only collision
 # can be dialled back without touching the falling path.
-const CONTROLLED_COLLISION_MASK: int = 1
-const FALLING_COLLISION_MASK: int = 3
-# ponytail: measured from the CHR2 arm sprites' pixel content (opaque-pixel centroid of the
-# shoulder half vs. the hand half of each cropped frame) rather than an exact art-authored
-# value -- re-measure if the equipped arm art changes. The two are mirror images of each
-# other (measured ~141.4 deg / ~38.6 deg), hence right = PI - left.
-const LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = 2.4674
+# Route walls (layer 64, RunScene's vine borders) block the head in both modes; they sit on
+# their own layer so coin/hazard/chaser areas, which react to any layer-1 body, ignore them.
+const ROUTE_WALL_COLLISION_LAYER: int = 64
+const CONTROLLED_COLLISION_MASK: int = 1 | ROUTE_WALL_COLLISION_LAYER
+const FALLING_COLLISION_MASK: int = 3 | ROUTE_WALL_COLLISION_LAYER
+# ponytail: measured from the CHR2 arm sprites' pixel content -- the arm origin (the drawn
+# shoulder tip, which player_appearance_catalog.tres offsets onto the pivot) to the drawn hand
+# tip, (-36, 9) px -- rather than an exact art-authored value. Re-measure if the equipped arm
+# art changes. The two are near-mirror images (right measures ~11.8 deg vs. the mirrored
+# ~14 deg), hence right = PI - left.
+const LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = 2.8966
 const RIGHT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS: float = PI - LEFT_ARM_BONE_FORWARD_ANGLE_OFFSET_RADIANS
 const MIN_ARM_TARGET_DISTANCE_PIXELS: float = 4.0
+# How far inside the fitted head box's side edges the shoulder sockets sit, so the drawn
+# shoulder overlaps the head instead of floating beside it.
+const SHOULDER_INSET_PIXELS: float = 3.0
 
 # LeftArm/RightArm live on this layer and mask only world geometry (layer 1) + handhold bodies
 # (layer 2), so the arms never collide with each other or with Head. Head is the gameplay body
 # and stays on layer 1 (ChaserKillZone/hazard/pickup detection keys off it); the arm<->Head
-# exclusion is handled entirely by disable_collision=true on the 2 scene-authored PinJoint2D
-# joints in player_character.tscn. Do not "simplify" this into a layer-only scheme.
+# exclusion is the permanent add_collision_exception_with() in _ready() (the scene-authored
+# PinJoint2Ds' disable_collision only covers the falling mode, when they are connected). Do not
+# "simplify" this into a layer-only scheme.
 const LIMB_COLLISION_LAYER: int = 32
 
 # ponytail: per-limb mass values (scene-authored in player_character.tscn) are placeholder
@@ -301,20 +309,14 @@ func get_left_arm_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
 func get_right_arm_fitted_collision_polygons() -> Array[CollisionPolygon2D]:
 	return _right_arm_fitted_collision_polygons
 
-func configure_arm_collision_capsule(hand_side: int, radius: float, height: float, collision_offset: Vector2) -> void:
-	if hand_side == HandSideScript.Value.LEFT:
-		_configure_capsule_shape(_left_arm_collision_shape, "LeftArm", radius, height, collision_offset)
-		return
-	_configure_capsule_shape(_right_arm_collision_shape, "RightArm", radius, height, collision_offset)
-
 # Pixel-silhouette collision: N convex CollisionPolygon2D children replace the fallback
 # primitive shape (disabled, not removed -- it's the always-valid state before any appearance
-# is applied, and stays the shape used by the cutout appearance path). Godot's dynamic
+# is applied). Godot's dynamic
 # RigidBody2D physics doesn't support a single concave shape correctly (no well-defined
 # "inside"), so a traced silhouette must arrive pre-decomposed into convex pieces -- this
 # only assembles what PlayerAppearanceApplicator hands it, it doesn't do the tracing itself.
-# The head is excluded on purpose: it keeps its round authored CapsuleShape2D so a resting
-# head has no preferred tilt angle (see PlayerAppearanceApplicator.apply_appearance).
+# The head is excluded on purpose: it stays a RectangleShape2D, fitted to the head art's bounds
+# by configure_head_collision (see PlayerAppearanceApplicator.apply_appearance).
 func configure_arm_collision_polygons(hand_side: int, local_polygons: Array[PackedVector2Array]) -> void:
 	if hand_side == HandSideScript.Value.LEFT:
 		_left_arm_fitted_collision_polygons = _configure_collision_polygons(_left_arm, _left_arm_collision_shape, _left_arm_fitted_collision_polygons, "LeftArm", local_polygons)
@@ -348,20 +350,24 @@ func _configure_collision_polygons(body: RigidBody2D, fallback_shape: CollisionS
 		fallback_shape.disabled = true
 	return created_polygons
 
-func _configure_capsule_shape(shape_node: CollisionShape2D, label: String, radius: float, height: float, collision_offset: Vector2) -> void:
-	Validation.require_condition(radius > 0.0, "PlayerCharacter %s collision capsule radius must be positive." % label)
-	Validation.require_condition(height >= 0.0, "PlayerCharacter %s collision capsule height cannot be negative." % label)
-	Validation.require_condition(shape_node != null, "PlayerCharacter requires %s collision shape before configuring the capsule." % label)
-	Validation.require_condition(shape_node.shape != null, "PlayerCharacter requires %s collision shape to have a shape before configuring the capsule." % label)
-	Validation.require_condition(shape_node.shape is CapsuleShape2D, "PlayerCharacter %s collision shape must remain a CapsuleShape2D." % label)
+# Fits the head box to the drawn head (a Head-local rect) and moves the shoulder sockets onto
+# its side edges. Hand anchors and the body<->arm joints are socket children, so they follow.
+# The scene's head shape is a sub-resource shared by every PlayerCharacter instance, so it is
+# duplicated before resizing -- resizing it in place would resize every other player too.
+func configure_head_collision(drawn_rect: Rect2) -> void:
+	Validation.require_condition(drawn_rect.size.x > SHOULDER_INSET_PIXELS * 2.0 and drawn_rect.size.y > 0.0, "PlayerCharacter head collision rect must be wider than both shoulder insets.")
+	Validation.require_condition(_head_collision_shape.shape is RectangleShape2D, "PlayerCharacter HeadCollisionShape must be a RectangleShape2D to fit head art.")
 
-	var duplicated_shape: Resource = shape_node.shape.duplicate()
-	Validation.require_condition(duplicated_shape is CapsuleShape2D, "PlayerCharacter failed to duplicate the %s collision capsule." % label)
-	var capsule_shape: CapsuleShape2D = duplicated_shape as CapsuleShape2D
-	capsule_shape.radius = radius
-	capsule_shape.height = height
-	shape_node.shape = capsule_shape
-	shape_node.position = collision_offset
+	var fitted_shape: RectangleShape2D = (_head_collision_shape.shape as RectangleShape2D).duplicate() as RectangleShape2D
+	fitted_shape.size = drawn_rect.size
+	_head_collision_shape.shape = fitted_shape
+	_head_collision_shape.position = drawn_rect.get_center()
+
+	var shoulder_y: float = drawn_rect.get_center().y
+	_left_shoulder_socket.position = Vector2(drawn_rect.position.x + SHOULDER_INSET_PIXELS, shoulder_y)
+	_right_shoulder_socket.position = Vector2(drawn_rect.end.x - SHOULDER_INSET_PIXELS, shoulder_y)
+	if _physics_mode == PlayerPhysicsModeScript.controlled_climb():
+		_sync_kinematic_limb_pose()
 
 func get_left_grip_joint_anchor() -> Marker2D:
 	return _left_grip_joint_anchor
