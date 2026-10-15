@@ -11,22 +11,22 @@ signal store_requested
 const RunEndReasonScript = preload("res://src/core/run_end_reason.gd")
 const RunEndScreenStateScript = preload("res://src/ui/run_end_screen_state.gd")
 
-@onready var _title_label: Label = get_node("CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
-@onready var _reason_label: Label = get_node("CenterContainer/Panel/ContentMargin/Content/ReasonLabel") as Label
-@onready var _summary_label: Label = get_node("CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
-@onready var _ad_feedback_label: Label = get_node("CenterContainer/Panel/ContentMargin/Content/AdFeedbackLabel") as Label
-@onready var _rewarded_continue_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton") as Button
-@onready var _post_run_coin_doubler_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
-@onready var _store_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/StoreButton") as Button
-@onready var _restart_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
-@onready var _new_seed_run_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/NewSeedRunButton") as Button
-@onready var _main_menu_button: Button = get_node("CenterContainer/Panel/ContentMargin/Content/MainMenuButton") as Button
+@onready var _title_label: Label = get_node("CenterContainer/ContentMargin/Content/TitleLabel") as Label
+@onready var _reason_label: Label = get_node("CenterContainer/ContentMargin/Content/ReasonLabel") as Label
+@onready var _summary_label: Label = get_node("CenterContainer/ContentMargin/Content/SummaryLabel") as Label
+@onready var _ad_feedback_label: Label = get_node("CenterContainer/ContentMargin/Content/AdFeedbackLabel") as Label
+@onready var _rewarded_continue_button: Button = get_node("CenterContainer/ContentMargin/Content/RewardedContinueButton") as Button
+@onready var _post_run_coin_doubler_button: Button = get_node("CenterContainer/ContentMargin/Content/PostRunCoinDoublerButton") as Button
+@onready var _store_button: Button = get_node("CenterContainer/ContentMargin/Content/StoreButton") as Button
+@onready var _restart_button: Button = get_node("CenterContainer/ContentMargin/Content/RestartButton") as Button
+@onready var _new_seed_run_button: Button = get_node("CenterContainer/ContentMargin/Content/NewSeedRunButton") as Button
+@onready var _main_menu_button: Button = get_node("CenterContainer/ContentMargin/Content/MainMenuButton") as Button
 
-@onready var _score_value: Label = $CenterContainer/Panel/ContentMargin/Content/ScoreValue
-@onready var _best_score_value: Label = $CenterContainer/Panel/ContentMargin/Content/BestScoreValue
-@onready var _run_coins_value: Label = $CenterContainer/Panel/ContentMargin/Content/RunCoinsValue
-@onready var _wallet_coins_value: Label = $CenterContainer/Panel/ContentMargin/Content/WalletCoinsValue
-
+@onready var _score_value: Label = $CenterContainer/ContentMargin/Content/ScoreValue
+@onready var _best_score_value: Label = $CenterContainer/ContentMargin/Content/BestScoreValue
+@onready var _run_coins_value: Label = $CenterContainer/ContentMargin/Content/RunCoinsValue
+@onready var _coin_animation: AnimatedSprite2D = \
+$CenterContainer/ContentMargin/Content/CoinIcon
 func _ready() -> void:
 	_validate_required_nodes()
 	var _rewarded_continue_connect_result: int = _rewarded_continue_button.connect(&"pressed", Callable(self, "_on_rewarded_continue_button_pressed"))
@@ -35,7 +35,7 @@ func _ready() -> void:
 	var _connect_result: int = _restart_button.connect(&"pressed", Callable(self, "_on_restart_button_pressed"))
 	var _new_seed_run_connect_result: int = _new_seed_run_button.connect(&"pressed", Callable(self, "_on_new_seed_run_button_pressed"))
 	var _main_menu_connect_result: int = _main_menu_button.connect(&"pressed", Callable(self, "_on_main_menu_button_pressed"))
-
+	_coin_animation.play(&"coin_animated")
 func apply_state(state: RefCounted) -> void:
 	Validation.require_condition(state != null, "RunEndScreen requires a state snapshot.")
 	Validation.require_condition(state is RunEndScreenStateScript, "RunEndScreen requires a RunEndScreenState snapshot.")
@@ -55,12 +55,10 @@ func apply_state(state: RefCounted) -> void:
 	var ad_feedback_message: String = typed_state.get("ad_feedback_message")
 
 	# Labels display the snapshot only; they never award coins or save a record.
-	_score_value.text = "%.1f m" % final_height_meters
-	_best_score_value.text = "%.1f m" % best_height_meters
+	_score_value.text = "%.1f M" % final_height_meters
+	_best_score_value.text = "%.1f M" % best_height_meters
 	_run_coins_value.text = str(run_earned_coins)
-	_wallet_coins_value.text = str(wallet_coins)
 	_run_coins_value.tooltip_text = "Xu nhặt trong lượt này: %d" % run_earned_coins
-	_wallet_coins_value.tooltip_text = "Tổng xu trong ví: %d" % wallet_coins
 	_title_label.visible = is_rescue_offered_state
 	visible = is_visible_state
 	_ad_feedback_label.visible = not ad_feedback_message.is_empty()

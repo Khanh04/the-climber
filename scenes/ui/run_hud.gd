@@ -15,6 +15,9 @@ const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
 @onready var _skill_button: Button = get_node("Panel/ContentMargin/Metrics/Wrapper_Skill/SkillButton") as Button
 @onready var _skill_cooldown_bar: ProgressBar = get_node("Panel/ContentMargin/Metrics/Wrapper_Skill/SkillCooldownBar") as ProgressBar
 
+@onready var _coin_animation: AnimatedSprite2D = \
+$Panel/ContentMargin/Metrics/Wrapper_Coins/icon_coin
+
 # Artwork uses a 270x480 canvas, displayed at 4x in the 1080x1920 design.
 # Scale the whole HUD uniformly and center it with the environment on tall phones.
 func _align_panel() -> void:
@@ -31,6 +34,7 @@ func _ready() -> void:
 	_validate_required_nodes()
 	var _pause_connect_result: int = _pause_button.connect(&"pressed", Callable(self, "_on_pause_button_pressed"))
 	var _skill_connect_result: int = _skill_button.connect(&"pressed", Callable(self, "_on_skill_button_pressed"))
+	_coin_animation.play(&"coin_animated")
 
 func apply_state(state: RefCounted) -> void:
 	Validation.require_condition(state != null, "RunHud requires a state snapshot.")
@@ -45,7 +49,7 @@ func apply_state(state: RefCounted) -> void:
 	var wallet_coins: int = typed_state.wallet_coins
 	var run_earned_coins: int = typed_state.run_earned_coins
 
-	_height_value_label.text = "%.1f m" % height_meters
+	_height_value_label.text = "%.1f M" % height_meters
 	_stamina_value_label.text = "%.1f / %.1f" % [current_stamina_seconds, max_stamina_seconds]
 	_stamina_bar.max_value = max_stamina_seconds
 	_stamina_bar.value = current_stamina_seconds

@@ -1,8 +1,23 @@
 [gd_scene format=3 uid="uid://caple2pf1uor3"]
 
-[ext_resource type="Texture2D" uid="uid://bmj7ak4hthdac" path="res://assets/PNG/UI/run/RunHud/icon_coin.png" id="coin"]
+[ext_resource type="Texture2D" uid="uid://8iqc6gwcven2" path="res://assets/assets_animated/icon_coin/coin_0001.png" id="9_jj4cn"]
+[ext_resource type="Texture2D" uid="uid://djwmbe634t3ku" path="res://assets/assets_animated/icon_coin/coin_0002.png" id="10_1prsh"]
+[ext_resource type="Texture2D" uid="uid://dcyua3vo0wc3w" path="res://assets/assets_animated/icon_coin/coin_0003.png" id="11_2v8jl"]
+[ext_resource type="Texture2D" uid="uid://cy3me5477m468" path="res://assets/assets_animated/icon_coin/coin_0004.png" id="12_tniw3"]
+[ext_resource type="Texture2D" uid="uid://bla7vpkry48nw" path="res://assets/assets_animated/icon_coin/coin_0005.png" id="13_57h4f"]
+[ext_resource type="Texture2D" uid="uid://cb2e167enabtp" path="res://assets/assets_animated/icon_coin/coin_0006.png" id="14_xabod"]
+[ext_resource type="Texture2D" uid="uid://b7tkemktrnshd" path="res://assets/assets_animated/icon_coin/coin_0007.png" id="15_kkv1i"]
+[ext_resource type="Texture2D" uid="uid://yh4hyqdsikk5" path="res://assets/assets_animated/icon_coin/coin_0008.png" id="16_pb823"]
+[ext_resource type="Texture2D" uid="uid://y6ilhe82ju4p" path="res://assets/assets_animated/icon_coin/coin_0009.png" id="17_ybc7j"]
+[ext_resource type="Texture2D" uid="uid://b5alhf24rx3e6" path="res://assets/assets_animated/icon_coin/coin_0010.png" id="18_72dmp"]
+[ext_resource type="Texture2D" uid="uid://nx7f1d1bgn27" path="res://assets/assets_animated/icon_coin/coin_0011.png" id="19_yr4wm"]
+[ext_resource type="Texture2D" uid="uid://6j4eab3slm1p" path="res://assets/assets_animated/icon_coin/coin_0012.png" id="20_g6xlc"]
+[ext_resource type="Texture2D" uid="uid://cj76aic2hmoqr" path="res://assets/assets_animated/icon_coin/coin_0013.png" id="21_g5kty"]
+[ext_resource type="Texture2D" uid="uid://c2k5tayo728fn" path="res://assets/assets_animated/icon_coin/coin_0014.png" id="22_tm0rn"]
+[ext_resource type="Texture2D" uid="uid://cc6ful4c7kd8m" path="res://assets/assets_animated/icon_coin/coin_0015.png" id="23_0rxam"]
+[ext_resource type="Texture2D" uid="uid://u7yhld8b0vq7" path="res://assets/assets_animated/icon_coin/coin_0016.png" id="24_dfvc5"]
 [ext_resource type="Texture2D" uid="uid://cxsel2egvwo0" path="res://assets/PNG/UI/run/RunHud/icon_Score.png" id="height"]
-[ext_resource type="Texture2D" uid="uid://b6mc8yrwn8hup" path="res://assets/PNG/UI/pause_menu/btn_main_menu.png" id="main_menu"]
+[ext_resource type="Texture2D" uid="uid://b6mc8yrwn8hup" path="res://assets/PNG/UI/pause_menu/btn_home.png" id="main_menu"]
 [ext_resource type="Texture2D" uid="uid://yir52bs68hlh" path="res://assets/PNG/UI/pause_menu/btn_new_run.png" id="new_seed"]
 [ext_resource type="Texture2D" uid="uid://ddbhi3hb1uf03" path="res://assets/PNG/UI/pause_menu/panel_pause.png" id="panel"]
 [ext_resource type="Texture2D" uid="uid://dg6ti0ymc4h1t" path="res://assets/PNG/UI/pause_menu/btn_restart.png" id="restart"]
@@ -18,11 +33,6 @@ filter_clip = true
 [sub_resource type="AtlasTexture" id="Atlas_height"]
 atlas = ExtResource("height")
 region = Rect2(0, 0, 17, 17)
-filter_clip = true
-
-[sub_resource type="AtlasTexture" id="Atlas_coin"]
-atlas = ExtResource("coin")
-region = Rect2(0, 0, 15, 15)
 filter_clip = true
 
 [sub_resource type="AtlasTexture" id="Atlas_resume"]
@@ -108,6 +118,62 @@ texture = ExtResource("setting")
 texture = SubResource("Atlas_setting")
 modulate_color = Color(1.12, 1.12, 1.12, 1)
 
+[sub_resource type="SpriteFrames" id="SpriteFrames_rvu5y"]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("9_jj4cn")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_1prsh")
+}, {
+"duration": 1.0,
+"texture": ExtResource("11_2v8jl")
+}, {
+"duration": 1.0,
+"texture": ExtResource("12_tniw3")
+}, {
+"duration": 1.0,
+"texture": ExtResource("13_57h4f")
+}, {
+"duration": 1.0,
+"texture": ExtResource("14_xabod")
+}, {
+"duration": 1.0,
+"texture": ExtResource("15_kkv1i")
+}, {
+"duration": 1.0,
+"texture": ExtResource("16_pb823")
+}, {
+"duration": 1.0,
+"texture": ExtResource("17_ybc7j")
+}, {
+"duration": 1.0,
+"texture": ExtResource("18_72dmp")
+}, {
+"duration": 1.0,
+"texture": ExtResource("19_yr4wm")
+}, {
+"duration": 1.0,
+"texture": ExtResource("20_g6xlc")
+}, {
+"duration": 1.0,
+"texture": ExtResource("21_g5kty")
+}, {
+"duration": 1.0,
+"texture": ExtResource("22_tm0rn")
+}, {
+"duration": 1.0,
+"texture": ExtResource("23_0rxam")
+}, {
+"duration": 1.0,
+"texture": ExtResource("24_dfvc5")
+}],
+"loop": 1,
+"name": &"coin_animated",
+"speed": 24.0
+}]
+
 [node name="PauseMenu" type="Control" unique_id=1859928570]
 process_mode = 3
 texture_filter = 1
@@ -179,17 +245,6 @@ offset_bottom = 314.0
 scale = Vector2(0.7, 0.7)
 mouse_filter = 2
 texture = SubResource("Atlas_height")
-expand_mode = 1
-
-[node name="CoinIcon" type="TextureRect" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=1244493654]
-layout_mode = 0
-offset_left = 96.0
-offset_top = 314.0
-offset_right = 148.0
-offset_bottom = 370.0
-scale = Vector2(0.7, 0.7)
-mouse_filter = 2
-texture = SubResource("Atlas_coin")
 expand_mode = 1
 
 [node name="HeightValue" type="Label" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=584126850]
@@ -280,3 +335,12 @@ theme_override_styles/normal = SubResource("setting_normal")
 theme_override_styles/pressed = SubResource("StyleBoxTexture_lrbnh")
 theme_override_styles/hover = SubResource("setting_hover")
 theme_override_styles/focus = SubResource("Focus")
+
+[node name="icon_coin" type="AnimatedSprite2D" parent="CenterContainer/Panel/ContentMargin/Content" unique_id=666521526]
+position = Vector2(116, 335)
+scale = Vector2(2.5, 2.5)
+sprite_frames = SubResource("SpriteFrames_rvu5y")
+animation = &"coin_animated"
+frame_progress = 0.053412482
+
+[connection signal="animation_changed" from="CenterContainer/Panel/ContentMargin/Content/icon_coin" to="." method="_on_icon_coin_animation_changed"]

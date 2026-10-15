@@ -45,6 +45,15 @@ window/handheld/orientation=1
 
 enabled=PackedStringArray("res://addons/godot_ai/plugin.cfg")
 
+[file_customization]
+
+folder_colors={
+"res://assets/Climb_point/": "teal",
+"res://assets/PNG/": "teal",
+"res://assets/assets_animated/": "yellow",
+"res://assets/audio/": "gray"
+}
+
 [input]
 
 debug_left_grip={

@@ -4,7 +4,7 @@
 
 [node name="RestPresentation" type="Node2D"]
 script = ExtResource("1")
-frame_path_format = "res://assets/art/game_object/rest/frame_%02d.png"
+frame_path_format = "res://assets/Climb_point/rest/frame_%02d.png"
 frame_count = 24
 animation_name = &"rest"
 frames_per_second = 12.0

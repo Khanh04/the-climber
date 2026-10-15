@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3]
+[gd_scene format=3]
 
-[ext_resource type="Texture2D" path="res://assets/art/game_object/Normal.png" id="1"]
+[ext_resource type="Texture2D" uid="uid://bvfunh7o0cc56" path="res://assets/Climb_point/Normal.png" id="1"]
+
 
 [node name="NormalPresentation" type="Node2D"]
 

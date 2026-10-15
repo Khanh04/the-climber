@@ -1,7 +1,7 @@
 extends GutTest
 
 const RunResource = preload("res://scenes/main/run_scene.tscn")
-const CONTENT: String = "UiLayer/RunEndScreen/CenterContainer/Panel/ContentMargin/Content/"
+const CONTENT: String = "UiLayer/RunEndScreen/CenterContainer/ContentMargin/Content/"
 
 func test_run_end_displays_saved_record_and_distinct_coin_totals_without_awarding_again() -> void:
 	var memory: InMemoryLocalStorageAdapter = InMemoryLocalStorageAdapter.new()
@@ -20,7 +20,7 @@ func test_run_end_displays_saved_record_and_distinct_coin_totals_without_awardin
 	assert_eq((run.get_node(CONTENT + "ScoreValue") as Label).text, "86.4 m")
 	assert_eq((run.get_node(CONTENT + "BestScoreValue") as Label).text, "128.5 m")
 	assert_eq((run.get_node(CONTENT + "RunCoinsValue") as Label).text, "12")
-	assert_eq((run.get_node(CONTENT + "WalletCoinsValue") as Label).text, "246")
+	assert_string_contains((run.get_node(CONTENT + "SummaryLabel") as Label).text, "Wallet Coins: 246")
 	assert_eq(run.get_test_adapter_for_test().get_wallet_for_test().get_coins(), 246)
 	assert_eq(SaveStorage.new(memory).load_snapshot().wallet_coins, 246)
 	assert_eq(BestScoreStorage.new(memory).get_best_height_meters(), 128.5)

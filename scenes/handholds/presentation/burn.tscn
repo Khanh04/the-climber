@@ -4,8 +4,8 @@
 
 [node name="BurnPresentation" type="Node2D"]
 script = ExtResource("1")
-frame_path_format = "res://assets/art/game_object/burn/frame_%02d.png"
-frame_count = 24
+frame_path_format = "res://assets/Climb_point/burn/frame_%02d.png"
+frame_count = 12
 animation_name = &"burn"
 frames_per_second = 12.0
 

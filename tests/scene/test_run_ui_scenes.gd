@@ -360,15 +360,15 @@ func test_run_end_screen_shows_summary_and_emits_restart() -> void:
 		)
 	)
 
-	var title_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
-	var reason_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/ReasonLabel") as Label
-	var summary_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
-	var rewarded_continue_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton") as Button
-	var post_run_coin_doubler_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
-	var store_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/StoreButton") as Button
-	var restart_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/RestartButton") as Button
-	var new_seed_run_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/NewSeedRunButton") as Button
-	var main_menu_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/MainMenuButton") as Button
+	var title_label: Label = screen.get_node("CenterContainer/ContentMargin/Content/TitleLabel") as Label
+	var reason_label: Label = screen.get_node("CenterContainer/ContentMargin/Content/ReasonLabel") as Label
+	var summary_label: Label = screen.get_node("CenterContainer/ContentMargin/Content/SummaryLabel") as Label
+	var rewarded_continue_button: Button = screen.get_node("CenterContainer/ContentMargin/Content/RewardedContinueButton") as Button
+	var post_run_coin_doubler_button: Button = screen.get_node("CenterContainer/ContentMargin/Content/PostRunCoinDoublerButton") as Button
+	var store_button: Button = screen.get_node("CenterContainer/ContentMargin/Content/StoreButton") as Button
+	var restart_button: Button = screen.get_node("CenterContainer/ContentMargin/Content/RestartButton") as Button
+	var new_seed_run_button: Button = screen.get_node("CenterContainer/ContentMargin/Content/NewSeedRunButton") as Button
+	var main_menu_button: Button = screen.get_node("CenterContainer/ContentMargin/Content/MainMenuButton") as Button
 
 	assert_true(screen.visible)
 	assert_not_null(title_label)
@@ -425,7 +425,7 @@ func test_run_end_screen_emits_store_request() -> void:
 		)
 	)
 
-	var store_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/StoreButton") as Button
+	var store_button: Button = screen.get_node("CenterContainer/ContentMargin/Content/StoreButton") as Button
 
 	assert_not_null(store_button)
 	var _emit_result: int = store_button.emit_signal("pressed")
@@ -459,9 +459,9 @@ func test_run_end_screen_shows_rewarded_continue_button_when_available() -> void
 	state_object.set("show_rewarded_continue", true)
 	screen.call("apply_state", state)
 
-	var rewarded_continue_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/RewardedContinueButton") as Button
-	var post_run_coin_doubler_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
-	var summary_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/SummaryLabel") as Label
+	var rewarded_continue_button: Button = screen.get_node("CenterContainer/ContentMargin/Content/RewardedContinueButton") as Button
+	var post_run_coin_doubler_button: Button = screen.get_node("CenterContainer/ContentMargin/Content/PostRunCoinDoublerButton") as Button
+	var summary_label: Label = screen.get_node("CenterContainer/ContentMargin/Content/SummaryLabel") as Label
 
 	assert_not_null(rewarded_continue_button)
 	assert_not_null(post_run_coin_doubler_button)
@@ -470,7 +470,7 @@ func test_run_end_screen_shows_rewarded_continue_button_when_available() -> void
 	assert_false(post_run_coin_doubler_button.visible)
 	assert_string_contains(summary_label.text, "Watch an ad to continue this run once")
 
-	var ad_feedback_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/AdFeedbackLabel") as Label
+	var ad_feedback_label: Label = screen.get_node("CenterContainer/ContentMargin/Content/AdFeedbackLabel") as Label
 	assert_not_null(ad_feedback_label)
 	assert_false(ad_feedback_label.visible)
 
@@ -504,7 +504,7 @@ func test_run_end_screen_shows_ad_feedback_message_when_provided() -> void:
 	state_object.set("ad_feedback_message", "Ad cancelled — you can try again.")
 	screen.call("apply_state", state)
 
-	var ad_feedback_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/AdFeedbackLabel") as Label
+	var ad_feedback_label: Label = screen.get_node("CenterContainer/ContentMargin/Content/AdFeedbackLabel") as Label
 	assert_not_null(ad_feedback_label)
 	assert_true(ad_feedback_label.visible)
 	assert_eq(ad_feedback_label.text, "Ad cancelled — you can try again.")
@@ -536,7 +536,7 @@ func test_run_end_screen_shows_post_run_coin_doubler_button_when_available() -> 
 		)
 	)
 
-	var post_run_coin_doubler_button: Button = screen.get_node("CenterContainer/Panel/ContentMargin/Content/PostRunCoinDoublerButton") as Button
+	var post_run_coin_doubler_button: Button = screen.get_node("CenterContainer/ContentMargin/Content/PostRunCoinDoublerButton") as Button
 
 	assert_not_null(post_run_coin_doubler_button)
 	assert_true(post_run_coin_doubler_button.visible)
@@ -571,7 +571,7 @@ func test_run_ui_view_applies_snapshots_to_both_controls() -> void:
 	)
 
 	var height_value_label: Label = hud.get_node("Panel/ContentMargin/Metrics/Wrapper_Score/Icon_Score/HeightValueLabel") as Label
-	var title_label: Label = screen.get_node("CenterContainer/Panel/ContentMargin/Content/TitleLabel") as Label
+	var title_label: Label = screen.get_node("CenterContainer/ContentMargin/Content/TitleLabel") as Label
 
 	assert_not_null(height_value_label)
 	assert_not_null(title_label)

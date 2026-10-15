@@ -19,7 +19,8 @@ const PauseMenuStateScript = preload("res://src/ui/pause_menu_state.gd")
 @onready var _panel_frame: Control = $CenterContainer
 @onready var _height_value: Label = $CenterContainer/Panel/ContentMargin/Content/HeightValue
 @onready var _coin_value: Label = $CenterContainer/Panel/ContentMargin/Content/CoinValue
-
+@onready var _coin_animation: AnimatedSprite2D = \
+$CenterContainer/Panel/ContentMargin/Content/icon_coin
 # Settings replaces the artwork, but the run stays paused underneath it.
 func set_settings_obscured(obscured: bool) -> void:
 	_panel_frame.visible = not obscured
@@ -31,7 +32,7 @@ func _ready() -> void:
 	var _new_seed_run_connect_result: int = _new_seed_run_button.connect(&"pressed", Callable(self, "_on_new_seed_run_button_pressed"))
 	var _main_menu_connect_result: int = _main_menu_button.connect(&"pressed", Callable(self, "_on_main_menu_button_pressed"))
 	var _settings_connect_result: int = _settings_button.connect(&"pressed", Callable(self, "_on_settings_button_pressed"))
-
+	_coin_animation.play(&"coin_animated")
 func apply_state(state: RefCounted) -> void:
 	Validation.require_condition(state != null, "PauseMenu requires a state snapshot.")
 	Validation.require_condition(state is PauseMenuStateScript, "PauseMenu requires a PauseMenuState snapshot.")
@@ -41,9 +42,9 @@ func apply_state(state: RefCounted) -> void:
 	visible = typed_state.visible
 	# Copy the current run snapshot into the visible labels whenever Pause refreshes.
 	_height_value.text = "%.1f m" % typed_state.height_meters
-	_height_value.tooltip_text = "Độ cao cao nhất lượt này: %.1f m" % typed_state.height_meters
+	_height_value.tooltip_text = "Heighest in round: %.1f m" % typed_state.height_meters
 	_coin_value.text = str(typed_state.run_earned_coins)
-	_coin_value.tooltip_text = "Xu lượt này: %d\nXu trong ví: %d" % [typed_state.run_earned_coins, typed_state.wallet_coins]
+	_coin_value.tooltip_text = "Coin in round: %d\nCoin in wallet: %d" % [typed_state.run_earned_coins, typed_state.wallet_coins]
 
 func _unhandled_input(event: InputEvent) -> void:
 	if not visible or not _panel_frame.visible:
