@@ -1,5 +1,8 @@
 extends GutTest
 
+func after_each() -> void:
+    CharacterSkillProfile.skills_enabled = false
+
 const AimInputIntentScript = preload("res://src/gameplay/player/aim_input_intent.gd")
 const ChaserFeedbackSnapshotScript = preload("res://src/gameplay/chaser/chaser_feedback_snapshot.gd")
 const ChaserPacingModelScript = preload("res://src/gameplay/chaser/chaser_pacing_model.gd")
@@ -166,7 +169,7 @@ func test_run_scene_wires_required_nodes_and_starts_run() -> void:
     assert_not_null(playground.get_node_or_null("GeneratedChunks"))
     assert_eq(_test_adapter(playground).get_run_session_for_test().get_state(), RunStateScript.Value.CLIMBING)
 
-func test_run_scene_uses_extended_starting_stamina_for_playtesting() -> void:
+func test_run_scene_uses_small_stamina_pool_with_two_hand_regen() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
     var playground_node: Node = scene.instantiate()
     var playground: RunSceneScript = playground_node as RunSceneScript
@@ -175,7 +178,8 @@ func test_run_scene_uses_extended_starting_stamina_for_playtesting() -> void:
     add_child_autofree(playground)
     await get_tree().process_frame
 
-    assert_eq(playground.stamina_tuning.one_hand_seconds, 100.0)
+    assert_eq(playground.stamina_tuning.one_hand_seconds, 10.0)
+    assert_eq(playground.stamina_tuning.two_hand_regen_seconds_per_second, 1.5)
 
 func test_run_scene_consumes_staged_tutorial_launch_mode() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -550,6 +554,59 @@ func test_run_scene_purchases_equips_and_persists_cosmetics() -> void:
     assert_eq(snapshot.body_cosmetic_id, &"body_sunrise_jacket")
     assert_true(snapshot.owned_cosmetic_ids.has("body_sunrise_jacket"))
     assert_true(snapshot.applied_persistent_transaction_ids.has("purchase:cosmetic_unlock:body_sunrise_jacket"))
+
+func test_run_scene_equipping_spartan_applies_heavy_passive() -> void:
+    CharacterSkillProfile.skills_enabled = true
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var local_storage: InMemoryLocalStorageAdapterScript = InMemoryLocalStorageAdapterScript.new()
+    var playground: RunSceneScript = scene.instantiate() as RunSceneScript
+    playground.set_local_storage_adapter(local_storage)
+    add_child_autofree(playground)
+    await get_tree().process_frame
+    var controller: ClimbPrototypeController = playground.get_controller_for_test()
+    var base_swing: float = controller.get_swing_control_force(Vector2.UP).length()
+    assert_eq(playground.get_stamina_for_test().get_max_stamina_seconds(), 10.0)
+
+    assert_true(playground.apply_persistent_coin_transaction("debug_dev:spartan_grant", TransactionSourceScript.Value.DEBUG_DEV, 100))
+    var _purchase: CosmeticPurchaseResultScript = playground.purchase_cosmetic_item(&"character_spartan")
+    playground.equip_cosmetic_item(&"character_spartan")
+
+    assert_almost_eq(playground.get_stamina_for_test().get_max_stamina_seconds(), 13.0, 0.001)
+    assert_almost_eq(controller.get_swing_control_force(Vector2.UP).length(), base_swing * 0.8, 0.01)
+
+func test_run_scene_with_skills_disabled_spartan_keeps_base_stamina_and_hides_skill_button() -> void:
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground: RunSceneScript = scene.instantiate() as RunSceneScript
+    playground.set_local_storage_adapter(InMemoryLocalStorageAdapterScript.new())
+    add_child_autofree(playground)
+    await get_tree().process_frame
+
+    assert_true(playground.apply_persistent_coin_transaction("debug_dev:spartan_grant", TransactionSourceScript.Value.DEBUG_DEV, 100))
+    var _purchase: CosmeticPurchaseResultScript = playground.purchase_cosmetic_item(&"character_spartan")
+    playground.equip_cosmetic_item(&"character_spartan")
+    await get_tree().physics_frame
+
+    assert_eq(playground.get_stamina_for_test().get_max_stamina_seconds(), 10.0)
+    var skill_wrapper: Control = playground.get_node("UiLayer/RunHud/Panel/ContentMargin/Metrics/Wrapper_Skill") as Control
+    assert_false(skill_wrapper.visible)
+
+func test_run_scene_skill_button_triggers_chalk_up_for_human() -> void:
+    CharacterSkillProfile.skills_enabled = true
+    var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
+    var playground: RunSceneScript = scene.instantiate() as RunSceneScript
+    playground.set_local_storage_adapter(InMemoryLocalStorageAdapterScript.new())
+    add_child_autofree(playground)
+    await get_tree().process_frame
+    var stamina: StaminaRuntime = playground.get_stamina_for_test()
+    var _depleted: bool = stamina.advance(1, 6.0)
+    assert_almost_eq(stamina.get_current_stamina_seconds(), 4.0, 0.001)
+
+    var run_hud: Node = playground.get_node("UiLayer/RunHud")
+    var _emit_result: Error = run_hud.emit_signal(&"skill_requested")
+    await get_tree().physics_frame
+    await get_tree().physics_frame
+
+    assert_gte(stamina.get_current_stamina_seconds(), 8.9, "Chalk Up restores half of the 10 s pool.")
 
 func test_run_scene_show_store_creates_dedicated_store_shell() -> void:
     var scene: PackedScene = load("res://scenes/main/run_scene.tscn")
@@ -1596,7 +1653,7 @@ func test_run_scene_hud_displays_initial_run_snapshot() -> void:
     var displayed_height_meters: float = height_value_label.text.replace(" m", "").to_float()
     assert_gte(displayed_height_meters, 0.0)
     assert_lte(displayed_height_meters, 0.1)
-    assert_eq(stamina_value_label.text, "100.0 / 100.0")
+    assert_eq(stamina_value_label.text, "10.0 / 10.0")
     assert_eq(wallet_value_label.text, "0")
     assert_eq(coins_value_label.text, "+0")
     assert_false(run_end_screen.visible)

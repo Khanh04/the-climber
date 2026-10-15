@@ -75,7 +75,7 @@ See [ADR 0011](adr/0011-hold-field-generation.md) for the full model.
   at least 2.6 m apart. In every 36 m stretch one corridor fades out for a few
   metres, forcing a traverse.
 - Every chunk must offer three distinct routes in EASY and BASELINE and two in
-  CHALLENGE, each within the band's move limit (1.3 / 1.7 / 2.1 m).
+  CHALLENGE, each within the band's move limit (1.55 / 2.0 / 2.1 m).
 - Chunk spawn and despawn windows around the camera must never change layout
   content or chunk metadata.
 

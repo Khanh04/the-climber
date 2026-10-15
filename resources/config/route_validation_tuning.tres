@@ -1,6 +1,13 @@
-[gd_resource type="Resource" script_class="RouteValidationTuning" load_steps=2 format=3]
+[gd_resource type="Resource" script_class="RouteValidationTuning" format=3]
 
-[ext_resource type="Script" path="res://resources/config/route_validation_tuning.gd" id="1_y3n2h"]
+[ext_resource type="Script" uid="uid://cs426rtmwgwkm" path="res://resources/config/route_validation_tuning.gd" id="1_script"]
 
 [resource]
-script = ExtResource("1_y3n2h")
+script = ExtResource("1_script")
+max_move_distance_meters = 2.2
+static_reach_distance_meters = 0.96
+max_downward_move_meters = 0.12
+jitter_safety_margin_meters = 0.15
+player_body_width_meters = 0.72
+entry_anchor_positions = PackedVector2Array(-0.42, -0.24, 0.42, -0.24)
+candidate_attempt_count = 3

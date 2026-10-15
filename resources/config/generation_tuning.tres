@@ -1,0 +1,26 @@
+[gd_resource type="Resource" script_class="GenerationTuning" format=3]
+
+[ext_resource type="Script" uid="uid://5um68hdxp5u1" path="res://resources/config/generation_tuning.gd" id="1_script"]
+[ext_resource type="Resource" path="res://resources/config/route_validation_tuning.tres" id="2_route_validation_tuning"]
+[ext_resource type="Resource" path="res://resources/config/band_field_profile_easy.tres" id="3_band_field_profile_easy"]
+[ext_resource type="Resource" path="res://resources/config/band_field_profile_baseline.tres" id="4_band_field_profile_baseline"]
+[ext_resource type="Resource" path="res://resources/config/band_field_profile_challenge.tres" id="5_band_field_profile_challenge"]
+[ext_resource type="Resource" path="res://resources/config/handhold_type_definition_catalog.tres" id="6_handhold_type_definition_catalog"]
+
+[resource]
+script = ExtResource("1_script")
+segment_height_meters = 12.0
+chunk_width_meters = 14.0
+wall_side_margin_meters = 0.5
+opener_first_row_height_meters = 0.72
+route_separation_meters = 1.75
+seam_band_height_meters = 2.4
+easy_band_max_height_meters = 50.0
+baseline_band_max_height_meters = 100.0
+chunk_spawn_ahead_count = 3
+chunk_keep_behind_count = 1
+route_validation_tuning = ExtResource("2_route_validation_tuning")
+easy_field_profile = ExtResource("3_band_field_profile_easy")
+baseline_field_profile = ExtResource("4_band_field_profile_baseline")
+challenge_field_profile = ExtResource("5_band_field_profile_challenge")
+handhold_type_definition_catalog = ExtResource("6_handhold_type_definition_catalog")

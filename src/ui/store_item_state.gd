@@ -11,6 +11,8 @@ var owned: bool
 var equipped: bool
 var can_purchase: bool
 var can_equip: bool
+## Character items: the skill kit text (ADR 0013). Empty for visual-only items.
+var detail_text: String
 
 func _init(
 	item_id_value: StringName = &"body_default",
@@ -20,7 +22,8 @@ func _init(
 	owned_value: bool = false,
 	equipped_value: bool = false,
 	can_purchase_value: bool = false,
-	can_equip_value: bool = false
+	can_equip_value: bool = false,
+	detail_text_value: String = ""
 ) -> void:
 	item_id = item_id_value
 	display_name = display_name_value
@@ -30,6 +33,7 @@ func _init(
 	equipped = equipped_value
 	can_purchase = can_purchase_value
 	can_equip = can_equip_value
+	detail_text = detail_text_value
 	assert_valid()
 
 func assert_valid() -> void:

@@ -258,3 +258,33 @@ fill_mode = 3
 texture_under = SubResource("AtlasTexture_elvma")
 texture_progress = SubResource("AtlasTexture_lc2qd")
 texture_progress_offset = Vector2(3, 3)
+
+[node name="Wrapper_Skill" type="Control" parent="Panel/ContentMargin/Metrics" unique_id=1937115520]
+anchors_preset = 0
+offset_left = 400.0
+offset_top = 1660.0
+offset_right = 680.0
+offset_bottom = 1880.0
+mouse_filter = 2
+
+[node name="SkillButton" type="Button" parent="Panel/ContentMargin/Metrics/Wrapper_Skill" unique_id=1937115521]
+layout_mode = 0
+offset_right = 280.0
+offset_bottom = 180.0
+focus_mode = 0
+theme_override_colors/font_color = Color(1, 0.94, 0.68, 1)
+theme_override_colors/font_outline_color = Color(0.08, 0.12, 0.08, 1)
+theme_override_constants/outline_size = 7
+theme_override_font_sizes/font_size = 34
+text = "Skill"
+autowrap_mode = 2
+
+[node name="SkillCooldownBar" type="ProgressBar" parent="Panel/ContentMargin/Metrics/Wrapper_Skill" unique_id=1937115522]
+layout_mode = 0
+offset_top = 192.0
+offset_right = 280.0
+offset_bottom = 216.0
+mouse_filter = 2
+max_value = 1.0
+step = 0.001
+show_percentage = false

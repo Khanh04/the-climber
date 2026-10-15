@@ -1,70 +1,70 @@
 class_name ClimbPrototypeTuning
 extends Resource
 
-# Max distance from a hand anchor to a hold before grip input can attach.
-# Higher values make grabbing more forgiving; lower values require cleaner aim.
+## Max distance from a hand anchor to a hold before grip input can attach.
+## Higher values make grabbing more forgiving; lower values require cleaner aim.
 @export var handhold_detection_radius_pixels: float = 96.0
-# Debug-only directional force applied while the player is attached and aiming.
-# Higher values make pull and swing input feel stronger and more immediate.
+## Debug-only directional force applied while the player is attached and aiming.
+## Higher values make pull and swing input feel stronger and more immediate.
 @export var swing_control_force: float = 2400.0
-# Default vertical gap between the held grip point and the player's body center.
-# Higher values make the body hang lower under holds; lower values tuck it closer.
+## Default vertical gap between the held grip point and the player's body center.
+## Higher values make the body hang lower under holds; lower values tuck it closer.
 @export var grip_hang_offset_pixels: float = 65.0
-# Debug-only distance the grip target shifts toward the aim direction while attached.
-# Higher values make aiming reshape the body position more aggressively.
+## Debug-only distance the grip target shifts toward the aim direction while attached.
+## Higher values make aiming reshape the body position more aggressively.
 @export var grip_aim_target_offset_pixels: float = 100.0
-# Strength of the spring-like pull that moves the body toward the grip target.
-# Higher values keep one-hand swing radius and two-hand support targets tighter; lower values feel looser.
+## Strength of the spring-like pull that moves the body toward the grip target.
+## Higher values keep one-hand swing radius and two-hand support targets tighter; lower values feel looser.
 @export var grip_pull_stiffness: float = 80.0
-# Per-frame retention applied to the one-hand radial velocity component.
-# Higher values preserve more line tension bounce; lower values settle swing radius faster.
+## Per-frame retention applied to the one-hand radial velocity component.
+## Higher values preserve more line tension bounce; lower values settle swing radius faster.
 @export var grip_velocity_damping: float = 0.96
-# Upward force budget applied while attached.
-# Two-hand support uses the full value; one-hand swing uses the configured ratio below.
+## Upward force budget applied while attached.
+## Two-hand support uses the full value; one-hand swing uses the configured ratio below.
 @export var attached_gravity_compensation_force: float = 980.0
-# Fraction of attached gravity compensation applied while only one hand is attached.
-# Lower values make one-hand hangs feel heavier and more pendulum-like.
+## Fraction of attached gravity compensation applied while only one hand is attached.
+## Lower values make one-hand hangs feel heavier and more pendulum-like.
 @export var one_hand_gravity_compensation_ratio: float = 0.2
-# Speed at which hand visuals catch up to their visual target positions.
-# Higher values reduce visible lag; lower values make hands feel sloppier.
+## Speed at which hand visuals catch up to their visual target positions.
+## Higher values reduce visible lag; lower values make hands feel sloppier.
 @export var hand_visual_follow_speed_pixels_per_second: float = 240.0
-# Seconds of body velocity used to trail hand visuals behind the gameplay reach anchors.
-# Higher values exaggerate visual drag opposite the body's motion.
+## Seconds of body velocity used to trail hand visuals behind the gameplay reach anchors.
+## Higher values exaggerate visual drag opposite the body's motion.
 @export var hand_visual_velocity_lag_seconds: float = 0.03
-# Maximum distance that body-velocity drag can pull a hand visual away from its visual rest offset.
-# Higher values allow more exaggerated trailing before the follow catches up.
+## Maximum distance that body-velocity drag can pull a hand visual away from its visual rest offset.
+## Higher values allow more exaggerated trailing before the follow catches up.
 @export var hand_visual_max_lag_pixels: float = 18.0
-# Fraction of the distance from the visual rest target toward an attached hold that the hand visual should borrow.
-# Higher values make attached hands visibly reach toward their hold more aggressively.
+## Fraction of the distance from the visual rest target toward an attached hold that the hand visual should borrow.
+## Higher values make attached hands visibly reach toward their hold more aggressively.
 @export var hand_visual_attached_hold_pull_ratio: float = 0.16
-# Maximum extra distance an attached hold can pull a hand visual away from its visual rest target.
-# Higher values allow a more exaggerated attached-hand stretch toward the active hold.
+## Maximum extra distance an attached hold can pull a hand visual away from its visual rest target.
+## Higher values allow a more exaggerated attached-hand stretch toward the active hold.
 @export var hand_visual_attached_hold_max_pull_pixels: float = 12.0
-# Extra per-frame damping applied when both hands are attached.
-# Lower values lock the player down more; higher values keep two-hand movement livelier.
+## Extra per-frame damping applied when both hands are attached.
+## Lower values lock the player down more; higher values keep two-hand movement livelier.
 @export var two_hand_velocity_damping: float = 0.90
-# Hard speed cap applied after movement forces each frame.
-# Higher values allow faster swings and launches before clamping.
+## Hard speed cap applied after movement forces each frame.
+## Higher values allow faster swings and launches before clamping.
 @export var max_player_speed_pixels_per_second: float = 900.0
-# Vertical offset used to keep the player below the camera center while climbing upward.
-# Higher values show more space above the player; lower values center them more.
+## Vertical offset used to keep the player below the camera center while climbing upward.
+## Higher values show more space above the player; lower values center them more.
 @export var camera_player_lower_screen_offset_pixels: float = 160.0
-# Vertical dead-zone around the preferred camera offset before the camera moves again.
-# Higher values reduce small follow adjustments; lower values make the camera feel tighter.
+## Vertical dead-zone around the preferred camera offset before the camera moves again.
+## Higher values reduce small follow adjustments; lower values make the camera feel tighter.
 @export var camera_vertical_dead_zone_pixels: float = 72.0
-# Horizontal dead-zone around the player before the camera recenters.
-# Higher values reduce side-to-side camera motion; lower values keep the player more centered.
+## Horizontal dead-zone around the player before the camera recenters.
+## Higher values reduce side-to-side camera motion; lower values keep the player more centered.
 @export var camera_horizontal_dead_zone_pixels: float = 72.0
-# Width of the gameplay world visible on every portrait device. Camera zoom
-# derives from this value so interactive objects retain a stable screen size.
+## Width of the gameplay world visible on every portrait device. Camera zoom
+## derives from this value so interactive objects retain a stable screen size.
 @export var camera_target_visible_width_pixels: float = 900.0
-# Extra distance below the visible bottom edge before a fall is resolved.
-# Higher values are more forgiving; lower values end the run sooner when dropping.
+## Extra distance below the visible bottom edge before a fall is resolved.
+## Higher values are more forgiving; lower values end the run sooner when dropping.
 @export var bottom_fall_margin_pixels: float = 160.0
-# Conversion factor for recording climb height into run-session meters.
-# Higher values mean more pixels are required to count as one meter of progress.
+## Conversion factor for recording climb height into run-session meters.
+## Higher values mean more pixels are required to count as one meter of progress.
 @export var pixels_per_meter: float = 100.0
-# Scene group name used to find valid handhold nodes at runtime.
+## Scene group name used to find valid handhold nodes at runtime.
 @export var handhold_group_name: StringName = &"handhold"
 
 func is_valid() -> bool:

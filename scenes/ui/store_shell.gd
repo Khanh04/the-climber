@@ -84,6 +84,8 @@ func _sync_selected_detail() -> void:
 
 	_selected_name_label.text = item.display_name
 	_selected_detail_label.text = "%s\n%s" % [CosmeticSlotScript.to_label(item.slot), _format_item_status(item)]
+	if not item.detail_text.is_empty():
+		_selected_detail_label.text += "\n%s" % item.detail_text
 	_purchase_button.visible = not item.owned
 	_purchase_button.disabled = not item.can_purchase
 	_purchase_button.text = "Buy %d" % item.price_coins

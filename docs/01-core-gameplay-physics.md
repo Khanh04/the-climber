@@ -42,8 +42,17 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 - The ragdoll is 3 real `RigidBody2D` bodies (Head, LeftArm, RightArm) — the character has no torso. Head is the gameplay anchor body: it is always dynamic, stays on collision layer 1, and is what forces, grip joints, and chaser/hazard/pickup/fall detection act on. The two arms hang off Head via 2 scene-authored `PinJoint2D`s and flip between `freeze = true` (kinematic, code-posed while climbing) and `freeze = false` (real ragdoll physics while falling) via `RigidBody2D.freeze_mode = FREEZE_MODE_KINEMATIC`.
 - Each of the 3 bodies owns its own collision shape.
 - The Head and both arms physically collide with handhold bodies (physics layer 2) in both climbing and falling modes, so the player can rest against and bump holds the same way it does floor and platform geometry. The currently-grabbed hold is exempted by `disable_collision` on the runtime grip `PinJoint2D`, so gripping is never pushed off its hold.
-- Cosmetics must be visual-only sprite swaps.
-- Cosmetics must not affect collision boundaries, friction, mass, or any other gameplay-relevant value.
+- Body and hand cosmetics must be visual-only sprite swaps that do not affect collision boundaries, friction, mass, or any other gameplay-relevant value.
+- Characters (player appearances) may refit collision to their art ([ADR 0012](adr/0012-appearance-fitted-collision.md)) and carry one sidegrade skill kit ([ADR 0013](adr/0013-character-skills.md)).
+
+### Character Skills
+
+- Each character has one always-on passive and one active skill fired from the HUD skill button (desktop: `E`). Directional actives use the current aim, or straight up when not aiming.
+- Skills work only while the run is CLIMBING; cooldowns reset on a new run and on rescue. A skill with nothing to act on spends no cooldown.
+- Human: Catch (with no hand attached, a hand in reach of a hold grips on its own) and Chalk Up (restore 50% stamina, 20 s cooldown).
+- Spartan: Heavy (stamina x1.3, hazard knock-back x0.5, swing force x0.8) and Spartan Kick (push off the hold, launch up and away, 15 s cooldown).
+- Webhead: Sticky Hands (hold drain capped at normal, stamina x0.8) and Web Swing (pull to a hold up to 2x grab reach in the aim cone, grab on arrival, 18 s cooldown).
+- Letting go with both hands does not start a fall; the run stays CLIMBING and the player can grab again mid-air until the body leaves the bottom of the screen or touches something lethal. Kick, Web Swing and Catch build on that.
 
 ### Game Loop and Camera
 
@@ -90,9 +99,10 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 
 ### Stamina Rules
 
-- Drain only when exactly one hand is attached.
-- Pause drain when both hands are secured.
-- Phase 2 runtime does not passively regenerate stamina; restore stamina only through explicit run start, retry, or rescue flows unless later balancing changes require otherwise.
+- The run pool is 10 s of one-hand hanging (`run_scene.tscn` stamina tuning), scaled by the character's max stamina multiplier.
+- Drain only when exactly one hand is attached, faster on holds with a drain multiplier above 1.0.
+- Regenerate `two_hand_regen_seconds_per_second` (1.5 s/s) while both hands are secured, up to the pool's max. No regeneration with no hand attached.
+- Otherwise stamina refills only through run start, retry, rescue, or Chalk Up.
 - Ensure forced break events use the same release path as manual input release to avoid divergent states.
 
 ### Physics Fairness
@@ -119,7 +129,6 @@ Build the player interaction loop around two-hand gripping, pendulum-style movem
 
 - What is the target average stamina duration for a one-hand hang in the first 100 meters?
 - Should first-run Chaser pressure be fully disabled for the tutorial opener or simply delayed until a first height milestone?
-- If passive stamina regeneration is added later, should it happen only while both hands are attached or also while fully detached during a fall beat?
 - What minimum fall distance qualifies for the comedic camera follow before the result UI can appear?
 
 ## Risks

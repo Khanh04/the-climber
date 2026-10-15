@@ -1,5 +1,8 @@
 extends GutTest
 
+func after_each() -> void:
+    CharacterSkillProfile.skills_enabled = false
+
 const CoinTransactionLedgerScript = preload("res://src/economy/coin_transaction_ledger.gd")
 const CosmeticInventoryScript = preload("res://src/cosmetics/cosmetic_inventory.gd")
 const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_catalog.gd")
@@ -143,6 +146,20 @@ func test_store_presenter_marks_owned_equipped_and_affordable_items() -> void:
     assert_true(_find_item_state(state, &"body_sunrise_jacket").equipped)
     assert_true(_find_item_state(state, &"chaser_hot_coffee").can_purchase)
     assert_false(_find_item_state(state, &"chaser_hot_coffee").owned)
+
+func test_store_presenter_shows_character_skill_kit_only_on_character_items() -> void:
+    CharacterSkillProfile.skills_enabled = true
+    var catalog: CosmeticItemCatalogScript = _load_catalog()
+    var appearance_catalog: PlayerAppearanceCatalogScript = _load_appearance_catalog()
+    var inventory := CosmeticInventoryScript.new(PackedStringArray(), catalog.get_default_unlocked_item_ids())
+    var loadout := CosmeticLoadoutScript.new()
+    loadout.player_appearance_id = &"human"
+    var presenter := StorePresenterScript.new(CosmeticLoadoutServiceScript.new())
+
+    var state: StoreStateScript = presenter.build_state(catalog, inventory, loadout, WalletScript.new(0), StringName(), "", appearance_catalog)
+
+    assert_eq(_find_item_state(state, &"character_spartan").detail_text, appearance_catalog.get_required_appearance_by_id(&"spartan").skill_profile.description)
+    assert_eq(_find_item_state(state, &"body_sunrise_jacket").detail_text, "")
 
 func _load_catalog() -> CosmeticItemCatalogScript:
     var catalog: CosmeticItemCatalogScript = load("res://resources/config/cosmetic_item_catalog.tres") as CosmeticItemCatalogScript

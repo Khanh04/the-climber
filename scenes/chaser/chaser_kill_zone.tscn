@@ -4,9 +4,7 @@
 [ext_resource type="Script" uid="uid://cddbb26pw0s5w" path="res://resources/config/chaser_tuning.gd" id="2_tuning"]
 [ext_resource type="Resource" path="res://resources/config/chaser_theme_rising_void.tres" id="3_theme"]
 [ext_resource type="SpriteFrames" uid="uid://cwldcvf4426qa" path="res://resources/config/chaser_run_animation.tres" id="4_animation"]
-
-[sub_resource type="Resource" id="Resource_chaser_tuning"]
-script = ExtResource("2_tuning")
+[ext_resource type="Resource" path="res://resources/config/chaser_tuning.tres" id="tuning_chaser_tuning"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_chaser"]
 size = Vector2(1336, 192)
@@ -14,7 +12,7 @@ size = Vector2(1336, 192)
 [node name="ChaserKillZone" type="Area2D" unique_id=1366949008]
 collision_layer = 4
 script = ExtResource("1_script")
-chaser_tuning = SubResource("Resource_chaser_tuning")
+chaser_tuning = ExtResource("tuning_chaser_tuning")
 chaser_theme = ExtResource("3_theme")
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="." unique_id=1138205243]

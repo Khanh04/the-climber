@@ -67,7 +67,7 @@ Create a progression and monetization layer that rewards risk, preserves fairnes
 
 ### Fairness Rules
 
-- Permanent cosmetics must stay gameplay-neutral.
+- Permanent cosmetics must stay gameplay-neutral, except characters: each carries a sidegrade skill kit that trades a strength for a weakness rather than being strictly stronger ([ADR 0013](adr/0013-character-skills.md)).
 - Consumables affect convenience or survivability but should be balanced carefully to avoid pay-to-win perception.
 - Rewarded ads should always be optional and clearly explained before activation.
 - Subscription benefits must not provide gameplay stat advantages beyond economy acceleration.

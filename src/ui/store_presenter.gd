@@ -5,6 +5,8 @@ const CosmeticInventoryScript = preload("res://src/cosmetics/cosmetic_inventory.
 const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_catalog.gd")
 const CosmeticItemScript = preload("res://resources/config/cosmetic_item.gd")
 const CosmeticLoadoutScript = preload("res://resources/config/cosmetic_loadout.gd")
+const CosmeticSlotScript = preload("res://src/cosmetics/cosmetic_slot.gd")
+const PlayerAppearanceCatalogScript = preload("res://resources/config/player_appearance_catalog.gd")
 const CosmeticLoadoutServiceScript = preload("res://src/cosmetics/cosmetic_loadout_service.gd")
 const StoreItemStateScript = preload("res://src/ui/store_item_state.gd")
 const StoreStateScript = preload("res://src/ui/store_state.gd")
@@ -23,7 +25,8 @@ func build_state(
 	loadout: Resource,
 	wallet: RefCounted,
 	selected_item_id: StringName = StringName(),
-	feedback_message: String = ""
+	feedback_message: String = "",
+	player_appearance_catalog: PlayerAppearanceCatalogScript = null
 ) -> StoreStateScript:
 	var typed_catalog: CosmeticItemCatalogScript = _require_catalog(catalog)
 	var typed_inventory: CosmeticInventoryScript = _require_inventory(inventory)
@@ -52,12 +55,18 @@ func build_state(
 			owned,
 			equipped,
 			can_purchase,
-			can_equip
+			can_equip,
+			_character_skill_text(item, player_appearance_catalog)
 		))
 
 	var store_state: StoreStateScript = StoreStateScript.new(typed_wallet.get_coins(), item_states, resolved_selected_item_id, feedback_message)
 	store_state.assert_valid()
 	return store_state
+
+func _character_skill_text(item: CosmeticItemScript, player_appearance_catalog: PlayerAppearanceCatalogScript) -> String:
+	if not CharacterSkillProfile.skills_enabled or player_appearance_catalog == null or item.slot != CosmeticSlotScript.Value.PLAYER_APPEARANCE:
+		return ""
+	return player_appearance_catalog.get_required_appearance_by_id(item.player_appearance_id).skill_profile.description
 
 func _require_catalog(catalog: Resource) -> CosmeticItemCatalogScript:
 	Validation.require_condition(catalog != null, "StorePresenter requires a cosmetic item catalog.")

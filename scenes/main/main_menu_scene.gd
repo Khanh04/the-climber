@@ -31,6 +31,7 @@ const TUTORIAL_SCENE_PATH: String = "res://scenes/main/tutorial_scene.tscn"
 
 @export var cosmetic_item_catalog: CosmeticItemCatalogScript
 @export var cosmetic_loadout: CosmeticLoadoutScript
+@export var player_appearance_catalog: PlayerAppearanceCatalog
 
 @onready var _main_menu: MainMenuScript = %MainMenu
 
@@ -76,6 +77,7 @@ func _ready() -> void:
 func _validate_required_state() -> void:
 	Validation.require_condition(cosmetic_item_catalog != null, "MainMenuScene requires a cosmetic item catalog before ready.")
 	Validation.require_condition(cosmetic_loadout != null, "MainMenuScene requires a cosmetic loadout before ready.")
+	Validation.require_condition(player_appearance_catalog != null, "MainMenuScene requires a player appearance catalog before ready.")
 
 func set_local_storage_adapter(local_storage_adapter: RefCounted) -> void:
 	Validation.require_condition(local_storage_adapter != null, "MainMenuScene requires a local storage adapter.")
@@ -200,7 +202,8 @@ func _refresh_store_ui() -> void:
 		cosmetic_item_catalog,
 		_cosmetic_inventory,
 		cosmetic_loadout,
-		_wallet
+		_wallet,
+		player_appearance_catalog
 	)
 	_store_shell.apply_state(store_state)
 

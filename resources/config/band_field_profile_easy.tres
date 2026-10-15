@@ -4,12 +4,12 @@
 
 [resource]
 script = ExtResource("1_band")
-corridor_hold_spacing_meters = 0.95
+corridor_hold_spacing_meters = 1.15
 corridor_half_width_meters = 1.0
 scatter_hold_spacing_meters = 2.6
 corridor_count = 4
-max_route_move_meters = 1.3
-min_easiest_route_move_meters = 0.9
+max_route_move_meters = 1.55
+min_easiest_route_move_meters = 1.05
 required_route_count = 3
 max_hold_count = 90
 hazard_count = 1

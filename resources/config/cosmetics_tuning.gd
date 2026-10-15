@@ -1,9 +1,13 @@
 class_name CosmeticsTuning
 extends Resource
 
+## Number of cosmetic loadout slots. Not yet read at runtime.
 @export var loadout_slot_count: int = 3
+## Most preview variants the store shows per cosmetic item. Not yet read at runtime.
 @export var max_preview_variants_per_item: int = 4
+## Store catalog items shown per page. Not yet read at runtime.
 @export var catalog_page_size: int = 12
+## Most cosmetic visual layers drawn on the player at once. Not yet read at runtime.
 @export var max_active_visual_layers: int = 3
 
 func is_valid() -> bool:

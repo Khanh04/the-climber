@@ -6,7 +6,7 @@ const PlayerCharacterScript = preload("res://scenes/player/player_character.gd")
 const RunSessionScript = preload("res://src/gameplay/run/run_session.gd")
 const RunStateScript = preload("res://src/gameplay/run/run_state.gd")
 
-func resolve(controller: RefCounted, player: Node, run_session: RefCounted, impulse_vector_pixels: Vector2) -> void:
+func resolve(controller: RefCounted, player: Node, run_session: RefCounted, impulse_vector_pixels: Vector2, impulse_multiplier: float = 1.0) -> void:
 	Validation.require_condition(controller != null, "WindGustHazardContactService requires a climb controller.")
 	Validation.require_condition(controller is ClimbPrototypeControllerScript, "WindGustHazardContactService requires a ClimbPrototypeController implementation.")
 	Validation.require_condition(player != null, "WindGustHazardContactService requires a player character.")
@@ -14,6 +14,7 @@ func resolve(controller: RefCounted, player: Node, run_session: RefCounted, impu
 	Validation.require_condition(run_session != null, "WindGustHazardContactService requires a run session.")
 	Validation.require_condition(run_session is RunSessionScript, "WindGustHazardContactService requires a RunSession implementation.")
 	Validation.require_condition(impulse_vector_pixels != Vector2.ZERO, "WindGustHazardContactService requires a non-zero impulse vector.")
+	Validation.require_condition(impulse_multiplier > 0.0, "WindGustHazardContactService impulse multiplier must be positive.")
 
 	var typed_controller: ClimbPrototypeControllerScript = controller as ClimbPrototypeControllerScript
 	var typed_player: PlayerCharacterScript = player as PlayerCharacterScript
@@ -32,4 +33,4 @@ func resolve(controller: RefCounted, player: Node, run_session: RefCounted, impu
 		typed_player.clear_runtime_grip_joints()
 		typed_player.clear_runtime_grip_links()
 
-	typed_player.set_body_linear_velocity(typed_player.get_body_linear_velocity() + impulse_vector_pixels)
+	typed_player.set_body_linear_velocity(typed_player.get_body_linear_velocity() + impulse_vector_pixels * impulse_multiplier)

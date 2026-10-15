@@ -1,6 +1,7 @@
 class_name RunOverlayRuntime
 extends RefCounted
 
+const PlayerAppearanceCatalogScript = preload("res://resources/config/player_appearance_catalog.gd")
 const AppSettingsSnapshotScript = preload("res://src/platform/storage/app_settings_snapshot.gd")
 const CosmeticItemCatalogScript = preload("res://resources/config/cosmetic_item_catalog.gd")
 const CosmeticPurchaseOutcomeScript = preload("res://src/cosmetics/cosmetic_purchase_outcome.gd")
@@ -61,7 +62,8 @@ func build_store_state(
 	cosmetic_item_catalog: CosmeticItemCatalogScript,
 	cosmetic_inventory: RefCounted,
 	cosmetic_loadout: Resource,
-	wallet: WalletScript
+	wallet: WalletScript,
+	player_appearance_catalog: PlayerAppearanceCatalogScript = null
 ) -> StoreStateScript:
 	Validation.require_condition(store_presenter != null, "RunOverlayRuntime requires a store presenter to build store state.")
 	Validation.require_condition(cosmetic_item_catalog != null, "RunOverlayRuntime requires a cosmetic item catalog to build store state.")
@@ -72,7 +74,8 @@ func build_store_state(
 		cosmetic_loadout,
 		wallet,
 		_store_selected_item_id,
-		_store_feedback_message
+		_store_feedback_message,
+		player_appearance_catalog
 	)
 
 func select_store_item(item_id: StringName) -> void:

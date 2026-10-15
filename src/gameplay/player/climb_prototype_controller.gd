@@ -16,6 +16,10 @@ var _attachments: HandAttachmentStateScript = HandAttachmentStateScript.new()
 var _last_drain_multiplier: float = 1.0
 var _left_attached_drain_multiplier: float = 1.0
 var _right_attached_drain_multiplier: float = 1.0
+var _caps_hold_drain: bool = false
+var _auto_catch: bool = false
+var _forced_catch: bool = false
+var _swing_force_multiplier: float = 1.0
 
 func _init(tuning: Resource, stamina: RefCounted) -> void:
     Validation.require_condition(tuning != null, "ClimbPrototypeController requires climb prototype tuning.")
@@ -27,12 +31,22 @@ func _init(tuning: Resource, stamina: RefCounted) -> void:
     _stamina = stamina
     _tuning.assert_valid()
 
+func configure_character_passives(caps_hold_drain: bool, auto_catch: bool, swing_force_multiplier: float = 1.0) -> void:
+    Validation.require_condition(swing_force_multiplier > 0.0, "ClimbPrototypeController swing force multiplier must be positive.")
+    _caps_hold_drain = caps_hold_drain
+    _auto_catch = auto_catch
+    _swing_force_multiplier = swing_force_multiplier
+
+## Lets an active skill (Web Swing) grab on arrival for characters without the auto-catch passive.
+func set_forced_catch(forced_catch: bool) -> void:
+    _forced_catch = forced_catch
+
 func get_attachment_state() -> HandAttachmentStateScript:
     return _attachments
 
 func get_swing_control_force(aim_vector: Vector2) -> Vector2:
     Validation.require_condition(aim_vector != Vector2.ZERO, "Swing control force requires a non-zero aim vector.")
-    return aim_vector.normalized() * _tuning.swing_control_force
+    return aim_vector.normalized() * _tuning.swing_control_force * _swing_force_multiplier
 
 func apply_input_frame(
     input_frame: RefCounted,
@@ -62,7 +76,13 @@ func apply_input_frame(
 
     return ClimbPrototypeFrameResultScript.new(control_force, depleted_now, _attachments.get_attached_hand_count())
 
+## Lets go with both hands without touching stamina (skill launches, not falls).
+func release_all_hands() -> void:
+    _attachments.release_all()
+    _reset_attached_drain_multipliers()
+
 func reset() -> void:
+    _forced_catch = false
     _attachments.release_all()
     _stamina.restore_full()
     _reset_attached_drain_multipliers()
@@ -82,20 +102,28 @@ func _apply_grip_intents(input_frame: PlayerInputFrameScript, left_target: RefCo
     for grip_intent in input_frame.grip_intents:
         var typed_grip_intent: Object = grip_intent
         var hand_side: int = typed_grip_intent.get("hand_side")
-        var target: RefCounted = _target_for_hand(hand_side, left_target, right_target)
+        _try_attach(hand_side, _target_for_hand(hand_side, left_target, right_target))
 
-        if target == null:
-            continue
-
-        Validation.require_condition(target is HandholdTargetScript, "ClimbPrototypeController requires typed handhold targets.")
-        var typed_target: HandholdTargetScript = target
-        typed_target.assert_valid()
-
-        if not _attachments.is_attached(hand_side) and not _is_hold_attached_by_other_hand(hand_side, typed_target.hold_path):
-            _attachments.attach(hand_side, typed_target.hold_id, typed_target.attach_position, typed_target.hold_path)
-            _set_attached_drain_multiplier(hand_side, typed_target.stamina_drain_multiplier)
+    if (_auto_catch or _forced_catch) and _attachments.get_attached_hand_count() == 0:
+        _try_attach(HandSideScript.Value.LEFT, left_target)
+        _try_attach(HandSideScript.Value.RIGHT, right_target)
 
     _refresh_drain_multiplier()
+
+func _try_attach(hand_side: int, target: RefCounted) -> void:
+    if target == null:
+        return
+
+    Validation.require_condition(target is HandholdTargetScript, "ClimbPrototypeController requires typed handhold targets.")
+    var typed_target: HandholdTargetScript = target
+    typed_target.assert_valid()
+
+    if not _attachments.is_attached(hand_side) and not _is_hold_attached_by_other_hand(hand_side, typed_target.hold_path):
+        _attachments.attach(hand_side, typed_target.hold_id, typed_target.attach_position, typed_target.hold_path)
+        var drain_multiplier: float = typed_target.stamina_drain_multiplier
+        if _caps_hold_drain:
+            drain_multiplier = minf(drain_multiplier, 1.0)
+        _set_attached_drain_multiplier(hand_side, drain_multiplier)
 
 func _target_for_hand(hand_side: int, left_target: RefCounted, right_target: RefCounted) -> RefCounted:
     HandSideScript.assert_valid(hand_side)

@@ -18,6 +18,9 @@ const CosmeticLoadoutServiceScript = preload("res://src/cosmetics/cosmetic_loado
 const PlayerAppearanceCatalogScript = preload("res://resources/config/player_appearance_catalog.gd")
 const PlayerAppearanceScript = preload("res://resources/config/player_appearance.gd")
 const PlayerAppearanceApplicatorScript = preload("res://src/cosmetics/player_appearance_applicator.gd")
+const CharacterSkillProfileScript = preload("res://resources/config/character_skill_profile.gd")
+const CharacterSkillRuntimeScript = preload("res://src/gameplay/player/skills/character_skill_runtime.gd")
+const SkillContextScript = preload("res://src/gameplay/player/skills/skill_context.gd")
 const CosmeticPurchaseOutcomeScript = preload("res://src/cosmetics/cosmetic_purchase_outcome.gd")
 const CosmeticPurchaseResultScript = preload("res://src/cosmetics/cosmetic_purchase_result.gd")
 const CosmeticUnlockPurchaseServiceScript = preload("res://src/cosmetics/cosmetic_unlock_purchase_service.gd")
@@ -161,6 +164,9 @@ signal tutorial_observation_recorded(observation: TutorialRunObservationScript)
 
 var _run_session: RunSessionScript = RunSessionScript.new()
 var _stamina: StaminaRuntimeScript
+var _skill_runtime: CharacterSkillRuntimeScript
+var _skill_requested: bool = false
+var _skill_available: bool = false
 var _desktop_input: DesktopDebugInputAdapterScript = DesktopDebugInputAdapterScript.new()
 var _mobile_input: MobileTouchInputAdapterScript = MobileTouchInputAdapterScript.new()
 var _controller: ClimbPrototypeControllerScript
@@ -264,6 +270,7 @@ func _ready() -> void:
 	var _post_run_coin_doubler_connect_result: int = _run_end_screen.connect(&"post_run_coin_doubler_requested", _on_post_run_coin_doubler_requested)
 	var _store_connect_result: int = _run_end_screen.connect(&"store_requested", _on_store_requested)
 	var _pause_connect_result: int = _run_hud.connect(&"pause_requested", _on_pause_requested)
+	var _skill_connect_result: int = _run_hud.connect(&"skill_requested", _on_skill_requested)
 	var _chaser_connect_result: int = _gameplay_nodes.chaser_kill_zone.connect(&"chaser_contacted", _on_chaser_contacted)
 	_gameplay_nodes.player.set_climb_tuning(climb_tuning)
 	_stamina = StaminaRuntimeScript.new(stamina_tuning)
@@ -432,6 +439,8 @@ func _physics_process(delta: float) -> void:
 		)
 
 	if _run_session.get_state() != RunStateScript.Value.CLIMBING:
+		_skill_requested = false
+		_skill_available = false
 		_clear_aim_preview()
 		_refresh_ui()
 		return
@@ -465,6 +474,7 @@ func _physics_process(delta: float) -> void:
 		generation_tuning,
 		aim_vector
 	)
+	_advance_character_skill(aim_vector, handholds, delta)
 	var result: ClimbPrototypeFrameResultScript = _controller.apply_input_frame(input_frame, left_target, right_target, delta)
 	var current_attachment_state: HandAttachmentState = _controller.get_attachment_state()
 	_resolve_generated_handhold_attachment_changes(
@@ -530,6 +540,11 @@ func _get_generated_handhold_adapter(hold_path: NodePath) -> GeneratedHandholdAd
 func _input(event: InputEvent) -> void:
 	if event.is_action_pressed(&"pause_menu"):
 		_toggle_pause_requested()
+		get_viewport().set_input_as_handled()
+		return
+
+	if event.is_action_pressed(&"use_skill"):
+		_on_skill_requested()
 		get_viewport().set_input_as_handled()
 		return
 
@@ -696,6 +711,9 @@ func apply_rewarded_continue(rewarded_ad_result: RefCounted) -> bool:
 
 func get_controller_for_test() -> ClimbPrototypeControllerScript:
 	return _controller
+
+func get_stamina_for_test() -> StaminaRuntimeScript:
+	return _stamina
 
 func get_player_for_test() -> PlayerCharacterScript:
 	return _gameplay_nodes.player
@@ -1042,7 +1060,8 @@ func _on_generated_hazard_triggered(body: Node, hazard_spawn: GeneratedHazardSpa
 				_controller,
 				_player,
 				_run_session,
-				hazard_spawn.get_impulse_vector_pixels()
+				hazard_spawn.get_impulse_vector_pixels(),
+				_skill_runtime.get_profile().hazard_impulse_multiplier if _skill_runtime != null else 1.0
 			)
 		GeneratedHazardKindScript.Value.STARTLE_PUFF:
 			_startle_hazard_contact_service.resolve(_hazard_camera_effect_controller)
@@ -1070,6 +1089,7 @@ func _uses_chaser() -> bool:
 func _reset_playground() -> void:
 	_persist_best_score()
 	_clear_aim_preview()
+	_reset_character_skill()
 
 	_desktop_input.reset()
 	_mobile_input.reset()
@@ -1140,6 +1160,7 @@ func _apply_cosmetic_loadout() -> void:
 	_cosmetic_loadout_service.assert_loadout_matches_catalog(cosmetic_loadout, cosmetic_item_catalog)
 	var active_appearance: PlayerAppearanceScript = player_appearance_catalog.get_required_appearance_by_id(cosmetic_loadout.player_appearance_id)
 	_player_appearance_applicator.apply_appearance(_player, active_appearance)
+	_apply_character_skills(active_appearance.skill_profile)
 	if _cosmetic_inventory != null:
 		_cosmetic_loadout_service.assert_loadout_owned(cosmetic_loadout, _cosmetic_inventory, cosmetic_item_catalog)
 	if active_appearance.hide_overlay_cosmetics:
@@ -1147,6 +1168,53 @@ func _apply_cosmetic_loadout() -> void:
 	else:
 		_player_cosmetic_applicator.apply_loadout(_player, cosmetic_loadout, cosmetic_item_catalog)
 	_apply_equipped_chaser_theme()
+
+# Character passives scale the run's base tuning; the active skill gets a fresh runtime when the
+# character changes (ADR 0013).
+func _apply_character_skills(profile: CharacterSkillProfileScript) -> void:
+	Validation.require_condition(_stamina != null and _controller != null, "RunScene must create stamina and controller before applying character skills.")
+	profile.assert_valid()
+	if not CharacterSkillProfileScript.skills_enabled:
+		_stamina.set_max_stamina_multiplier(1.0)
+		_controller.configure_character_passives(false, false, 1.0)
+		_reset_character_skill()
+		_skill_runtime = null
+		return
+	_stamina.set_max_stamina_multiplier(profile.max_stamina_multiplier)
+	_controller.configure_character_passives(profile.caps_hold_drain, profile.auto_catch, profile.swing_force_multiplier)
+	if _skill_runtime != null and _skill_runtime.get_profile() == profile:
+		return
+	if _skill_runtime != null:
+		_skill_runtime.reset(_build_skill_context(Vector2.ZERO, []))
+	_skill_runtime = CharacterSkillRuntimeScript.new(profile)
+
+func _on_skill_requested() -> void:
+	_skill_requested = true
+
+func _advance_character_skill(aim_vector: Vector2, handholds: Array, delta: float) -> void:
+	if _skill_runtime == null:
+		_skill_requested = false
+		return
+	var context: SkillContextScript = _build_skill_context(aim_vector, handholds)
+	if _skill_requested:
+		_skill_requested = false
+		var _activated: bool = _skill_runtime.try_activate(context)
+	_skill_runtime.advance(delta, context)
+	_skill_available = _skill_runtime.can_activate(context)
+
+func _reset_character_skill() -> void:
+	_skill_requested = false
+	_skill_available = false
+	if _skill_runtime != null:
+		_skill_runtime.reset(_build_skill_context(Vector2.ZERO, []))
+
+func _build_skill_context(aim_vector: Vector2, handholds: Array) -> SkillContextScript:
+	var typed_handholds: Array[Node2D] = []
+	for handhold in handholds:
+		Validation.require_condition(handhold is Node2D, "RunScene skill context handholds must be Node2D instances.")
+		var handhold_node: Node2D = handhold
+		typed_handholds.append(handhold_node)
+	return SkillContextScript.new(_controller, _player, _stamina, aim_vector, typed_handholds, climb_tuning.handhold_detection_radius_pixels)
 
 func _duplicate_cosmetic_loadout(loadout: Resource) -> CosmeticLoadoutScript:
 	Validation.require_condition(loadout != null, "RunScene requires a cosmetic loadout resource.")
@@ -1181,7 +1249,12 @@ func _refresh_ui() -> void:
 	if _stamina == null or _run_ui_view == null:
 		return
 
-	var hud_state: RefCounted = _run_ui_presenter.build_hud_state(_run_session, _stamina, _wallet)
+	var skill_name: String = ""
+	var skill_cooldown_ratio: float = 0.0
+	if _skill_runtime != null:
+		skill_name = _skill_runtime.get_profile().active_name
+		skill_cooldown_ratio = _skill_runtime.get_cooldown_ratio()
+	var hud_state: RefCounted = _run_ui_presenter.build_hud_state(_run_session, _stamina, _wallet, skill_name, skill_cooldown_ratio, _skill_available)
 	var run_end_state: RefCounted = _run_ui_presenter.build_run_end_screen_state_with_ad_offers(
 		_run_session,
 		_wallet,
@@ -1330,7 +1403,8 @@ func _refresh_store_ui() -> void:
 		cosmetic_item_catalog,
 		_cosmetic_inventory,
 		cosmetic_loadout,
-		_wallet
+		_wallet,
+		player_appearance_catalog
 	)
 	_store_shell.apply_state(store_state)
 
@@ -1483,6 +1557,7 @@ func _bind_post_run_coin_doubler_reward_id(reward_id: String) -> String:
 	return _post_run_coin_doubler_reward_id
 
 func _restore_rewarded_continue() -> void:
+	_reset_character_skill()
 	var rescue_plan: RewardedContinueRescuePlanScript = _run_rescue_runtime.build_rewarded_continue_rescue_plan(
 		_collect_rewarded_continue_handholds(),
 		_camera.global_position,
@@ -1552,6 +1627,9 @@ func _clear_aim_preview() -> void:
 		_aim_target_marker = null
 
 func _update_touch_position(event: InputEventScreenTouch) -> void:
+	if event.pressed and (_run_hud as RunHud).is_screen_point_on_skill_button(event.position):
+		return
+
 	if event.pressed:
 		_begin_touch_contact(event.index, event.position)
 		return

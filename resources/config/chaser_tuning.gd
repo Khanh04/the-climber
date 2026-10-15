@@ -1,27 +1,44 @@
 class_name ChaserTuning
 extends Resource
 
+## Seconds of recent climbing used to judge whether the player is camping or racing.
 @export var sample_window_seconds: float = 5.0
+## Climbing less than this within the sample window counts as camping and speeds the chaser up.
 @export var camping_progress_meters: float = 2.0
+## Climbing more than this within the sample window counts as racing and slows the chaser down.
 @export var rapid_progress_meters: float = 8.0
+## Chaser rise speed when the player is neither camping nor racing.
 @export var base_rise_speed_meters_per_second: float = 0.5
+## Extra rise speed while camping. Fades out as the altitude gain takes over.
 @export var camping_speed_bonus_meters_per_second: float = 0.5
+## Rise speed removed while the player is racing ahead.
 @export var rapid_climb_slowdown_meters_per_second: float = 1.0
 ## Rise speed added per 100 m climbed above the onset height, so the chaser becomes
 ## a real escalating threat instead of flatlining at 1.0 m/s.
 @export var altitude_rise_speed_gain_per_100m: float = 0.35
 ## Height below which altitude does not scale the chaser (the tutorial/early zone).
 @export var altitude_rise_speed_onset_meters: float = 50.0
+## Final rise speed is clamped to at least this.
 @export var min_rise_speed_meters_per_second: float = 0.5
+## Final rise speed is clamped to at most this.
 @export var max_rise_speed_meters_per_second: float = 5.0
+## How far below the player the chaser starts each run.
 @export var initial_spawn_offset_meters: float = 8.0
+## At or beyond this distance from the player, chaser visuals and audio sit at their calmest.
 @export var far_distance_for_min_intensity_meters: float = 12.0
+## At or inside this distance from the player, chaser visuals and audio are at full intensity.
 @export var near_distance_for_max_intensity_meters: float = 4.0
+## Chaser fill opacity at minimum intensity (0-1).
 @export var min_visual_alpha: float = 0.72
+## Chaser fill opacity at maximum intensity (0-1).
 @export var max_visual_alpha: float = 0.96
+## Chaser loop volume at minimum intensity, in decibels.
 @export var min_audio_volume_db: float = -20.0
+## Chaser loop volume at maximum intensity, in decibels.
 @export var max_audio_volume_db: float = -7.0
+## Chaser loop pitch at minimum intensity (1.0 is unchanged).
 @export var min_audio_pitch_scale: float = 0.98
+## Chaser loop pitch at maximum intensity (1.0 is unchanged).
 @export var max_audio_pitch_scale: float = 1.04
 
 func is_valid() -> bool:

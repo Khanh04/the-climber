@@ -37,14 +37,28 @@ const DefaultChallengeFieldProfileResource = preload("res://resources/config/ban
 @export var chunk_spawn_ahead_count: int = 3
 ## Number of chunks retained behind the current camera anchor.
 @export var chunk_keep_behind_count: int = 1
-## Player reach envelope, entry anchors, and candidate budget.
+## Player reach envelope, entry anchors, and candidate budget (route_validation_tuning.tres).
 @export var route_validation_tuning: Resource = _duplicate_default(DefaultRouteValidationTuningResource, RouteValidationTuningScript)
-## Hold-field knobs per difficulty band.
+## Hold-field knobs for the easy band (band_field_profile_easy.tres).
 @export var easy_field_profile: Resource = _duplicate_default(DefaultEasyFieldProfileResource, BandFieldProfileScript)
+## Hold-field knobs for the baseline band (band_field_profile_baseline.tres).
 @export var baseline_field_profile: Resource = _duplicate_default(DefaultBaselineFieldProfileResource, BandFieldProfileScript)
+## Hold-field knobs for the challenge band (band_field_profile_challenge.tres).
 @export var challenge_field_profile: Resource = _duplicate_default(DefaultChallengeFieldProfileResource, BandFieldProfileScript)
-## Typed handhold definitions keyed by HandholdType for generation and runtime setup.
-@export var handhold_definitions: Array[Resource] = _duplicate_default_handhold_definitions()
+## Size, surface, lifecycle and movement of every hold type (handhold_type_definition_catalog.tres).
+@export var handhold_type_definition_catalog: Resource = DefaultHandholdTypeDefinitionCatalogResource:
+	set(value):
+		handhold_type_definition_catalog = value
+		_handhold_definitions = []
+
+var _handhold_definitions: Array[Resource] = []
+
+## Per-tuning copies of the catalog's definitions, so mutating one never leaks into another.
+var handhold_definitions: Array[Resource]:
+	get:
+		if _handhold_definitions.is_empty():
+			_handhold_definitions = _duplicate_catalog_definitions(handhold_type_definition_catalog)
+		return _handhold_definitions
 
 var route_validation_candidate_attempt_count: int:
 	get:
@@ -185,12 +199,12 @@ func _assert_valid_handhold_definitions() -> void:
 			"Generation config requires a handhold definition for %s." % HandholdTypeScript.to_label(handhold_type)
 		)
 
-static func _duplicate_default_handhold_definitions() -> Array[Resource]:
+static func _duplicate_catalog_definitions(catalog: Resource) -> Array[Resource]:
 	Validation.require_condition(
-		DefaultHandholdTypeDefinitionCatalogResource is HandholdTypeDefinitionCatalogScript,
-		"Generation config default handhold type definitions must use HandholdTypeDefinitionCatalog resources."
+		catalog is HandholdTypeDefinitionCatalogScript,
+		"Generation config handhold type definitions must use a HandholdTypeDefinitionCatalog resource."
 	)
-	var typed_catalog: HandholdTypeDefinitionCatalogScript = DefaultHandholdTypeDefinitionCatalogResource as HandholdTypeDefinitionCatalogScript
+	var typed_catalog: HandholdTypeDefinitionCatalogScript = catalog as HandholdTypeDefinitionCatalogScript
 	typed_catalog.assert_valid()
 	return typed_catalog.duplicate_definitions()
 

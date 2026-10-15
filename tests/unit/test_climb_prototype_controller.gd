@@ -141,3 +141,57 @@ func _create_controller() -> ClimbPrototypeControllerScript:
     var stamina := StaminaRuntimeScript.new(StaminaTuningScript.new())
 
     return ClimbPrototypeControllerScript.new(tuning, stamina)
+
+func test_auto_catch_grips_targets_without_grip_input_when_no_hand_is_attached() -> void:
+    var stamina := StaminaRuntimeScript.new(StaminaTuningScript.new())
+    var controller := ClimbPrototypeControllerScript.new(ClimbPrototypeTuningScript.new(), stamina)
+    controller.configure_character_passives(false, true)
+    var left_target := HandholdTargetScript.new(&"left_hold", Vector2(100.0, 200.0), NodePath("left_hold"))
+    var empty_frame := PlayerInputFrameScript.new()
+
+    var _result: RefCounted = controller.apply_input_frame(empty_frame, left_target, null, 0.016)
+
+    assert_true(controller.get_attachment_state().is_attached(HandSideScript.Value.LEFT))
+    assert_false(controller.get_attachment_state().is_attached(HandSideScript.Value.RIGHT))
+
+func test_auto_catch_does_not_grab_while_a_hand_is_already_attached() -> void:
+    var stamina := StaminaRuntimeScript.new(StaminaTuningScript.new())
+    var controller := ClimbPrototypeControllerScript.new(ClimbPrototypeTuningScript.new(), stamina)
+    controller.configure_character_passives(false, true)
+    var left_target := HandholdTargetScript.new(&"left_hold", Vector2(100.0, 200.0), NodePath("left_hold"))
+    var right_target := HandholdTargetScript.new(&"right_hold", Vector2(150.0, 200.0), NodePath("right_hold"))
+    var _first: RefCounted = controller.apply_input_frame(PlayerInputFrameScript.new([GripInputIntentScript.new(HandSideScript.Value.LEFT)]), left_target, null, 0.016)
+
+    var _second: RefCounted = controller.apply_input_frame(PlayerInputFrameScript.new(), left_target, right_target, 0.016)
+
+    assert_false(controller.get_attachment_state().is_attached(HandSideScript.Value.RIGHT))
+
+func test_without_auto_catch_targets_need_grip_input() -> void:
+    var stamina := StaminaRuntimeScript.new(StaminaTuningScript.new())
+    var controller := ClimbPrototypeControllerScript.new(ClimbPrototypeTuningScript.new(), stamina)
+    var left_target := HandholdTargetScript.new(&"left_hold", Vector2(100.0, 200.0), NodePath("left_hold"))
+
+    var _result: RefCounted = controller.apply_input_frame(PlayerInputFrameScript.new(), left_target, null, 0.016)
+    assert_eq(controller.get_attachment_state().get_attached_hand_count(), 0)
+
+    controller.set_forced_catch(true)
+    var _forced: RefCounted = controller.apply_input_frame(PlayerInputFrameScript.new(), left_target, null, 0.016)
+    assert_true(controller.get_attachment_state().is_attached(HandSideScript.Value.LEFT))
+
+func test_caps_hold_drain_limits_slippery_hold_drain_to_normal() -> void:
+    var stamina_tuning := StaminaTuningScript.new()
+    var stamina := StaminaRuntimeScript.new(stamina_tuning)
+    var controller := ClimbPrototypeControllerScript.new(ClimbPrototypeTuningScript.new(), stamina)
+    controller.configure_character_passives(true, false)
+    var greasy_target := HandholdTargetScript.new(&"greasy", Vector2(100.0, 200.0), NodePath("greasy"), 3.0)
+
+    var _result: RefCounted = controller.apply_input_frame(PlayerInputFrameScript.new([GripInputIntentScript.new(HandSideScript.Value.LEFT)]), greasy_target, null, 1.0)
+
+    assert_almost_eq(stamina.get_current_stamina_seconds(), stamina_tuning.one_hand_seconds - 1.0, 0.001)
+
+func test_swing_force_multiplier_scales_swing_control() -> void:
+    var tuning := ClimbPrototypeTuningScript.new()
+    var controller := ClimbPrototypeControllerScript.new(tuning, StaminaRuntimeScript.new(StaminaTuningScript.new()))
+    controller.configure_character_passives(false, false, 0.8)
+
+    assert_almost_eq(controller.get_swing_control_force(Vector2.UP).length(), tuning.swing_control_force * 0.8, 0.01)

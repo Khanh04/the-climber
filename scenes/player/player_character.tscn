@@ -2,9 +2,7 @@
 
 [ext_resource type="Script" uid="uid://c4vbg2rpjp3c" path="res://scenes/player/player_character.gd" id="1_player"]
 [ext_resource type="Script" uid="uid://co0omgi88wjup" path="res://resources/config/climb_prototype_tuning.gd" id="2_climb"]
-
-[sub_resource type="Resource" id="Resource_climb"]
-script = ExtResource("2_climb")
+[ext_resource type="Resource" path="res://resources/config/climb_prototype_tuning.tres" id="tuning_climb_prototype_tuning"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_head"]
 size = Vector2(70, 70)
@@ -14,7 +12,7 @@ height = 36.0
 
 [node name="PlayerCharacter" type="Node2D" unique_id=1767530868]
 script = ExtResource("1_player")
-climb_tuning = SubResource("Resource_climb")
+climb_tuning = ExtResource("tuning_climb_prototype_tuning")
 
 [node name="Head" type="RigidBody2D" parent="." unique_id=1775544273]
 collision_layer = 1

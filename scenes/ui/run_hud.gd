@@ -2,6 +2,7 @@ class_name RunHud
 extends Control
 
 signal pause_requested
+signal skill_requested
 
 const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
 
@@ -11,6 +12,8 @@ const RunHudStateScript = preload("res://src/ui/run_hud_state.gd")
 @onready var _wallet_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Coins/CoinsValueLabel2") as Label
 @onready var _coins_value_label: Label = get_node("Panel/ContentMargin/Metrics/Wrapper_Coins/CoinsValueLabel") as Label
 @onready var _pause_button: Button = get_node("Panel/ContentMargin/Metrics/Wrapper_BtnPause/PauseButton") as Button
+@onready var _skill_button: Button = get_node("Panel/ContentMargin/Metrics/Wrapper_Skill/SkillButton") as Button
+@onready var _skill_cooldown_bar: ProgressBar = get_node("Panel/ContentMargin/Metrics/Wrapper_Skill/SkillCooldownBar") as ProgressBar
 
 # Artwork uses a 270x480 canvas, displayed at 4x in the 1080x1920 design.
 # Scale the whole HUD uniformly and center it with the environment on tall phones.
@@ -27,6 +30,7 @@ func _ready() -> void:
 	_align_panel.call_deferred()
 	_validate_required_nodes()
 	var _pause_connect_result: int = _pause_button.connect(&"pressed", Callable(self, "_on_pause_button_pressed"))
+	var _skill_connect_result: int = _skill_button.connect(&"pressed", Callable(self, "_on_skill_button_pressed"))
 
 func apply_state(state: RefCounted) -> void:
 	Validation.require_condition(state != null, "RunHud requires a state snapshot.")
@@ -47,7 +51,15 @@ func apply_state(state: RefCounted) -> void:
 	_stamina_bar.value = current_stamina_seconds
 	_wallet_value_label.text = str(wallet_coins)
 	_coins_value_label.text = "+%d" % run_earned_coins
-	
+	(_skill_button.get_parent() as Control).visible = not typed_state.skill_name.is_empty()
+	_skill_button.text = typed_state.skill_name
+	_skill_button.disabled = not typed_state.skill_available
+	_skill_cooldown_bar.value = typed_state.skill_cooldown_ratio
+
+## Touches on the skill button must not also count as a grip in the left/right screen zones.
+func is_screen_point_on_skill_button(screen_position: Vector2) -> bool:
+	return _skill_button.is_visible_in_tree() and _skill_button.get_global_rect().has_point(screen_position)
+
 func _validate_required_nodes() -> void:
 	Validation.require_condition(_height_value_label != null, "RunHud requires HeightValueLabel.")
 	Validation.require_condition(_stamina_value_label != null, "RunHud requires StaminaValueLabel.")
@@ -55,6 +67,11 @@ func _validate_required_nodes() -> void:
 	Validation.require_condition(_wallet_value_label != null, "RunHud requires CoinsValueLabel2 for the wallet total.")
 	Validation.require_condition(_coins_value_label != null, "RunHud requires CoinsValueLabel.")
 	Validation.require_condition(_pause_button != null, "RunHud requires PauseButton.")
+	Validation.require_condition(_skill_button != null, "RunHud requires SkillButton.")
+	Validation.require_condition(_skill_cooldown_bar != null, "RunHud requires SkillCooldownBar.")
 
 func _on_pause_button_pressed() -> void:
 	pause_requested.emit()
+
+func _on_skill_button_pressed() -> void:
+	skill_requested.emit()

@@ -83,6 +83,7 @@ var _left_runtime_grip_joint: PinJoint2D = null
 var _right_runtime_grip_joint: PinJoint2D = null
 var _left_runtime_grip_link: Line2D = null
 var _right_runtime_grip_link: Line2D = null
+var _web_line: Line2D = null
 var _debug_anchors: Node2D
 
 var _hand_visual_follow_controller: HandVisualFollowControllerScript
@@ -201,6 +202,23 @@ func clear_runtime_grip_links() -> void:
 	_left_runtime_grip_link = _clear_runtime_grip_link(_left_runtime_grip_link)
 	_right_runtime_grip_link = _clear_runtime_grip_link(_right_runtime_grip_link)
 
+# Web Swing's line from the hands to its target hold. Presentation only: no physics nodes.
+func show_web_line(target_global_position: Vector2) -> void:
+	if _web_line == null:
+		_web_line = Line2D.new()
+		_web_line.name = &"WebLine"
+		_web_line.width = 3.0
+		_web_line.default_color = Color(0.95, 0.95, 1.0, 0.9)
+		add_child(_web_line)
+
+	var hand_midpoint: Vector2 = (_left_hand_anchor.global_position + _right_hand_anchor.global_position) * 0.5
+	_web_line.points = PackedVector2Array([to_local(hand_midpoint), to_local(target_global_position)])
+
+func hide_web_line() -> void:
+	if _web_line != null:
+		_web_line.queue_free()
+		_web_line = null
+
 func enter_falling(reason: int) -> void:
 	PlayerPhysicsModeTransitionsScript.assert_transition_allowed(_physics_mode, PlayerPhysicsModeScript.falling_ragdoll(), reason)
 	_physics_mode = PlayerPhysicsModeScript.falling_ragdoll()
@@ -208,11 +226,13 @@ func enter_falling(reason: int) -> void:
 	_sync_limb_freeze_for_mode()
 	clear_runtime_grip_joints()
 	clear_runtime_grip_links()
+	hide_web_line()
 
 func reset_physics(global_position_value: Vector2) -> void:
 	_physics_mode = PlayerPhysicsModeTransitionsScript.reset_mode(_physics_mode)
 	clear_runtime_grip_joints()
 	clear_runtime_grip_links()
+	hide_web_line()
 	_body.global_position = global_position_value
 	_body.rotation = _reset_body_rotation
 	_body.linear_velocity = Vector2.ZERO

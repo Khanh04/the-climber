@@ -7,6 +7,7 @@ applyTo: ["**/*.tscn", "**/*.tres", "**/*.res"]
 - Keep scenes compositional and scripts focused.
 - Required exported references must be validated by code or scene tests.
 - Do not change mass, friction, or collision layers through cosmetics.
+- Only a player appearance's `CharacterSkillProfile` may scale gameplay tuning, as a sidegrade, per `docs/adr/0013-character-skills.md`.
 - Player collision shapes belong to the base skeleton; only a player appearance may refit them (head box, arm silhouettes, shoulder sockets) to its art, per `docs/adr/0012-appearance-fitted-collision.md`.
 - Typed tuning data belongs in Resource scripts under `resources/config/`.
 - Avoid broad scene rewrites when a targeted scene or Resource edit is enough.

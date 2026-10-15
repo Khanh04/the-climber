@@ -1,0 +1,9 @@
+[gd_resource type="Resource" script_class="StaminaTuning" format=3]
+
+[ext_resource type="Script" uid="uid://coalyt3xlftcd" path="res://resources/config/stamina_tuning.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+one_hand_seconds = 10.0
+greasy_ledge_drain_multiplier = 3.0
+two_hand_regen_seconds_per_second = 1.5

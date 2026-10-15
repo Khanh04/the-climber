@@ -111,17 +111,9 @@
 [ext_resource type="Texture2D" uid="uid://kvjqtkeoy2lp" path="res://assets/PNG/Enviroment/Mountaint.png" id="102_y6dka"]
 [ext_resource type="Texture2D" uid="uid://gff3u878ruu6" path="res://assets/PNG/Enviroment/base.png" id="107_y6dka"]
 [ext_resource type="Texture2D" uid="uid://dbewd0bu6wt0m" path="res://assets/PNG/Enviroment/floor.png" id="109_306mh"]
-
-[sub_resource type="Resource" id="Resource_climb"]
-script = ExtResource("2_climb")
-
-[sub_resource type="Resource" id="Resource_stamina"]
-script = ExtResource("3_stamina")
-one_hand_seconds = 100.0
-
-[sub_resource type="Resource" id="Resource_generation"]
-script = ExtResource("10_generation")
-handhold_definitions = null
+[ext_resource type="Resource" path="res://resources/config/climb_prototype_tuning.tres" id="tuning_climb_prototype_tuning"]
+[ext_resource type="Resource" path="res://resources/config/stamina_tuning.tres" id="tuning_stamina_tuning"]
+[ext_resource type="Resource" path="res://resources/config/generation_tuning.tres" id="tuning_generation_tuning"]
 
 [sub_resource type="SpriteFrames" id="SpriteFrames_uj04i"]
 animations = [{
@@ -407,9 +399,9 @@ size = Vector2(1200, 80)
 [node name="RunScene" type="Node2D" unique_id=15343070]
 position = Vector2(-3, -223)
 script = ExtResource("1_dev")
-climb_tuning = SubResource("Resource_climb")
-stamina_tuning = SubResource("Resource_stamina")
-generation_tuning = SubResource("Resource_generation")
+climb_tuning = ExtResource("tuning_climb_prototype_tuning")
+stamina_tuning = ExtResource("tuning_stamina_tuning")
+generation_tuning = ExtResource("tuning_generation_tuning")
 handhold_presentation_catalog = ExtResource("14_handhold_presentation")
 hazard_presentation_catalog = ExtResource("15_hazard_presentation")
 cosmetic_loadout = ExtResource("8_loadout")

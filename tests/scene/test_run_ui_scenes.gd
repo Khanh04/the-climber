@@ -23,6 +23,7 @@ var _rewarded_continue_requested: bool = false
 var _post_run_coin_doubler_requested: bool = false
 var _store_requested: bool = false
 var _pause_requested: bool = false
+var _skill_requested: bool = false
 var _resume_requested: bool = false
 var _settings_requested: bool = false
 var _settings_closed: bool = false
@@ -267,6 +268,29 @@ func test_run_hud_emits_pause_request() -> void:
 	var _emit_result: int = pause_button.emit_signal("pressed")
 
 	assert_true(_pause_requested)
+
+func test_run_hud_skill_button_shows_skill_state_and_emits_request() -> void:
+	var hud: Control = (load("res://scenes/ui/run_hud.tscn") as PackedScene).instantiate() as Control
+	add_child_autofree(hud)
+	await get_tree().process_frame
+	var skill_button: Button = hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Skill/SkillButton") as Button
+	var cooldown_bar: ProgressBar = hud.get_node_or_null("Panel/ContentMargin/Metrics/Wrapper_Skill/SkillCooldownBar") as ProgressBar
+	assert_not_null(skill_button)
+	assert_not_null(cooldown_bar)
+
+	hud.call("apply_state", RunHudStateScript.new(0.0, 5.0, 10.0, 0, 0, RunStateScript.Value.CLIMBING, "Chalk Up", 0.25, false))
+
+	assert_eq(skill_button.text, "Chalk Up")
+	assert_true(skill_button.disabled)
+	assert_eq(cooldown_bar.value, 0.25)
+
+	_skill_requested = false
+	var _connect_result: int = hud.connect(&"skill_requested", Callable(self, "_mark_skill_requested"))
+	var _emit_result: int = skill_button.emit_signal("pressed")
+	assert_true(_skill_requested)
+
+func _mark_skill_requested() -> void:
+	_skill_requested = true
 
 func test_tutorial_overlay_scene_wires_required_nodes() -> void:
 	var scene: PackedScene = load("res://scenes/ui/tutorial_overlay.tscn")

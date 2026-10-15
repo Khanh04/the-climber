@@ -16,7 +16,14 @@ func _init(run_loop_coordinator: RefCounted) -> void:
 
 	_run_loop_coordinator = run_loop_coordinator
 
-func build_hud_state(run_session: RefCounted, stamina: RefCounted, wallet: RefCounted) -> RunHudStateScript:
+func build_hud_state(
+	run_session: RefCounted,
+	stamina: RefCounted,
+	wallet: RefCounted,
+	skill_name: String = "",
+	skill_cooldown_ratio: float = 0.0,
+	skill_available: bool = false
+) -> RunHudStateScript:
 	Validation.require_condition(run_session != null, "RunUiPresenter requires a run session to build HUD state.")
 	Validation.require_condition(run_session is RunSessionScript, "RunUiPresenter requires a RunSession implementation for HUD state.")
 	Validation.require_condition(stamina != null, "RunUiPresenter requires stamina runtime to build HUD state.")
@@ -33,7 +40,10 @@ func build_hud_state(run_session: RefCounted, stamina: RefCounted, wallet: RefCo
 		typed_stamina.get_max_stamina_seconds(),
 		typed_wallet.get_coins(),
 		typed_run_session.get_run_earned_coins(),
-		typed_run_session.get_state()
+		typed_run_session.get_state(),
+		skill_name,
+		skill_cooldown_ratio,
+		skill_available
 	)
 	hud_state.assert_valid()
 	return hud_state

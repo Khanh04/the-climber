@@ -58,3 +58,39 @@ func test_stamina_depletion_can_enter_session_level_fall_flow() -> void:
     assert_eq(session.get_state(), RunStateScript.Value.RESCUE_OFFERED)
     assert_true(session.has_end_reason())
     assert_eq(session.get_end_reason(), RunEndReasonScript.Value.STAMINA_FALL)
+func test_two_hand_hold_regenerates_stamina_up_to_max() -> void:
+    var tuning: StaminaTuningScript = StaminaTuningScript.new()
+    tuning.two_hand_regen_seconds_per_second = 2.0
+    var stamina: StaminaRuntimeScript = StaminaRuntimeScript.new(tuning)
+
+    assert_false(stamina.advance(1, 3.0))
+    assert_false(stamina.advance(2, 1.0))
+    assert_almost_eq(stamina.get_current_stamina_seconds(), tuning.one_hand_seconds - 1.0, 0.001)
+
+    assert_false(stamina.advance(2, 10.0))
+    assert_eq(stamina.get_current_stamina_seconds(), tuning.one_hand_seconds)
+    assert_true(stamina.is_full())
+
+func test_restore_ratio_refills_a_share_of_max_without_overflowing() -> void:
+    var tuning: StaminaTuningScript = StaminaTuningScript.new()
+    var stamina: StaminaRuntimeScript = StaminaRuntimeScript.new(tuning)
+
+    assert_false(stamina.advance(1, tuning.one_hand_seconds * 0.75))
+    stamina.restore_ratio(0.5)
+    assert_almost_eq(stamina.get_current_stamina_seconds(), tuning.one_hand_seconds * 0.75, 0.001)
+    assert_false(stamina.is_full())
+
+    stamina.restore_ratio(0.5)
+    assert_eq(stamina.get_current_stamina_seconds(), tuning.one_hand_seconds)
+
+func test_max_stamina_multiplier_scales_pool_and_keeps_fill_ratio() -> void:
+    var tuning: StaminaTuningScript = StaminaTuningScript.new()
+    var stamina: StaminaRuntimeScript = StaminaRuntimeScript.new(tuning)
+    assert_false(stamina.advance(1, tuning.one_hand_seconds * 0.5))
+
+    stamina.set_max_stamina_multiplier(1.5)
+
+    assert_almost_eq(stamina.get_max_stamina_seconds(), tuning.one_hand_seconds * 1.5, 0.001)
+    assert_almost_eq(stamina.get_current_stamina_seconds(), tuning.one_hand_seconds * 0.75, 0.001)
+    stamina.restore_full()
+    assert_almost_eq(stamina.get_current_stamina_seconds(), tuning.one_hand_seconds * 1.5, 0.001)

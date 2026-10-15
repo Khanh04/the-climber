@@ -29,13 +29,14 @@ The Climber is a Godot 4.4+ mobile-first 2D physics game. The MVP architecture p
 - Scene scripts should be thin coordinators.
 - Scene scripts may cache required child nodes, but missing nodes must fail fast.
 - Player collision shapes belong to their owning `RigidBody2D` (Torso/Head/LeftArm/RightArm) only.
-- Cosmetics must never modify mass, friction, collision layers, or gameplay tuning. A player appearance may refit the player's collision shapes (head box, arm silhouettes) and shoulder sockets to its art; see [ADR 0012](../adr/0012-appearance-fitted-collision.md).
+- Cosmetics must never modify mass, friction, collision layers, or gameplay tuning. A player appearance may refit the player's collision shapes (head box, arm silhouettes) and shoulder sockets to its art; see [ADR 0012](../adr/0012-appearance-fitted-collision.md). A player appearance (character) also carries a sidegrade `CharacterSkillProfile` that scales gameplay tuning; see [ADR 0013](../adr/0013-character-skills.md).
 
 ## Configuration
 
 - Tunable values use typed `Resource` classes.
 - Shared gameplay, economy, generation, Chaser, cosmetics, and ads tuning scripts live under `resources/config/`.
-- Concrete `.tres` tuning assets belong under `resources/config/`.
+- Concrete `.tres` tuning assets belong under `resources/config/`. Scenes reference them as external resources (`climb_prototype_tuning.tres`, `stamina_tuning.tres`, `generation_tuning.tres`, `chaser_tuning.tres`); they do not embed tuning as inline sub-resources. Each tuning `.tres` writes out every value, and each `@export` carries a `##` doc comment that shows as its inspector tooltip.
+- An exported tuning property must not default to a function call that builds a resource. Android export bakes such defaults to null on inline sub-resources. Set the value in the `.tres` instead.
 - Configuration Resources must expose a `validate()` method when values have constraints. `is_valid()` and `assert_valid()` are the standard supporting helpers.
 - Invalid configuration is a development error. Do not clamp, guess, or silently replace invalid values.
 

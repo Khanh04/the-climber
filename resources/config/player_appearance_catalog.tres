@@ -2,9 +2,45 @@
 
 [ext_resource type="Script" uid="uid://j1c43scgtjui" path="res://resources/config/player_appearance_catalog.gd" id="1_catalog"]
 [ext_resource type="Script" uid="uid://b3tvdg5myp3hn" path="res://resources/config/player_appearance.gd" id="2_appearance"]
+[ext_resource type="Script" path="res://resources/config/character_skill_profile.gd" id="3_skill"]
+
+[sub_resource type="Resource" id="Resource_skill_human"]
+script = ExtResource("3_skill")
+passive_name = "Catch"
+active_name = "Chalk Up"
+description = "Catch: with both hands free, a hand that reaches a hold grabs it on its own.\nChalk Up: restore half your stamina."
+auto_catch = true
+active_kind = 0
+cooldown_seconds = 20.0
+magnitude = 0.5
+
+[sub_resource type="Resource" id="Resource_skill_spartan"]
+script = ExtResource("3_skill")
+passive_name = "Heavy"
+active_name = "Spartan Kick"
+description = "Heavy: 30% more stamina and half the hazard knock-back, but 20% weaker swings.\nSpartan Kick: push off the wall and launch upward."
+max_stamina_multiplier = 1.3
+swing_force_multiplier = 0.8
+hazard_impulse_multiplier = 0.5
+active_kind = 1
+cooldown_seconds = 15.0
+magnitude = 900.0
+
+[sub_resource type="Resource" id="Resource_skill_webhead"]
+script = ExtResource("3_skill")
+passive_name = "Sticky Hands"
+active_name = "Web Swing"
+description = "Sticky Hands: slippery holds drain no faster than normal, but 20% less stamina.\nWeb Swing: web a far hold in your aim direction and get pulled to it."
+max_stamina_multiplier = 0.8
+caps_hold_drain = true
+active_kind = 2
+cooldown_seconds = 18.0
+magnitude = 2.0
+pull_seconds = 0.3
 
 [sub_resource type="Resource" id="Resource_human"]
 script = ExtResource("2_appearance")
+skill_profile = SubResource("Resource_skill_human")
 face_texture_path = "res://assets/PNG/Character/CHR2/head.png"
 face_offset = Vector2(-1, 1)
 face_scale = Vector2(5, 5)
@@ -19,6 +55,7 @@ right_upper_arm_rotation_degrees = -9.9
 
 [sub_resource type="Resource" id="Resource_spartan"]
 script = ExtResource("2_appearance")
+skill_profile = SubResource("Resource_skill_spartan")
 appearance_id = &"spartan"
 display_name = "Spartan"
 face_texture_path = "res://assets/PNG/Character/CHR1/Player/head.png"
@@ -35,6 +72,7 @@ right_upper_arm_rotation_degrees = -4.9
 
 [sub_resource type="Resource" id="Resource_webhead"]
 script = ExtResource("2_appearance")
+skill_profile = SubResource("Resource_skill_webhead")
 appearance_id = &"webhead"
 display_name = "Webhead"
 face_texture_path = "res://assets/PNG/Character/CHR3/head.png"

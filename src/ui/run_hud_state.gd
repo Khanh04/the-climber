@@ -9,6 +9,10 @@ var max_stamina_seconds: float = 0.0
 var wallet_coins: int = 0
 var run_earned_coins: int = 0
 var run_state: int = RunStateScript.Value.READY
+var skill_name: String = ""
+## 1.0 right after use, 0.0 when ready.
+var skill_cooldown_ratio: float = 0.0
+var skill_available: bool = false
 
 func _init(
 	height_meters_value: float = 0.0,
@@ -16,7 +20,10 @@ func _init(
 	max_stamina_seconds_value: float = 0.0,
 	wallet_coins_value: int = 0,
 	run_earned_coins_value: int = 0,
-	run_state_value: int = RunStateScript.Value.READY
+	run_state_value: int = RunStateScript.Value.READY,
+	skill_name_value: String = "",
+	skill_cooldown_ratio_value: float = 0.0,
+	skill_available_value: bool = false
 ) -> void:
 	height_meters = height_meters_value
 	current_stamina_seconds = current_stamina_seconds_value
@@ -24,6 +31,9 @@ func _init(
 	wallet_coins = wallet_coins_value
 	run_earned_coins = run_earned_coins_value
 	run_state = run_state_value
+	skill_name = skill_name_value
+	skill_cooldown_ratio = skill_cooldown_ratio_value
+	skill_available = skill_available_value
 
 func assert_valid() -> void:
 	Validation.require_condition(height_meters >= 0.0, "RunHudState height cannot be negative.")
@@ -33,3 +43,4 @@ func assert_valid() -> void:
 	Validation.require_condition(wallet_coins >= 0, "RunHudState wallet coins cannot be negative.")
 	Validation.require_condition(run_earned_coins >= 0, "RunHudState run-earned coins cannot be negative.")
 	RunStateScript.assert_valid(run_state)
+	Validation.require_condition(skill_cooldown_ratio >= 0.0 and skill_cooldown_ratio <= 1.0, "RunHudState skill cooldown ratio must be in [0, 1].")

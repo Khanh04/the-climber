@@ -1,0 +1,28 @@
+[gd_resource type="Resource" script_class="ClimbPrototypeTuning" format=3]
+
+[ext_resource type="Script" uid="uid://co0omgi88wjup" path="res://resources/config/climb_prototype_tuning.gd" id="1_script"]
+
+[resource]
+script = ExtResource("1_script")
+handhold_detection_radius_pixels = 96.0
+swing_control_force = 2400.0
+grip_hang_offset_pixels = 65.0
+grip_aim_target_offset_pixels = 100.0
+grip_pull_stiffness = 80.0
+grip_velocity_damping = 0.96
+attached_gravity_compensation_force = 980.0
+one_hand_gravity_compensation_ratio = 0.2
+hand_visual_follow_speed_pixels_per_second = 240.0
+hand_visual_velocity_lag_seconds = 0.03
+hand_visual_max_lag_pixels = 18.0
+hand_visual_attached_hold_pull_ratio = 0.16
+hand_visual_attached_hold_max_pull_pixels = 12.0
+two_hand_velocity_damping = 0.9
+max_player_speed_pixels_per_second = 900.0
+camera_player_lower_screen_offset_pixels = 160.0
+camera_vertical_dead_zone_pixels = 72.0
+camera_horizontal_dead_zone_pixels = 72.0
+camera_target_visible_width_pixels = 900.0
+bottom_fall_margin_pixels = 160.0
+pixels_per_meter = 100.0
+handhold_group_name = &"handhold"

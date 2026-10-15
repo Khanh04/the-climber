@@ -96,6 +96,11 @@ generator version is `generator_v6`.
   ~48 / 38 / 28 (~80 / 59 / 47 before pruning); relaxed fallback ~0.1%. Three EASY
   routes of ~13 holds each put the floor near 40 holds; going lower means fewer routes
   or longer moves.
+- Amended 2026-10-15 for more space between holds: corridor spacing 1.15 / 1.3 / 1.45 m
+  and move limits 1.55 / 2.0 / 2.1 m (min easiest-route move 1.05 / 1.3 / 1.4). Spacing
+  alone does not work: routes stop connecting and repair packs holds back in. Measured over
+  130 chunks: median vertical gap on the easiest route 0.95 / 1.25 / 1.38 m (was
+  0.83 / 1.05 / 1.20), ~40 / 31 / 25 holds per chunk, relaxed fallback ~2%.
 - Deleted: the plan builder, anchor graph, lane solver, population builder,
   layout emitter, route graph/validator, the slot scheduler and
   `route_profile_tuning`, and their tests. New: `hold_field_sampler.gd`,

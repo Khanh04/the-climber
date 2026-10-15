@@ -4,6 +4,7 @@
 [ext_resource type="PackedScene" uid="uid://wdx1u6hx4prx" path="res://scenes/ui/main_menu.tscn" id="2_menu"]
 [ext_resource type="Resource" uid="uid://ou47hb7bijus" path="res://resources/config/cosmetic_item_catalog.tres" id="3_cosmetic_catalog"]
 [ext_resource type="Resource" uid="uid://pkomv75rg3na" path="res://resources/config/cosmetic_loadout_default.tres" id="4_loadout"]
+[ext_resource type="Resource" uid="uid://dmuooovvgsc1c" path="res://resources/config/player_appearance_catalog.tres" id="5_appearance_catalog"]
 
 [node name="MainMenuScene" type="Control" unique_id=2132401272]
 layout_mode = 3
@@ -15,6 +16,7 @@ grow_vertical = 2
 script = ExtResource("1_scene")
 cosmetic_item_catalog = ExtResource("3_cosmetic_catalog")
 cosmetic_loadout = ExtResource("4_loadout")
+player_appearance_catalog = ExtResource("5_appearance_catalog")
 
 [node name="MainMenu" parent="." unique_id=1401698379 instance=ExtResource("2_menu")]
 unique_name_in_owner = true
